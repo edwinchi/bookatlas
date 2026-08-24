@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Header } from './components/Header';
 import { HeroCarousel } from './components/HeroCarousel';
 import { FilterSidebar } from './components/FilterSidebar';
@@ -37,7 +37,9 @@ import {
   Award,
   Bot,
   Lock,
-  Unlock
+  Unlock,
+  Globe,
+  Compass
 } from 'lucide-react';
 
 export default function App() {
@@ -286,6 +288,30 @@ export default function App() {
   }, [books, filters, activeTab]);
 
   // Derived Book Subsets for Netflix-Style Horizontal Carousels
+  const africanLitPicks = useMemo(() => {
+    return books.filter(b => 
+      b.primaryGenre === 'African Literature & Classics' || 
+      b.primaryGenre === 'Afrofuturism & Speculative Fiction' ||
+      b.primaryGenre === 'Pan-African History & Civilizations' ||
+      b.primaryGenre === 'African Diaspora & Black Studies' ||
+      b.primaryGenre === 'African Philosophy & Indigenous Traditions' ||
+      b.primaryGenre === 'Contemporary African Voices & Fiction' ||
+      b.genres?.some(g => g.includes('African') || g.includes('Afrofuturism') || g.includes('Diaspora'))
+    );
+  }, [books]);
+
+  const consciousnessPicks = useMemo(() => {
+    return books.filter(b => 
+      b.primaryGenre === 'Consciousness & Ancient Wisdom' || 
+      b.primaryGenre === 'Kemetic Science & Sacred Geometry' ||
+      b.primaryGenre === 'Metaphysics & Higher Dimensions' ||
+      b.primaryGenre === 'Indigenous Spiritual Technologies' ||
+      b.primaryGenre === 'Mind Mastery & Quantum Awakening' ||
+      b.primaryGenre === 'Holistic Energy, Chakras & Kundalini' ||
+      b.genres?.some(g => g.includes('Consciousness') || g.includes('Kemetic') || g.includes('Metaphysics') || g.includes('Spiritual') || g.includes('Mind Mastery'))
+    );
+  }, [books]);
+
   const amsterdamPicks = useMemo(() => {
     return books.filter(b => b.primaryGenre === 'Dutch & European Classics' || b.primaryGenre === 'Historical Fiction' || b.id.includes('amsterdam') || b.tags?.includes('Amsterdam') || b.isEditorPick);
   }, [books]);
@@ -368,13 +394,22 @@ export default function App() {
     setActiveTab('library');
   };
 
-  const handleSaveProgress = (chapterIndex: number, paragraphIndex: number, progressPct: number) => {
-    if (!activeReadingBook) return;
+  // Keep a ref to activeReadingBook so handleSaveProgress does not need it in dependencies
+  const activeReadingBookRef = useRef(activeReadingBook);
+  useEffect(() => {
+    activeReadingBookRef.current = activeReadingBook;
+  }, [activeReadingBook]);
+
+  const handleSaveProgress = useCallback((chapterIndex: number, paragraphIndex: number, progressPct: number) => {
+    const currentActive = activeReadingBookRef.current;
+    if (!currentActive) return;
+    const targetBook = currentActive.book;
+    
     setLibrary((prev) => {
-      const exists = prev.some((i) => i.book.id === activeReadingBook.book.id);
+      const exists = prev.some((i) => i.book.id === targetBook.id);
       if (exists) {
         return prev.map((item) =>
-          item.book.id === activeReadingBook.book.id
+          item.book.id === targetBook.id
             ? {
                 ...item,
                 currentChapterIndex: chapterIndex,
@@ -388,7 +423,7 @@ export default function App() {
       } else {
         return [
           {
-            book: activeReadingBook.book,
+            book: targetBook,
             format: 'ebook',
             progressPercent: progressPct,
             currentChapterIndex: chapterIndex,
@@ -402,7 +437,7 @@ export default function App() {
         ];
       }
     });
-  };
+  }, []);
 
   const handleViewAllCategory = (genreName: string, formatName: 'all' | 'ebook' | 'audiobook' = 'all') => {
     setFilters((f) => ({
@@ -587,14 +622,16 @@ export default function App() {
                 {/* Category Quick Pills */}
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
                   {[
-                    { name: 'All Categories', genre: 'All Genres' },
-                    { name: 'Sci-Fi & Fantasy', genre: 'Sci-Fi & Fantasy' },
-                    { name: 'Mystery & Suspense', genre: 'Mystery & Suspense' },
-                    { name: 'Historical Fiction', genre: 'Historical Fiction' },
-                    { name: 'Dutch & European Classics', genre: 'Dutch & European Classics' },
-                    { name: 'Business & Leadership', genre: 'Business & Leadership' },
-                    { name: 'Philosophy & Deep Thought', genre: 'Philosophy & Deep Thought' },
-                    { name: 'Self-Improvement & Psychology', genre: 'Self-Improvement & Psychology' },
+                    { name: '✨ All Categories', genre: 'All Genres' },
+                    { name: '🌍 African Literature & Classics', genre: 'African Literature & Classics' },
+                    { name: '🚀 Afrofuturism & Speculative', genre: 'Afrofuturism & Speculative Fiction' },
+                    { name: '👁️ Consciousness & Wisdom', genre: 'Consciousness & Ancient Wisdom' },
+                    { name: '☥ Kemetic Science & Geometry', genre: 'Kemetic Science & Sacred Geometry' },
+                    { name: '🔮 Metaphysics & Quantum', genre: 'Metaphysics & Higher Dimensions' },
+                    { name: '🌌 Sci-Fi & Fantasy', genre: 'Sci-Fi & Fantasy' },
+                    { name: '🕵️ Mystery & Thriller', genre: 'Mystery & Suspense' },
+                    { name: '🏛️ Dutch & European Classics', genre: 'Dutch & European Classics' },
+                    { name: '💡 Self-Improvement', genre: 'Self-Improvement & Psychology' },
                   ].map((cat) => (
                     <button
                       key={cat.name}
@@ -606,7 +643,41 @@ export default function App() {
                   ))}
                 </div>
 
-                {/* Carousel 1: Atlantean Curated Picks & Trending in the Netherlands */}
+                {/* Carousel 1: African Literature, Afrofuturism & Pan-African Classics */}
+                <HorizontalProductCarousel
+                  title="African Literature & Pan-African Renaissance"
+                  subtitle="From ancient Timbuktu manuscripts to cosmic Dogon astronomy & contemporary diaspora classics"
+                  badge="🌍 African Spotlight"
+                  icon={<Globe className="w-5 h-5 text-amber-600" />}
+                  books={africanLitPicks}
+                  onViewAll={() => handleViewAllCategory('African Literature & Classics')}
+                  onOpenDetail={(b) => setSelectedBookForDetail(b)}
+                  onReadSample={handleReadSample}
+                  onAddToCart={handleAddToCart}
+                  onToggleWishlist={handleToggleWishlist}
+                  onPlayAudioSample={(b) => setActiveAudiobook(b)}
+                  wishlistIds={wishlist.map((w) => w.id)}
+                  currencySymbol={currencySymbol}
+                />
+
+                {/* Carousel 2: Consciousness Community, Kemetic Science & Quantum Wisdom */}
+                <HorizontalProductCarousel
+                  title="Consciousness Community & Sacred Wisdom"
+                  subtitle="Kemetic sciences, the 42 Laws of Ma'at, bio-resonance, and quantum mind mastery"
+                  badge="👁️ Consciousness"
+                  icon={<Compass className="w-5 h-5 text-emerald-600" />}
+                  books={consciousnessPicks}
+                  onViewAll={() => handleViewAllCategory('Consciousness & Ancient Wisdom')}
+                  onOpenDetail={(b) => setSelectedBookForDetail(b)}
+                  onReadSample={handleReadSample}
+                  onAddToCart={handleAddToCart}
+                  onToggleWishlist={handleToggleWishlist}
+                  onPlayAudioSample={(b) => setActiveAudiobook(b)}
+                  wishlistIds={wishlist.map((w) => w.id)}
+                  currencySymbol={currencySymbol}
+                />
+
+                {/* Carousel 3: Atlantean Curated Picks & Trending in the Netherlands */}
                 <HorizontalProductCarousel
                   title="Trending in the Netherlands & Europe"
                   subtitle="Curated by Atlantean Globals Services editorial team in Amsterdam"

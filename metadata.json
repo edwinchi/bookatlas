@@ -1,6 +1,6 @@
 {
   "name": "Bookatlas eBook Store & Reader",
-  "description": "Enterprise digital bookstore, in-browser eReader, and autonomous single-manager backend studio by Atlantean Globals Services (Netherlands), featuring Gemini 3.7 Flash manuscript generation across 15 categories, dynamic pricing, and marketing automation.",
+  "description": "Enterprise digital bookstore, in-browser eReader, and autonomous publishing studio by Atlantean Globals Services (Netherlands), featuring extensive African Literature, Consciousness Community & Sacred Sciences catalogs, Gemini AI reader intelligence, and offline reading capabilities.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

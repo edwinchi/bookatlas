@@ -179,6 +179,10 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
           customPrompt: genCustomPrompt,
         }),
       });
+      const contentType = response.headers.get('content-type');
+      if (!response.ok || !contentType || !contentType.includes('application/json')) {
+        throw new Error(`Server returned non-JSON (${response.status})`);
+      }
       const data = await response.json();
       if (data.success && data.book) {
         onAddBook(data.book);
@@ -211,6 +215,10 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
+      const contentType = response.headers.get('content-type');
+      if (!response.ok || !contentType || !contentType.includes('application/json')) {
+        throw new Error(`Server returned non-JSON (${response.status})`);
+      }
       const data = await response.json();
       if (data.success && data.newBooks) {
         data.newBooks.forEach((b: Book) => onAddBook(b));
@@ -231,6 +239,10 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ strategy }),
       });
+      const contentType = response.headers.get('content-type');
+      if (!response.ok || !contentType || !contentType.includes('application/json')) {
+        throw new Error(`Server returned non-JSON (${response.status})`);
+      }
       const data = await response.json();
       if (data.success && data.books) {
         data.books.forEach((b: Book) => onUpdateBook(b));
@@ -251,6 +263,10 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bookId: selectedMarketingBookId }),
       });
+      const contentType = response.headers.get('content-type');
+      if (!response.ok || !contentType || !contentType.includes('application/json')) {
+        throw new Error(`Server returned non-JSON (${response.status})`);
+      }
       const data = await response.json();
       if (data.success && data.marketingKit) {
         setMarketingKit(data.marketingKit);

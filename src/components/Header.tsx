@@ -26,7 +26,7 @@ import {
   UserCheck
 } from 'lucide-react';
 
-import { GENRES } from '../data/booksData';
+import { GENRES, AFRICAN_LITERATURE_GENRES, CONSCIOUSNESS_COMMUNITY_GENRES, GENERAL_GENRES } from '../data/booksData';
 
 interface HeaderProps {
   activeTab: 'store' | 'library' | 'deals' | 'audiobooks' | 'koboplus' | 'manager';
@@ -290,31 +290,108 @@ export const Header: React.FC<HeaderProps> = ({
 
               {categoryDropdownOpen && (
                 <div 
-                  className="absolute left-0 top-full mt-1.5 w-64 bg-white rounded-xl shadow-2xl border border-stone-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                  className="absolute left-0 top-full mt-1.5 w-80 bg-white rounded-xl shadow-2xl border border-stone-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 max-h-[480px] overflow-y-auto"
                   onMouseLeave={() => setCategoryDropdownOpen(false)}
                 >
-                  <div className="px-3.5 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                    <span>Browse Genres</span>
-                    <span className="text-[10px] text-indigo-600">15 Active Genres</span>
+                  <div className="px-3.5 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between border-b border-slate-100 pb-2 mb-1">
+                    <span>Browse Bookstore Taxonomy</span>
+                    <span className="text-[10px] text-indigo-600 font-bold">{GENRES.length - 1} Active Genres</span>
                   </div>
-                  {GENRES.map((genre) => (
-                    <button
-                      key={genre}
-                      onClick={() => {
-                        setSelectedGenre(genre);
-                        setActiveTab('store');
-                        setCategoryDropdownOpen(false);
-                      }}
-                      className={`w-full text-left px-3.5 py-2 text-sm transition-colors cursor-pointer flex items-center justify-between ${
-                        selectedGenre === genre
-                          ? 'bg-indigo-50 text-indigo-900 font-semibold'
-                          : 'text-slate-700 hover:bg-slate-50 hover:text-slate-950'
-                      }`}
-                    >
-                      <span>{genre}</span>
-                      {selectedGenre === genre && <span className="w-2 h-2 rounded-full bg-indigo-600"></span>}
-                    </button>
-                  ))}
+
+                  {/* All Genres Option */}
+                  <button
+                    onClick={() => {
+                      setSelectedGenre('All Genres');
+                      setActiveTab('store');
+                      setCategoryDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3.5 py-2 text-sm transition-colors cursor-pointer flex items-center justify-between ${
+                      selectedGenre === 'All Genres'
+                        ? 'bg-indigo-50 text-indigo-900 font-bold'
+                        : 'text-slate-700 hover:bg-slate-50 hover:text-slate-950 font-medium'
+                    }`}
+                  >
+                    <span>✨ All Categories & Catalog</span>
+                    {selectedGenre === 'All Genres' && <span className="w-2 h-2 rounded-full bg-indigo-600"></span>}
+                  </button>
+
+                  {/* Section 1: African Literature & Pan-African Studies */}
+                  <div className="mt-2 pt-2 border-t border-slate-100">
+                    <div className="px-3.5 py-1 text-[11px] font-bold text-amber-900 bg-amber-50/80 rounded mx-2 mb-1 flex items-center gap-1.5">
+                      <span>🌍</span>
+                      <span>African Literature & Pan-African Studies</span>
+                    </div>
+                    {AFRICAN_LITERATURE_GENRES.map((genre) => (
+                      <button
+                        key={genre}
+                        onClick={() => {
+                          setSelectedGenre(genre);
+                          setActiveTab('store');
+                          setCategoryDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3.5 py-1.5 text-xs sm:text-sm transition-colors cursor-pointer flex items-center justify-between ${
+                          selectedGenre === genre
+                            ? 'bg-amber-100/60 text-amber-950 font-bold'
+                            : 'text-slate-700 hover:bg-amber-50/50 hover:text-slate-950'
+                        }`}
+                      >
+                        <span className="truncate">{genre}</span>
+                        {selectedGenre === genre && <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Section 2: Consciousness Community & Sacred Sciences */}
+                  <div className="mt-2 pt-2 border-t border-slate-100">
+                    <div className="px-3.5 py-1 text-[11px] font-bold text-emerald-900 bg-emerald-50/80 rounded mx-2 mb-1 flex items-center gap-1.5">
+                      <span>👁️</span>
+                      <span>Consciousness & Sacred Sciences</span>
+                    </div>
+                    {CONSCIOUSNESS_COMMUNITY_GENRES.map((genre) => (
+                      <button
+                        key={genre}
+                        onClick={() => {
+                          setSelectedGenre(genre);
+                          setActiveTab('store');
+                          setCategoryDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3.5 py-1.5 text-xs sm:text-sm transition-colors cursor-pointer flex items-center justify-between ${
+                          selectedGenre === genre
+                            ? 'bg-emerald-100/60 text-emerald-950 font-bold'
+                            : 'text-slate-700 hover:bg-emerald-50/50 hover:text-slate-950'
+                        }`}
+                      >
+                        <span className="truncate">{genre}</span>
+                        {selectedGenre === genre && <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Section 3: General Literature & Classics */}
+                  <div className="mt-2 pt-2 border-t border-slate-100">
+                    <div className="px-3.5 py-1 text-[11px] font-bold text-indigo-900 bg-indigo-50/80 rounded mx-2 mb-1 flex items-center gap-1.5">
+                      <span>📚</span>
+                      <span>General & European Literature</span>
+                    </div>
+                    {GENERAL_GENRES.map((genre) => (
+                      <button
+                        key={genre}
+                        onClick={() => {
+                          setSelectedGenre(genre);
+                          setActiveTab('store');
+                          setCategoryDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3.5 py-1.5 text-xs sm:text-sm transition-colors cursor-pointer flex items-center justify-between ${
+                          selectedGenre === genre
+                            ? 'bg-indigo-50 text-indigo-900 font-bold'
+                            : 'text-slate-700 hover:bg-slate-50 hover:text-slate-950'
+                        }`}
+                      >
+                        <span className="truncate">{genre}</span>
+                        {selectedGenre === genre && <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

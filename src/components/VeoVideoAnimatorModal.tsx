@@ -78,6 +78,11 @@ export function VeoVideoAnimatorModal({ isOpen, onClose, books }: VeoVideoAnimat
         } as VeoGenerationRequest)
       });
 
+      const contentType = response.headers.get('content-type');
+      if (!response.ok || !contentType || !contentType.includes('application/json')) {
+        throw new Error(`Server returned non-JSON response (${response.status})`);
+      }
+
       const data = await response.json();
       clearInterval(progressInterval);
       setGenerationProgress(100);

@@ -100,11 +100,21 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const readParas = chapters.slice(0, currentChapterIndex).reduce((acc, c) => acc + c.content.length, 0) + (currentParagraphIndex + 1);
   const progressPercent = Math.min(100, Math.round((readParas / Math.max(1, totalParas)) * 100));
 
+  // Stable ref for progress callback to prevent infinite re-render loops
+  const onSaveProgressRef = useRef(onSaveProgress);
   useEffect(() => {
-    if (onSaveProgress) {
-      onSaveProgress(currentChapterIndex, currentParagraphIndex, progressPercent);
+    onSaveProgressRef.current = onSaveProgress;
+  }, [onSaveProgress]);
+
+  const lastSavedRef = useRef<string>('');
+
+  useEffect(() => {
+    const key = `${currentChapterIndex}-${currentParagraphIndex}-${progressPercent}`;
+    if (key !== lastSavedRef.current && onSaveProgressRef.current) {
+      lastSavedRef.current = key;
+      onSaveProgressRef.current(currentChapterIndex, currentParagraphIndex, progressPercent);
     }
-  }, [currentChapterIndex, currentParagraphIndex, progressPercent, onSaveProgress]);
+  }, [currentChapterIndex, currentParagraphIndex, progressPercent]);
 
   // Speech synthesis setup
   useEffect(() => {

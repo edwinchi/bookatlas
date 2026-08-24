@@ -115,68 +115,90 @@ export const EditorialCuratorBlock: React.FC<{
   onOpenMatchmaker: () => void;
 }> = ({ onExploreGenre, onOpenMatchmaker }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-8">
-      {/* Editorial 1: Atlantean Reading Lounge */}
-      <div className="bg-gradient-to-br from-amber-500/10 via-amber-100/40 to-white p-6 rounded-2xl border border-amber-200/80 flex flex-col justify-between space-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 my-8">
+      {/* Editorial 1: African Literary Renaissance & Afrofuturism */}
+      <div className="bg-gradient-to-br from-amber-900/90 via-orange-950 to-slate-900 text-white p-5 rounded-2xl border border-amber-500/30 flex flex-col justify-between space-y-4 shadow-md hover:border-amber-400/50 transition-all">
         <div className="space-y-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800 bg-amber-200/60 px-2.5 py-0.5 rounded-full">
-            Curator Dispatch
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-300 bg-amber-900/60 border border-amber-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1 w-fit">
+            <span>🌍</span> African Literary Renaissance
           </span>
-          <h3 className="text-lg font-serif font-extrabold text-slate-900">
-            Dutch Golden Age & Modern European Fiction
+          <h3 className="text-base font-serif font-extrabold text-white">
+            Dogon Astronomy, Afrofuturism & Pan-African Classics
           </h3>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            From atmospheric canal mysteries to Amsterdam historical sagas, dive into hand-picked literature curated by Atlantean Globals in the Netherlands.
+          <p className="text-xs text-amber-100/80 leading-relaxed">
+            Explore ancient Timbuktu manuscripts, cosmic Dogon star voyages, and groundbreaking speculative fiction from visionary African writers.
           </p>
         </div>
         <button
-          onClick={() => onExploreGenre('Historical Fiction')}
-          className="text-xs font-bold text-amber-900 hover:text-amber-700 flex items-center gap-1 cursor-pointer pt-2"
+          onClick={() => onExploreGenre('Afrofuturism & Speculative Fiction')}
+          className="text-xs font-bold text-amber-300 hover:text-amber-200 flex items-center justify-between cursor-pointer pt-2 border-t border-white/10"
         >
-          <span>Explore Historical Sagas</span>
+          <span>Explore African Literature</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      {/* Editorial 2: Gemini AI Matchmaker */}
-      <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-6 rounded-2xl border border-indigo-500/30 flex flex-col justify-between space-y-4 shadow-md">
+      {/* Editorial 2: Consciousness Community & Kemetic Sacred Wisdom */}
+      <div className="bg-gradient-to-br from-emerald-950 via-teal-950 to-slate-900 text-white p-5 rounded-2xl border border-emerald-500/30 flex flex-col justify-between space-y-4 shadow-md hover:border-emerald-400/50 transition-all">
+        <div className="space-y-2">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 bg-emerald-900/60 border border-emerald-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1 w-fit">
+            <span>👁️</span> Consciousness Community
+          </span>
+          <h3 className="text-base font-serif font-extrabold text-white">
+            Kemetic Science, Sacred Geometry & Quantum Awakening
+          </h3>
+          <p className="text-xs text-emerald-100/80 leading-relaxed">
+            Delve into the 42 Laws of Ma'at, Hermetic universal principles, bio-resonance, and mind mastery for higher sovereign living.
+          </p>
+        </div>
+        <button
+          onClick={() => onExploreGenre('Kemetic Science & Sacred Geometry')}
+          className="text-xs font-bold text-emerald-300 hover:text-emerald-200 flex items-center justify-between cursor-pointer pt-2 border-t border-white/10"
+        >
+          <span>Explore Consciousness Texts</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Editorial 3: Gemini AI Matchmaker */}
+      <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-5 rounded-2xl border border-indigo-500/30 flex flex-col justify-between space-y-4 shadow-md hover:border-indigo-400/50 transition-all">
         <div className="space-y-2">
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-300 bg-indigo-800/80 px-2.5 py-0.5 rounded-full flex items-center gap-1 w-fit">
             <Sparkles className="w-3 h-3 text-amber-400" />
             AI Reader Intelligence
           </span>
-          <h3 className="text-lg font-serif font-extrabold text-white">
-            Meet Your Personal Book Matchmaker
+          <h3 className="text-base font-serif font-extrabold text-white">
+            AI Matchmaker & Literary Companion
           </h3>
           <p className="text-xs text-slate-300 leading-relaxed">
-            Powered by Google Gemini 3.7 Flash. Tell us your current reading mood, favorite tropes, or pacing, and receive instant personalized picks.
+            Powered by Google Gemini. Discover tailored books matching your spiritual growth, preferred literary atmosphere, or philosophical questions.
           </p>
         </div>
         <button
           onClick={onOpenMatchmaker}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center justify-between cursor-pointer transition-colors shadow-sm"
+          className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center justify-between cursor-pointer transition-colors shadow-sm"
         >
           <span>Launch AI Matchmaker</span>
           <ArrowRight className="w-3.5 h-3.5 text-amber-300" />
         </button>
       </div>
 
-      {/* Editorial 3: Bookatlas Plus Unlimited */}
-      <div className="bg-gradient-to-br from-purple-500/10 via-purple-100/40 to-white p-6 rounded-2xl border border-purple-200/80 flex flex-col justify-between space-y-4">
+      {/* Editorial 4: Bookatlas Plus Unlimited */}
+      <div className="bg-gradient-to-br from-purple-500/10 via-purple-100/40 to-white p-5 rounded-2xl border border-purple-200/80 flex flex-col justify-between space-y-4">
         <div className="space-y-2">
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-800 bg-purple-200/60 px-2.5 py-0.5 rounded-full">
             Subscription Freedom
           </span>
-          <h3 className="text-lg font-serif font-extrabold text-slate-900">
+          <h3 className="text-base font-serif font-extrabold text-slate-900">
             Bookatlas Plus: 1.5M Titles
           </h3>
           <p className="text-xs text-slate-600 leading-relaxed">
-            Unlimited reading & listening across all your screens, tablets, and e-Ink devices. Free 30-day trial with instant activation.
+            Unlimited reading & listening across all screens and e-Ink devices with full offline eReader support.
           </p>
         </div>
         <button
-          onClick={() => onExploreGenre('Science Fiction')}
-          className="text-xs font-bold text-purple-900 hover:text-purple-700 flex items-center gap-1 cursor-pointer pt-2"
+          onClick={() => onExploreGenre('All Genres')}
+          className="text-xs font-bold text-purple-900 hover:text-purple-700 flex items-center justify-between cursor-pointer pt-2 border-t border-purple-100"
         >
           <span>Browse Plus Catalog</span>
           <ArrowRight className="w-3.5 h-3.5" />

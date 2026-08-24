@@ -174,6 +174,11 @@ What would you like to explore today?`,
         })
       });
 
+      const contentType = response.headers.get('content-type');
+      if (!response.ok || !contentType || !contentType.includes('application/json')) {
+        throw new Error(`Server returned non-JSON response (${response.status})`);
+      }
+
       const data = await response.json();
 
       const assistantMessage: ChatMessage = {

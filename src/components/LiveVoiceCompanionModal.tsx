@@ -131,6 +131,11 @@ export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionM
         })
       });
 
+      const contentType = response.headers.get('content-type');
+      if (!response.ok || !contentType || !contentType.includes('application/json')) {
+        throw new Error(`Server returned non-JSON response (${response.status})`);
+      }
+
       const data = await response.json();
       const assistantText = data.spokenText || 'I am ready to explore our literary collection together.';
 

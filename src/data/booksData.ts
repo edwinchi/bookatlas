@@ -1,7 +1,24 @@
 import { Book } from '../types';
 
-export const GENRES = [
-  'All Genres',
+export const AFRICAN_LITERATURE_GENRES = [
+  'African Literature & Classics',
+  'African Diaspora & Black Studies',
+  'Afrofuturism & Speculative Fiction',
+  'Pan-African History & Civilizations',
+  'African Philosophy & Indigenous Traditions',
+  'Contemporary African Voices & Fiction'
+];
+
+export const CONSCIOUSNESS_COMMUNITY_GENRES = [
+  'Consciousness & Ancient Wisdom',
+  'Kemetic Science & Sacred Geometry',
+  'Metaphysics & Higher Dimensions',
+  'Indigenous Spiritual Technologies',
+  'Mind Mastery & Quantum Awakening',
+  'Holistic Energy, Chakras & Kundalini'
+];
+
+export const GENERAL_GENRES = [
   'Sci-Fi & Fantasy',
   'Fiction & Literature',
   'Mystery & Suspense',
@@ -19,8 +36,546 @@ export const GENRES = [
   'Science & Technology'
 ];
 
+export const GENRES = [
+  'All Genres',
+  // African Literature & Diaspora
+  ...AFRICAN_LITERATURE_GENRES,
+  // Consciousness Community & Sacred Sciences
+  ...CONSCIOUSNESS_COMMUNITY_GENRES,
+  // General & Regional Classics
+  ...GENERAL_GENRES
+];
+
 export const INITIAL_BOOKS: Book[] = [
-  // 1. Sci-Fi & Fantasy
+  // ==========================================
+  // AFRICAN LITERATURE & CONSCIOUSNESS MASTERWORKS
+  // ==========================================
+
+  // 1. Afrofuturism & Speculative Fiction
+  {
+    id: 'atlas-afr-001',
+    title: 'The Celestial Griot of Sirius B',
+    subtitle: 'Quantum Orature, Dogon Star Maps, and the Great Exodus Beyond the Void',
+    author: 'Dr. Keshia Mwangi',
+    authorBio: 'Dr. Keshia Mwangi is an astrobiologist and Hugo-nominated author born in Nairobi and currently researching cosmic archeology between Oxford and Dakar. Her speculative fiction bridges ancient African astral navigation with quantum gravitational physics.',
+    narrator: 'Chiwetel Ejiofor',
+    coverImage: 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=700&q=80',
+    price: 14.99,
+    originalPrice: 21.99,
+    isBookatlasPlus: true,
+    isKoboPlus: true,
+    isDeal: true,
+    isBestseller: true,
+    isNewRelease: true,
+    isEditorPick: true,
+    rating: 4.97,
+    reviewCount: 4890,
+    format: 'bundle',
+    genres: ['Afrofuturism & Speculative Fiction', 'African Literature & Classics', 'Sci-Fi & Fantasy'],
+    primaryGenre: 'Afrofuturism & Speculative Fiction',
+    pageCount: 464,
+    audioDurationMinutes: 780,
+    publishDate: 'February 1, 2026',
+    publisher: 'Kushite Stellar Imprint / Atlantean Global Arts',
+    isbn: '978-0-998-10294-3',
+    language: 'English',
+    synopsis: 'Deep in the Bandiagara Escarpment of Mali, the sacred Po Tolo star calendar begins radiating an anomalous tachyonic signal. Nommo, an elder sonic engineer and hereditary griot, uncovers the forgotten solar ark constructed by the ancient Dogon stargazers—a vessel powered by acoustic harmonics calibrated to the resonant frequency of the African continent.',
+    editorialReview: '“A monumental achievement in speculative Afrofuturism. Mwangi fuses deep ancestral oral tradition with theoretical astrophysics in prose so radiant it vibrates in your chest.” — The Pan-African Literary Review',
+    superPointsEarned: 150,
+    tags: ['Afrofuturism', 'Dogon Astronomy', 'Sirius B', 'Sci-Fi', 'Bookatlas Plus', 'Bestseller'],
+    awards: ['African Speculative Fiction Award Winner 2026', 'Nebula Award Finalist'],
+    readingTimeHours: 8.0,
+    aiVibe: 'Transcendent, cosmic, and fiercely ancestral',
+    audioSampleUrl: 'https://actions.google.com/sounds/v1/ambiences/rain_heavy.ogg',
+    sampleChapters: [
+      {
+        title: 'Chapter 1: The Heavy Star Whispers',
+        subtitle: 'The Cliff of Bandiagara, 2142',
+        content: [
+          'The sandstone of the cliffs still held the dry heat of the Sahel sun, but inside the cave of the sanctuary, the stone altar was humming with the exact pitch of an oscillating crystal.',
+          'Nommo placed both palms against the carved basalt relief of Po Tolo—the tiny white dwarf star the ancestors had tracked for three thousand years before optical telescopes had ever detected its invisible companion.',
+          'The hieroglyphs were not decorative. They were circuit pathways of pure carbon-copper inlay. When Nommo whispered the seventh name of the Nummo water-spirits, the stone beneath his fingers softened into liquid light, and the star map of the third galaxy blossomed across the vaulted cavern ceiling.',
+          '“The Great Return has been initiated,” his daughter Amina whispered from the entrance, her cybernetic cowl catching the emerald bioluminescence of the chamber.',
+          '“Not a return, my child,” Nommo said, watching the star trails spiral into alignment. “It is our appointed departure.”'
+        ]
+      },
+      {
+        title: 'Chapter 2: The Acoustic Engine',
+        subtitle: 'Harmonics of the Great Migration',
+        content: [
+          'The vessel rested four hundred meters beneath the dunes of Timbuktu, suspended in a magnetic cradle powered by the subterranean aquifers of the Niger river basin.',
+          'Its hull was not forged of titanium or polymer, but of bio-grown ironwood tempered in zero-point vacuum fields and inscribed with gold geometric lattices.',
+          '“We do not combust fuel,” Nommo explained to the young navigators gathered in the command amphitheater. “We sing the coordinates. The universe does not yield to force; it yields to resonance.”'
+        ]
+      }
+    ],
+    reviews: [
+      {
+        id: 'rev-afr-1',
+        authorName: 'Tariq Al-Mansoor',
+        rating: 5,
+        date: '3 days ago',
+        title: 'The definitive Afrofuturist epic of our era',
+        comment: 'The synthesis of Dogon astronomical cosmology with quantum physics is staggering. The audio narration by Chiwetel Ejiofor brings tears to your eyes during the departure chant.',
+        verifiedPurchase: true,
+        upvotes: 84
+      }
+    ]
+  },
+
+  // 2. Kemetic Science & Sacred Geometry
+  {
+    id: 'atlas-afr-002',
+    title: 'The Sacred Science of Kemet',
+    subtitle: 'Temple Architecture, Ma\'at, the 42 Divine Principles, and the Pineal Awakening of Ancient Egypt',
+    author: 'Master Heru Ankh-Ra',
+    authorBio: 'Master Heru Ankh-Ra is a Kemetic historian, initiates of the Mystery Tradition, and researcher in bio-geometry who has studied the Nile Valley temples for over thirty-five years.',
+    narrator: 'Dennis Haysbert',
+    coverImage: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=700&q=80',
+    price: 16.49,
+    originalPrice: 24.99,
+    isBookatlasPlus: true,
+    isKoboPlus: true,
+    isDeal: false,
+    isBestseller: true,
+    isNewRelease: true,
+    isEditorPick: true,
+    rating: 4.99,
+    reviewCount: 6120,
+    format: 'bundle',
+    genres: ['Kemetic Science & Sacred Geometry', 'Consciousness & Ancient Wisdom', 'Metaphysics & Higher Dimensions'],
+    primaryGenre: 'Kemetic Science & Sacred Geometry',
+    pageCount: 528,
+    audioDurationMinutes: 890,
+    publishDate: 'January 15, 2026',
+    publisher: 'Ankh Mystery School Press / Atlantean Philosophical Library',
+    isbn: '978-1-954-82019-8',
+    language: 'English',
+    synopsis: 'A groundbreaking revelation of the sacred sciences developed along the Nile River. Master Heru decodes the architectural harmonics of the Temple of Luxor (the Temple of Man), the 42 Laws of Ma\'at, the Seven Hermetic Axioms of Tehuti (Thoth), and the biological mechanics of the Eye of Heru (the Pineal Gland) as an interface for higher dimensional awareness.',
+    editorialReview: '“An encyclopedic masterpiece of consciousness and ancestral wisdom. It dismantles centuries of Eurocentric distortion and restores Kemetic science to its rightful place as the mother of astronomy, physics, and spiritual alchemy.” — Journal of Consciousness Studies',
+    superPointsEarned: 165,
+    tags: ['Kemet', 'Ancient Egypt', 'Sacred Geometry', 'Maat', 'Tehuti', 'Pineal Gland', 'Consciousness'],
+    awards: ['Consciousness Literature Gold Award', 'African Heritage Scholarly Prize'],
+    readingTimeHours: 9.5,
+    aiVibe: 'Illuminating, profoundly sacred, and mathematically pristine',
+    sampleChapters: [
+      {
+        title: 'Chapter 1: The Temple as Biological Blueprint',
+        subtitle: 'The Hermetic Key of Luxor',
+        content: [
+          'When the ancient Kemetic priesthood laid the granite foundation stones of Waset (Thebes), they were not building a monument to human vanity. They were constructing a living holographic resonator of the human body.',
+          'Every hall, pylon, colonnade, and sanctum of the Temple of Luxor corresponds with millimeter precision to the endocrine glands, bone proportions, and neural chakras of the fully awakened human being.',
+          'The innermost sanctuary—the Holy of Holies—sits in direct geometric alignment with the Thalamus and the Epiphysis Cerebri: the Pineal Gland, known in Medu Neter as the Ujat or Eye of Heru.',
+          'To enter the temple was not to worship an external deity; it was an exact mathematical initiation into the seven stages of psychological and spiritual transmutation.'
+        ]
+      },
+      {
+        title: 'Chapter 2: Ma’at and the Physics of Universal Balance',
+        subtitle: 'The 42 Declarations of Innocence as Quantum Coherence',
+        content: [
+          'In Kemetic cosmology, Ma’at represents Truth, Justice, Reciprocity, and Cosmic Equilibrium.',
+          'The weighing of the heart (Ib) against the feather of Ma’at is not a superstitious mythology—it is an energetic law: consciousness cannot traverse the doorway into higher dimensional realms if it carries the vibrational density of discord, deceit, or unhealed trauma.',
+          'When thought, word, and deed achieve zero entropy, the bio-toroidal field of the heart expands, harmonizing with the primordial cosmic order known as Nun.'
+        ]
+      }
+    ],
+    reviews: [
+      {
+        id: 'rev-kemet-1',
+        authorName: 'Dr. Ashanti Menelik',
+        rating: 5,
+        date: '1 week ago',
+        title: 'Required reading for every seeker of truth',
+        comment: 'This book completely transformed my understanding of the pyramids and ancient African metaphysics. The breakdown of the 42 laws and sacred geometry of Luxor is breathtaking.',
+        verifiedPurchase: true,
+        upvotes: 112
+      }
+    ]
+  },
+
+  // 3. African Literature & Classics
+  {
+    id: 'atlas-afr-003',
+    title: 'Echoes of the River Niger',
+    subtitle: 'The Lost Manuscripts of Timbuktu, Ancient Universities, and the Golden Age of African Scholarship',
+    author: 'Professor Amadou Diop',
+    authorBio: 'Professor Amadou Diop is an archivist, historian, and director of the Sahelian Heritage Research Center in Bamako and Paris. He has led international excavations preserving over 40,000 medieval African manuscripts.',
+    narrator: 'Hugh Quarshie',
+    coverImage: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=700&q=80',
+    price: 13.49,
+    originalPrice: 19.99,
+    isBookatlasPlus: true,
+    isKoboPlus: true,
+    isDeal: false,
+    isBestseller: true,
+    isNewRelease: false,
+    isEditorPick: true,
+    rating: 4.95,
+    reviewCount: 3840,
+    format: 'ebook',
+    genres: ['African Literature & Classics', 'Pan-African History & Civilizations', 'Non-Fiction & Essays'],
+    primaryGenre: 'African Literature & Classics',
+    pageCount: 480,
+    audioDurationMinutes: 760,
+    publishDate: 'October 10, 2025',
+    publisher: 'Sankore University Press / Atlantean Imprint',
+    isbn: '978-0-435-90512-1',
+    language: 'English',
+    synopsis: 'Long before Oxford and the Sorbonne flourished, the University of Sankore in Timbuktu housed over 25,000 international scholars and millions of leather-bound manuscripts covering optics, jurisprudence, astronomy, mathematics, and poetry. Professor Diop chronicles the intellectual renaissance of the Songhai and Mali Empires, unveiling the profound legacy of African literary genius.',
+    editorialReview: '“A majestic reclamation of African intellectual history. Diop’s prose flows with the grace of the Niger itself, bringing the vibrant libraries of Timbuktu alive for the modern world.” — The European Journal of African Studies',
+    superPointsEarned: 135,
+    tags: ['Timbuktu', 'African Classics', 'Sankore', 'History', 'Manuscripts', 'Scholarship'],
+    awards: ['UNESCO International Heritage Award', 'African Studies Association Best Book Prize'],
+    readingTimeHours: 8.2,
+    aiVibe: 'Majestic, historically profound, and deeply inspiring',
+    sampleChapters: [
+      {
+        title: 'Chapter 1: The City of Gold and Ink',
+        subtitle: 'The University of Sankore in 1492',
+        content: [
+          'In the year 1492, as caravels sailed west from Andalusia, camel caravans carrying forty tons of bound books and fine rag paper were arriving at the gates of Timbuktu.',
+          'Here, in the shadow of the great mud-brick minarets of the Djinguereber and Sankore mosques, books were prized above all commodities. Salt came from the north, gold came from the south, but the word of God and the treasures of wisdom were found only in the scholars’ courtyards.',
+          'Ahmed Baba, the grand jurist and bibliophile who possessed a personal library of over two thousand rare volumes, sat upon a carpet of woven silk, dictating annotations on spherical trigonometry to students from across North Africa and the Middle East.'
+        ]
+      }
+    ],
+    reviews: []
+  },
+
+  // 4. Consciousness & Ancient Wisdom
+  {
+    id: 'atlas-con-001',
+    title: 'The Frequency of Awakening',
+    subtitle: 'Dimensional Shifting, Quantum Intuition, Bio-Resonance, and the Universal Lattice',
+    author: 'Dr. Zuri Oladipo',
+    authorBio: 'Dr. Zuri Oladipo is a biophysicist and pioneer in consciousness research at the Institute of Noetic Sciences and the University of Cape Town. Her work investigates the quantum coherence of microtubules and heart-brain bio-fields.',
+    narrator: 'Thandiwe Newton',
+    coverImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=700&q=80',
+    price: 15.99,
+    originalPrice: 22.99,
+    isBookatlasPlus: true,
+    isKoboPlus: true,
+    isDeal: true,
+    isBestseller: true,
+    isNewRelease: true,
+    isEditorPick: true,
+    rating: 4.96,
+    reviewCount: 5210,
+    format: 'bundle',
+    genres: ['Consciousness & Ancient Wisdom', 'Mind Mastery & Quantum Awakening', 'Self-Improvement & Psychology'],
+    primaryGenre: 'Consciousness & Ancient Wisdom',
+    pageCount: 416,
+    audioDurationMinutes: 690,
+    publishDate: 'January 28, 2026',
+    publisher: 'Akashic Quantum Editions / Atlantean Consciousness Vault',
+    isbn: '978-1-608-68720-4',
+    language: 'English',
+    synopsis: 'What if intuition is not an accident, but a measurable biological signal connecting you to a non-local quantum intelligence lattice? Dr. Oladipo combines cellular biophysics, ancient indigenous initiation practices, and sound frequency entrainment to deliver a practical guide for shifting consciousness into higher creative and intuitive flow states.',
+    editorialReview: '“Brilliant, grounded, and utterly transformative. Dr. Oladipo bridges the gap between quantum mechanics and spiritual illumination with flawless clarity.” — Mind & Energy Quarterly',
+    superPointsEarned: 160,
+    tags: ['Consciousness', 'Quantum Awakening', 'Bio-Resonance', 'Intuition', 'Ancient Wisdom'],
+    readingTimeHours: 7.0,
+    aiVibe: 'Visionary, deeply calming, and scientifically revolutionary',
+    sampleChapters: [
+      {
+        title: 'Chapter 1: The Heart-Brain Torus',
+        subtitle: 'The electromagnetic field of human intention',
+        content: [
+          'The human heart produces an electromagnetic field five thousand times stronger magnetically and sixty times stronger electrically than that generated by the brain.',
+          'This toroidal field extends up to eight feet outside your physical body in all directions, acting as a continuous transceiver of emotional coherence and vibrational intent.',
+          'When your heart rhythm enters a state of 0.1 Hertz coherent oscillation, your nervous system locks into resonance with the Schumann resonance of Planet Earth—opening the perceptual threshold to instant knowing.'
+        ]
+      }
+    ],
+    reviews: []
+  },
+
+  // 5. Pan-African History & Civilizations
+  {
+    id: 'atlas-afr-004',
+    title: 'Stolen Legacy of the Nile',
+    subtitle: 'Great African Foundations of World Civilization, Mathematics, Philosophy, and Architecture',
+    author: 'Dr. Kwame Asante-Boateng',
+    authorBio: 'Dr. Kwame Asante-Boateng is a distinguished professor of African History and Chair of Nile Valley Civilizations at the University of Ghana, Legon.',
+    narrator: 'David Oyelowo',
+    coverImage: 'https://images.unsplash.com/photo-1512486130939-2c4f79935e4f?auto=format&fit=crop&w=700&q=80',
+    price: 12.99,
+    originalPrice: 18.99,
+    isBookatlasPlus: true,
+    isKoboPlus: true,
+    isDeal: false,
+    isBestseller: true,
+    isNewRelease: false,
+    isEditorPick: true,
+    rating: 4.98,
+    reviewCount: 7120,
+    format: 'bundle',
+    genres: ['Pan-African History & Civilizations', 'African Diaspora & Black Studies', 'Philosophy & Deep Thought'],
+    primaryGenre: 'Pan-African History & Civilizations',
+    pageCount: 544,
+    audioDurationMinutes: 940,
+    publishDate: 'August 18, 2025',
+    publisher: 'Pan-African Heritage Library / Atlantean Historical Editions',
+    isbn: '978-0-933-12101-0',
+    language: 'English',
+    synopsis: 'A tour de force historical synthesis tracing the origins of geometry, astronomy, medicine, and philosophy back to the indigenous African civilizations of Ta-Seti, Nubia, Kemet, Axum, and Great Zimbabwe. Dr. Asante-Boateng reveals how Greek scholars like Pythagoras, Thales, and Plato studied for decades at the African temple universities of Heliopolis and Waset.',
+    editorialReview: '“An indispensable pillar of historical scholarship. Every page pulses with rigorous archival documentation and uncompromising truth.” — Black History & World Affairs Journal',
+    superPointsEarned: 130,
+    tags: ['Pan-African History', 'Nubia', 'Kemet', 'Black Studies', 'Civilization', 'Heritage'],
+    awards: ['African Intellectual Excellence Award', 'W.E.B. Du Bois Medal of Honor'],
+    readingTimeHours: 9.2,
+    aiVibe: 'Monumental, empowering, and rigorously documented',
+    sampleChapters: [
+      {
+        title: 'Chapter 1: The Mother of Sciences',
+        subtitle: 'Nubia and the Southern Foundations of the Nile',
+        content: [
+          'Civilization did not migrate down from the Mediterranean into Africa; it flowed north from the heart of the continent along the spine of the Hapi (Nile) river.',
+          'At Nabta Playa in southern Egypt, two millennia before Stonehenge, African pastoralists erected the world’s oldest megalithic astronomical calendar circle, tracking the heliacal rising of Sirius and the solstices.',
+          'From this southern cradle arose the dynasties of Kush, Kerma, and Ta-Seti, bringing the royal crown, the hieroglyphic script, and the sacred science of resurrection northward to Memphis and Giza.'
+        ]
+      }
+    ],
+    reviews: []
+  },
+
+  // 6. Mind Mastery & Quantum Awakening
+  {
+    id: 'atlas-con-002',
+    title: 'The Holographic Mind',
+    subtitle: 'Reprogramming the Subconscious Matrix, Timeline Collapsing, and Supreme Inner Sovereignty',
+    author: 'Malik Vance & The Consciousness Collective',
+    authorBio: 'Malik Vance is a master mindset strategist, author, and meditation teacher who has mentored over 250,000 students globally in quantum manifestation and mental sovereignty.',
+    narrator: 'Lance Reddick',
+    coverImage: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=700&q=80',
+    price: 11.99,
+    originalPrice: 17.99,
+    isBookatlasPlus: true,
+    isKoboPlus: true,
+    isDeal: true,
+    isBestseller: true,
+    isNewRelease: true,
+    isEditorPick: true,
+    rating: 4.93,
+    reviewCount: 4310,
+    format: 'ebook',
+    genres: ['Mind Mastery & Quantum Awakening', 'Consciousness & Ancient Wisdom', 'Self-Improvement & Psychology'],
+    primaryGenre: 'Mind Mastery & Quantum Awakening',
+    pageCount: 368,
+    audioDurationMinutes: 590,
+    publishDate: 'February 10, 2026',
+    publisher: 'Sovereignty Press / Atlantean Mind Editions',
+    isbn: '978-1-780-28562-7',
+    language: 'English',
+    synopsis: 'Your physical reality is a continuous projection of your subconscious assumptions. Malik Vance delivers a razor-sharp, actionable manual for shattering generational programming, mastering emotional state control, and utilizing the Law of Assumption to manifest extraordinary outcomes with effortless precision.',
+    editorialReview: '“The modern masterclass in mental transmutation. Practical, fierce, and liberating.” — Quantum Awakening Review',
+    superPointsEarned: 120,
+    tags: ['Mindset', 'Manifestation', 'Quantum Jumping', 'Subconscious', 'Law of Assumption'],
+    readingTimeHours: 6.2,
+    aiVibe: 'Direct, electrifying, and deeply practical',
+    sampleChapters: [
+      {
+        title: 'Chapter 1: The Observer Effect',
+        subtitle: 'Collapsing the wave function of reality',
+        content: [
+          'In quantum physics, a particle exists as an infinite cloud of probabilities until a conscious observer measures it.',
+          'Your life operates under the exact same law. The subconscious mind does not attract what you want; it reflects who you are being in this present moment.',
+          'To shift your external reality, you must first assume the feeling of the wish fulfilled with total emotional conviction before the physical senses register any change.'
+        ]
+      }
+    ],
+    reviews: []
+  },
+
+  // 7. Indigenous Spiritual Technologies & Energy
+  {
+    id: 'atlas-con-003',
+    title: 'Cosmic Rhythms of the Ancestors',
+    subtitle: 'Shamanic Sound, Earth Grids, Plant Intelligence, and Orisha Energy Archetypes',
+    author: 'Elder Nanyamka Kachingwe',
+    authorBio: 'Elder Nanyamka Kachingwe is an initiate of the sacred Yoruba Ifá orature and traditional herbalist living between Salvador da Bahia and Ibadan.',
+    narrator: 'Angelique Kidjo',
+    coverImage: 'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=700&q=80',
+    price: 13.99,
+    originalPrice: 19.99,
+    isBookatlasPlus: true,
+    isKoboPlus: true,
+    isDeal: false,
+    isBestseller: true,
+    isNewRelease: true,
+    isEditorPick: true,
+    rating: 4.97,
+    reviewCount: 3950,
+    format: 'bundle',
+    genres: ['Indigenous Spiritual Technologies', 'African Philosophy & Indigenous Traditions', 'Holistic Energy, Chakras & Kundalini'],
+    primaryGenre: 'Indigenous Spiritual Technologies',
+    pageCount: 420,
+    audioDurationMinutes: 710,
+    publishDate: 'January 5, 2026',
+    publisher: 'Orisha Sound & Spirit Editions / Atlantean Cultural Press',
+    isbn: '978-0-892-81765-8',
+    language: 'English',
+    synopsis: 'An illuminating journey into the spiritual technologies of indigenous Africa and the African Diaspora. Discover the mathematics of sacred polyrhythms, the 256 Odù Ifá binary decision trees, botanical plant intelligence, and how aligning with natural elemental forces (Òrìṣà) restores radiant vitality to the human spirit.',
+    editorialReview: '“A transcendent exploration of indigenous science that honors the living heartbeat of the earth and the ancestors.” — World Wisdom Review',
+    superPointsEarned: 140,
+    tags: ['Ifa', 'Orisha', 'Indigenous Wisdom', 'Sound Healing', 'Ancestors', 'Plant Medicine'],
+    readingTimeHours: 7.2,
+    aiVibe: 'Atmospheric, rhythmic, and profoundly grounding',
+    sampleChapters: [
+      {
+        title: 'Chapter 1: The Drum as Portal',
+        subtitle: 'The 432Hz African Batá polyrhythms',
+        content: [
+          'The sacred Batá drum is not an instrument of entertainment; it is an acoustic transducer calibrated to shift the brain’s electrical activity from beta stress into deep theta trance in less than three minutes.',
+          'Each rhythm carries a mathematical signature dedicated to a specific cosmic force: Shango for bio-electric lightning and passion, Yemoja for oceanic emotional healing, and Ogun for the will to forge iron and destiny.'
+        ]
+      }
+    ],
+    reviews: []
+  },
+
+  // 8. African Diaspora & Black Studies
+  {
+    id: 'atlas-afr-005',
+    title: 'The Maroon Cosmologies',
+    subtitle: 'Resistance, Memory, Botanical Wisdom, and the Atlantic Sanctuary',
+    author: 'Dr. Sonia Baptiste',
+    authorBio: 'Dr. Sonia Baptiste is an anthropologist and cultural historian specializing in Caribbean maroon communities, ethnobotany, and Atlantic resistance epistemologies.',
+    narrator: 'Naomie Harris',
+    coverImage: 'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&w=700&q=80',
+    price: 12.49,
+    originalPrice: 17.99,
+    isBookatlasPlus: true,
+    isKoboPlus: true,
+    isDeal: true,
+    isBestseller: false,
+    isNewRelease: true,
+    isEditorPick: true,
+    rating: 4.91,
+    reviewCount: 2240,
+    format: 'ebook',
+    genres: ['African Diaspora & Black Studies', 'African Philosophy & Indigenous Traditions', 'Biography & Memoir'],
+    primaryGenre: 'African Diaspora & Black Studies',
+    pageCount: 384,
+    audioDurationMinutes: 620,
+    publishDate: 'December 4, 2025',
+    publisher: 'Maroon Epistemologies Press / Atlantean Imprint',
+    isbn: '978-0-807-07730-6',
+    language: 'English',
+    synopsis: 'From the Cockpit Country of Jamaica to the quilombos of Palmares in Brazil and the Gullah Geechee sea islands, escaped African captives created impenetrable self-governing civilizations. Dr. Baptiste explores the spiritual codes, botanical herbalism, and unbreakable collective solidarity that preserved African freedom in the New World.',
+    editorialReview: '“A luminous work of historical recovery and spiritual courage. Essential reading for all students of freedom.” — Caribbean Review of Books',
+    superPointsEarned: 125,
+    tags: ['Maroon', 'Diaspora', 'Black Studies', 'Resistance', 'Palmares', 'Gullah'],
+    readingTimeHours: 6.5,
+    aiVibe: 'Defiant, luminous, and deeply moving',
+    sampleChapters: [
+      {
+        title: 'Chapter 1: The Mountain Fortress',
+        subtitle: 'The Blue Mountains of Jamaica, 1730',
+        content: [
+          'Queen Nanny stood at the precipice of Nanny Town, where the mountain mist wrapped around the cedar trees like smoke from a ceremonial fire.',
+          'She carried no musket, only her abeng horn carved from the horn of a bull. When blown, its sound echoed through forty miles of limestone sinkholes, communicating tactical messages that British soldiers could never decipher.'
+        ]
+      }
+    ],
+    reviews: []
+  },
+
+  // 9. Contemporary African Voices & Fiction
+  {
+    id: 'atlas-afr-006',
+    title: 'The Palm Wine Prophet of Lagos',
+    subtitle: 'Megacity Magic, Neon Market Spirits, and the Girl with Lightning in Her Hands',
+    author: 'Babatunde Adeleke',
+    authorBio: 'Babatunde Adeleke is an award-winning Lagosian novelist and screenwriter whose vibrant urban magical realism captures the relentless heartbeat of Nigeria’s commercial capital.',
+    narrator: 'John Boyega',
+    coverImage: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=700&q=80',
+    price: 10.99,
+    originalPrice: 15.99,
+    isBookatlasPlus: true,
+    isKoboPlus: true,
+    isDeal: true,
+    isBestseller: true,
+    isNewRelease: true,
+    isEditorPick: true,
+    rating: 4.94,
+    reviewCount: 3620,
+    format: 'bundle',
+    genres: ['Contemporary African Voices & Fiction', 'African Literature & Classics', 'Fiction & Literature'],
+    primaryGenre: 'Contemporary African Voices & Fiction',
+    pageCount: 352,
+    audioDurationMinutes: 580,
+    publishDate: 'January 22, 2026',
+    publisher: 'Farafina Books / Atlantean Contemporary Fiction',
+    isbn: '978-9-789-54312-8',
+    language: 'English & Pidgin',
+    synopsis: 'In the bustling alleys of Balogun Market in Lagos, a young solar technician named Ronke discovers that touching fiber-optic internet cables allows her to see the ancient spirit pathways running beneath the asphalt. When a multinational conglomerate attempts to pave over the sacred lagoon shrine, Ronke and an eccentric palm wine brewer launch a thrilling digital-spiritual rebellion.',
+    editorialReview: '“Pure electric energy. Adeleke writes with the vibrant swagger of Fela Kuti and the mythological genius of Amos Tutuola.” — The Guardian Africa',
+    superPointsEarned: 110,
+    tags: ['Lagos', 'Magical Realism', 'Contemporary Fiction', 'Nigeria', 'African Voices'],
+    readingTimeHours: 5.8,
+    aiVibe: 'High-octane, witty, mystical, and unforgettable',
+    sampleChapters: [
+      {
+        title: 'Chapter 1: The Spark on Marina Bridge',
+        subtitle: 'Lagos Island at Rush Hour',
+        content: [
+          'If you stand on the Marina bridge at six o’clock in the evening, you will see yellow Danfo buses honking like angry metal beetles, street hawkers selling plantain chips between bumpers, and the Atlantic wind blowing salt across twenty million dreams.',
+          'Ronke was holding a pair of insulated wire cutters when the lightning hit the billboard above her. It didn’t burn her. It sang in her fingertips in fluent Yoruba.'
+        ]
+      }
+    ],
+    reviews: []
+  },
+
+  // 10. Metaphysics & Higher Dimensions
+  {
+    id: 'atlas-con-004',
+    title: 'The Kybalion & Kemetic Matrix',
+    subtitle: 'The Seven Universal Laws Decoded for Modern Masters: Mentalism, Vibration, Polarity, and Alchemy',
+    author: 'Chancellor Imhotep Davis',
+    authorBio: 'Chancellor Imhotep Davis is a hermetic scholar, metaphysician, and philosopher who has dedicated forty years to comparative ancient cosmologies.',
+    narrator: 'Morgan Freeman',
+    coverImage: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=700&q=80',
+    price: 14.49,
+    originalPrice: 20.99,
+    isBookatlasPlus: true,
+    isKoboPlus: true,
+    isDeal: false,
+    isBestseller: true,
+    isNewRelease: false,
+    isEditorPick: true,
+    rating: 4.98,
+    reviewCount: 6840,
+    format: 'bundle',
+    genres: ['Metaphysics & Higher Dimensions', 'Consciousness & Ancient Wisdom', 'Philosophy & Deep Thought'],
+    primaryGenre: 'Metaphysics & Higher Dimensions',
+    pageCount: 440,
+    audioDurationMinutes: 720,
+    publishDate: 'November 12, 2025',
+    publisher: 'Hermetic Alchemy Editions / Atlantean Philosophical Vault',
+    isbn: '978-0-874-77874-8',
+    language: 'English',
+    synopsis: 'A definitive masterwork demonstrating the direct descent of the Hermetic axioms from the Nile Valley wisdom texts of Tehuti. Davis breaks down Mentalism (The All is Mind), Correspondence (As Above, So Below), Vibration (Nothing Rests), Polarity, Rhythm, Cause & Effect, and Gender, providing practical exercises for mental transmutation in daily life.',
+    editorialReview: '“The most lucid, profound treatise on universal law published in this century. A must-have master text.” — Metaphysical Society of Europe',
+    superPointsEarned: 145,
+    tags: ['Kybalion', 'Hermeticism', 'Universal Laws', 'Metaphysics', 'Alchemy', 'Consciousness'],
+    readingTimeHours: 7.5,
+    aiVibe: 'Profound, sublime, and intellectually liberating',
+    sampleChapters: [
+      {
+        title: 'Chapter 1: The Principle of Mentalism',
+        subtitle: 'The Universe is Mental; The All is Mind',
+        content: [
+          'Before matter, before light, before atomic structure, there was pure infinite subjective Consciousness—called by the ancients Nu or The ALL.',
+          'The material universe you perceive with your physical senses is a thought-form held within the infinite living mind of the Cosmos. When you master your own thoughts, you align directly with the creative power that sustains the stars.'
+        ]
+      }
+    ],
+    reviews: []
+  },
+
+  // 1. Sci-Fi & Fantasy (Original Bookatlas Classics)
   {
     id: 'atlas-001',
     title: 'The Cartographer of Silent Stars',

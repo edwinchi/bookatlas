@@ -57,11 +57,12 @@ export const AIMatchmakerModal: React.FC<AIMatchmakerModalProps> = ({
   const symbol = getCurrencySymbol(currency);
 
   const samplePrompts = [
-    'Gripping sci-fi with cosmic mysteries & deep space astronomy',
-    'Historical novel set in Amsterdam or European Golden Age',
-    'Actionable habits & mindset for high performers and founders',
-    'Atmospheric Gothic detective mystery in Victorian London',
-    'Stoic philosophy & daily calm for fast-paced modern work'
+    '🌍 Afrofuturism, Dogon stellar mysteries & African speculative fiction',
+    '👁️ Kemetic sacred science, 42 Laws of Ma\'at & ancient Egyptian wisdom',
+    '🧘 Kundalini, chakra energy alignment & higher dimensional consciousness',
+    '📚 Gripping historical novel set in Amsterdam or European Golden Age',
+    '🚀 Hard sci-fi with cosmic wormholes & deep space astronomy',
+    '💡 Mind mastery, bio-resonance & spiritual awakening practices'
   ];
 
   const handleMatch = async (query: string) => {
@@ -91,7 +92,8 @@ export const AIMatchmakerModal: React.FC<AIMatchmakerModalProps> = ({
         })
       });
 
-      if (response.ok) {
+      const contentType = response.headers.get('content-type');
+      if (response.ok && contentType && contentType.includes('application/json')) {
         const data = await response.json();
         if (data.matches && data.matches.length > 0) {
           const hydrated = data.matches.map((m: { bookId: string; matchScore: number; matchReason: string; keyHighlights: string[] }) => {

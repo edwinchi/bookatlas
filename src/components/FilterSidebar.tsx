@@ -1,7 +1,7 @@
 import React from 'react';
-import { Filter, Star, Sparkles, Tag, Check, Headphones, BookOpen } from 'lucide-react';
+import { Filter, Star, Sparkles, Tag, Check, Headphones, BookOpen, Globe, Compass, Layers } from 'lucide-react';
 import { FilterOptions } from '../types';
-import { GENRES } from '../data/booksData';
+import { GENRES, AFRICAN_LITERATURE_GENRES, CONSCIOUSNESS_COMMUNITY_GENRES, GENERAL_GENRES } from '../data/booksData';
 
 interface FilterSidebarProps {
   filters: FilterOptions;
@@ -165,22 +165,94 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
       {/* Genres List */}
       <div className="space-y-2">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">Genre</h3>
-        <div className="space-y-1 max-h-56 overflow-y-auto pr-1 text-sm">
-          {GENRES.map((g) => (
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">Categories & Genres</h3>
+          {filters.genre !== 'All Genres' && (
             <button
-              key={g}
-              onClick={() => handleGenreChange(g)}
-              className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs sm:text-sm transition-colors cursor-pointer flex items-center justify-between ${
-                filters.genre === g
-                  ? 'bg-[#bf0000]/10 text-[#bf0000] font-bold'
-                  : 'text-gray-700 hover:bg-gray-50 hover:text-gray-950'
-              }`}
+              onClick={() => handleGenreChange('All Genres')}
+              className="text-[11px] text-[#bf0000] hover:underline font-semibold cursor-pointer"
             >
-              <span className="truncate">{g}</span>
-              {filters.genre === g && <span className="w-1.5 h-1.5 rounded-full bg-[#bf0000]"></span>}
+              Reset
             </button>
-          ))}
+          )}
+        </div>
+        
+        <div className="space-y-1 max-h-72 overflow-y-auto pr-1 text-sm">
+          {/* All Genres */}
+          <button
+            onClick={() => handleGenreChange('All Genres')}
+            className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs sm:text-sm transition-colors cursor-pointer flex items-center justify-between ${
+              filters.genre === 'All Genres'
+                ? 'bg-[#bf0000]/10 text-[#bf0000] font-bold'
+                : 'text-gray-700 hover:bg-gray-50 hover:text-gray-950 font-medium'
+            }`}
+          >
+            <span>✨ All Categories</span>
+            {filters.genre === 'All Genres' && <span className="w-1.5 h-1.5 rounded-full bg-[#bf0000]"></span>}
+          </button>
+
+          {/* African Literature Group */}
+          <div className="pt-2">
+            <div className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 rounded flex items-center gap-1 mb-1">
+              <span>🌍</span> African Literature & Diaspora
+            </div>
+            {AFRICAN_LITERATURE_GENRES.map((g) => (
+              <button
+                key={g}
+                onClick={() => handleGenreChange(g)}
+                className={`w-full text-left px-2 py-1 rounded-md text-xs transition-colors cursor-pointer flex items-center justify-between ${
+                  filters.genre === g
+                    ? 'bg-amber-100 text-amber-950 font-bold'
+                    : 'text-gray-700 hover:bg-amber-50/60 hover:text-gray-950'
+                }`}
+              >
+                <span className="truncate">{g}</span>
+                {filters.genre === g && <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>}
+              </button>
+            ))}
+          </div>
+
+          {/* Consciousness Group */}
+          <div className="pt-2">
+            <div className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 rounded flex items-center gap-1 mb-1">
+              <span>👁️</span> Consciousness & Sacred Sciences
+            </div>
+            {CONSCIOUSNESS_COMMUNITY_GENRES.map((g) => (
+              <button
+                key={g}
+                onClick={() => handleGenreChange(g)}
+                className={`w-full text-left px-2 py-1 rounded-md text-xs transition-colors cursor-pointer flex items-center justify-between ${
+                  filters.genre === g
+                    ? 'bg-emerald-100 text-emerald-950 font-bold'
+                    : 'text-gray-700 hover:bg-emerald-50/60 hover:text-gray-950'
+                }`}
+              >
+                <span className="truncate">{g}</span>
+                {filters.genre === g && <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>}
+              </button>
+            ))}
+          </div>
+
+          {/* General Genres Group */}
+          <div className="pt-2">
+            <div className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 bg-slate-100 rounded flex items-center gap-1 mb-1">
+              <span>📚</span> General & Classics
+            </div>
+            {GENERAL_GENRES.map((g) => (
+              <button
+                key={g}
+                onClick={() => handleGenreChange(g)}
+                className={`w-full text-left px-2 py-1 rounded-md text-xs transition-colors cursor-pointer flex items-center justify-between ${
+                  filters.genre === g
+                    ? 'bg-[#bf0000]/10 text-[#bf0000] font-bold'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-950'
+                }`}
+              >
+                <span className="truncate">{g}</span>
+                {filters.genre === g && <span className="w-1.5 h-1.5 rounded-full bg-[#bf0000]"></span>}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
