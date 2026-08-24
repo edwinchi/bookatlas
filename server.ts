@@ -1,14 +1,10 @@
 import express from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { INITIAL_BOOKS, GENRES } from './src/data/booksData.js';
 
 dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // In-Memory Live Store Database for Single Manager Operations
 let liveCatalog = JSON.parse(JSON.stringify(INITIAL_BOOKS));
