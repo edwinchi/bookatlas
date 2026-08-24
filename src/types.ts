@@ -249,10 +249,12 @@ export interface SecurityAuditLog {
   status: 'authorized' | 'denied' | 'security_event';
 }
 
-// Subscriber & Bulk CSV Email Blast Types
+export type SubscriberTier = 'free_reader' | 'member_subscriber' | 'vip_patron';
+
 export interface SubscriberItem {
   email: string;
   name?: string;
+  tier?: SubscriberTier;
   status: 'subscribed' | 'unsubscribed' | 'bounced';
   subscribedAt: number;
   unsubscribedAt?: number;
@@ -261,6 +263,42 @@ export interface SubscriberItem {
   unsubscribeToken: string;
   emailsReceivedCount: number;
   lastEmailSentAt?: number;
+  lastOpenedAt?: number;
+  lastClickedAt?: number;
+  bounceReason?: string;
+  readingInterests?: string[];
+  userDiscountCode?: string;
+  readingStreakDays?: number;
+  pagesReadTotal?: number;
+}
+
+export interface ABCampaignVariant {
+  id: 'A' | 'B';
+  subject: string;
+  previewText?: string;
+  recipientsCount: number;
+  opensCount: number;
+  clicksCount: number;
+  openRate: number;
+  clickRate: number;
+}
+
+export interface CampaignAnalytics {
+  totalDelivered: number;
+  bouncedCount: number;
+  bounceRate: number;
+  uniqueOpens: number;
+  openRate: number;
+  uniqueClicks: number;
+  clickRate: number;
+  unsubscribesCount: number;
+  unsubscribeRate: number;
+  deviceBreakdown: {
+    mobile: number; // percentage
+    desktop: number;
+    tablet: number;
+  };
+  hourlyTimeline: Array<{ hour: string; opens: number; clicks: number }>;
 }
 
 export interface SubscriberCampaign {
@@ -271,15 +309,55 @@ export interface SubscriberCampaign {
   senderName: string;
   content: string;
   bookTitle?: string;
+  bookCoverUrl?: string;
+  bookAuthor?: string;
   ctaText?: string;
   ctaUrl?: string;
-  targetFilter: 'all_active' | 'vip' | 'custom_tags';
+  discountCode?: string;
+  templatePreset?: 'new_release' | 'vip_discount' | 'weekly_digest' | 'reading_streak' | 'audiobook_premiere' | 'custom';
+  targetFilter: 'all_active' | 'vip' | 'members_only' | 'free_tier' | 'custom_tags';
+  targetTag?: string;
   totalRecipients: number;
   sentAt: number;
   status: 'sending' | 'completed' | 'draft';
+  isABTest?: boolean;
+  abSplitPercent?: number; // e.g. 50% or 20%
+  variantA?: ABCampaignVariant;
+  variantB?: ABCampaignVariant;
+  winningVariant?: 'A' | 'B' | 'tied';
   openRate?: number;
   clickRate?: number;
+  bounceRate?: number;
   unsubscribesCount?: number;
+  analytics?: CampaignAnalytics;
+}
+
+export interface CSVColumnMapping {
+  emailCol: string;
+  nameCol?: string;
+  tierCol?: string;
+  tagsCol?: string;
+  interestsCol?: string;
+  notesCol?: string;
+}
+
+export interface CSVValidationError {
+  rowNumber: number;
+  rawEmail: string;
+  reason: string;
+  severity: 'error' | 'warning';
+}
+
+export interface CSVValidationPreview {
+  totalRows: number;
+  headers: string[];
+  previewRows: Array<Record<string, string>>;
+  validCount: number;
+  invalidCount: number;
+  duplicateCount: number;
+  unsubscribedCount: number;
+  errors: CSVValidationError[];
+  detectedDelimiter: string;
 }
 
 export interface CSVImportStats {
@@ -291,4 +369,34 @@ export interface CSVImportStats {
   unsubscribedPreserved: number;
   processingTimeMs: number;
 }
+
+export interface SubscriberCleanupCriteria {
+  removeBounced: boolean;
+  removeInactive90Days: boolean;
+  removeUnsubscribed: boolean;
+  removeDuplicateDomains: boolean;
+  flagSyntaxErrors: boolean;
+}
+
+export interface SubscriberCleanupReport {
+  scannedCount: number;
+  bouncedRemoved: number;
+  inactiveRemoved: number;
+  unsubscribedRemoved: number;
+  duplicatesRemoved: number;
+  syntaxErrorsFixed: number;
+  deliverabilityScoreBefore: number;
+  deliverabilityScoreAfter: number;
+  estimatedInboxPlacementBoost: string;
+  timestamp: string;
+}
+
+export interface TierFeaturePermission {
+  featureKey: string;
+  title: string;
+  description: string;
+  minTierRequired: SubscriberTier;
+  badgeLabel: string;
+}
+
 
