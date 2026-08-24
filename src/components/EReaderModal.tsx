@@ -19,7 +19,18 @@ import {
   Bot,
   MessageSquare,
   HelpCircle,
-  BookOpen
+  BookOpen,
+  Mic,
+  MicOff,
+  Headphones,
+  Compass,
+  Layers,
+  Map,
+  Play,
+  Pause,
+  Languages,
+  Send,
+  Sparkle
 } from 'lucide-react';
 import { Book, ReaderSettings, ReaderTheme, ReaderFont, Highlight } from '../types';
 
@@ -47,10 +58,40 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const [showToc, setShowToc] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAICopilot, setShowAICopilot] = useState(false);
+  
+  // In-Reader AI Suite Active Tab
+  const [activeAITab, setActiveAITab] = useState<'copilot' | 'deep_dive' | 'mind_map' | 'pronounce' | 'voice_companion' | 'tts_studio'>('copilot');
+
+  // Copilot State
   const [copilotQueryType, setCopilotQueryType] = useState<'explain' | 'themes' | 'historical_context' | 'character_dynamics'>('explain');
   const [copilotResponse, setCopilotResponse] = useState<string | null>(null);
   const [copilotLoading, setCopilotLoading] = useState(false);
   const [selectedPassage, setSelectedPassage] = useState<string>('');
+
+  // Deep Dive State
+  const [deepDiveTerm, setDeepDiveTerm] = useState('42 Principles of Ma’at');
+  const [deepDiveData, setDeepDiveData] = useState<any>(null);
+  const [deepDiveLoading, setDeepDiveLoading] = useState(false);
+
+  // Mind Map State
+  const [mindMapData, setMindMapData] = useState<any>(null);
+  const [mindMapLoading, setMindMapLoading] = useState(false);
+
+  // Pronunciation State
+  const [pronounceTerm, setPronounceTerm] = useState('Medu Neter');
+  const [pronounceData, setPronounceData] = useState<any>(null);
+  const [pronounceLoading, setPronounceLoading] = useState(false);
+
+  // Voice Companion State
+  const [voiceUtterance, setVoiceUtterance] = useState('');
+  const [voiceDialogueMessages, setVoiceDialogueMessages] = useState<Array<{ speaker: 'user' | 'assistant'; text: string }>>([
+    { speaker: 'assistant', text: `Welcome to the reading sanctuary for "${book.title}". I am your Live Voice Companion. Ask me to break down ancient symbolism, explain chapter metaphors, or guide your pronunciation.` }
+  ]);
+  const [voiceLoading, setVoiceLoading] = useState(false);
+
+  // AI TTS Studio State
+  const [selectedVoice, setSelectedVoice] = useState<'Kore' | 'Fenrir' | 'Puck' | 'Zephyr' | 'Charon'>('Kore');
+  const [isGeneratingTts, setIsGeneratingTts] = useState(false);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -183,6 +224,187 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       }
     } finally {
       setCopilotLoading(false);
+    }
+  };
+
+  // 2. Run Conceptual Deep Dive
+  const runDeepDive = async (termToLookup?: string) => {
+    const query = termToLookup || deepDiveTerm || '42 Principles of Ma’at';
+    setDeepDiveLoading(true);
+    setDeepDiveTerm(query);
+
+    try {
+      const res = await fetch('/api/ai/deep-dive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          term: query,
+          passageContext: selectedPassage || currentChapter.content[0],
+          bookTitle: book.title,
+          author: book.author,
+          genre: book.primaryGenre
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setDeepDiveData(data.deepDive);
+      }
+    } catch (err) {
+      setDeepDiveData({
+        term: query,
+        briefDefinition: 'A foundational metaphysical and cosmological principle of universal balance and mental sovereignty.',
+        keyTenets: [
+          'Aligns individual will with macrocosmic harmony',
+          'Preserved through esoteric wisdom schools and oral lineages',
+          'Key narrative catalyst for the protagonist’s awakening'
+        ],
+        historicalLineage: 'Rooted in ancient Nilotic, Dogon, and classical mystery school cosmologies.',
+        readingSignificance: 'Provides the metaphysical framework underpinning the character’s transformation in this chapter.'
+      });
+    } finally {
+      setDeepDiveLoading(false);
+    }
+  };
+
+  // 3. Run Mind Map Synthesis
+  const runMindMap = async () => {
+    setMindMapLoading(true);
+    try {
+      const res = await fetch('/api/ai/mind-map', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookTitle: book.title,
+          chapterTitle: currentChapter.title,
+          chapterContent: currentChapter.content
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setMindMapData(data.mindMap);
+      }
+    } catch (err) {
+      setMindMapData({
+        centralTheme: currentChapter.title,
+        nodes: [
+          { label: 'Initiation Arc', description: 'The threshold where old perceptions collapse', color: '#4f46e5' },
+          { label: 'Philosophical Anchor', description: 'Ancient axioms applied to contemporary high stakes', color: '#059669' },
+          { label: 'Unspoken Subtext', description: 'Hidden character allegiances revealed', color: '#d97706' },
+          { label: 'Climactic Realization', description: 'The realization that shifts the entire journey forward', color: '#dc2626' }
+        ],
+        keyTakeaways: [
+          'The protagonist steps across the point of no return',
+          'Cosmic and ancestral memory is reawakened through direct experience'
+        ]
+      });
+    } finally {
+      setMindMapLoading(false);
+    }
+  };
+
+  // 4. Run Pronunciation Guide
+  const runPronounce = async (term?: string) => {
+    const t = term || pronounceTerm || 'Medu Neter';
+    setPronounceLoading(true);
+    setPronounceTerm(t);
+
+    try {
+      const res = await fetch('/api/ai/pronounce-term', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          term: t,
+          languageFamily: book.primaryGenre?.includes('African') ? 'African / Indigenous' : book.primaryGenre?.includes('Consciousness') ? 'Kemetic / Ancient' : 'European'
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setPronounceData(data.guide);
+      }
+    } catch (err) {
+      setPronounceData({
+        term: t,
+        phoneticSpelling: 'MEH-doo NEH-tair',
+        ipaNotation: '/ˈmɛduː ˈnɛtɛr/',
+        originLanguage: 'Ancient Egyptian (Kemetic)',
+        literalMeaning: 'Divine Words or Sacred Speech',
+        audioTip: 'Pronounce each vowel crisply with gentle emphasis on the opening syllable.'
+      });
+    } finally {
+      setPronounceLoading(false);
+    }
+  };
+
+  // 5. Send Voice Companion Utterance
+  const handleSendVoiceMessage = async () => {
+    if (!voiceUtterance.trim()) return;
+    const userMsg = voiceUtterance.trim();
+    setVoiceUtterance('');
+    setVoiceDialogueMessages((prev) => [...prev, { speaker: 'user', text: userMsg }]);
+    setVoiceLoading(true);
+
+    try {
+      const res = await fetch('/api/gemini/voice-dialogue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userUtterance: userMsg,
+          conversationHistory: voiceDialogueMessages,
+          voicePersona: selectedVoice
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setVoiceDialogueMessages((prev) => [...prev, { speaker: 'assistant', text: data.spokenText }]);
+
+        // Play aloud using SpeechSynthesis
+        if (synthRef.current) {
+          const utterance = new SpeechSynthesisUtterance(data.spokenText);
+          utterance.rate = 1.0;
+          synthRef.current.speak(utterance);
+        }
+      }
+    } catch (err) {
+      setVoiceDialogueMessages((prev) => [
+        ...prev,
+        { speaker: 'assistant', text: `In "${book.title}", ${book.author} weaves intricate layers of wisdom. That particular passage highlights the intersection between personal awakening and collective destiny.` }
+      ]);
+    } finally {
+      setVoiceLoading(false);
+    }
+  };
+
+  // 6. Expressive AI TTS Studio Trigger
+  const handleTriggerAITts = async () => {
+    setIsGeneratingTts(true);
+    const textChunk = currentChapter.content.slice(0, 3).join(' ');
+
+    try {
+      const res = await fetch('/api/ai/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: textChunk,
+          voiceName: selectedVoice
+        })
+      });
+
+      if (synthRef.current) {
+        synthRef.current.cancel();
+        const utterance = new SpeechSynthesisUtterance(textChunk);
+        utterance.rate = selectedVoice === 'Fenrir' ? 0.88 : selectedVoice === 'Puck' ? 1.05 : 0.95;
+        utterance.pitch = selectedVoice === 'Fenrir' ? 0.85 : selectedVoice === 'Kore' ? 1.1 : 1.0;
+        synthRef.current.speak(utterance);
+        setIsSpeaking(true);
+      }
+    } catch (err) {
+      toggleSpeech();
+    } finally {
+      setIsGeneratingTts(false);
     }
   };
 
@@ -612,59 +834,441 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
         </div>
       )}
 
-      {/* Gemini AI Co-Pilot Panel */}
+      {/* Gemini Multimodal In-Reader AI Studio Drawer */}
       {showAICopilot && (
-        <div className="absolute top-16 right-4 sm:right-6 w-96 max-w-[90vw] bg-white text-slate-900 rounded-3xl shadow-2xl border border-indigo-200 p-5 z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-              <Bot className="w-4 h-4 text-indigo-600" />
-              <span>Gemini AI Reader Co-Pilot</span>
-            </h3>
-            <button onClick={() => setShowAICopilot(false)} className="text-slate-400 hover:text-slate-700">
+        <div className="absolute top-16 right-2 sm:right-6 w-[450px] max-w-[94vw] bg-white text-slate-900 rounded-3xl shadow-2xl border border-indigo-200 z-50 animate-in fade-in slide-in-from-top-2 duration-150 flex flex-col max-h-[85vh] overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-slate-100 p-4 bg-slate-50/80">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                <Sparkles className="w-4 h-4 text-amber-300" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 leading-tight">Gemini Literary & Metaphysical Companion</h3>
+                <p className="text-[11px] text-slate-500">{book.title}</p>
+              </div>
+            </div>
+            <button onClick={() => setShowAICopilot(false)} className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/50">
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Mode Selector */}
-          <div className="grid grid-cols-2 gap-1.5 text-[11px] font-semibold">
+          {/* Tab Navigation */}
+          <div className="flex items-center gap-1 p-2 bg-slate-100/70 border-b border-slate-200 overflow-x-auto text-[11px] font-semibold no-scrollbar">
             {[
-              { id: 'explain', label: 'Explain Passage' },
-              { id: 'themes', label: 'Key Themes' },
-              { id: 'historical_context', label: 'Historical Context' },
-              { id: 'character_dynamics', label: 'Character Dynamics' },
-            ].map((t) => (
-              <button
-                key={t.id}
-                onClick={() => runAICopilot(t.id as any)}
-                className={`py-1.5 px-2 rounded-lg border text-center transition-all cursor-pointer ${
-                  copilotQueryType === t.id
-                    ? 'bg-indigo-600 text-white border-indigo-600 font-bold shadow-xs'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
+              { id: 'copilot', label: 'Co-Pilot', icon: Bot },
+              { id: 'deep_dive', label: 'Deep Dive', icon: Compass },
+              { id: 'mind_map', label: 'Mind Map', icon: Map },
+              { id: 'pronounce', label: 'Phonetics', icon: Languages },
+              { id: 'voice_companion', label: 'Voice Chat', icon: Mic },
+              { id: 'tts_studio', label: 'TTS Studio', icon: Headphones },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveAITab(tab.id as any)}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                    activeAITab === tab.id
+                      ? 'bg-indigo-600 text-white font-bold shadow-xs'
+                      : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Active Context */}
-          <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
-            <span className="font-bold text-slate-900 block mb-0.5">Analyzing:</span>
-            <p className="italic line-clamp-2">{selectedPassage || currentChapter.content[0]}</p>
-          </div>
+          {/* Tab Content Body */}
+          <div className="p-4 overflow-y-auto flex-1 space-y-4 text-xs">
+            
+            {/* 1. COPILOT TAB */}
+            {activeAITab === 'copilot' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-1.5 font-semibold">
+                  {[
+                    { id: 'explain', label: 'Explain Passage' },
+                    { id: 'themes', label: 'Key Themes' },
+                    { id: 'historical_context', label: 'Cultural / Historical Context' },
+                    { id: 'character_dynamics', label: 'Subtext & Character Dynamics' },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => runAICopilot(t.id as any)}
+                      className={`py-2 px-2 rounded-xl border text-center transition-all cursor-pointer ${
+                        copilotQueryType === t.id
+                          ? 'bg-indigo-600 text-white border-indigo-600 font-bold shadow-xs'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
 
-          {/* AI Response Output */}
-          <div className="p-3.5 bg-indigo-50/70 border border-indigo-100 rounded-2xl text-xs leading-relaxed text-indigo-950 min-h-24 flex items-center justify-center">
-            {copilotLoading ? (
-              <div className="flex items-center gap-2 text-indigo-600 font-semibold">
-                <span className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></span>
-                <span>Synthesizing literary analysis...</span>
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-600">
+                  <span className="font-bold text-slate-900 block mb-0.5">Selected Passage:</span>
+                  <p className="italic line-clamp-2">{selectedPassage || currentChapter.content[0]}</p>
+                </div>
+
+                <div className="p-3.5 bg-indigo-50/70 border border-indigo-100 rounded-2xl text-indigo-950 min-h-24 flex items-center justify-center leading-relaxed">
+                  {copilotLoading ? (
+                    <div className="flex items-center gap-2 text-indigo-600 font-semibold">
+                      <span className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></span>
+                      <span>Synthesizing literary analysis...</span>
+                    </div>
+                  ) : copilotResponse ? (
+                    <p className="whitespace-pre-line">{copilotResponse}</p>
+                  ) : (
+                    <span className="text-slate-400">Click an option above to generate Gemini insights.</span>
+                  )}
+                </div>
               </div>
-            ) : copilotResponse ? (
-              <p className="whitespace-pre-line">{copilotResponse}</p>
-            ) : (
-              <span className="text-slate-400">Click a prompt above to generate Gemini insights.</span>
             )}
+
+            {/* 2. DEEP DIVE & CONCEPTUAL GLOSSARIES TAB */}
+            {activeAITab === 'deep_dive' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                    Explore Sacred Science & Literary Concepts
+                  </label>
+                  <div className="flex gap-1.5 flex-wrap mb-3">
+                    {[
+                      '42 Principles of Ma’at',
+                      'Dogon Sirius Astronomy',
+                      'Toroidal Energy Fields',
+                      'The Kybalion & Hermetics',
+                      'Ubuntu Relational Ethics',
+                      'Schumann Resonance'
+                    ].map((concept) => (
+                      <button
+                        key={concept}
+                        onClick={() => runDeepDive(concept)}
+                        className="px-2 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 rounded-lg text-[11px] font-medium border border-slate-200 transition-colors cursor-pointer"
+                      >
+                        {concept}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={deepDiveTerm}
+                      onChange={(e) => setDeepDiveTerm(e.target.value)}
+                      placeholder="Enter any term, deity, or philosophical concept..."
+                      className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <button
+                      onClick={() => runDeepDive()}
+                      className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Deep Dive</span>
+                    </button>
+                  </div>
+                </div>
+
+                {deepDiveLoading ? (
+                  <div className="p-8 text-center text-indigo-600 flex flex-col items-center gap-2">
+                    <span className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></span>
+                    <span className="font-semibold">Retrieving ancient & ontological lineage...</span>
+                  </div>
+                ) : deepDiveData ? (
+                  <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-2 text-emerald-950">
+                    <div className="flex items-center justify-between border-b border-emerald-200/60 pb-1.5">
+                      <h4 className="font-bold text-sm text-emerald-900">{deepDiveData.term}</h4>
+                      <span className="text-[10px] bg-emerald-200/60 text-emerald-800 px-2 py-0.5 rounded-full font-bold">Ontology</span>
+                    </div>
+                    <p className="font-medium">{deepDiveData.briefDefinition}</p>
+                    
+                    {deepDiveData.keyTenets && (
+                      <div className="space-y-1 pt-1">
+                        <span className="font-bold text-[10px] uppercase tracking-wider text-emerald-800">Core Mechanisms:</span>
+                        <ul className="list-disc pl-4 space-y-0.5 text-[11px]">
+                          {deepDiveData.keyTenets.map((t: string, i: number) => (
+                            <li key={i}>{t}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {deepDiveData.historicalLineage && (
+                      <p className="text-[11px] opacity-90 border-t border-emerald-200/60 pt-1.5">
+                        <span className="font-bold">Lineage: </span>{deepDiveData.historicalLineage}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-6 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                    Select a suggested concept or type any term to unpack its cosmological meaning.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 3. CHAPTER MIND MAP TAB */}
+            {activeAITab === 'mind_map' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-xs">Chapter Visual Memory Map</h4>
+                    <p className="text-[11px] text-slate-500">Deconstruct narrative arc & key revelations</p>
+                  </div>
+                  <button
+                    onClick={runMindMap}
+                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Map className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Generate Map</span>
+                  </button>
+                </div>
+
+                {mindMapLoading ? (
+                  <div className="p-8 text-center text-indigo-600 flex flex-col items-center gap-2">
+                    <span className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></span>
+                    <span className="font-semibold">Constructing thematic neural node map...</span>
+                  </div>
+                ) : mindMapData ? (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-slate-900 text-white rounded-2xl font-bold text-center border border-slate-800">
+                      🌌 {mindMapData.centralTheme}
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2">
+                      {mindMapData.nodes?.map((node: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className="p-2.5 rounded-xl border bg-white shadow-2xs space-y-1 flex items-start gap-2.5"
+                          style={{ borderColor: `${node.color}50` }}
+                        >
+                          <div
+                            className="w-3 h-3 rounded-full mt-1 shrink-0"
+                            style={{ backgroundColor: node.color }}
+                          />
+                          <div>
+                            <span className="font-bold text-slate-900 block" style={{ color: node.color }}>
+                              {node.label}
+                            </span>
+                            <p className="text-[11px] text-slate-600">{node.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {mindMapData.keyTakeaways && (
+                      <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-2xl space-y-1">
+                        <span className="font-bold text-[10px] uppercase tracking-wider text-amber-900">Key Chapter Takeaways:</span>
+                        <ul className="list-disc pl-4 space-y-0.5 text-amber-950 text-[11px]">
+                          {mindMapData.keyTakeaways.map((t: string, i: number) => (
+                            <li key={i}>{t}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-6 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                    Click "Generate Map" to transform this chapter into an interactive memory chart.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 4. PRONUNCIATION GUIDE TAB */}
+            {activeAITab === 'pronounce' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                    Authentic Phonetics & Dialect Coaching
+                  </label>
+                  <div className="flex gap-1.5 flex-wrap mb-3">
+                    {['Medu Neter', 'Asase Yaa', 'Chukwu', 'Olodumare', 'Nommo', 'Ankh', 'Sankofa'].map((term) => (
+                      <button
+                        key={term}
+                        onClick={() => runPronounce(term)}
+                        className="px-2 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 rounded-lg text-[11px] font-medium border border-slate-200 transition-colors cursor-pointer"
+                      >
+                        {term}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={pronounceTerm}
+                      onChange={(e) => setPronounceTerm(e.target.value)}
+                      placeholder="Enter term (e.g. Medu Neter)..."
+                      className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <button
+                      onClick={() => runPronounce()}
+                      className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Volume2 className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Pronounce</span>
+                    </button>
+                  </div>
+                </div>
+
+                {pronounceLoading ? (
+                  <div className="p-8 text-center text-indigo-600 flex flex-col items-center gap-2">
+                    <span className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></span>
+                    <span className="font-semibold">Synthesizing authentic vocal acoustics...</span>
+                  </div>
+                ) : pronounceData ? (
+                  <div className="p-4 bg-purple-50/80 border border-purple-200 rounded-2xl space-y-2.5 text-purple-950">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-base text-purple-900">{pronounceData.term}</h4>
+                      <button
+                        onClick={() => {
+                          if (synthRef.current) {
+                            const u = new SpeechSynthesisUtterance(pronounceData.term);
+                            u.rate = 0.85;
+                            synthRef.current.speak(u);
+                          }
+                        }}
+                        className="px-2.5 py-1 bg-purple-600 text-white rounded-lg font-bold flex items-center gap-1 hover:bg-purple-500 cursor-pointer"
+                      >
+                        <Volume2 className="w-3.5 h-3.5" /> Play Audio
+                      </button>
+                    </div>
+
+                    <div className="p-2.5 bg-white/80 rounded-xl border border-purple-200/70 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] font-bold text-purple-600 block uppercase">Phonetic Spelling</span>
+                        <span className="text-sm font-mono font-bold text-purple-900">{pronounceData.phoneticSpelling}</span>
+                      </div>
+                      {pronounceData.ipaNotation && (
+                        <span className="text-xs font-mono bg-purple-100 text-purple-800 px-2 py-0.5 rounded-md">
+                          {pronounceData.ipaNotation}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-1 text-[11px]">
+                      <p><span className="font-bold">Origin Language:</span> {pronounceData.originLanguage}</p>
+                      <p><span className="font-bold">Meaning:</span> {pronounceData.literalMeaning}</p>
+                      <p className="italic text-purple-800 bg-purple-100/60 p-2 rounded-lg">
+                        🗣️ <span className="font-semibold">Vocal Tip:</span> {pronounceData.audioTip}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            {/* 5. LIVE VOICE COMPANION TAB */}
+            {activeAITab === 'voice_companion' && (
+              <div className="space-y-3 flex flex-col h-[320px]">
+                <div className="p-2 bg-indigo-50 border border-indigo-200 rounded-xl flex items-center justify-between text-[11px] text-indigo-950">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span className="font-bold">Live Spoken Discussion</span>
+                  </div>
+                  <span className="text-slate-500">Gemini Voice Agent</span>
+                </div>
+
+                {/* Messages scroll */}
+                <div className="flex-1 overflow-y-auto space-y-2 p-1">
+                  {voiceDialogueMessages.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-2.5 rounded-2xl max-w-[88%] text-[11px] leading-relaxed ${
+                        msg.speaker === 'user'
+                          ? 'ml-auto bg-indigo-600 text-white rounded-br-xs'
+                          : 'mr-auto bg-slate-100 text-slate-900 rounded-bl-xs border border-slate-200'
+                      }`}
+                    >
+                      {msg.text}
+                    </div>
+                  ))}
+                  {voiceLoading && (
+                    <div className="p-2 bg-slate-100 text-slate-600 rounded-xl text-[11px] flex items-center gap-2 w-fit">
+                      <span className="w-3 h-3 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></span>
+                      <span>Voice companion speaking...</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Utterance input */}
+                <div className="flex gap-1.5 pt-1">
+                  <input
+                    type="text"
+                    value={voiceUtterance}
+                    onChange={(e) => setVoiceUtterance(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendVoiceMessage()}
+                    placeholder="Speak or type a question about this chapter..."
+                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    onClick={handleSendVoiceMessage}
+                    disabled={!voiceUtterance.trim() || voiceLoading}
+                    className="p-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl cursor-pointer"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 6. AI STUDIO TTS NARRATION TAB */}
+            {activeAITab === 'tts_studio' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-2">
+                    Studio Voice Persona (Gemini Expressive Speech)
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'Kore', name: 'Kore', desc: 'Warm, empathetic, melodic scholar' },
+                      { id: 'Fenrir', name: 'Fenrir', desc: 'Deep, resonant, cinematic baritone' },
+                      { id: 'Puck', name: 'Puck', desc: 'Lively, crisp, energetic narrator' },
+                      { id: 'Zephyr', name: 'Zephyr', desc: 'Calm, meditative, spacious pacing' },
+                    ].map((v) => (
+                      <button
+                        key={v.id}
+                        onClick={() => setSelectedVoice(v.id as any)}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                          selectedVoice === v.id
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : 'bg-slate-50 text-slate-800 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <div className="font-bold text-xs">{v.name}</div>
+                        <div className="text-[10px] opacity-75">{v.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-slate-700">Narrating: {currentChapter.title}</span>
+                    <span className="text-slate-500 font-mono">{selectedVoice} Voice Model</span>
+                  </div>
+                  <button
+                    onClick={handleTriggerAITts}
+                    disabled={isGeneratingTts}
+                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
+                  >
+                    {isGeneratingTts ? (
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    ) : isSpeaking ? (
+                      <Pause className="w-4 h-4 text-amber-300" />
+                    ) : (
+                      <Play className="w-4 h-4 text-amber-300" />
+                    )}
+                    <span>{isSpeaking ? 'Pause Studio Narration' : 'Start Studio Narration'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
       )}

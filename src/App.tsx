@@ -20,6 +20,8 @@ import { GoogleSearchGroundingModal } from './components/GoogleSearchGroundingMo
 import { ExportDocsModal } from './components/ExportDocsModal';
 import { AIStudioHub } from './components/AIStudioHub';
 import { AdminAuthModal } from './components/AdminAuthModal';
+import { UserRegistrationGateModal } from './components/UserRegistrationGateModal';
+import { TRANSLATIONS } from './data/translations';
 import { INITIAL_BOOKS } from './data/booksData';
 
 import { Book, CartItem, UserLibraryItem, FilterOptions, AdminSession } from './types';
@@ -47,6 +49,18 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'store' | 'library' | 'deals' | 'audiobooks' | 'koboplus' | 'manager'>('store');
   const [currency, setCurrency] = useState('EUR');
   const currencySymbol = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
+  const [language, setLanguage] = useState<'en' | 'nl'>('en');
+
+  // Registration Gate state
+  const [registeredUser, setRegisteredUser] = useState<{ email: string; name?: string } | null>(() => {
+    const saved = localStorage.getItem('bookatlas_registered_user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return null;
+  });
 
   // Load books from backend API if available
   useEffect(() => {
@@ -479,10 +493,13 @@ export default function App() {
         onOpenDocs={() => setIsDocsOpen(true)}
         currency={currency}
         setCurrency={setCurrency}
+        language={language}
+        setLanguage={setLanguage}
         isAdminAuthenticated={isAdminAuthenticated}
         adminEmail={adminEmail}
         onOpenAdminAuth={openAdminAuthForFeature}
         onAdminLogout={handleAdminLogout}
+        registeredUser={registeredUser}
       />
 
 
@@ -550,6 +567,9 @@ export default function App() {
           <MyLibraryView
             library={library}
             wishlist={wishlist}
+            language={language}
+            userEmail={registeredUser?.email || adminEmail}
+            userName={registeredUser?.name || 'Eddy'}
             onOpenReader={(item) => {
               setActiveReadingBook({
                 book: item.book,
@@ -1069,6 +1089,13 @@ export default function App() {
         onSuccess={handleAdminAuthSuccess}
         restrictedFeatureName={adminAuthRequestedFeature}
         adminEmail={adminEmail}
+      />
+
+      {/* Mandatory User Registration Gate Modal (Email required to explore) */}
+      <UserRegistrationGateModal
+        isOpen={!registeredUser}
+        onSuccess={(userData) => setRegisteredUser(userData)}
+        language={language}
       />
 
 

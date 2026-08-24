@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BookOpen, 
   Flame, 
@@ -11,9 +11,21 @@ import {
   ShoppingBag, 
   Heart,
   Headphones,
-  Sparkles
+  Sparkles,
+  FileDown,
+  DownloadCloud,
+  CheckCircle2,
+  HardDriveDownload,
+  Wifi,
+  WifiOff,
+  Layers,
+  ArrowRight,
+  TrendingUp,
+  Award
 } from 'lucide-react';
 import { UserLibraryItem, Book } from '../types';
+import { exportUserLibraryPDF } from '../utils/exportLibraryPdf';
+import { TRANSLATIONS } from '../data/translations';
 
 interface MyLibraryViewProps {
   library: UserLibraryItem[];
@@ -24,6 +36,9 @@ interface MyLibraryViewProps {
   onRemoveFromWishlist: (bookId: string) => void;
   onAddToCart: (book: Book) => void;
   onExploreStore: () => void;
+  language?: 'en' | 'nl';
+  userEmail?: string;
+  userName?: string;
 }
 
 export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
@@ -35,11 +50,74 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
   onRemoveFromWishlist,
   onAddToCart,
   onExploreStore,
+  language = 'en',
+  userEmail = 'eddyteddy78@gmail.com',
+  userName = 'Eddy',
 }) => {
+  const t = TRANSLATIONS[language] || TRANSLATIONS.en;
   const [activeTab, setActiveTab] = useState<'reading' | 'all' | 'finished' | 'wishlist'>('reading');
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [pdfSuccessBanner, setPdfSuccessBanner] = useState(false);
+  
+  // Offline Caching State
+  const [offlineEnabled, setOfflineEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('bookatlas_offline_caching_enabled') === 'true';
+  });
+  const [isCaching, setIsCaching] = useState(false);
+  const [cachedItemsCount, setCachedItemsCount] = useState(library.length);
 
+  // Dynamic Reading Stats
   const currentlyReading = library.filter((item) => !item.finished && item.progressPercent < 100);
   const finishedBooks = library.filter((item) => item.finished || item.progressPercent >= 100);
+  const totalHighlightsCount = library.reduce((sum, item) => sum + (item.highlights?.length || 0), 0);
+  const totalReadingHours = Math.round((library.reduce((sum, item) => sum + (item.progressPercent * (item.book.pageCount || 300) / 100), 0) / 45) + 12);
+  const readingStreakDays = 14;
+
+  const handleExportPDF = () => {
+    setIsExportingPdf(true);
+    setTimeout(() => {
+      try {
+        exportUserLibraryPDF({
+          userEmail,
+          userName,
+          streakDays: readingStreakDays,
+          totalReadingHours,
+          booksCompleted: finishedBooks.length + 3,
+          totalShelfCount: library.length,
+          libraryItems: library,
+          wishlistItems: wishlist,
+          highlightsCount: totalHighlightsCount,
+        }, language);
+
+        setPdfSuccessBanner(true);
+        setTimeout(() => setPdfSuccessBanner(false), 5000);
+      } catch (err) {
+        console.error('PDF generation error:', err);
+      } finally {
+        setIsExportingPdf(false);
+      }
+    }, 400);
+  };
+
+  const handleToggleOffline = () => {
+    const nextState = !offlineEnabled;
+    setOfflineEnabled(nextState);
+    localStorage.setItem('bookatlas_offline_caching_enabled', String(nextState));
+
+    if (nextState) {
+      setIsCaching(true);
+      // Cache library items and manuscripts in localStorage / IndexedDB mockup
+      try {
+        localStorage.setItem('bookatlas_offline_library_cache', JSON.stringify(library));
+        setTimeout(() => {
+          setIsCaching(false);
+          setCachedItemsCount(library.length);
+        }, 800);
+      } catch (e) {
+        setIsCaching(false);
+      }
+    }
+  };
 
   const getFilteredItems = () => {
     switch (activeTab) {
@@ -57,182 +135,257 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
   const filteredItems = getFilteredItems();
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-200">
+    <div className="space-y-8 animate-fadeIn">
       
+      {/* PDF Success Alert Banner */}
+      {pdfSuccessBanner && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl flex items-center justify-between shadow-sm animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-emerald-950">{t.exportSuccess}</p>
+              <p className="text-xs text-emerald-700">Official reader manifest & reading stats downloaded as PDF.</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setPdfSuccessBanner(false)}
+            className="text-xs text-emerald-700 hover:text-emerald-950 font-bold underline cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Reading Goal & Stats Hero Banner */}
-      <div className="bg-gradient-to-r from-stone-900 via-stone-850 to-stone-900 text-white rounded-2xl p-6 sm:p-8 shadow-lg border border-stone-800">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+      <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
           
-          <div className="md:col-span-7 space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="bg-[#bf0000] text-white text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                My Bookshelf
+          <div className="lg:col-span-7 space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="bg-amber-400 text-slate-950 text-xs font-extrabold px-3 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5" />
+                {t.myBookshelf}
               </span>
-              <span className="text-xs text-gray-400 font-medium">Synced across all devices</span>
+              <span className="text-xs text-slate-400 font-medium">
+                {userEmail} • Atlantean Cloud Sync
+              </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-serif font-extrabold text-white">
-              Your Personal Digital Library
+            <h1 className="text-2xl sm:text-3xl font-serif font-extrabold text-white leading-tight">
+              {t.personalLibrary}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-300">
-              Pick up right where you left off on any browser, iOS/Android device, or Bookatlas eReader.
+            <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
+              Pick up seamlessly on any browser, iOS/Android device, or Bookatlas eReader. Enjoy full offline caching for travel and zero-latency reading.
             </p>
 
-            {/* Reading Challenge 2026 */}
-            <div className="pt-2 max-w-md">
-              <div className="flex items-center justify-between text-xs font-bold text-gray-300 mb-1.5">
+            {/* Reading Challenge 2026 Progress */}
+            <div className="pt-1 max-w-md bg-white/5 p-4 rounded-2xl border border-white/10">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-200 mb-2">
                 <span className="flex items-center gap-1.5 text-amber-300">
-                  <Trophy className="w-4 h-4" /> 2026 Reading Challenge
+                  <Trophy className="w-4 h-4" /> {t.readingChallenge}
                 </span>
-                <span>{finishedBooks.length + 3} of 20 books read</span>
+                <span>{finishedBooks.length + 3} of 20 books</span>
               </div>
-              <div className="w-full h-2.5 bg-stone-800 rounded-full overflow-hidden border border-white/10">
+              <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden border border-white/10">
                 <div 
-                  className="h-full bg-gradient-to-r from-amber-500 to-[#bf0000] rounded-full transition-all duration-500" 
+                  className="h-full bg-gradient-to-r from-amber-400 via-rose-500 to-indigo-500 rounded-full transition-all duration-500" 
                   style={{ width: `${Math.min(100, Math.round(((finishedBooks.length + 3) / 20) * 100))}%` }}
                 ></div>
               </div>
             </div>
+
+            {/* Action Bar: Export PDF & Offline Toggle */}
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                onClick={handleExportPDF}
+                disabled={isExportingPdf}
+                className="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                title={t.exportPdfTooltip}
+              >
+                {isExportingPdf ? (
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3.5 h-3.5 rounded-full border-2 border-slate-950 border-t-transparent animate-spin"></span>
+                    <span>Generating PDF...</span>
+                  </span>
+                ) : (
+                  <>
+                    <FileDown className="w-4 h-4" />
+                    <span>{t.exportPdf}</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={handleToggleOffline}
+                className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 cursor-pointer ${
+                  offlineEnabled
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                    : 'bg-white/10 text-slate-300 border-white/15 hover:bg-white/15'
+                }`}
+              >
+                {offlineEnabled ? (
+                  <>
+                    <Wifi className="w-4 h-4 text-emerald-400" />
+                    <span>{t.offlineReady} ({cachedItemsCount})</span>
+                  </>
+                ) : (
+                  <>
+                    <HardDriveDownload className="w-4 h-4 text-slate-300" />
+                    <span>{t.enableOffline}</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
-          {/* Right Stats Quick Grid */}
-          <div className="md:col-span-5 grid grid-cols-3 gap-3 bg-stone-950/60 p-4 rounded-xl border border-white/10 text-center">
-            <div className="space-y-1">
+          {/* Right Reading Stats Grid */}
+          <div className="lg:col-span-5 grid grid-cols-3 gap-3 bg-slate-950/80 p-5 rounded-2xl border border-white/10 text-center">
+            <div className="space-y-1.5 p-2">
               <div className="flex items-center justify-center text-amber-400">
                 <Flame className="w-5 h-5 fill-amber-400" />
               </div>
-              <div className="text-xl font-extrabold text-white">14</div>
-              <p className="text-[10px] text-gray-400 uppercase font-semibold">Day Streak</p>
+              <div className="text-2xl font-extrabold text-white">{readingStreakDays}</div>
+              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{t.readingStreak}</p>
             </div>
 
-            <div className="space-y-1 border-x border-white/10">
-              <div className="flex items-center justify-center text-rose-400">
+            <div className="space-y-1.5 p-2 border-x border-white/10">
+              <div className="flex items-center justify-center text-indigo-400">
                 <BookOpen className="w-5 h-5" />
               </div>
-              <div className="text-xl font-extrabold text-white">{library.length}</div>
-              <p className="text-[10px] text-gray-400 uppercase font-semibold">My Titles</p>
+              <div className="text-2xl font-extrabold text-white">{library.length}</div>
+              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Titles</p>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1.5 p-2">
               <div className="flex items-center justify-center text-emerald-400">
                 <Clock className="w-5 h-5" />
               </div>
-              <div className="text-xl font-extrabold text-white">48h</div>
-              <p className="text-[10px] text-gray-400 uppercase font-semibold">Read Time</p>
+              <div className="text-2xl font-extrabold text-white">{totalReadingHours}h</div>
+              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{t.totalReadTime}</p>
             </div>
           </div>
 
         </div>
       </div>
 
-      {/* Library Tabs */}
-      <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+      {/* Library Navigation & Filters */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
         <div className="flex items-center space-x-2 text-sm font-semibold">
           <button
             onClick={() => setActiveTab('reading')}
-            className={`px-3.5 py-2 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'reading'
-                ? 'bg-gray-900 text-white'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                ? 'bg-slate-950 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
           >
             <BookOpen className="w-4 h-4 text-amber-400" />
-            <span>Currently Reading ({currentlyReading.length})</span>
+            <span>{t.currentlyReading} ({currentlyReading.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('all')}
-            className={`px-3.5 py-2 rounded-lg transition-colors cursor-pointer ${
+            className={`px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'all'
-                ? 'bg-gray-900 text-white'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                ? 'bg-slate-950 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
           >
-            All Books ({library.length})
+            <Layers className="w-4 h-4 text-indigo-400" />
+            <span>All Bookshelf ({library.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('finished')}
-            className={`px-3.5 py-2 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'finished'
-                ? 'bg-gray-900 text-white'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                ? 'bg-slate-950 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
           >
-            <CheckCircle className="w-4 h-4 text-emerald-500" />
-            <span>Finished ({finishedBooks.length})</span>
+            <CheckCircle className="w-4 h-4 text-emerald-400" />
+            <span>{t.finished} ({finishedBooks.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('wishlist')}
-            className={`px-3.5 py-2 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'wishlist'
-                ? 'bg-gray-900 text-white'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                ? 'bg-slate-950 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
           >
-            <Heart className="w-4 h-4 text-[#bf0000]" />
+            <Heart className="w-4 h-4 text-rose-400" />
             <span>Wishlist ({wishlist.length})</span>
           </button>
         </div>
+
+        <button
+          onClick={onExploreStore}
+          className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5 cursor-pointer py-1.5 px-3 rounded-lg hover:bg-indigo-50 transition-colors"
+        >
+          <span>Discover More Books</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
       </div>
 
-      {/* Tab Content: Wishlist Tab */}
+      {/* Main Tab Content */}
       {activeTab === 'wishlist' ? (
         wishlist.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center space-y-4">
-            <div className="w-14 h-14 bg-rose-50 text-[#bf0000] rounded-full flex items-center justify-center mx-auto">
-              <Heart className="w-7 h-7" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900">Your wishlist is empty</h3>
-            <p className="text-sm text-gray-500 max-w-sm mx-auto">
-              Save eBooks and Audiobooks you want to read later by clicking the heart icon on any title.
-            </p>
+          <div className="text-center py-16 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
+            <Heart className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <h3 className="text-base font-serif font-bold text-slate-900 mb-1">Your wishlist is empty</h3>
+            <p className="text-xs text-slate-500 mb-5">Save interesting titles while browsing the catalog.</p>
             <button
               onClick={onExploreStore}
-              className="px-5 py-2.5 bg-[#bf0000] hover:bg-[#a60000] text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer"
+              className="px-5 py-2.5 bg-slate-950 text-white text-xs font-bold rounded-xl shadow hover:bg-slate-800 cursor-pointer"
             >
-              Browse Bestsellers
+              Browse Bookstore
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {wishlist.map((book) => (
-              <div key={book.id} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col justify-between shadow-2xs">
-                <div className="flex gap-4">
-                  <img
-                    src={book.coverImage}
-                    alt={book.title}
+              <div
+                key={book.id}
+                className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <div 
                     onClick={() => onOpenBookDetail(book)}
-                    className="w-20 aspect-[2/3] object-cover rounded-md shadow-xs cursor-pointer"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <h4 
-                      onClick={() => onOpenBookDetail(book)}
-                      className="font-bold text-sm text-gray-900 line-clamp-2 hover:text-[#bf0000] cursor-pointer"
-                    >
-                      {book.title}
-                    </h4>
-                    <p className="text-xs text-gray-600 truncate mt-0.5">{book.author}</p>
-                    <div className="text-sm font-extrabold text-gray-950 mt-2">
-                      ${book.price.toFixed(2)}
-                    </div>
+                    className="aspect-[2/3] w-full rounded-xl overflow-hidden mb-3 bg-slate-100 cursor-pointer relative group"
+                  >
+                    <img 
+                      src={book.coverImage} 
+                      alt={book.title} 
+                      referrerPolicy="no-referrer" 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
                   </div>
+                  <h3 
+                    onClick={() => onOpenBookDetail(book)}
+                    className="font-serif font-bold text-slate-900 text-sm line-clamp-1 hover:text-indigo-600 cursor-pointer"
+                  >
+                    {book.title}
+                  </h3>
+                  <p className="text-xs text-slate-500">{book.author}</p>
+                  <p className="text-xs font-bold text-slate-900 mt-1">€{book.price.toFixed(2)}</p>
                 </div>
 
-                <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2 mt-4">
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 mt-3">
                   <button
                     onClick={() => onAddToCart(book)}
-                    className="flex-1 py-1.5 px-3 bg-[#bf0000] hover:bg-[#a60000] text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="flex-1 py-2 bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <ShoppingBag className="w-3.5 h-3.5" />
-                    <span>Add to Cart</span>
+                    <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{t.addToCart}</span>
                   </button>
                   <button
                     onClick={() => onRemoveFromWishlist(book.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100 cursor-pointer"
-                    title="Remove from wishlist"
+                    className="p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-slate-100 cursor-pointer"
+                    title="Remove"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -242,21 +395,24 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
           </div>
         )
       ) : (
-        /* Bookshelf Books Grid */
         filteredItems.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center space-y-4">
-            <div className="w-14 h-14 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center mx-auto">
-              <BookOpen className="w-7 h-7" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900">No books found in this shelf</h3>
-            <p className="text-sm text-slate-500 max-w-sm mx-auto">
-              Explore the Bookatlas Store to add eBooks, Audiobooks, or start reading free instant samples.
+          <div className="text-center py-16 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
+            <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <h3 className="text-base font-serif font-bold text-slate-900 mb-1">
+              {activeTab === 'reading'
+                ? 'No active books being read right now'
+                : activeTab === 'finished'
+                ? 'No finished books yet'
+                : 'Your bookshelf is empty'}
+            </h3>
+            <p className="text-xs text-slate-500 mb-5">
+              Explore 1.5M+ eBooks and Audiobooks in our catalog and add them to your shelf.
             </p>
             <button
               onClick={onExploreStore}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer shadow-sm"
+              className="px-5 py-2.5 bg-slate-950 text-white text-xs font-bold rounded-xl shadow hover:bg-slate-800 cursor-pointer"
             >
-              Browse Bookatlas Store
+              Discover Titles in Store
             </button>
           </div>
         ) : (
@@ -264,59 +420,58 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
             {filteredItems.map((item) => (
               <div
                 key={item.book.id}
-                className="bg-white rounded-2xl border border-gray-200 p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between"
+                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
               >
                 <div className="flex gap-4">
-                  {/* Cover */}
                   <div 
                     onClick={() => onOpenReader(item)}
-                    className="relative w-24 aspect-[2/3] shrink-0 rounded-md overflow-hidden shadow-md border border-gray-200 cursor-pointer group"
+                    className="w-24 h-36 flex-shrink-0 rounded-xl overflow-hidden bg-slate-100 cursor-pointer shadow-sm relative group"
                   >
                     <img
                       src={item.book.coverImage}
                       alt={item.book.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <Play className="w-6 h-6 text-white fill-white" />
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Play className="w-7 h-7 text-white fill-white" />
                     </div>
                   </div>
 
-                  {/* Details */}
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex items-center gap-1 text-[11px] font-semibold text-gray-500">
-                      {item.format === 'audiobook' ? (
-                        <span className="flex items-center gap-1 text-indigo-700">
-                          <Headphones className="w-3 h-3" /> Audiobook
+                  <div className="flex-1 min-w-0 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md">
+                          {item.format === 'audiobook' ? 'Audiobook' : 'EPUB3'}
                         </span>
-                      ) : (
-                        <span className="flex items-center gap-1">
-                          <BookOpen className="w-3 h-3 text-gray-400" /> eBook
-                        </span>
-                      )}
+                        {item.finished && (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" /> Finished
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 
+                        onClick={() => onOpenBookDetail(item.book)}
+                        className="font-serif font-bold text-slate-900 text-sm line-clamp-1 hover:text-indigo-600 cursor-pointer"
+                      >
+                        {item.book.title}
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium truncate">{item.book.author}</p>
                     </div>
 
-                    <h3 
-                      onClick={() => onOpenBookDetail(item.book)}
-                      className="font-serif font-bold text-gray-950 text-base line-clamp-1 hover:text-[#bf0000] cursor-pointer"
-                    >
-                      {item.book.title}
-                    </h3>
-                    <p className="text-xs text-gray-600 font-medium truncate">{item.book.author}</p>
-
-                    {/* Progress Percentage */}
-                    <div className="pt-3 space-y-1">
-                      <div className="flex justify-between text-xs font-bold text-gray-700">
-                        <span>{item.progressPercent}% Completed</span>
-                        <span className="text-[11px] text-gray-400 font-normal">
-                          Ch. {item.currentChapterIndex + 1} of {item.book.sampleChapters?.length || 5}
+                    {/* Progress Bar */}
+                    <div className="pt-2 space-y-1">
+                      <div className="flex justify-between text-xs font-bold text-slate-700">
+                        <span>{item.progressPercent}% {item.finished ? 'Done' : 'Read'}</span>
+                        <span className="text-[11px] text-slate-400 font-normal">
+                          Ch. {item.currentChapterIndex + 1} of {item.book.sampleChapters?.length || 4}
                         </span>
                       </div>
-                      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${
-                            item.progressPercent >= 100 ? 'bg-emerald-500' : 'bg-[#bf0000]'
+                            item.progressPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-600'
                           }`}
                           style={{ width: `${item.progressPercent}%` }}
                         ></div>
@@ -325,17 +480,17 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
 
                     {item.highlights && item.highlights.length > 0 && (
                       <p className="text-[11px] text-amber-700 pt-1 font-medium flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" /> {item.highlights.length} saved highlights
+                        <Sparkles className="w-3 h-3" /> {item.highlights.length} saved insights
                       </p>
                     )}
                   </div>
                 </div>
 
-                {/* Actions bottom */}
-                <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-3 mt-4">
+                {/* Actions Bottom */}
+                <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-2 mt-4">
                   <button
                     onClick={() => onOpenReader(item)}
-                    className="flex-1 py-2 px-4 bg-gray-900 hover:bg-black text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                    className="flex-1 py-2.5 px-4 bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
                   >
                     <BookOpen className="w-3.5 h-3.5 text-amber-400" />
                     <span>{item.progressPercent > 0 ? 'Continue Reading' : 'Start Reading'}</span>
@@ -343,7 +498,7 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
 
                   <button
                     onClick={() => onRemoveFromLibrary(item.book.id)}
-                    className="p-2 text-gray-400 hover:text-red-600 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                    className="p-2.5 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
                     title="Remove from Shelf"
                   >
                     <Trash2 className="w-4 h-4" />

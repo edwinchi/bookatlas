@@ -32,10 +32,21 @@ import {
   ShieldAlert,
   UserCheck,
   Building2,
-  Fingerprint
+  Fingerprint,
+  Globe,
+  Compass,
+  Languages,
+  Radio,
+  FileText,
+  BarChart3,
+  LineChart,
+  UploadCloud,
+  FolderPlus
 } from 'lucide-react';
 import { Book, ManagerStats, AutomationLogEntry, MarketingKit, SecurityAuditLog } from '../types';
 import { GENRES } from '../data/booksData';
+import { MultimodalPublishingStudio } from './MultimodalPublishingStudio';
+import { TRANSLATIONS } from '../data/translations';
 
 interface ManagerPortalProps {
   books: Book[];
@@ -73,7 +84,68 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
   onAdminLogout
 }) => {
 
-  const [activeTab, setActiveTab] = useState<'inventory' | 'ai_studio' | 'pricing' | 'marketing' | 'autopilot' | 'security'>('inventory');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'upload_publish' | 'categories_mgr' | 'ai_studio' | 'market_radar' | 'translation' | 'pricing' | 'marketing' | 'autopilot' | 'security'>('upload_publish');
+  
+  // Custom Dynamic Categories
+  const [publisherCategories, setPublisherCategories] = useState<string[]>([
+    'African Philosophy & Indigenous Traditions',
+    'Consciousness & Ancient Wisdom',
+    'Sacred Geometry & Quantum Metaphysics',
+    'Afrofuturism & Speculative Space Orature',
+    'Dutch & European Heritage Classics'
+  ]);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDesc, setNewCategoryDesc] = useState('');
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/categories');
+      const data = await res.json();
+      if (data.success && data.allCategories) {
+        setPublisherCategories(data.allCategories);
+      }
+    } catch (e) {
+      // fallback
+    }
+  };
+
+  const handleAddPublisherCategory = async (nameToAdd?: string) => {
+    const catName = nameToAdd || newCategoryName.trim();
+    if (!catName) return;
+    setIsAddingCategory(true);
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: catName, description: newCategoryDesc })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPublisherCategories(prev => Array.from(new Set([...prev, catName])));
+        setNewCategoryName('');
+        setNewCategoryDesc('');
+        setAiSuccessMessage(`✨ Category "${catName}" registered and published to catalog!`);
+      }
+    } catch (err) {
+      setPublisherCategories(prev => Array.from(new Set([...prev, catName])));
+    } finally {
+      setIsAddingCategory(false);
+    }
+  };
+
+  const handleRemovePublisherCategory = async (catName: string) => {
+    try {
+      await fetch(`/api/categories/${encodeURIComponent(catName)}`, { method: 'DELETE' });
+      setPublisherCategories(prev => prev.filter(c => c !== catName));
+    } catch (e) {
+      setPublisherCategories(prev => prev.filter(c => c !== catName));
+    }
+  };
   
   // Security & Passcode State
   const [currentMasterPin, setCurrentMasterPin] = useState(() => localStorage.getItem('bookatlas_admin_pin') || '7878');
@@ -114,12 +186,30 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
   const [selectedGenre, setSelectedGenre] = useState('All Genres');
   
   // AI Generator Form
-  const [genCategory, setGenCategory] = useState('Sci-Fi & Fantasy');
+  const [genCategory, setGenCategory] = useState('African Philosophy & Metaphysics');
   const [genTone, setGenTone] = useState('Atmospheric, intellectual, and page-turning');
   const [genCustomPrompt, setGenCustomPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [batchGenerating, setBatchGenerating] = useState(false);
   const [aiSuccessMessage, setAiSuccessMessage] = useState<string | null>(null);
+
+  // Market Radar (Gemini + Grounded Search)
+  const [radarGenre, setRadarGenre] = useState('African Philosophy & Metaphysics');
+  const [radarRegion, setRadarRegion] = useState('Global & Diaspora');
+  const [radarFocus, setRadarFocus] = useState('Bestseller Trends & Consciousness Epistemologies');
+  const [isRadarLoading, setIsRadarLoading] = useState(false);
+  const [radarData, setRadarData] = useState<any>(null);
+
+  // Translation & Cultural Localization Form
+  const [selectedTranslateBookId, setSelectedTranslateBookId] = useState<string>(books[0]?.id || '');
+  const [targetLanguage, setTargetLanguage] = useState('Dutch');
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationData, setTranslationData] = useState<any>(null);
+
+  // Dynamic Pricing Engine
+  const [pricingObjective, setPricingObjective] = useState<'maximize_revenue' | 'maximize_reader_acquisition' | 'bestseller_velocity'>('maximize_revenue');
+  const [isOptimizingPricing, setIsOptimizingPricing] = useState(false);
+  const [pricingOptimizationResult, setPricingOptimizationResult] = useState<any>(null);
 
   // Marketing Generator
   const [selectedMarketingBookId, setSelectedMarketingBookId] = useState<string>(books[0]?.id || '');
@@ -275,6 +365,112 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
       console.error('Marketing generation failed:', err);
     } finally {
       setIsGeneratingMarketing(false);
+    }
+  };
+
+  // 5. Market Radar Handler
+  const handleRunMarketRadar = async () => {
+    setIsRadarLoading(true);
+    setRadarData(null);
+    try {
+      const response = await fetch('/api/manager/market-radar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          genre: radarGenre,
+          region: radarRegion,
+          focus: radarFocus
+        }),
+      });
+      const data = await response.json();
+      if (data.success && data.marketIntelligence) {
+        setRadarData(data.marketIntelligence);
+        setLogs(prev => [
+          {
+            id: `log-${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            actionType: 'inventory_sync',
+            title: `Market Radar Intelligence: ${radarGenre}`,
+            description: `Grounded bestseller trends analyzed across ${radarRegion}.`,
+            badge: 'Search Grounded'
+          },
+          ...prev
+        ]);
+      }
+    } catch (err) {
+      console.error('Market radar failed:', err);
+    } finally {
+      setIsRadarLoading(false);
+    }
+  };
+
+  // 6. Translation & Cultural Localization Handler
+  const handleTranslateBook = async () => {
+    if (!selectedTranslateBookId) return;
+    setIsTranslating(true);
+    setTranslationData(null);
+    try {
+      const response = await fetch('/api/manager/translate-book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookId: selectedTranslateBookId,
+          targetLanguage
+        }),
+      });
+      const data = await response.json();
+      if (data.success && data.translation) {
+        setTranslationData(data.translation);
+        setLogs(prev => [
+          {
+            id: `log-${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            actionType: 'inventory_sync',
+            title: `Translation Completed: ${data.translation.translatedTitle}`,
+            description: `Localized into ${targetLanguage} with cultural footnotes.`,
+            badge: 'Localization'
+          },
+          ...prev
+        ]);
+      }
+    } catch (err) {
+      console.error('Book translation failed:', err);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  // 7. Smart Dynamic Pricing & Profit Optimization Handler
+  const handleRunDynamicPricingOptimization = async () => {
+    setIsOptimizingPricing(true);
+    setPricingOptimizationResult(null);
+    try {
+      const response = await fetch('/api/manager/dynamic-pricing-optimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objective: pricingObjective }),
+      });
+      const data = await response.json();
+      if (data.success && data.optimizedBooks) {
+        setPricingOptimizationResult(data);
+        data.optimizedBooks.forEach((b: Book) => onUpdateBook(b));
+        setAiSuccessMessage(`📈 Dynamic pricing optimized across ${data.optimizedBooks.length} titles for objective: ${pricingObjective}!`);
+        setLogs(prev => [
+          {
+            id: `log-${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            actionType: 'deal_rotation',
+            title: `Dynamic Pricing Optimizer Executed`,
+            description: `Rebalanced price points and discount schedules for ${pricingObjective}.`,
+            badge: 'Revenue Optimizer'
+          },
+          ...prev
+        ]);
+      }
+    } catch (err) {
+      console.error('Dynamic pricing optimization failed:', err);
+    } finally {
+      setIsOptimizingPricing(false);
     }
   };
 
@@ -541,6 +737,30 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
       {/* Main Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-2 scrollbar-none">
         <button
+          onClick={() => setActiveTab('upload_publish')}
+          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+            activeTab === 'upload_publish'
+              ? 'bg-indigo-600 text-white shadow-md'
+              : 'text-indigo-900 bg-indigo-50 hover:bg-indigo-100 font-extrabold border border-indigo-200'
+          }`}
+        >
+          <UploadCloud className="w-4 h-4 text-amber-300" />
+          ✨ Upload & Autonomous Publish
+        </button>
+
+        <button
+          onClick={() => setActiveTab('categories_mgr')}
+          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+            activeTab === 'categories_mgr'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-slate-700 bg-slate-100 hover:bg-slate-200'
+          }`}
+        >
+          <FolderPlus className="w-4 h-4 text-amber-500" />
+          Book Categories Manager ({publisherCategories.length})
+        </button>
+
+        <button
           onClick={() => setActiveTab('inventory')}
           className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
             activeTab === 'inventory'
@@ -561,7 +781,31 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
           }`}
         >
           <Bot className="w-4 h-4 text-amber-300" />
-          AI Autonomous Publishing Studio
+          AI Publishing Studio
+        </button>
+
+        <button
+          onClick={() => setActiveTab('market_radar')}
+          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+            activeTab === 'market_radar'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Radio className="w-4 h-4 text-rose-400" />
+          Live Market Radar
+        </button>
+
+        <button
+          onClick={() => setActiveTab('translation')}
+          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+            activeTab === 'translation'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Languages className="w-4 h-4 text-emerald-400" />
+          Cultural Localization
         </button>
 
         <button
@@ -572,8 +816,8 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          <Tag className="w-4 h-4" />
-          Automated Pricing & Deals
+          <Tag className="w-4 h-4 text-amber-300" />
+          Dynamic Pricing Optimizer
         </button>
 
         <button
@@ -585,7 +829,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
           }`}
         >
           <Share2 className="w-4 h-4" />
-          AI Marketing & Campaigns
+          Marketing & Campaigns
         </button>
 
         <button
@@ -612,6 +856,123 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
           Admin Security & PIN Vault
         </button>
       </div>
+
+      {/* ========================================================================= */}
+      {/* TAB 0: MULTIMODAL INGEST & AUTONOMOUS PUBLISHING STUDIO */}
+      {/* ========================================================================= */}
+      {activeTab === 'upload_publish' && (
+        <MultimodalPublishingStudio
+          onBookPublished={(newBook) => {
+            onAddBook(newBook);
+            setAiSuccessMessage(`✨ Multimodal Ingest Completed: "${newBook.title}" synthesized & published live in "${newBook.primaryGenre}"!`);
+            setLogs(prev => [
+              {
+                id: `log-${Date.now()}`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                actionType: 'ai_generation',
+                title: `Multimodal Ingest: "${newBook.title}"`,
+                description: `eBook & Audiobook created. Published in category: ${newBook.primaryGenre}.`,
+                badge: 'Multimodal AI'
+              },
+              ...prev
+            ]);
+          }}
+          categories={publisherCategories}
+          onAddCategory={(cat) => handleAddPublisherCategory(cat)}
+          currencySymbol={currencySymbol}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: BOOK CATEGORIES MANAGER */}
+      {/* ========================================================================= */}
+      {activeTab === 'categories_mgr' && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-xl font-serif font-bold text-slate-900 flex items-center gap-2">
+                  <FolderPlus className="w-5 h-5 text-amber-500" />
+                  Publisher Category Manager & Catalog Taxonomy
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Dynamically create, index, and organize categories across the entire Bookatlas digital bookstore and AI ingestion engine.
+                </p>
+              </div>
+
+              <span className="text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 px-3 py-1.5 rounded-xl">
+                {publisherCategories.length} Active Categories
+              </span>
+            </div>
+
+            {/* Add Category Form */}
+            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-4">
+              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
+                Create New Category
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div className="md:col-span-5">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Category Name *</label>
+                  <input
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="e.g. Indigenous Cosmic Epistemologies"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:ring-2 focus:ring-indigo-600"
+                  />
+                </div>
+                <div className="md:col-span-5">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Scope & Editorial Focus</label>
+                  <input
+                    type="text"
+                    value={newCategoryDesc}
+                    onChange={(e) => setNewCategoryDesc(e.target.value)}
+                    placeholder="e.g. Ancient astronomical archives, Dogon science, and speculative narratives"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:ring-2 focus:ring-indigo-600"
+                  />
+                </div>
+                <div className="md:col-span-2 flex items-end">
+                  <button
+                    type="button"
+                    disabled={isAddingCategory || !newCategoryName.trim()}
+                    onClick={() => handleAddPublisherCategory()}
+                    className="w-full py-2.5 bg-slate-950 hover:bg-slate-800 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* List of Categories */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {publisherCategories.map((cat) => {
+                const bookCount = books.filter(b => b.primaryGenre === cat || b.genres?.includes(cat)).length;
+                return (
+                  <div
+                    key={cat}
+                    className="p-4 bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 shadow-2xs transition-all flex items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-900 truncate">{cat}</p>
+                      <p className="text-[11px] text-slate-500 font-medium">{bookCount} titles assigned</p>
+                    </div>
+
+                    <button
+                      onClick={() => handleRemovePublisherCategory(cat)}
+                      className="p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                      title="Delete category"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* TAB 1: CATALOG & INVENTORY MANAGEMENT */}
@@ -988,17 +1349,424 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 3: AUTOMATED PRICING & FLASH SALES */}
+      {/* TAB: LIVE MARKET RADAR & BESTSELLER INTELLIGENCE */}
+      {/* ========================================================================= */}
+      {activeTab === 'market_radar' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Controls */}
+          <div className="lg:col-span-4 bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-rose-600 font-bold text-xs uppercase tracking-wider">
+                <Radio className="w-4 h-4 animate-pulse" />
+                <span>Search-Grounded Market Intelligence</span>
+              </div>
+              <h3 className="font-serif font-bold text-lg text-slate-900">
+                Bestseller Market Radar
+              </h3>
+              <p className="text-xs text-slate-500">
+                Scan live global trends, reader acquisition voids, and pricing elasticity across African and Consciousness literature.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Focus Genre / Epistemology
+                </label>
+                <select
+                  value={radarGenre}
+                  onChange={(e) => setRadarGenre(e.target.value)}
+                  className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                >
+                  {GENRES.filter(g => g !== 'All Genres').map(g => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Target Geographic Region
+                </label>
+                <select
+                  value={radarRegion}
+                  onChange={(e) => setRadarRegion(e.target.value)}
+                  className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                >
+                  {['Global & Diaspora', 'Western Europe (NL, UK, FR, DE)', 'North America (US, CA)', 'Pan-African (NG, KE, ZA, GH, ET)', 'Latin America & Caribbean (BR, JM)'].map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Intelligence Objective
+                </label>
+                <input
+                  type="text"
+                  value={radarFocus}
+                  onChange={(e) => setRadarFocus(e.target.value)}
+                  placeholder="e.g. Bestseller Trends, Sacred Science Demand..."
+                  className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <button
+                onClick={handleRunMarketRadar}
+                disabled={isRadarLoading}
+                className="w-full py-3.5 bg-rose-600 hover:bg-rose-500 disabled:bg-rose-300 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {isRadarLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Scanning Global Bestseller Indices...</span>
+                  </>
+                ) : (
+                  <>
+                    <Radio className="w-4 h-4" />
+                    <span>Launch Real-Time Market Radar</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Results Panel */}
+          <div className="lg:col-span-8 space-y-5">
+            {isRadarLoading ? (
+              <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-4">
+                <div className="w-12 h-12 rounded-full border-4 border-rose-600 border-t-transparent animate-spin mx-auto"></div>
+                <h4 className="font-bold text-slate-900 text-base">Grounding Gemini with Real-Time Literary Market Data</h4>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  Synthesizing global publishing trends, reader demand surges, and catalog gap opportunities...
+                </p>
+              </div>
+            ) : radarData ? (
+              <div className="space-y-6 animate-fadeIn">
+                {/* Overview Header Card */}
+                <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white p-6 sm:p-7 rounded-2xl border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-rose-400">
+                      Market Intelligence Brief
+                    </span>
+                    <span className="text-[11px] bg-rose-500/20 text-rose-300 px-3 py-1 rounded-full font-bold border border-rose-500/30">
+                      Grounded in Live Web Signals
+                    </span>
+                  </div>
+                  <h3 className="font-serif font-bold text-xl text-white">
+                    {radarData.title || `Market Radar for ${radarGenre}`}
+                  </h3>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    {radarData.marketOverview}
+                  </p>
+                </div>
+
+                {/* Grid of Key Opportunities */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-700 flex items-center gap-1.5">
+                      <TrendingUp className="w-4 h-4 text-emerald-600" />
+                      Trending Themes & Tropes
+                    </h4>
+                    <ul className="text-xs space-y-2 text-slate-700">
+                      {radarData.trendingThemes?.map((theme: string, idx: number) => (
+                        <li key={idx} className="flex items-start gap-2 bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100">
+                          <span className="font-bold text-emerald-700 mt-0.5">•</span>
+                          <span>{theme}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-indigo-700 flex items-center gap-1.5">
+                      <Compass className="w-4 h-4 text-indigo-600" />
+                      High-Yield Catalog Gaps
+                    </h4>
+                    <ul className="text-xs space-y-2 text-slate-700">
+                      {radarData.catalogGaps?.map((gap: string, idx: number) => (
+                        <li key={idx} className="flex items-start gap-2 bg-indigo-50/60 p-2.5 rounded-xl border border-indigo-100">
+                          <span className="font-bold text-indigo-700 mt-0.5">•</span>
+                          <span>{gap}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Pricing & Acquisition Strategy Card */}
+                {radarData.pricingRecommendations && (
+                  <div className="bg-amber-50/80 border border-amber-200 p-5 rounded-2xl space-y-2">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                      <Tag className="w-4 h-4 text-amber-600" />
+                      Recommended Price Point & Merchandising Strategy
+                    </h4>
+                    <p className="text-xs text-amber-950 font-medium leading-relaxed">
+                      {radarData.pricingRecommendations}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-12 text-center text-slate-400 space-y-2">
+                <Radio className="w-8 h-8 mx-auto text-slate-300" />
+                <h4 className="font-bold text-sm text-slate-600">No active radar scan</h4>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  Select your target category and region on the left, then click "Launch Real-Time Market Radar" to synthesize actionable publishing intelligence.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: AUTOMATED BOOK TRANSLATION & LOCALIZATION */}
+      {/* ========================================================================= */}
+      {activeTab === 'translation' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Controls */}
+          <div className="lg:col-span-4 bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase tracking-wider">
+                <Languages className="w-4 h-4" />
+                <span>Multilingual Cultural Publishing</span>
+              </div>
+              <h3 className="font-serif font-bold text-lg text-slate-900">
+                Book Translation & Localization Studio
+              </h3>
+              <p className="text-xs text-slate-500">
+                Translate manuscripts into Dutch, French, Swahili, Portuguese, German, and Yoruba with cultural footnote localization.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Select Source Title
+                </label>
+                <select
+                  value={selectedTranslateBookId}
+                  onChange={(e) => setSelectedTranslateBookId(e.target.value)}
+                  className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                >
+                  {books.map(b => (
+                    <option key={b.id} value={b.id}>
+                      {b.title} ({b.author})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Target Language
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['Dutch', 'French', 'Swahili', 'Portuguese', 'German', 'Yoruba', 'Amharic', 'Spanish'].map(lang => (
+                    <button
+                      key={lang}
+                      type="button"
+                      onClick={() => setTargetLanguage(lang)}
+                      className={`p-2 text-xs rounded-xl border font-bold text-left transition-all cursor-pointer ${
+                        targetLanguage === lang
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {lang}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={handleTranslateBook}
+                disabled={isTranslating}
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-300 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {isTranslating ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Translating with Cultural Nuance...</span>
+                  </>
+                ) : (
+                  <>
+                    <Languages className="w-4 h-4" />
+                    <span>Translate to {targetLanguage}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Translation Output */}
+          <div className="lg:col-span-8 space-y-5">
+            {isTranslating ? (
+              <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-4">
+                <div className="w-12 h-12 rounded-full border-4 border-emerald-600 border-t-transparent animate-spin mx-auto"></div>
+                <h4 className="font-bold text-slate-900 text-base">Translating & Adapting Cultural Idioms</h4>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  Gemini is maintaining literary cadence, metaphysical precision, and generating localized explanatory footnotes for {targetLanguage}...
+                </p>
+              </div>
+            ) : translationData ? (
+              <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-sm space-y-6 animate-fadeIn">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                      {translationData.targetLanguage} Edition
+                    </span>
+                    <h3 className="font-serif font-bold text-xl text-slate-900 mt-2">
+                      {translationData.translatedTitle}
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Original: "{books.find(b => b.id === selectedTranslateBookId)?.title}"
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(JSON.stringify(translationData, null, 2), 'translation')}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    {copiedKey === 'translation' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedKey === 'translation' ? 'Copied' : 'Copy Edition'}</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-slate-700">Localized Synopsis</h4>
+                  <p className="text-xs text-slate-800 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    {translationData.translatedSynopsis}
+                  </p>
+                </div>
+
+                {/* Sample Translated Chapter Text */}
+                {translationData.sampleChapter && (
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-slate-700">Sample Chapter Translation</h4>
+                    <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 text-xs text-emerald-950 font-serif leading-relaxed space-y-2 max-h-60 overflow-y-auto">
+                      <h5 className="font-sans font-bold text-emerald-900 text-sm">{translationData.sampleChapter.title}</h5>
+                      <p className="whitespace-pre-line">{translationData.sampleChapter.content}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Cultural Adaptations / Footnotes */}
+                {translationData.culturalNotes && (
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-amber-800">Cultural Context & Translation Footnotes</h4>
+                    <ul className="text-xs space-y-1.5 text-slate-700 bg-amber-50/60 p-4 rounded-xl border border-amber-200">
+                      {translationData.culturalNotes.map((note: string, idx: number) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <span className="font-bold text-amber-700">[{idx + 1}]</span>
+                          <span>{note}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-12 text-center text-slate-400 space-y-2">
+                <Languages className="w-8 h-8 mx-auto text-slate-300" />
+                <h4 className="font-bold text-sm text-slate-600">No translation generated yet</h4>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  Select a title from inventory and choose a target language to create an authentic localized edition.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 3: DYNAMIC PRICING & PROFIT OPTIMIZER */}
       {/* ========================================================================= */}
       {activeTab === 'pricing' && (
-        <div className="space-y-6">
+        <div className="space-y-8">
+          {/* AI Profit & Dynamic Pricing Engine */}
+          <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-6 sm:p-8 rounded-2xl border border-indigo-900/50 shadow-xl space-y-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
+                  <Sparkles className="w-4 h-4" />
+                  <span>Gemini Dynamic Elasticity & Yield Optimization</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-serif font-bold text-white">
+                  Smart Dynamic Pricing Engine
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-300 max-w-2xl">
+                  Simulate buyer elasticity curves, optimize profit margins, or boost velocity by automatically adjusting price points across the catalog.
+                </p>
+              </div>
+
+              {/* Optimization Objective Selector */}
+              <div className="flex items-center gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700/60">
+                {[
+                  { id: 'maximize_revenue', label: 'Max Revenue', icon: DollarSign },
+                  { id: 'maximize_reader_acquisition', label: 'Reader Growth', icon: Users },
+                  { id: 'bestseller_velocity', label: 'Bestseller Velocity', icon: TrendingUp },
+                ].map((obj) => {
+                  const Icon = obj.icon;
+                  return (
+                    <button
+                      key={obj.id}
+                      onClick={() => setPricingObjective(obj.id as any)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        pricingObjective === obj.id
+                          ? 'bg-amber-400 text-slate-950 shadow-sm'
+                          : 'text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{obj.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button
+              onClick={handleRunDynamicPricingOptimization}
+              disabled={isOptimizingPricing}
+              className="px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {isOptimizingPricing ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
+                  <span>Computing Elasticity Curves & Rebalancing Prices...</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4 text-slate-950" />
+                  <span>Execute Dynamic Pricing Optimization</span>
+                </>
+              )}
+            </button>
+
+            {/* Optimization Results Feed */}
+            {pricingOptimizationResult && (
+              <div className="bg-slate-800/90 border border-slate-700 p-5 rounded-xl space-y-3 animate-fadeIn">
+                <div className="flex items-center justify-between text-xs text-amber-300 font-bold">
+                  <span>Strategy Insights:</span>
+                  <span>{pricingOptimizationResult.optimizedBooks?.length || 0} Titles Rebalanced</span>
+                </div>
+                <p className="text-xs text-slate-200 leading-relaxed">
+                  {pricingOptimizationResult.rationale}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Algorithmic Presets */}
           <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
             <div className="space-y-1">
-              <h2 className="text-xl font-serif font-bold text-slate-900">
-                Automated Dynamic Pricing & Promotion Engine
-              </h2>
+              <h3 className="text-lg font-serif font-bold text-slate-900">
+                1-Click Catalog Merchandising Presets
+              </h3>
               <p className="text-xs text-slate-500">
-                Apply algorithmic pricing rules across your bookstore with a single click.
+                Apply pre-configured promotion templates directly across the bookstore inventory.
               </p>
             </div>
 

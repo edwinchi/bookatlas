@@ -49,10 +49,13 @@ interface HeaderProps {
   onOpenDocs: () => void;
   currency: string;
   setCurrency: (c: string) => void;
+  language?: 'en' | 'nl';
+  setLanguage?: (lang: 'en' | 'nl') => void;
   isAdminAuthenticated: boolean;
   adminEmail: string;
   onOpenAdminAuth: (featureName: string, callback?: () => void) => void;
   onAdminLogout: () => void;
+  registeredUser?: { email: string; name?: string } | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -76,10 +79,13 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDocs,
   currency,
   setCurrency,
+  language = 'en',
+  setLanguage,
   isAdminAuthenticated,
   adminEmail,
   onOpenAdminAuth,
-  onAdminLogout
+  onAdminLogout,
+  registeredUser
 }) => {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -234,8 +240,23 @@ export const Header: React.FC<HeaderProps> = ({
               <HelpCircle className="w-3.5 h-3.5" />
               <span>Blueprint</span>
             </button>
+            {/* Language Switcher (Dutch / English) */}
+            {setLanguage && (
+              <div className="flex items-center gap-1 bg-slate-800/80 px-2 py-0.5 rounded-lg border border-slate-700">
+                <Globe className="w-3.5 h-3.5 text-amber-400" />
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value as 'en' | 'nl')}
+                  className="bg-transparent text-[11px] font-bold text-slate-200 focus:outline-none cursor-pointer"
+                >
+                  <option value="en" className="bg-slate-900 text-white">🇬🇧 English</option>
+                  <option value="nl" className="bg-slate-900 text-white">🇳🇱 Nederlands</option>
+                </select>
+              </div>
+            )}
+
+            {/* Currency Selector */}
             <div className="flex items-center gap-1 text-slate-300 hover:text-white">
-              <Globe className="w-3.5 h-3.5 text-slate-400" />
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}

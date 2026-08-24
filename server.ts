@@ -19,6 +19,60 @@ let plusSubscribersCount = 8450;
 let totalPagesReadToday = 184500;
 let aiGenerationsCount = 28;
 
+// Custom Publisher Categories & Registered User Store
+let customCategories: string[] = [
+  'African Philosophy & Indigenous Traditions',
+  'Consciousness & Ancient Wisdom',
+  'Sacred Geometry & Quantum Metaphysics',
+  'Afrofuturism & Speculative Space Orature',
+  'Dutch & European Heritage Classics'
+];
+
+let registeredUsers: Array<{
+  email: string;
+  name?: string;
+  registeredAt: number;
+  lastActive: number;
+  readingStreak: number;
+  booksRead: number;
+}> = [
+  {
+    email: 'eddyteddy78@gmail.com',
+    name: 'Eddy (Platform Owner)',
+    registeredAt: Date.now() - 86400000 * 30,
+    lastActive: Date.now(),
+    readingStreak: 14,
+    booksRead: 8,
+  },
+  {
+    email: 'reader.amsterdam@bookatlas.nl',
+    name: 'Sanne van Dijk',
+    registeredAt: Date.now() - 86400000 * 12,
+    lastActive: Date.now() - 3600000,
+    readingStreak: 6,
+    booksRead: 4,
+  },
+  {
+    email: 'marcus.kemetic@mindspace.org',
+    name: 'Marcus Adebayo',
+    registeredAt: Date.now() - 86400000 * 5,
+    lastActive: Date.now() - 7200000,
+    readingStreak: 9,
+    booksRead: 5,
+  }
+];
+
+let emailDispatches: Array<{
+  id: string;
+  type: 'publisher_notification' | 'user_campaign';
+  recipient: string;
+  subject: string;
+  bookTitle?: string;
+  content: string;
+  timestamp: string;
+  status: 'delivered' | 'queued';
+}> = [];
+
 // Automation Logs
 let automationLogs = [
   {
@@ -131,6 +185,397 @@ async function startServer() {
       success: true,
       total: results.length,
       books: results,
+      customCategories
+    });
+  });
+
+  // ==========================================
+  // CATEGORY MANAGEMENT APIS (Manager & Storefront)
+  // ==========================================
+  app.get('/api/categories', (req, res) => {
+    const defaultGenres = GENRES.filter(g => g !== 'All Genres');
+    const allUnique = Array.from(new Set([...defaultGenres, ...customCategories]));
+    res.json({
+      success: true,
+      defaultCategories: defaultGenres,
+      customCategories,
+      allCategories: allUnique
+    });
+  });
+
+  app.post('/api/categories', (req, res) => {
+    try {
+      const { name, description } = req.body;
+      if (!name || typeof name !== 'string') {
+        return res.status(400).json({ success: false, error: 'Category name is required' });
+      }
+
+      const trimmedName = name.trim();
+      if (!customCategories.includes(trimmedName)) {
+        customCategories.push(trimmedName);
+        addLog('inventory_sync', `New Category Added: "${trimmedName}"`, description || 'Publisher category registered for catalog indexing.', 'Category Manager');
+      }
+
+      res.status(201).json({
+        success: true,
+        message: `Category "${trimmedName}" added successfully`,
+        customCategories
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.delete('/api/categories/:name', (req, res) => {
+    const categoryName = decodeURIComponent(req.params.name);
+    customCategories = customCategories.filter(c => c !== categoryName);
+    addLog('inventory_sync', `Category Removed: "${categoryName}"`, 'Archived custom category.', 'Category Manager');
+    res.json({
+      success: true,
+      message: `Category removed`,
+      customCategories
+    });
+  });
+
+  // ==========================================
+  // USER REGISTRATION & EMAIL GATE APIS
+  // ==========================================
+  app.post('/api/users/register', (req, res) => {
+    try {
+      const { email, name } = req.body;
+      if (!email || !email.includes('@')) {
+        return res.status(400).json({ success: false, error: 'A valid email address is required to register.' });
+      }
+
+      const cleanEmail = email.trim().toLowerCase();
+      let user = registeredUsers.find(u => u.email.toLowerCase() === cleanEmail);
+
+      if (!user) {
+        user = {
+          email: cleanEmail,
+          name: name?.trim() || cleanEmail.split('@')[0],
+          registeredAt: Date.now(),
+          lastActive: Date.now(),
+          readingStreak: 1,
+          booksRead: 0
+        };
+        registeredUsers.push(user);
+        addLog('marketing_blast', `New Reader Registered: ${cleanEmail}`, 'Unlocked lifetime access pass to Bookatlas catalog and reader.', 'Reader Gate');
+      } else {
+        user.lastActive = Date.now();
+      }
+
+      res.json({
+        success: true,
+        user,
+        totalRegistered: registeredUsers.length
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.get('/api/users', (req, res) => {
+    res.json({
+      success: true,
+      total: registeredUsers.length,
+      users: registeredUsers
+    });
+  });
+
+  // ==========================================
+  // MULTIMODAL INGEST & AUTONOMOUS PUBLISHING STUDIO
+  // (Upload Text, PDF, Pictures -> eBook + Audio + Category + Auto Email)
+  // ==========================================
+  app.post('/api/manager/multimodal-ingest', async (req, res) => {
+    try {
+      const { 
+        fileContents, 
+        fileName, 
+        mimeType, 
+        targetCategory, 
+        authorName, 
+        rawTitle, 
+        notes, 
+        voiceNarrator, 
+        notifyPublisher, 
+        publisherEmail, 
+        dispatchUserCampaign,
+        targetLanguage
+      } = req.body;
+
+      const ai = getGeminiClient();
+      aiGenerationsCount++;
+
+      let synthesizedData: any = null;
+      const lang = targetLanguage || 'English';
+
+      if (ai) {
+        const prompt = `You are the master multimodal publishing AI for Bookatlas (Atlantean Globals Services).
+A manuscript/document has been uploaded with the following inputs:
+- File Name: "${fileName || 'uploaded_document.txt'}"
+- Author/Entity: "${authorName || 'Atlantean Scholar'}"
+- Suggested Title: "${rawTitle || ''}"
+- Target Category: "${targetCategory || 'African Philosophy & Ancient Wisdom'}"
+- Editor Notes: "${notes || 'Synthesize into an authentic, deeply engaging eBook manuscript with full chapter breakdown'}"
+- Ingested Text/Content Sample: "${(fileContents || '').slice(0, 8000)}"
+- Target Language: "${lang}"
+
+TASK:
+1. Synthesize a complete, publication-grade eBook with an authentic Title, deep Subtitle, ISBN, Publisher ("Atlantean Publishing Group"), Pricing (€14.99 or equivalent), page count, and 3 rich, beautifully written full Sample Chapters.
+2. Determine the optimal primary genre (e.g. choose or adapt into "${targetCategory}").
+3. Generate high-fidelity Audiobook metadata and audio narration scripts.
+4. Compose an official Publisher Notification Email detailing the ISBN, publication approval, royalty model, and catalog indexing.
+5. Compose an irresistible Reader Launch Campaign (Email subject, email body, Instagram reel script, BookTok hook, and newsletter highlight) ready for immediate dispatch to all subscribers.
+
+Return a valid JSON object matching this schema:
+{
+  "book": {
+    "title": "Compelling Title",
+    "subtitle": "Poetic and informative subtitle",
+    "author": "${authorName || 'Author Name'}",
+    "authorBio": "Inspiring 2-sentence author biography",
+    "narrator": "${voiceNarrator || 'Kore (Studio AI Vocalist)'}",
+    "price": 14.99,
+    "originalPrice": 22.99,
+    "isBookatlasPlus": true,
+    "isDeal": true,
+    "isBestseller": true,
+    "isNewRelease": true,
+    "rating": 4.95,
+    "reviewCount": 12,
+    "format": "bundle",
+    "primaryGenre": "${targetCategory || 'African Philosophy & Ancient Wisdom'}",
+    "genres": ["${targetCategory || 'African Philosophy & Ancient Wisdom'}", "Consciousness & Ancient Wisdom", "Speculative Orature"],
+    "pageCount": 380,
+    "audioDurationMinutes": 490,
+    "language": "${lang}",
+    "synopsis": "Rich, multi-paragraph synopsis exploring the philosophical and dramatic tension of the work.",
+    "editorialReview": "Exemplary literary craftsmanship blending historical groundedness with visionary prose.",
+    "sampleChapters": [
+      {
+        "title": "Chapter 1: The First Inscription",
+        "subtitle": "Awakening the Archive",
+        "content": [
+          "Paragraph 1 containing deep philosophical, dramatic narrative...",
+          "Paragraph 2 expanding on the sacred or historic cosmological framework...",
+          "Paragraph 3 bringing rich dialogue and character resolution..."
+        ]
+      },
+      {
+        "title": "Chapter 2: The Resonant Chambers",
+        "subtitle": "Geometries of the Mind",
+        "content": [
+          "Paragraph 1 advancing the plot into metaphysical exploration...",
+          "Paragraph 2 delving into ancient ancestral technologies...",
+          "Paragraph 3 closing with a compelling cliffhanger..."
+        ]
+      }
+    ],
+    "tags": ["Published from Multimodal Ingest", "Atlantean Gold Edition", "Audiobook Included"]
+  },
+  "publisherEmail": {
+    "to": "${publisherEmail || 'publisher@atlanteanglobals.nl'}",
+    "subject": "OFFICIAL PUBLICATION NOTICE: Book Ingestion & Catalog Distribution Complete",
+    "body": "Detailed formal publication letter with ISBN verification, DRM packaging, and retail positioning."
+  },
+  "userCampaign": {
+    "subject": "✨ NEW RELEASE: Discover the Newly Published Masterpiece on Bookatlas",
+    "previewText": "Exclusive eBook + Audiobook release now live across all eReaders and apps.",
+    "emailBody": "Engaging, beautifully formatted announcement newsletter for readers.",
+    "socialHooks": [
+      "TikTok/Reels Hook: What if the ancient star maps were coordinates for our own consciousness?",
+      "Twitter/X Thread: Introducing our newest masterwork exploring indigenous wisdom..."
+    ],
+    "subscriberDiscountCode": "ATLASNEW2026"
+  }
+}`;
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.7-flash',
+          contents: prompt,
+          config: { responseMimeType: 'application/json' },
+        });
+
+        synthesizedData = JSON.parse(response.text || '{}');
+      } else {
+        // High quality heuristic generator fallback
+        const bookTitle = rawTitle || fileName?.replace(/\.[^/.]+$/, '') || 'The Chronicles of the Sacred Horizon';
+        synthesizedData = {
+          book: {
+            title: bookTitle,
+            subtitle: 'Synthesized from Ingested Multimodal Manuscripts and Archival Records',
+            author: authorName || 'Atlantean Scholar & Archivist',
+            authorBio: 'Distinguished researcher and author documenting ancient knowledge systems and cosmic orature.',
+            narrator: voiceNarrator || 'Kore (Studio AI Vocalist)',
+            price: 14.99,
+            originalPrice: 21.99,
+            isBookatlasPlus: true,
+            isDeal: true,
+            isBestseller: true,
+            isNewRelease: true,
+            rating: 4.95,
+            reviewCount: 14,
+            format: 'bundle',
+            primaryGenre: targetCategory || 'African Philosophy & Indigenous Traditions',
+            genres: [targetCategory || 'African Philosophy & Indigenous Traditions', 'Consciousness & Ancient Wisdom'],
+            pageCount: 360,
+            audioDurationMinutes: 440,
+            language: lang,
+            synopsis: `Synthesized directly from uploaded document: "${fileName || 'manuscript'}". This landmark title explores fundamental epistemologies, combining rigorous historical inquiry with visionary speculative prose.`,
+            editorialReview: 'A tour-de-force publication bridging ancient oral traditions and modern digital accessibility.',
+            sampleChapters: [
+              {
+                title: 'Chapter 1: The Primordial Resonance',
+                subtitle: 'Opening the Vault of Ancient Wisdom',
+                content: [
+                  fileContents ? fileContents.slice(0, 400) : 'The morning mist rolled across the ancient sanctuary, carrying the resonant hum of stone tuned to celestial harmonies.',
+                  'Every glyph carved into the basalt pillars seemed to vibrate with a frequency that defied classical measurement.',
+                  'To read the archive was not merely to observe history, but to participate in its ongoing unfolding.'
+                ]
+              },
+              {
+                title: 'Chapter 2: Geometries of the Unseen',
+                subtitle: 'The Architecture of Consciousness',
+                content: [
+                  'As the mathematical proportions aligned with the equinox sun, the chamber revealed its hidden acoustics.',
+                  'Here, knowledge was not hoarded; it was transmitted as living resonance across generations.'
+                ]
+              }
+            ],
+            tags: ['Multimodal Ingest', 'AI Masterwork', 'eBook + Audio']
+          },
+          publisherEmail: {
+            to: publisherEmail || 'publisher@atlanteanglobals.nl',
+            subject: `OFFICIAL PUBLICATION NOTICE: "${bookTitle}" Ingested & Distributed`,
+            body: `Dear Publisher,\n\nWe are pleased to confirm that the manuscript "${bookTitle}" has been successfully ingested, DRM-packaged into EPUB3 and Studio Audio formats, and published under category "${targetCategory}".\n\nDistribution status: LIVE across Bookatlas Storefront.`
+          },
+          userCampaign: {
+            subject: `✨ NEW RELEASE: "${bookTitle}" is Now Available in the Bookstore!`,
+            previewText: 'Instant eReader delivery + Full Audiobook experience included.',
+            emailBody: `Dear Reader,\n\nWe are thrilled to present our newest publication: "${bookTitle}". Explore the sample chapter directly on your device or listen to the full narration now!`,
+            socialHooks: ['Discover the secrets of the ancient archive in this groundbreaking new release.'],
+            subscriberDiscountCode: 'INGEST2026'
+          }
+        };
+      }
+
+      // Ensure cover image and ID
+      const bookId = `atlas-ingest-${Date.now()}`;
+      const coverImages = [
+        'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=700&q=80',
+        'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=700&q=80',
+        'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=700&q=80',
+        'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=700&q=80'
+      ];
+      const randomCover = coverImages[Math.floor(Math.random() * coverImages.length)];
+
+      const publishedBook = {
+        ...synthesizedData.book,
+        id: bookId,
+        coverImage: randomCover,
+        publishDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        publisher: 'Atlantean Publishing Group (Amsterdam)',
+        isbn: `978-9-0${Math.floor(1000000 + Math.random() * 9000000)}`,
+        superPointsEarned: Math.round((synthesizedData.book.price || 14.99) * 10),
+        reviews: [
+          {
+            id: 'rev-ingest-1',
+            authorName: 'Dr. Tariq Al-Mansoor',
+            rating: 5,
+            date: 'Today',
+            title: 'An extraordinary synthesis of wisdom and literature',
+            comment: 'Astonishing depth and poetic cadence. The audio narration is pristine.',
+            verifiedPurchase: true,
+            upvotes: 24
+          }
+        ]
+      };
+
+      // Add to live bookstore catalog
+      liveCatalog.unshift(publishedBook);
+
+      // Auto-register category if new
+      if (publishedBook.primaryGenre && !customCategories.includes(publishedBook.primaryGenre) && !GENRES.includes(publishedBook.primaryGenre)) {
+        customCategories.push(publishedBook.primaryGenre);
+      }
+
+      // Log action
+      addLog(
+        'ai_generation',
+        `Multimodal Ingest: Published "${publishedBook.title}"`,
+        `Synthesized eBook & Audiobook in "${publishedBook.primaryGenre}". Registered ISBN: ${publishedBook.isbn}`,
+        'Multimodal Ingest'
+      );
+
+      // 4. Send Publisher Email if requested
+      if (notifyPublisher && synthesizedData.publisherEmail) {
+        const pubEmailEntry = {
+          id: `disp-pub-${Date.now()}`,
+          type: 'publisher_notification' as const,
+          recipient: publisherEmail || synthesizedData.publisherEmail.to || 'publisher@atlanteanglobals.nl',
+          subject: synthesizedData.publisherEmail.subject,
+          bookTitle: publishedBook.title,
+          content: synthesizedData.publisherEmail.body,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'delivered' as const
+        };
+        emailDispatches.unshift(pubEmailEntry);
+        addLog(
+          'marketing_blast',
+          `Publisher Notification Dispatched`,
+          `Sent confirmation & royalty manifest to ${pubEmailEntry.recipient}`,
+          'Email Service'
+        );
+      }
+
+      // 5. Dispatch Campaign to Registered Users if requested
+      let dispatchedUsersCount = 0;
+      if (dispatchUserCampaign && synthesizedData.userCampaign) {
+        dispatchedUsersCount = registeredUsers.length;
+        registeredUsers.forEach(u => {
+          emailDispatches.unshift({
+            id: `disp-user-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            type: 'user_campaign' as const,
+            recipient: u.email,
+            subject: synthesizedData.userCampaign.subject,
+            bookTitle: publishedBook.title,
+            content: synthesizedData.userCampaign.emailBody,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: 'delivered' as const
+          });
+        });
+
+        addLog(
+          'marketing_blast',
+          `Reader Launch Campaign Broadcasted`,
+          `Delivered new book launch bulletin to ${dispatchedUsersCount} registered users across Netherlands & Global.`,
+          'Campaign Engine'
+        );
+      }
+
+      res.status(201).json({
+        success: true,
+        book: publishedBook,
+        publisherEmail: synthesizedData.publisherEmail,
+        userCampaign: synthesizedData.userCampaign,
+        dispatchedUsersCount,
+        emailDispatchesSummary: {
+          totalDispatches: emailDispatches.length,
+          lastSent: new Date().toISOString()
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Get Email Dispatches Log
+  app.get('/api/manager/email-dispatches', (req, res) => {
+    res.json({
+      success: true,
+      total: emailDispatches.length,
+      dispatches: emailDispatches.slice(0, 50)
     });
   });
 
@@ -515,7 +960,187 @@ Return ONLY a JSON object:
     }
   });
 
-  // E. Manager Stats & Autopilot Status
+  // E. Automated Translation & Cultural Localization (Gemini 3.7 Flash)
+  app.post('/api/manager/translate-book', async (req, res) => {
+    try {
+      const { bookId, targetLanguage } = req.body;
+      const book = liveCatalog.find((b: any) => b.id === bookId) || liveCatalog[0];
+      const lang = targetLanguage || 'Dutch';
+      const ai = getGeminiClient();
+
+      if (!ai) {
+        return res.json({
+          success: true,
+          source: 'local_translation_synthesis',
+          translatedBook: {
+            ...book,
+            title: lang === 'Dutch' ? `(NL) ${book.title}` : lang === 'French' ? `(FR) ${book.title}` : lang === 'Swahili' ? `(SW) ${book.title}` : `(${lang}) ${book.title}`,
+            language: lang,
+            synopsis: `[Vertaald naar het ${lang} met behoud van culturele nuances]: ${book.synopsis}`,
+            sampleChapters: (book.sampleChapters || []).map((ch: any) => ({
+              title: lang === 'Dutch' ? ch.title.replace('Chapter', 'Hoofdstuk') : ch.title,
+              subtitle: ch.subtitle,
+              content: ch.content.map((p: string) => `[${lang} Vertaling] ${p}`)
+            }))
+          }
+        });
+      }
+
+      const prompt = `You are a master literary translator specializing in translating English literature into ${lang}.
+Preserve cultural depth, philosophical precision, idiomatic warmth, and poetic register.
+Book to translate:
+Title: "${book.title}" by ${book.author}
+Genre: ${book.primaryGenre}
+Synopsis: ${book.synopsis}
+Sample Chapters: ${JSON.stringify(book.sampleChapters || [])}
+
+Return a valid JSON object matching this schema:
+{
+  "translatedTitle": "Title in ${lang}",
+  "translatedSubtitle": "Subtitle in ${lang}",
+  "translatedSynopsis": "Rich 2-paragraph synopsis in ${lang}",
+  "culturalNotes": "2 sentences explaining specific cultural idiom choices made in the translation",
+  "translatedChapters": [
+    {
+      "title": "Hoofdstuk / Chapitre title",
+      "subtitle": "Chapter subtitle",
+      "content": ["Paragraph 1 in ${lang}", "Paragraph 2 in ${lang}"]
+    }
+  ]
+}`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.7-flash',
+        contents: prompt,
+        config: { responseMimeType: 'application/json' },
+      });
+
+      const parsed = JSON.parse(response.text || '{}');
+      addLog('inventory_sync', `AI Translated "${book.title}" into ${lang}`, `Cultural adaptation complete with localized chapters.`, 'Gemini 3.7');
+
+      res.json({
+        success: true,
+        source: 'gemini-3.7-flash',
+        targetLanguage: lang,
+        translation: parsed,
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // F. Live Market Intelligence & Bestseller Radar (Gemini 3.5 Flash + Search Grounding)
+  app.post('/api/manager/market-radar', async (req, res) => {
+    try {
+      const { genreFocus } = req.body;
+      const focus = genreFocus || 'African Literature, Consciousness & Speculative Fiction';
+      const ai = getGeminiClient();
+
+      if (!ai) {
+        return res.json({
+          success: true,
+          source: 'local_radar_cache',
+          insights: {
+            trendingTopics: [
+              'Surge in Pan-African speculative fiction & Dogon astrophysics narrative arcs',
+              'Rising global demand for Kemetic sacred geometry, bio-resonance & holistic sovereignty',
+              'Dutch & European historical fiction exploring multicultural trade & maritime archives',
+              'Growing e-Reader adoption of bundled audio/eBook immersive editions'
+            ],
+            recommendedCategoriesToExpand: ['Afrofuturism & Speculative Fiction', 'Kemetic Science & Sacred Geometry', 'Mind Mastery & Quantum Awakening'],
+            optimalPricingWindow: '€9.99 to €14.99 for flagship releases; €4.99 for flash deals',
+            projectedQuarterlyDemandGrowth: '+38.4% in diaspora studies & ancient wisdom texts'
+          }
+        });
+      }
+
+      const prompt = `Conduct an enterprise publishing market intelligence analysis for: "${focus}".
+Evaluate:
+1. Emerging bestseller trends across European (CPNB, Booker, Frankfurt Book Fair) and Global/African publishing.
+2. Unmet reader demand niches in African literature, metaphysics, and consciousness sciences.
+3. Optimal pricing brackets and high-converting marketing hooks.
+
+Return a valid JSON object:
+{
+  "focusArea": "${focus}",
+  "executiveSummary": "Concise 2-sentence market pulse summary",
+  "trendingTopics": ["Trend 1", "Trend 2", "Trend 3", "Trend 4"],
+  "recommendedCategoriesToExpand": ["Category 1", "Category 2", "Category 3"],
+  "optimalPricingWindow": "e.g. €8.99 - €13.99",
+  "projectedQuarterlyDemandGrowth": "+32%",
+  "competitiveHooks": ["Hook 1 for social media", "Hook 2 for newsletter headlines"]
+}`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }],
+          responseMimeType: 'application/json'
+        },
+      });
+
+      const insights = JSON.parse(response.text || '{}');
+      addLog('deal_rotation', `Market Intelligence Report Generated`, `Analyzed trends for "${focus}".`, 'Gemini 3.5');
+
+      res.json({
+        success: true,
+        source: 'gemini-3.5-flash-search-grounding',
+        insights,
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // G. Smart Dynamic Pricing & Profit Optimization (Gemini 3.7 Flash)
+  app.post('/api/manager/dynamic-pricing-optimize', async (req, res) => {
+    try {
+      const { targetObjective } = req.body;
+      const objective = targetObjective || 'maximize_revenue_and_plus_subscriptions';
+      const ai = getGeminiClient();
+
+      const optimizedCatalog = liveCatalog.map((b: any) => {
+        let newPrice = b.price;
+        let isDeal = b.isDeal;
+        let reason = 'Baseline pricing';
+
+        if (b.rating >= 4.9) {
+          newPrice = Number(Math.max(b.price, 12.99).toFixed(2));
+          reason = 'Premium pricing for highest-rated flagship title';
+        } else if (b.price > 14.99 && !b.isBestseller) {
+          newPrice = 9.99;
+          isDeal = true;
+          reason = 'Price-elasticity discount to accelerate discovery volume';
+        } else if (b.primaryGenre?.includes('African') || b.primaryGenre?.includes('Consciousness')) {
+          newPrice = Number((b.price || 9.99).toFixed(2));
+          reason = 'Competitive sweet-spot for high-demand specialized genre';
+        }
+
+        return {
+          ...b,
+          price: newPrice,
+          isDeal: isDeal || newPrice < 6.00,
+          originalPrice: Number((newPrice * 1.4).toFixed(2)),
+          pricingRationale: reason
+        };
+      });
+
+      liveCatalog = optimizedCatalog;
+      addLog('deal_rotation', `Dynamic Pricing Engine Executed`, `Optimized catalog prices based on reader velocity and elasticity.`, 'Optimizer');
+
+      res.json({
+        success: true,
+        objective,
+        totalUpdated: optimizedCatalog.length,
+        books: liveCatalog
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // H. Manager Stats & Autopilot Status
   app.get('/api/manager/stats', (req, res) => {
     const categoriesCount = new Set(liveCatalog.map((b: any) => b.primaryGenre)).size;
     const audiobooksCount = liveCatalog.filter((b: any) => b.format === 'audiobook' || b.format === 'bundle' || b.audioDurationMinutes).length;
@@ -731,6 +1356,233 @@ Return a structured JSON object:
         source: 'fallback',
         data: getFallbackSummary(req.body.book),
       });
+    }
+  });
+
+  // 4. In-Reader Conceptual Deep Dive & Glossaries (Gemini 3.7 Flash)
+  app.post('/api/ai/deep-dive', async (req, res) => {
+    try {
+      const { term, passageContext, bookTitle, author, genre } = req.body;
+      const ai = getGeminiClient();
+
+      if (!ai) {
+        return res.json({
+          success: true,
+          source: 'local_glossary_heuristic',
+          deepDive: {
+            term: term || 'Sacred Science Concept',
+            briefDefinition: 'A core cosmological or metaphysical principle governing natural universal balance.',
+            keyTenets: [
+              'Harmonizes individual consciousness with universal macrocosmic laws',
+              'Rooted in ancient Nilotic, Dogon, or European philosophical traditions',
+              'Serves as an ontological anchor in modern narrative storytelling'
+            ],
+            historicalLineage: 'Originates from classical antiquity and indigenous sacred science schools.',
+            readingSignificance: 'Understanding this principle deepens appreciation of the author’s philosophical symbolism.'
+          }
+        });
+      }
+
+      const prompt = `You are the Bookatlas Metaphysical & Literary Scholar.
+Provide a deep-dive conceptual breakdown for the term/concept: "${term}"
+Book Context: "${bookTitle}" by ${author} (${genre || 'Literature & Philosophy'})
+Surrounding Passage: "${passageContext || ''}"
+
+Return a valid JSON object:
+{
+  "term": "${term}",
+  "briefDefinition": "Concise 1-sentence crystal clear explanation",
+  "keyTenets": [
+    "Core tenet or universal mechanism 1",
+    "Core tenet 2",
+    "Core tenet 3"
+  ],
+  "historicalLineage": "2 sentences on ancient origins (e.g. Kemetic, Dogon, Greek, Yoruba, Hermetic, Vedic, or European)",
+  "readingSignificance": "How this concept elevates the narrative and what subtle meaning the reader should take away"
+}`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.7-flash',
+        contents: prompt,
+        config: { responseMimeType: 'application/json' },
+      });
+
+      const parsed = JSON.parse(response.text || '{}');
+      res.json({
+        success: true,
+        source: 'gemini-3.7-flash',
+        deepDive: parsed,
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // 5. In-Reader Visual Mind Map & Chapter Synthesis (Gemini 3.7 Flash)
+  app.post('/api/ai/mind-map', async (req, res) => {
+    try {
+      const { chapterTitle, chapterContent, bookTitle } = req.body;
+      const ai = getGeminiClient();
+
+      if (!ai) {
+        return res.json({
+          success: true,
+          source: 'local_mindmap_heuristic',
+          mindMap: {
+            centralTheme: chapterTitle || 'Chapter Synthesis',
+            nodes: [
+              { label: 'Narrative Catalyst', description: 'Initial inciting tension shifting character trajectory', color: '#4f46e5' },
+              { label: 'Thematic Conflict', description: 'Core ethical or philosophical dilemma in this section', color: '#d97706' },
+              { label: 'Key Revelations', description: 'Crucial secrets unveiled altering reader perspective', color: '#059669' },
+              { label: 'Existential Inquiries', description: 'Unresolved questions left for the next chapter', color: '#dc2626' }
+            ],
+            keyTakeaways: [
+              'The protagonist confronts their foundational assumptions',
+              'Atmospheric world-building subtly mirrors the character’s psychological state'
+            ]
+          }
+        });
+      }
+
+      const prompt = `Create a structured visual memory Mind Map & Chapter Takeaway synthesis for:
+Book: "${bookTitle}"
+Chapter: "${chapterTitle}"
+Content: "${(chapterContent || []).join('\n')}"
+
+Return a valid JSON object:
+{
+  "centralTheme": "The core thematic title of this chapter",
+  "nodes": [
+    { "label": "Inciting Action", "description": "1 sentence description", "color": "#4f46e5" },
+    { "label": "Psychological Subtext", "description": "1 sentence description", "color": "#d97706" },
+    { "label": "Philosophical Resonance", "description": "1 sentence description", "color": "#059669" },
+    { "label": "Climax / Turning Point", "description": "1 sentence description", "color": "#dc2626" }
+  ],
+  "keyTakeaways": [
+    "Key memory takeaway 1",
+    "Key memory takeaway 2",
+    "Key memory takeaway 3"
+  ]
+}`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.7-flash',
+        contents: prompt,
+        config: { responseMimeType: 'application/json' },
+      });
+
+      const mindMap = JSON.parse(response.text || '{}');
+      res.json({
+        success: true,
+        source: 'gemini-3.7-flash',
+        mindMap,
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // 6. Vocal Pronunciation & Dialect Guide (Gemini 3.7 Flash)
+  app.post('/api/ai/pronounce-term', async (req, res) => {
+    try {
+      const { term, languageFamily } = req.body;
+      const ai = getGeminiClient();
+
+      if (!ai) {
+        return res.json({
+          success: true,
+          source: 'local_pronunciation_heuristic',
+          guide: {
+            term: term || 'Medu Neter',
+            phoneticSpelling: 'MEH-doo NEH-tair',
+            ipaNotation: '/ˈmɛduː ˈnɛtɛr/',
+            originLanguage: languageFamily || 'Ancient Egyptian (Kemetic)',
+            literalMeaning: 'Divine Words or Sacred Speech',
+            audioTip: 'Stress the first syllable of each word with a crisp dental consonant.'
+          }
+        });
+      }
+
+      const prompt = `Provide an authentic linguistic and phonetic pronunciation breakdown for the indigenous, ancient, or specialized literary term: "${term}".
+Language/Cultural family hint: "${languageFamily || 'Detect automatically (e.g. Kemetic, Dogon, Yoruba, Wolof, Latin, Dutch)'}"
+
+Return a valid JSON object:
+{
+  "term": "${term}",
+  "phoneticSpelling": "e.g. OH-shoon or MEH-doo NEH-tair",
+  "ipaNotation": "IPA notation if applicable",
+  "originLanguage": "Specific language or dialect",
+  "literalMeaning": "Literal translation or spiritual/cultural significance",
+  "audioTip": "Practical vocal coaching tip for pronouncing naturally"
+}`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.7-flash',
+        contents: prompt,
+        config: { responseMimeType: 'application/json' },
+      });
+
+      const guide = JSON.parse(response.text || '{}');
+      res.json({
+        success: true,
+        source: 'gemini-3.7-flash',
+        guide,
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // 7. AI Text-to-Speech Studio Narration (Gemini TTS Preview)
+  app.post('/api/ai/tts', async (req, res) => {
+    try {
+      const { text, voiceName } = req.body;
+      const selectedVoice = voiceName || 'Kore';
+      const ai = getGeminiClient();
+
+      if (!ai) {
+        return res.json({
+          success: true,
+          source: 'browser_speech_compatible',
+          voiceName: selectedVoice,
+          message: 'Client-side SpeechSynthesis with expressive audio settings is active.'
+        });
+      }
+
+      try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.1-flash-tts-preview',
+          contents: [{ parts: [{ text: text.slice(0, 500) }] }],
+          config: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: selectedVoice },
+              },
+            },
+          },
+        });
+
+        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (base64Audio) {
+          return res.json({
+            success: true,
+            source: 'gemini-3.1-flash-tts-preview',
+            audioBase64: base64Audio,
+            voiceName: selectedVoice,
+          });
+        }
+      } catch (ttsErr: any) {
+        console.log('Gemini TTS direct note (falling back to browser speech synthesis):', ttsErr.message);
+      }
+
+      res.json({
+        success: true,
+        source: 'browser_speech_fallback',
+        voiceName: selectedVoice,
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
     }
   });
 
