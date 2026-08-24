@@ -3,6 +3,8 @@ import path from 'path';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { INITIAL_BOOKS, GENRES } from './src/data/booksData.js';
+import { isDbConfigured } from './db/supabaseClient.js';
+import * as db from './db/repository.js';
 
 dotenv.config();
 
@@ -361,6 +363,41 @@ function addLog(actionType: any, title: string, description: string, badge = 'Ma
 export async function createApp() {
   const app = express();
 
+  if (isDbConfigured) {
+    try {
+      const [dbBooks, dbCategories, dbUsers, dbSubscribers, dbCampaigns] = await Promise.all([
+        db.hydrateBooksFromDb(),
+        db.hydrateCategoriesFromDb(),
+        db.hydrateUsersFromDb(),
+        db.hydrateSubscribersFromDb(),
+        db.hydrateCampaignsFromDb(),
+      ]);
+
+      if (dbBooks && dbBooks.length) liveCatalog = dbBooks;
+      else void db.seedBooksInDb(liveCatalog);
+
+      if (dbCategories && dbCategories.length) customCategories = dbCategories;
+      else void db.seedCategoriesInDb(customCategories);
+
+      if (dbUsers && dbUsers.length) registeredUsers = dbUsers;
+      else void db.seedUsersInDb(registeredUsers);
+
+      if (dbSubscribers && dbSubscribers.size) {
+        subscribersMap.clear();
+        dbSubscribers.forEach((sub, email) => subscribersMap.set(email, sub));
+      } else {
+        void db.seedSubscribersInDb(Array.from(subscribersMap.values()));
+      }
+
+      if (dbCampaigns && dbCampaigns.length) subscriberCampaigns = dbCampaigns;
+      else void db.seedCampaignsInDb(subscriberCampaigns);
+
+      console.log('[db] Hydrated application state from Supabase');
+    } catch (err) {
+      console.error('[db] Hydration failed, continuing with in-memory seed data:', err);
+    }
+  }
+
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -458,6 +495,7 @@ export async function createApp() {
       const trimmedName = name.trim();
       if (!customCategories.includes(trimmedName)) {
         customCategories.push(trimmedName);
+        void db.addCategoryToDb(trimmedName);
         addLog('inventory_sync', `New Category Added: "${trimmedName}"`, description || 'Publisher category registered for catalog indexing.', 'Category Manager');
       }
 
@@ -474,6 +512,7 @@ export async function createApp() {
   app.delete('/api/categories/:name', (req, res) => {
     const categoryName = decodeURIComponent(req.params.name);
     customCategories = customCategories.filter(c => c !== categoryName);
+    void db.removeCategoryFromDb(categoryName);
     addLog('inventory_sync', `Category Removed: "${categoryName}"`, 'Archived custom category.', 'Category Manager');
     res.json({
       success: true,
@@ -509,15 +548,17 @@ export async function createApp() {
       } else {
         user.lastActive = Date.now();
       }
+      void db.upsertUserInDb(user);
 
       // Sync with master subscribers pool
-      upsertSubscriber({
+      const registrationSync = upsertSubscriber({
         email: cleanEmail,
         name: user.name,
         tags: ['registered_reader', 'platform_user'],
         source: 'registration_gate',
         status: 'subscribed'
       });
+      void db.upsertSubscriberInDb(registrationSync.subscriber);
 
       res.json({
         success: true,
@@ -854,6 +895,7 @@ export async function createApp() {
       let updatedCount = 0;
       let preservedUnsubCount = 0;
       let invalidCount = 0;
+      const touchedSubscribers: ServerSubscriber[] = [];
 
       for (const item of parsedRows) {
         if (!item.email || !item.email.includes('@')) {
@@ -874,7 +916,9 @@ export async function createApp() {
         if (result.action === 'created') newCount++;
         else if (result.action === 'updated') updatedCount++;
         else if (result.action === 'preserved_unsubscribed') preservedUnsubCount++;
+        if (result.action !== 'preserved_unsubscribed') touchedSubscribers.push(result.subscriber);
       }
+      void db.bulkUpsertSubscribersInDb(touchedSubscribers);
 
       const processingTimeMs = Date.now() - startTime;
 
@@ -924,11 +968,14 @@ export async function createApp() {
 
       const ninetyDaysAgo = Date.now() - 86400000 * 90;
       const seenDomainRoots = new Map<string, number>();
+      const emailsToDelete: string[] = [];
+      const subscribersToUpsert: ServerSubscriber[] = [];
 
       for (const [email, sub] of subscribersMap.entries()) {
         // 1. Remove bounced
         if (removeBounced && sub.status === 'bounced') {
           subscribersMap.delete(email);
+          emailsToDelete.push(email);
           bouncedRemoved++;
           continue;
         }
@@ -936,6 +983,7 @@ export async function createApp() {
         // 2. Remove unsubscribed
         if (removeUnsubscribed && sub.status === 'unsubscribed') {
           subscribersMap.delete(email);
+          emailsToDelete.push(email);
           unsubscribedRemoved++;
           continue;
         }
@@ -943,6 +991,7 @@ export async function createApp() {
         // 3. Remove inactive (0 opens/clicks in past 90 days and received > 5 emails)
         if (removeInactive90Days && sub.emailsReceivedCount > 5 && (!sub.lastOpenedAt || sub.lastOpenedAt < ninetyDaysAgo)) {
           subscribersMap.delete(email);
+          emailsToDelete.push(email);
           inactiveRemoved++;
           continue;
         }
@@ -953,9 +1002,13 @@ export async function createApp() {
           subscribersMap.delete(email);
           sub.email = fixedEmail;
           subscribersMap.set(fixedEmail, sub);
+          emailsToDelete.push(email);
+          subscribersToUpsert.push(sub);
           syntaxErrorsFixed++;
         }
       }
+      void db.bulkDeleteSubscribersFromDb(emailsToDelete);
+      void db.bulkUpsertSubscribersInDb(subscribersToUpsert);
 
       const remainingCount = subscribersMap.size;
       const totalPruned = initialCount - remainingCount;
@@ -1026,6 +1079,7 @@ export async function createApp() {
       const tiersPool: ServerSubscriberTier[] = ['free_reader', 'free_reader', 'member_subscriber', 'member_subscriber', 'vip_patron'];
 
       let added = 0;
+      const touchedSubscribers: ServerSubscriber[] = [];
       for (let i = 0; i < targetCount; i++) {
         const fn = firstNames[i % firstNames.length];
         const ln = lastNames[(i * 3 + 7) % lastNames.length];
@@ -1046,7 +1100,9 @@ export async function createApp() {
           userDiscountCode: assignedTier === 'vip_patron' ? 'VIPATLAS40' : (assignedTier === 'member_subscriber' ? 'PLUSATLAS25' : 'READ10')
         });
         if (result.action === 'created') added++;
+        if (result.action !== 'preserved_unsubscribed') touchedSubscribers.push(result.subscriber);
       }
+      void db.bulkUpsertSubscribersInDb(touchedSubscribers);
 
       const processingTimeMs = Date.now() - startTime;
 
@@ -1270,6 +1326,7 @@ export async function createApp() {
       }
 
       subscriberCampaigns.unshift(campaignRecord);
+      void db.addCampaignToDb(campaignRecord);
 
       addLog(
         'marketing_blast',
@@ -1400,6 +1457,7 @@ export async function createApp() {
         source: 'manual_entry',
         status: 'subscribed'
       });
+      void db.upsertSubscriberInDb(result.subscriber);
 
       addLog('marketing_blast', `Subscriber Added: ${email}`, `Tier: ${tier} | Tags: ${tags.join(', ')}`);
 
@@ -1419,6 +1477,7 @@ export async function createApp() {
       const email = decodeURIComponent(req.params.email).toLowerCase().trim();
       const existed = subscribersMap.delete(email);
       if (existed) {
+        void db.deleteSubscriberFromDb(email);
         addLog('marketing_blast', `Subscriber Deleted: ${email}`, 'Removed contact from audience map.');
       }
       res.json({ success: true, message: 'Subscriber removed', remaining: subscribersMap.size });
@@ -1493,6 +1552,7 @@ export async function createApp() {
       if (resubscribe) {
         sub.status = 'subscribed';
         sub.unsubscribedAt = undefined;
+        void db.upsertSubscriberInDb(sub);
         addLog('marketing_blast', `Reader Resubscribed: ${cleanEmail}`, 'User re-activated email newsletter notifications.', 'Subscription Center');
         return res.json({
           success: true,
@@ -1503,6 +1563,7 @@ export async function createApp() {
       } else {
         sub.status = 'unsubscribed';
         sub.unsubscribedAt = Date.now();
+        void db.upsertSubscriberInDb(sub);
         addLog('marketing_blast', `1-Click Unsubscribe Processed: ${cleanEmail}`, `Reason: ${reason}. Contact removed from future active dispatches.`, 'Unsubscribe Center');
         
         return res.json({
@@ -1827,10 +1888,12 @@ Return a valid JSON object matching this schema:
 
       // Add to live bookstore catalog
       liveCatalog.unshift(publishedBook);
+      void db.upsertBookInDb(publishedBook);
 
       // Auto-register category if new
       if (publishedBook.primaryGenre && !customCategories.includes(publishedBook.primaryGenre) && !GENRES.includes(publishedBook.primaryGenre)) {
         customCategories.push(publishedBook.primaryGenre);
+        void db.addCategoryToDb(publishedBook.primaryGenre);
       }
 
       // Log action
@@ -1949,6 +2012,7 @@ Return a valid JSON object matching this schema:
       };
 
       liveCatalog.unshift(finalizedBook);
+      void db.upsertBookInDb(finalizedBook);
       addLog('inventory_sync', `Published New Title: "${finalizedBook.title}"`, `Added to category ${finalizedBook.primaryGenre}.`);
 
       res.status(201).json({
@@ -1976,6 +2040,7 @@ Return a valid JSON object matching this schema:
     };
 
     liveCatalog[index] = updated;
+    void db.upsertBookInDb(updated);
     addLog('inventory_sync', `Updated Book: "${updated.title}"`, `Price: $${updated.price} | Bookatlas Plus: ${updated.isBookatlasPlus ? 'Yes' : 'No'}`);
 
     res.json({
@@ -1989,6 +2054,7 @@ Return a valid JSON object matching this schema:
     const { id } = req.params;
     const targetBook = liveCatalog.find((b: any) => b.id === id);
     liveCatalog = liveCatalog.filter((b: any) => b.id !== id);
+    void db.deleteBookFromDb(id);
 
     addLog('inventory_sync', `Archived Title: "${targetBook?.title || id}"`, 'Removed from live storefront inventory.');
 
@@ -2002,6 +2068,7 @@ Return a valid JSON object matching this schema:
   // 5. Reset to Seed Books
   app.post('/api/books/reset-default', (req, res) => {
     liveCatalog = JSON.parse(JSON.stringify(INITIAL_BOOKS));
+    void db.replaceAllBooksInDb(liveCatalog);
     addLog('inventory_sync', 'Catalog Reset to Default Seed', 'Restored all original 14+ category flagship titles.');
     res.json({
       success: true,
@@ -2027,6 +2094,7 @@ Return a valid JSON object matching this schema:
         // High quality heuristic generator fallback
         const originalBook = generateOriginalBookProcedural(targetCategory, tone, themes);
         liveCatalog.unshift(originalBook);
+        void db.upsertBookInDb(originalBook);
         addLog('ai_generation', `AI Generated: "${originalBook.title}"`, `Created original manuscript for ${targetCategory}`, 'Procedural AI');
         return res.json({
           success: true,
@@ -2128,6 +2196,7 @@ Return ONLY valid JSON matching this schema:
       };
 
       liveCatalog.unshift(completeBook);
+      void db.upsertBookInDb(completeBook);
       addLog('ai_generation', `AI Generated: "${completeBook.title}"`, `Published to ${targetCategory} using Gemini 3.7 Flash`, 'Gemini 3.7');
 
       res.status(201).json({
@@ -2139,6 +2208,7 @@ Return ONLY valid JSON matching this schema:
       console.error('Manager AI Generation Error:', error);
       const fallbackBook = generateOriginalBookProcedural(req.body.category || 'Fiction & Literature', req.body.tone, req.body.themes);
       liveCatalog.unshift(fallbackBook);
+      void db.upsertBookInDb(fallbackBook);
       addLog('ai_generation', `AI Generated (Fallback): "${fallbackBook.title}"`, `Created original manuscript for ${fallbackBook.primaryGenre}`);
 
       res.status(201).json({
@@ -2160,6 +2230,7 @@ Return ONLY valid JSON matching this schema:
         if (existingCount < 2) {
           const newBook = generateOriginalBookProcedural(cat, 'Atmospheric and Compelling', 'Original narrative masterwork');
           liveCatalog.push(newBook);
+          void db.upsertBookInDb(newBook);
           generatedList.push(newBook);
         }
       }
@@ -2460,6 +2531,7 @@ Return a valid JSON object:
       });
 
       liveCatalog = optimizedCatalog;
+      void db.replaceAllBooksInDb(liveCatalog);
       addLog('deal_rotation', `Dynamic Pricing Engine Executed`, `Optimized catalog prices based on reader velocity and elasticity.`, 'Optimizer');
 
       res.json({
