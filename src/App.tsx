@@ -21,6 +21,7 @@ import { ExportDocsModal } from './components/ExportDocsModal';
 import { AIStudioHub } from './components/AIStudioHub';
 import { AdminAuthModal } from './components/AdminAuthModal';
 import { UserRegistrationGateModal } from './components/UserRegistrationGateModal';
+import { UnsubscribePageModal } from './components/UnsubscribePageModal';
 import { TRANSLATIONS } from './data/translations';
 import { INITIAL_BOOKS } from './data/booksData';
 
@@ -61,6 +62,27 @@ export default function App() {
     }
     return null;
   });
+
+  // 1-Click Unsubscribe Modal state
+  const [isUnsubscribeModalOpen, setIsUnsubscribeModalOpen] = useState(false);
+  const [unsubTargetEmail, setUnsubTargetEmail] = useState('');
+  const [unsubTargetToken, setUnsubTargetToken] = useState('');
+
+  // Check URL parameters for 1-click unsubscribe links
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const action = params.get('action');
+      const emailParam = params.get('email');
+      const tokenParam = params.get('token');
+      if (emailParam) setUnsubTargetEmail(emailParam);
+      if (tokenParam) setUnsubTargetToken(tokenParam);
+
+      if (action === 'unsubscribe' || params.get('unsub') === 'true' || (emailParam && tokenParam)) {
+        setIsUnsubscribeModalOpen(true);
+      }
+    } catch (e) {}
+  }, []);
 
   // Load books from backend API if available
   useEffect(() => {
@@ -970,6 +992,15 @@ export default function App() {
             <button onClick={() => setIsArchitectureGuideOpen(true)} className="hover:text-white underline cursor-pointer">
               Technical Architecture & EPUB Specs
             </button>
+            <button 
+              onClick={() => {
+                setUnsubTargetEmail(registeredUser?.email || '');
+                setIsUnsubscribeModalOpen(true);
+              }} 
+              className="text-slate-400 hover:text-slate-200 underline cursor-pointer"
+            >
+              Email Preferences & 1-Click Opt-Out
+            </button>
           </div>
         </div>
       </footer>
@@ -1095,6 +1126,15 @@ export default function App() {
       <UserRegistrationGateModal
         isOpen={!registeredUser}
         onSuccess={(userData) => setRegisteredUser(userData)}
+        language={language}
+      />
+
+      {/* 1-Click Unsubscribe & Preference Center Modal */}
+      <UnsubscribePageModal
+        isOpen={isUnsubscribeModalOpen}
+        onClose={() => setIsUnsubscribeModalOpen(false)}
+        initialEmail={unsubTargetEmail || registeredUser?.email}
+        token={unsubTargetToken}
         language={language}
       />
 

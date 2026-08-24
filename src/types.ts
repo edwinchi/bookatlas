@@ -249,3 +249,46 @@ export interface SecurityAuditLog {
   status: 'authorized' | 'denied' | 'security_event';
 }
 
+// Subscriber & Bulk CSV Email Blast Types
+export interface SubscriberItem {
+  email: string;
+  name?: string;
+  status: 'subscribed' | 'unsubscribed' | 'bounced';
+  subscribedAt: number;
+  unsubscribedAt?: number;
+  tags?: string[];
+  source?: string;
+  unsubscribeToken: string;
+  emailsReceivedCount: number;
+  lastEmailSentAt?: number;
+}
+
+export interface SubscriberCampaign {
+  id: string;
+  title: string;
+  subject: string;
+  previewText?: string;
+  senderName: string;
+  content: string;
+  bookTitle?: string;
+  ctaText?: string;
+  ctaUrl?: string;
+  targetFilter: 'all_active' | 'vip' | 'custom_tags';
+  totalRecipients: number;
+  sentAt: number;
+  status: 'sending' | 'completed' | 'draft';
+  openRate?: number;
+  clickRate?: number;
+  unsubscribesCount?: number;
+}
+
+export interface CSVImportStats {
+  totalRowsParsed: number;
+  validEmailsProcessed: number;
+  newSubscribersAdded: number;
+  existingUpdated: number;
+  invalidSkipped: number;
+  unsubscribedPreserved: number;
+  processingTimeMs: number;
+}
+

@@ -46,6 +46,7 @@ import {
 import { Book, ManagerStats, AutomationLogEntry, MarketingKit, SecurityAuditLog } from '../types';
 import { GENRES } from '../data/booksData';
 import { MultimodalPublishingStudio } from './MultimodalPublishingStudio';
+import { SubscriberManagerHub } from './SubscriberManagerHub';
 import { TRANSLATIONS } from '../data/translations';
 
 interface ManagerPortalProps {
@@ -84,7 +85,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
   onAdminLogout
 }) => {
 
-  const [activeTab, setActiveTab] = useState<'inventory' | 'upload_publish' | 'categories_mgr' | 'ai_studio' | 'market_radar' | 'translation' | 'pricing' | 'marketing' | 'autopilot' | 'security'>('upload_publish');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'upload_publish' | 'categories_mgr' | 'subscribers_blast' | 'ai_studio' | 'market_radar' | 'translation' | 'pricing' | 'marketing' | 'autopilot' | 'security'>('upload_publish');
   
   // Custom Dynamic Categories
   const [publisherCategories, setPublisherCategories] = useState<string[]>([
@@ -761,6 +762,18 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
         </button>
 
         <button
+          onClick={() => setActiveTab('subscribers_blast')}
+          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+            activeTab === 'subscribers_blast'
+              ? 'bg-slate-950 text-white shadow-md'
+              : 'text-emerald-900 bg-emerald-50 hover:bg-emerald-100 font-extrabold border border-emerald-300'
+          }`}
+        >
+          <Users className="w-4 h-4 text-amber-400" />
+          👥 100k CSV & Subscriber Email Blast
+        </button>
+
+        <button
           onClick={() => setActiveTab('inventory')}
           className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
             activeTab === 'inventory'
@@ -972,6 +985,17 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: SUBSCRIBERS 100K CSV & EMAIL BLAST BROADCAST STUDIO */}
+      {/* ========================================================================= */}
+      {activeTab === 'subscribers_blast' && (
+        <SubscriberManagerHub
+          books={books}
+          currencySymbol={currencySymbol}
+          onNotification={(msg) => setAiSuccessMessage(msg)}
+        />
       )}
 
       {/* ========================================================================= */}

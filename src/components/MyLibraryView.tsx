@@ -87,7 +87,7 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
           libraryItems: library,
           wishlistItems: wishlist,
           highlightsCount: totalHighlightsCount,
-        }, language);
+        }, (language === 'nl' ? 'nl' : 'en'));
 
         setPdfSuccessBanner(true);
         setTimeout(() => setPdfSuccessBanner(false), 5000);
