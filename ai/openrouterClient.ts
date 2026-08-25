@@ -76,6 +76,17 @@ export async function generateWithOpenRouter(opts: GenerateOptions): Promise<str
   const cached = readCache(cacheKey);
   if (cached !== null) return cached;
 
+  // Hard wall-clock bound, independent of the fetch's own AbortController —
+  // some serverless runtimes don't reliably honor AbortSignal cancellation,
+  // and a hung call here must never be allowed to run out the clock on the
+  // whole request (Vercel functions have their own hard timeout).
+  return Promise.race([
+    generateWithOpenRouterInner(opts, cacheKey),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 12000)),
+  ]);
+}
+
+async function generateWithOpenRouterInner(opts: GenerateOptions, cacheKey: string): Promise<string | null> {
   try {
     const messages: Array<{ role: string; content: string }> = [];
     if (opts.systemInstruction) {
@@ -95,7 +106,7 @@ export async function generateWithOpenRouter(opts: GenerateOptions): Promise<str
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',

@@ -466,22 +466,31 @@ export async function createApp() {
     const ai = getGeminiClient();
     if (!ai) return null;
 
-    try {
-      const contents = opts.messages.map((m) => ({ role: m.role, parts: [{ text: m.text }] }));
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents,
-        config: {
-          systemInstruction: opts.systemInstruction,
-          temperature: opts.temperature,
-          responseMimeType: opts.jsonMode ? 'application/json' : undefined,
-        },
-      });
-      return response.text || null;
-    } catch (err) {
-      console.error('[ai] Gemini fallback call errored:', err);
-      return null;
-    }
+    const callGemini = async (): Promise<string | null> => {
+      try {
+        const contents = opts.messages.map((m) => ({ role: m.role, parts: [{ text: m.text }] }));
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.7-flash',
+          contents,
+          config: {
+            systemInstruction: opts.systemInstruction,
+            temperature: opts.temperature,
+            responseMimeType: opts.jsonMode ? 'application/json' : undefined,
+          },
+        });
+        return response.text || null;
+      } catch (err) {
+        console.error('[ai] Gemini fallback call errored:', err);
+        return null;
+      }
+    };
+
+    // Same hard wall-clock bound as the OpenRouter path — never let a slow
+    // provider call run out the clock on the whole request.
+    return Promise.race([
+      callGemini(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 12000)),
+    ]);
   }
 
   // ==========================================
