@@ -1,13 +1,17 @@
+// Must run before any other local import — ESM evaluates static imports in
+// source order before this module's own body runs, so db/supabaseClient.ts
+// and ai/openrouterClient.ts (which read process.env at module top-level)
+// would otherwise see an empty environment.
+import 'dotenv/config';
+
 import express from 'express';
 import path from 'path';
 import crypto from 'crypto';
 import { GoogleGenAI } from '@google/genai';
-import dotenv from 'dotenv';
 import { INITIAL_BOOKS, GENRES } from './src/data/booksData.js';
 import { isDbConfigured } from './db/supabaseClient.js';
 import * as db from './db/repository.js';
-
-dotenv.config();
+import { generateWithOpenRouter, isOpenRouterConfigured, type AiMessage } from './ai/openrouterClient.js';
 
 function isPlaceholderEnvValue(value?: string): boolean {
   if (!value) return true;
@@ -442,6 +446,42 @@ export async function createApp() {
       });
     }
     return aiClient;
+  }
+
+  // Unified text-generation entry point for every text/JSON-only AI feature
+  // (excludes TTS, Veo video, Google Search grounding, and multimodal image
+  // analysis, which are Gemini-exclusive capabilities OpenRouter can't do).
+  // Tries OpenRouter first (cheap/free-tier by default), then Gemini if a
+  // real key is configured, then null so the caller's own local heuristic
+  // fallback takes over — the app already never crashes without a key.
+  async function generateAiText(opts: {
+    systemInstruction?: string;
+    messages: AiMessage[];
+    jsonMode?: boolean;
+    temperature?: number;
+  }): Promise<string | null> {
+    const openRouterText = await generateWithOpenRouter(opts);
+    if (openRouterText) return openRouterText;
+
+    const ai = getGeminiClient();
+    if (!ai) return null;
+
+    try {
+      const contents = opts.messages.map((m) => ({ role: m.role, parts: [{ text: m.text }] }));
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.7-flash',
+        contents,
+        config: {
+          systemInstruction: opts.systemInstruction,
+          temperature: opts.temperature,
+          responseMimeType: opts.jsonMode ? 'application/json' : undefined,
+        },
+      });
+      return response.text || null;
+    } catch (err) {
+      console.error('[ai] Gemini fallback call errored:', err);
+      return null;
+    }
   }
 
   // ==========================================
@@ -1668,10 +1708,7 @@ export async function createApp() {
   app.post('/api/subscribers/ai-compose', async (req, res) => {
     const { topic, bookTitle, tone = 'compelling, warm, and intellectual', discountCode = 'BOOKATLAS25', targetGenre, targetTier = 'all' } = req.body;
     try {
-      const ai = getGeminiClient();
-
-      if (ai) {
-        const prompt = `You are the Master Marketing Director and Literary Publicist for Bookatlas Digital Bookstore in Amsterdam.
+      const prompt = `You are the Master Marketing Director and Literary Publicist for Bookatlas Digital Bookstore in Amsterdam.
 Write a high-converting, elegant email campaign for our audience of book lovers, philosophy scholars, and global readers.
 Context:
 - Book / Topic: "${bookTitle || topic || 'Curated Weekly Masterpieces & New Releases'}"
@@ -1693,20 +1730,12 @@ Return ONLY a clean JSON object with this exact schema:
   "recommendedTags": ["vip", "bestseller_fan"]
 }`;
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.7-flash',
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-            temperature: 0.7
-          }
-        });
-
-        const parsed = JSON.parse(response.text || '{}');
+      const text = await generateAiText({ messages: [{ role: 'user', text: prompt }], jsonMode: true, temperature: 0.7 });
+      if (text) {
+        const parsed = JSON.parse(text);
         return res.json({ success: true, aiGenerated: true, campaign: parsed });
-      } else {
-        return res.json({ success: true, aiGenerated: false, campaign: heuristicCampaignCopy(bookTitle) });
       }
+      return res.json({ success: true, aiGenerated: false, campaign: heuristicCampaignCopy(bookTitle) });
     } catch (error: any) {
       console.error('AI Compose Error:', error);
       res.json({ success: true, aiGenerated: false, campaign: heuristicCampaignCopy(bookTitle) });
@@ -2122,21 +2151,15 @@ Return a valid JSON object matching this schema:
     try {
       const { category, tone, themes, customPrompt } = req.body;
       const targetCategory = category || 'Sci-Fi & Fantasy';
-      const ai = getGeminiClient();
 
       aiGenerationsCount++;
 
-      if (!ai) {
-        // High quality heuristic generator fallback
+      function proceduralFallback() {
         const originalBook = generateOriginalBookProcedural(targetCategory, tone, themes);
         liveCatalog.unshift(originalBook);
         void db.upsertBookInDb(originalBook);
         addLog('ai_generation', `AI Generated: "${originalBook.title}"`, `Created original manuscript for ${targetCategory}`, 'Procedural AI');
-        return res.json({
-          success: true,
-          source: 'procedural_synthesis',
-          book: originalBook,
-        });
+        return originalBook;
       }
 
       const prompt = `You are a master novelist, publisher, and chief editorial curator at Bookatlas (owned by Atlantean Globals Services, Netherlands).
@@ -2194,17 +2217,17 @@ Return ONLY valid JSON matching this schema:
   ]
 }`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          systemInstruction: 'You are an award-winning literary author and publishing executive crafting original, high-caliber books for an international digital bookstore.',
-        },
+      const text = await generateAiText({
+        messages: [{ role: 'user', text: prompt }],
+        jsonMode: true,
+        systemInstruction: 'You are an award-winning literary author and publishing executive crafting original, high-caliber books for an international digital bookstore.',
       });
 
-      const responseText = response.text || '{}';
-      const parsedBook = JSON.parse(responseText);
+      if (!text) {
+        return res.json({ success: true, source: 'procedural_synthesis', book: proceduralFallback() });
+      }
+
+      const parsedBook = JSON.parse(text);
 
       // Assign cover image & unique ID
       const coverImages: { [key: string]: string } = {
@@ -2233,11 +2256,11 @@ Return ONLY valid JSON matching this schema:
 
       liveCatalog.unshift(completeBook);
       void db.upsertBookInDb(completeBook);
-      addLog('ai_generation', `AI Generated: "${completeBook.title}"`, `Published to ${targetCategory} using Gemini 3.7 Flash`, 'Gemini 3.7');
+      addLog('ai_generation', `AI Generated: "${completeBook.title}"`, `Published to ${targetCategory} using AI`, 'AI Studio');
 
       res.status(201).json({
         success: true,
-        source: 'gemini-3.7-flash',
+        source: 'ai',
         book: completeBook,
       });
     } catch (error: any) {
@@ -2331,37 +2354,32 @@ Return ONLY valid JSON matching this schema:
     }
   });
 
+  function marketingKitFallback(book: any) {
+    return {
+      bookTitle: book.title,
+      emailNewsletterSubject: `✨ Unveiling "${book.title}" — The Masterpiece You Cannot Miss This Weekend`,
+      emailBody: `Dear Bookatlas Readers,\n\nWe are delighted to bring you "${book.title}" by ${book.author}.\n\n"${book.synopsis}"\n\nNow available with instant eReader delivery and Studio Audio preview on Bookatlas Plus.\n\nHappy Reading,\nThe Bookatlas Editorial Team (Amsterdam)`,
+      socialMediaThread: [
+        `🧵 1/4 If you love ${book.primaryGenre}, you need to read "${book.title}" by ${book.author} immediately. Here is why: 👇`,
+        `2/4 🌌 The atmosphere is unmatched: "${book.synopsis?.slice(0, 140)}..."`,
+        `3/4 🎧 Also featuring narration by ${book.narrator || 'world-class voice artists'}. Read or listen now on Bookatlas!`,
+        `4/4 Read free sample chapters directly in your browser: https://bookatlas.eu/book/${book.id}`
+      ],
+      bookClubDiscussionQuestions: [
+        `How does the protagonist's central moral choice in Chapter 1 echo contemporary ethical dilemmas?`,
+        `In what ways does the setting function as an active character throughout the narrative?`,
+        `What did you make of the thematic resolution in the climax?`
+      ],
+      tagline: `An unforgettable journey into ${book.primaryGenre}.`,
+      targetAudienceAnalysis: `Readers who cherish intellectual depth, atmospheric European storytelling, and masterfully paced narratives.`
+    };
+  }
+
   // D. Generate Marketing Kit for Any Book (Gemini 3.7 Flash)
   app.post('/api/manager/generate-marketing-kit', async (req, res) => {
     try {
       const { bookId } = req.body;
       const book = liveCatalog.find((b: any) => b.id === bookId) || liveCatalog[0];
-      const ai = getGeminiClient();
-
-      if (!ai) {
-        return res.json({
-          success: true,
-          source: 'local_synthesis',
-          marketingKit: {
-            bookTitle: book.title,
-            emailNewsletterSubject: `✨ Unveiling "${book.title}" — The Masterpiece You Cannot Miss This Weekend`,
-            emailBody: `Dear Bookatlas Readers,\n\nWe are delighted to bring you "${book.title}" by ${book.author}.\n\n"${book.synopsis}"\n\nNow available with instant eReader delivery and Studio Audio preview on Bookatlas Plus.\n\nHappy Reading,\nThe Bookatlas Editorial Team (Amsterdam)`,
-            socialMediaThread: [
-              `🧵 1/4 If you love ${book.primaryGenre}, you need to read "${book.title}" by ${book.author} immediately. Here is why: 👇`,
-              `2/4 🌌 The atmosphere is unmatched: "${book.synopsis?.slice(0, 140)}..."`,
-              `3/4 🎧 Also featuring narration by ${book.narrator || 'world-class voice artists'}. Read or listen now on Bookatlas!`,
-              `4/4 Read free sample chapters directly in your browser: https://bookatlas.eu/book/${book.id}`
-            ],
-            bookClubDiscussionQuestions: [
-              `How does the protagonist's central moral choice in Chapter 1 echo contemporary ethical dilemmas?`,
-              `In what ways does the setting function as an active character throughout the narrative?`,
-              `What did you make of the thematic resolution in the climax?`
-            ],
-            tagline: `An unforgettable journey into ${book.primaryGenre}.`,
-            targetAudienceAnalysis: `Readers who cherish intellectual depth, atmospheric European storytelling, and masterfully paced narratives.`
-          }
-        });
-      }
 
       const prompt = `Generate a high-converting, professional marketing kit for this book:
 Title: "${book.title}" by ${book.author}
@@ -2380,24 +2398,39 @@ Return ONLY a JSON object:
   "targetAudienceAnalysis": "Detailed demographic and psychographic reader persona"
 }`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: { responseMimeType: 'application/json' },
-      });
+      const text = await generateAiText({ messages: [{ role: 'user', text: prompt }], jsonMode: true });
+      if (!text) {
+        return res.json({ success: true, source: 'local_synthesis', marketingKit: marketingKitFallback(book) });
+      }
 
-      const marketingKit = JSON.parse(response.text || '{}');
-      addLog('marketing_blast', `Generated Marketing Campaign for "${book.title}"`, 'Created Newsletter, Social Thread & Book Club Guide', 'Gemini 3.7');
+      const marketingKit = JSON.parse(text);
+      addLog('marketing_blast', `Generated Marketing Campaign for "${book.title}"`, 'Created Newsletter, Social Thread & Book Club Guide', 'AI Studio');
 
       res.json({
         success: true,
-        source: 'gemini-3.7-flash',
+        source: 'ai',
         marketingKit,
       });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      console.error('Marketing Kit AI Error:', error);
+      const fallbackBook = liveCatalog.find((b: any) => b.id === req.body.bookId) || liveCatalog[0];
+      res.json({ success: true, source: 'fallback', marketingKit: marketingKitFallback(fallbackBook) });
     }
   });
+
+  function translateBookFallback(book: any, lang: string) {
+    return {
+      ...book,
+      title: lang === 'Dutch' ? `(NL) ${book.title}` : lang === 'French' ? `(FR) ${book.title}` : lang === 'Swahili' ? `(SW) ${book.title}` : `(${lang}) ${book.title}`,
+      language: lang,
+      synopsis: `[Vertaald naar het ${lang} met behoud van culturele nuances]: ${book.synopsis}`,
+      sampleChapters: (book.sampleChapters || []).map((ch: any) => ({
+        title: lang === 'Dutch' ? ch.title.replace('Chapter', 'Hoofdstuk') : ch.title,
+        subtitle: ch.subtitle,
+        content: ch.content.map((p: string) => `[${lang} Vertaling] ${p}`)
+      }))
+    };
+  }
 
   // E. Automated Translation & Cultural Localization (Gemini 3.7 Flash)
   app.post('/api/manager/translate-book', async (req, res) => {
@@ -2405,25 +2438,6 @@ Return ONLY a JSON object:
       const { bookId, targetLanguage } = req.body;
       const book = liveCatalog.find((b: any) => b.id === bookId) || liveCatalog[0];
       const lang = targetLanguage || 'Dutch';
-      const ai = getGeminiClient();
-
-      if (!ai) {
-        return res.json({
-          success: true,
-          source: 'local_translation_synthesis',
-          translatedBook: {
-            ...book,
-            title: lang === 'Dutch' ? `(NL) ${book.title}` : lang === 'French' ? `(FR) ${book.title}` : lang === 'Swahili' ? `(SW) ${book.title}` : `(${lang}) ${book.title}`,
-            language: lang,
-            synopsis: `[Vertaald naar het ${lang} met behoud van culturele nuances]: ${book.synopsis}`,
-            sampleChapters: (book.sampleChapters || []).map((ch: any) => ({
-              title: lang === 'Dutch' ? ch.title.replace('Chapter', 'Hoofdstuk') : ch.title,
-              subtitle: ch.subtitle,
-              content: ch.content.map((p: string) => `[${lang} Vertaling] ${p}`)
-            }))
-          }
-        });
-      }
 
       const prompt = `You are a master literary translator specializing in translating English literature into ${lang}.
 Preserve cultural depth, philosophical precision, idiomatic warmth, and poetic register.
@@ -2448,23 +2462,24 @@ Return a valid JSON object matching this schema:
   ]
 }`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: { responseMimeType: 'application/json' },
-      });
+      const text = await generateAiText({ messages: [{ role: 'user', text: prompt }], jsonMode: true });
+      if (!text) {
+        return res.json({ success: true, source: 'local_translation_synthesis', translatedBook: translateBookFallback(book, lang) });
+      }
 
-      const parsed = JSON.parse(response.text || '{}');
-      addLog('inventory_sync', `AI Translated "${book.title}" into ${lang}`, `Cultural adaptation complete with localized chapters.`, 'Gemini 3.7');
+      const parsed = JSON.parse(text);
+      addLog('inventory_sync', `AI Translated "${book.title}" into ${lang}`, `Cultural adaptation complete with localized chapters.`, 'AI Studio');
 
       res.json({
         success: true,
-        source: 'gemini-3.7-flash',
+        source: 'ai',
         targetLanguage: lang,
         translation: parsed,
       });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      console.error('Translate Book AI Error:', error);
+      const fallbackBook = liveCatalog.find((b: any) => b.id === req.body.bookId) || liveCatalog[0];
+      res.json({ success: true, source: 'fallback', translatedBook: translateBookFallback(fallbackBook, req.body.targetLanguage || 'Dutch') });
     }
   });
 
@@ -2537,7 +2552,6 @@ Return a valid JSON object:
     try {
       const { targetObjective } = req.body;
       const objective = targetObjective || 'maximize_revenue_and_plus_subscriptions';
-      const ai = getGeminiClient();
 
       const optimizedCatalog = liveCatalog.map((b: any) => {
         let newPrice = b.price;
@@ -2623,15 +2637,6 @@ Return a valid JSON object:
   app.post('/api/ai/matchmaker', async (req, res) => {
     try {
       const { userPrompt, candidateBooks, userPreferences } = req.body;
-      const ai = getGeminiClient();
-
-      if (!ai) {
-        return res.json({
-          success: true,
-          source: 'local_heuristic',
-          recommendations: generateHeuristicMatches(userPrompt, candidateBooks || liveCatalog),
-        });
-      }
 
       const prompt = `You are the chief literary curator at Bookatlas (by Atlantean Globals Services, Netherlands).
 A reader has requested: "${userPrompt}"
@@ -2661,21 +2666,28 @@ Return ONLY a valid JSON array matching this exact format:
   }
 ]`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          systemInstruction: 'You are an award-winning literary expert and AI recommendation engine for Bookatlas eBook Store.',
-        },
+      const text = await generateAiText({
+        messages: [{ role: 'user', text: prompt }],
+        jsonMode: true,
+        systemInstruction: 'You are an award-winning literary expert and AI recommendation engine for Bookatlas eBook Store.',
       });
 
-      const responseText = response.text || '[]';
-      const parsedMatches = JSON.parse(responseText);
+      if (!text) {
+        return res.json({
+          success: true,
+          source: 'local_heuristic',
+          recommendations: generateHeuristicMatches(userPrompt, candidateBooks || liveCatalog),
+        });
+      }
+
+      const parsed = JSON.parse(text);
+      // Not every model reliably follows "return a JSON array" — normalize
+      // a bare object (or an { recommendations: [...] } wrapper) to an array.
+      const parsedMatches = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.recommendations) ? parsed.recommendations : [parsed];
 
       res.json({
         success: true,
-        source: 'gemini-3.7-flash',
+        source: 'ai',
         recommendations: parsedMatches,
       });
     } catch (error: any) {
@@ -2692,15 +2704,6 @@ Return ONLY a valid JSON array matching this exact format:
   app.post('/api/ai/reader-copilot', async (req, res) => {
     try {
       const { action, text, bookTitle, author, chapterTitle, context } = req.body;
-      const ai = getGeminiClient();
-
-      if (!ai) {
-        return res.json({
-          success: true,
-          source: 'local_synthesis',
-          result: getFallbackCopilotResult(action, text, bookTitle),
-        });
-      }
 
       const systemPrompt = `You are Bookatlas AI Reading Copilot, embedded directly within the Bookatlas eReader.
 Book: "${bookTitle}" by ${author}
@@ -2722,18 +2725,23 @@ Current Context: "${context || ''}"`;
         prompt = `Provide illuminating reading insights for: "${text}"`;
       }
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: {
-          systemInstruction: systemPrompt,
-        },
+      const text_ = await generateAiText({
+        messages: [{ role: 'user', text: prompt }],
+        systemInstruction: systemPrompt,
       });
+
+      if (!text_) {
+        return res.json({
+          success: true,
+          source: 'local_synthesis',
+          result: getFallbackCopilotResult(action, text, bookTitle),
+        });
+      }
 
       res.json({
         success: true,
-        source: 'gemini-3.7-flash',
-        result: response.text,
+        source: 'ai',
+        result: text_,
       });
     } catch (error: any) {
       console.error('Reader Copilot AI Error:', error);
@@ -2749,15 +2757,6 @@ Current Context: "${context || ''}"`;
   app.post('/api/ai/book-summary', async (req, res) => {
     try {
       const { book } = req.body;
-      const ai = getGeminiClient();
-
-      if (!ai) {
-        return res.json({
-          success: true,
-          source: 'local_synthesis',
-          data: getFallbackSummary(book),
-        });
-      }
 
       const prompt = `Generate a masterclass 5-minute Executive Book Briefing for "${book.title}" by ${book.author} (${book.primaryGenre}).
 Synopsis: ${book.synopsis}
@@ -2778,16 +2777,19 @@ Return a structured JSON object:
   "similarMasterpieces": ["Title 1 by Author", "Title 2 by Author"]
 }`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: { responseMimeType: 'application/json' },
-      });
+      const text = await generateAiText({ messages: [{ role: 'user', text: prompt }], jsonMode: true });
+      if (!text) {
+        return res.json({
+          success: true,
+          source: 'local_synthesis',
+          data: getFallbackSummary(book),
+        });
+      }
 
-      const data = JSON.parse(response.text || '{}');
+      const data = JSON.parse(text);
       res.json({
         success: true,
-        source: 'gemini-3.7-flash',
+        source: 'ai',
         data,
       });
     } catch (error: any) {
@@ -2800,28 +2802,23 @@ Return a structured JSON object:
   });
 
   // 4. In-Reader Conceptual Deep Dive & Glossaries (Gemini 3.7 Flash)
+  function deepDiveFallback(term?: string) {
+    return {
+      term: term || 'Sacred Science Concept',
+      briefDefinition: 'A core cosmological or metaphysical principle governing natural universal balance.',
+      keyTenets: [
+        'Harmonizes individual consciousness with universal macrocosmic laws',
+        'Rooted in ancient Nilotic, Dogon, or European philosophical traditions',
+        'Serves as an ontological anchor in modern narrative storytelling'
+      ],
+      historicalLineage: 'Originates from classical antiquity and indigenous sacred science schools.',
+      readingSignificance: 'Understanding this principle deepens appreciation of the author’s philosophical symbolism.'
+    };
+  }
+
   app.post('/api/ai/deep-dive', async (req, res) => {
     try {
       const { term, passageContext, bookTitle, author, genre } = req.body;
-      const ai = getGeminiClient();
-
-      if (!ai) {
-        return res.json({
-          success: true,
-          source: 'local_glossary_heuristic',
-          deepDive: {
-            term: term || 'Sacred Science Concept',
-            briefDefinition: 'A core cosmological or metaphysical principle governing natural universal balance.',
-            keyTenets: [
-              'Harmonizes individual consciousness with universal macrocosmic laws',
-              'Rooted in ancient Nilotic, Dogon, or European philosophical traditions',
-              'Serves as an ontological anchor in modern narrative storytelling'
-            ],
-            historicalLineage: 'Originates from classical antiquity and indigenous sacred science schools.',
-            readingSignificance: 'Understanding this principle deepens appreciation of the author’s philosophical symbolism.'
-          }
-        });
-      }
 
       const prompt = `You are the Bookatlas Metaphysical & Literary Scholar.
 Provide a deep-dive conceptual breakdown for the term/concept: "${term}"
@@ -2841,48 +2838,43 @@ Return a valid JSON object:
   "readingSignificance": "How this concept elevates the narrative and what subtle meaning the reader should take away"
 }`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: { responseMimeType: 'application/json' },
-      });
+      const text = await generateAiText({ messages: [{ role: 'user', text: prompt }], jsonMode: true });
+      if (!text) {
+        return res.json({ success: true, source: 'local_glossary_heuristic', deepDive: deepDiveFallback(term) });
+      }
 
-      const parsed = JSON.parse(response.text || '{}');
+      const parsed = JSON.parse(text);
       res.json({
         success: true,
-        source: 'gemini-3.7-flash',
+        source: 'ai',
         deepDive: parsed,
       });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      console.error('Deep Dive AI Error:', error);
+      res.json({ success: true, source: 'fallback', deepDive: deepDiveFallback(req.body.term) });
     }
   });
 
   // 5. In-Reader Visual Mind Map & Chapter Synthesis (Gemini 3.7 Flash)
+  function mindMapFallback(chapterTitle?: string) {
+    return {
+      centralTheme: chapterTitle || 'Chapter Synthesis',
+      nodes: [
+        { label: 'Narrative Catalyst', description: 'Initial inciting tension shifting character trajectory', color: '#4f46e5' },
+        { label: 'Thematic Conflict', description: 'Core ethical or philosophical dilemma in this section', color: '#d97706' },
+        { label: 'Key Revelations', description: 'Crucial secrets unveiled altering reader perspective', color: '#059669' },
+        { label: 'Existential Inquiries', description: 'Unresolved questions left for the next chapter', color: '#dc2626' }
+      ],
+      keyTakeaways: [
+        'The protagonist confronts their foundational assumptions',
+        'Atmospheric world-building subtly mirrors the character’s psychological state'
+      ]
+    };
+  }
+
   app.post('/api/ai/mind-map', async (req, res) => {
     try {
       const { chapterTitle, chapterContent, bookTitle } = req.body;
-      const ai = getGeminiClient();
-
-      if (!ai) {
-        return res.json({
-          success: true,
-          source: 'local_mindmap_heuristic',
-          mindMap: {
-            centralTheme: chapterTitle || 'Chapter Synthesis',
-            nodes: [
-              { label: 'Narrative Catalyst', description: 'Initial inciting tension shifting character trajectory', color: '#4f46e5' },
-              { label: 'Thematic Conflict', description: 'Core ethical or philosophical dilemma in this section', color: '#d97706' },
-              { label: 'Key Revelations', description: 'Crucial secrets unveiled altering reader perspective', color: '#059669' },
-              { label: 'Existential Inquiries', description: 'Unresolved questions left for the next chapter', color: '#dc2626' }
-            ],
-            keyTakeaways: [
-              'The protagonist confronts their foundational assumptions',
-              'Atmospheric world-building subtly mirrors the character’s psychological state'
-            ]
-          }
-        });
-      }
 
       const prompt = `Create a structured visual memory Mind Map & Chapter Takeaway synthesis for:
 Book: "${bookTitle}"
@@ -2905,43 +2897,38 @@ Return a valid JSON object:
   ]
 }`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: { responseMimeType: 'application/json' },
-      });
+      const text = await generateAiText({ messages: [{ role: 'user', text: prompt }], jsonMode: true });
+      if (!text) {
+        return res.json({ success: true, source: 'local_mindmap_heuristic', mindMap: mindMapFallback(chapterTitle) });
+      }
 
-      const mindMap = JSON.parse(response.text || '{}');
+      const mindMap = JSON.parse(text);
       res.json({
         success: true,
-        source: 'gemini-3.7-flash',
+        source: 'ai',
         mindMap,
       });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      console.error('Mind Map AI Error:', error);
+      res.json({ success: true, source: 'fallback', mindMap: mindMapFallback(req.body.chapterTitle) });
     }
   });
 
   // 6. Vocal Pronunciation & Dialect Guide (Gemini 3.7 Flash)
+  function pronounceTermFallback(term?: string, languageFamily?: string) {
+    return {
+      term: term || 'Medu Neter',
+      phoneticSpelling: 'MEH-doo NEH-tair',
+      ipaNotation: '/ˈmɛduː ˈnɛtɛr/',
+      originLanguage: languageFamily || 'Ancient Egyptian (Kemetic)',
+      literalMeaning: 'Divine Words or Sacred Speech',
+      audioTip: 'Stress the first syllable of each word with a crisp dental consonant.'
+    };
+  }
+
   app.post('/api/ai/pronounce-term', async (req, res) => {
     try {
       const { term, languageFamily } = req.body;
-      const ai = getGeminiClient();
-
-      if (!ai) {
-        return res.json({
-          success: true,
-          source: 'local_pronunciation_heuristic',
-          guide: {
-            term: term || 'Medu Neter',
-            phoneticSpelling: 'MEH-doo NEH-tair',
-            ipaNotation: '/ˈmɛduː ˈnɛtɛr/',
-            originLanguage: languageFamily || 'Ancient Egyptian (Kemetic)',
-            literalMeaning: 'Divine Words or Sacred Speech',
-            audioTip: 'Stress the first syllable of each word with a crisp dental consonant.'
-          }
-        });
-      }
 
       const prompt = `Provide an authentic linguistic and phonetic pronunciation breakdown for the indigenous, ancient, or specialized literary term: "${term}".
 Language/Cultural family hint: "${languageFamily || 'Detect automatically (e.g. Kemetic, Dogon, Yoruba, Wolof, Latin, Dutch)'}"
@@ -2956,20 +2943,20 @@ Return a valid JSON object:
   "audioTip": "Practical vocal coaching tip for pronouncing naturally"
 }`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: { responseMimeType: 'application/json' },
-      });
+      const text = await generateAiText({ messages: [{ role: 'user', text: prompt }], jsonMode: true });
+      if (!text) {
+        return res.json({ success: true, source: 'local_pronunciation_heuristic', guide: pronounceTermFallback(term, languageFamily) });
+      }
 
-      const guide = JSON.parse(response.text || '{}');
+      const guide = JSON.parse(text);
       res.json({
         success: true,
-        source: 'gemini-3.7-flash',
+        source: 'ai',
         guide,
       });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      console.error('Pronounce Term AI Error:', error);
+      res.json({ success: true, source: 'fallback', guide: pronounceTermFallback(req.body.term, req.body.languageFamily) });
     }
   });
 
@@ -3033,44 +3020,39 @@ Return a valid JSON object:
   app.post('/api/gemini/chat', async (req, res) => {
     try {
       const { messages, model, systemInstruction, temperature } = req.body;
-      const ai = getGeminiClient();
       const chosenModel = model || 'gemini-3.5-flash';
 
-      if (!ai) {
+      // Convert conversation history to the unified helper's shape
+      const formattedMessages: AiMessage[] = (messages || []).map((m: any) => ({
+        role: m.role === 'model' || m.role === 'assistant' ? 'model' : 'user',
+        text: m.content || '',
+      }));
+
+      const defaultSystem = `You are the Bookatlas AI Literary Companion, created by Atlantean Globals Services B.V. (Netherlands).
+You are deeply knowledgeable in world literature, European classics, speculative fiction, thriller mysteries, publishing trends, and creative writing.
+Be articulate, insightful, engaging, and provide rich recommendations, historical context, and thoughtful analysis.`;
+
+      const text = await generateAiText({
+        messages: formattedMessages,
+        systemInstruction: systemInstruction || defaultSystem,
+        temperature: typeof temperature === 'number' ? temperature : 0.7,
+      });
+
+      if (!text) {
         const lastUserMsg = messages && messages.length > 0 ? messages[messages.length - 1].content : 'Hello';
-        const fallbackReply = generateFallbackChatResponse(lastUserMsg, systemInstruction);
         return res.json({
           success: true,
           source: 'local_heuristic',
           model: chosenModel,
-          reply: fallbackReply,
+          reply: generateFallbackChatResponse(lastUserMsg, systemInstruction),
         });
       }
 
-      // Convert conversation history to Gemini SDK format
-      const formattedContents = (messages || []).map((m: any) => ({
-        role: m.role === 'model' || m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content || '' }],
-      }));
-
-      const defaultSystem = `You are the Bookatlas AI Literary Companion, created by Atlantean Globals Services B.V. (Netherlands). 
-You are deeply knowledgeable in world literature, European classics, speculative fiction, thriller mysteries, publishing trends, and creative writing.
-Be articulate, insightful, engaging, and provide rich recommendations, historical context, and thoughtful analysis.`;
-
-      const response = await ai.models.generateContent({
-        model: chosenModel,
-        contents: formattedContents,
-        config: {
-          systemInstruction: systemInstruction || defaultSystem,
-          temperature: typeof temperature === 'number' ? temperature : 0.7,
-        },
-      });
-
       res.json({
         success: true,
-        source: chosenModel,
+        source: 'ai',
         model: chosenModel,
-        reply: response.text || 'I could not generate a response at this moment.',
+        reply: text,
       });
     } catch (error: any) {
       console.error('Gemini Chat API Error:', error);
@@ -3162,7 +3144,6 @@ Provide clear headings and concise bullet points.`;
   app.post('/api/gemini/voice-dialogue', async (req, res) => {
     try {
       const { userUtterance, conversationHistory, voicePersona } = req.body;
-      const ai = getGeminiClient();
 
       const systemPrompt = `You are "Zephyr", the real-time Voice Companion for Bookatlas (Atlantean Globals Services B.V., Netherlands).
 You are speaking out loud to a reader through an interactive voice stream.
@@ -3171,7 +3152,20 @@ Rules for voice responses:
 2. Keep responses brief (2 to 4 spoken sentences) so conversation flows naturally without monologuing.
 3. Offer tailored reading suggestions, explain literary nuances, or chat about European book culture with enthusiasm.`;
 
-      if (!ai) {
+      // Convert conversation history to the unified helper's shape
+      const formatted: AiMessage[] = (conversationHistory || []).map((m: any) => ({
+        role: m.speaker === 'assistant' ? 'model' : 'user',
+        text: m.text,
+      }));
+      formatted.push({ role: 'user', text: userUtterance || 'Hello!' });
+
+      const text = await generateAiText({
+        messages: formatted,
+        systemInstruction: systemPrompt,
+        temperature: 0.8,
+      });
+
+      if (!text) {
         return res.json({
           success: true,
           source: 'local_voice_synthesis',
@@ -3180,26 +3174,10 @@ Rules for voice responses:
         });
       }
 
-      // Convert conversation history
-      const formatted = (conversationHistory || []).map((m: any) => ({
-        role: m.speaker === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.text }],
-      }));
-      formatted.push({ role: 'user', parts: [{ text: userUtterance || 'Hello!' }] });
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: formatted,
-        config: {
-          systemInstruction: systemPrompt,
-          temperature: 0.8,
-        },
-      });
-
       res.json({
         success: true,
-        source: 'gemini-voice-companion',
-        spokenText: response.text || 'I am listening. Tell me what literary world you would like to explore!',
+        source: 'ai-voice-companion',
+        spokenText: text,
         voicePersona: voicePersona || 'Zephyr',
       });
     } catch (error: any) {

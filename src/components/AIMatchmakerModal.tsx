@@ -71,13 +71,13 @@ export const AIMatchmakerModal: React.FC<AIMatchmakerModalProps> = ({
     setAiNote(null);
 
     try {
-      // Call backend Gemini AI endpoint
+      // Call backend AI matchmaker endpoint
       const response = await fetch('/api/ai/matchmaker', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: query,
-          books: books.map(b => ({
+          userPrompt: query,
+          candidateBooks: books.map(b => ({
             id: b.id,
             title: b.title,
             author: b.author,
@@ -95,18 +95,17 @@ export const AIMatchmakerModal: React.FC<AIMatchmakerModalProps> = ({
       const contentType = response.headers.get('content-type');
       if (response.ok && contentType && contentType.includes('application/json')) {
         const data = await response.json();
-        if (data.matches && data.matches.length > 0) {
-          const hydrated = data.matches.map((m: { bookId: string; matchScore: number; matchReason: string; keyHighlights: string[] }) => {
+        if (data.recommendations && data.recommendations.length > 0) {
+          const hydrated = data.recommendations.map((m: { bookId: string; matchScore: number; rationale: string; keyThemes: string[] }) => {
             const originalBook = books.find(b => b.id === m.bookId) || books[0];
             return {
               book: originalBook,
               matchScore: m.matchScore,
-              matchReason: m.matchReason,
-              keyHighlights: m.keyHighlights || []
+              matchReason: m.rationale,
+              keyHighlights: m.keyThemes || []
             };
           });
           setMatchedResults(hydrated);
-          setAiNote(data.aiExplanation || null);
           setIsSearching(false);
           return;
         }
