@@ -39,7 +39,6 @@ export interface Book {
   price: number;
   originalPrice: number;
   isBookatlasPlus?: boolean;
-  isKoboPlus?: boolean; // legacy alias
   isDeal: boolean;
   isBestseller: boolean;
   isNewRelease: boolean;
@@ -94,7 +93,7 @@ export interface FilterOptions {
   priceCategory: 'all' | 'free' | 'under5' | 'under10' | 'deals';
   minRating: number;
   sortBy: 'featured' | 'bestseller' | 'rating' | 'priceAsc' | 'priceDesc' | 'newest';
-  koboPlusOnly: boolean; // Bookatlas Plus
+  bookatlasPlusOnly: boolean; // Bookatlas Plus
   language?: string;
 }
 

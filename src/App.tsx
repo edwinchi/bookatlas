@@ -47,7 +47,7 @@ import {
 
 export default function App() {
   const [books, setBooks] = useState<Book[]>(INITIAL_BOOKS);
-  const [activeTab, setActiveTab] = useState<'store' | 'library' | 'deals' | 'audiobooks' | 'koboplus' | 'manager'>('store');
+  const [activeTab, setActiveTab] = useState<'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager'>('store');
   const [currency, setCurrency] = useState('EUR');
   const currencySymbol = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
   const [language, setLanguage] = useState<'en' | 'nl'>('en');
@@ -120,7 +120,7 @@ export default function App() {
     priceCategory: 'all',
     minRating: 0,
     sortBy: 'featured',
-    koboPlusOnly: false,
+    bookatlasPlusOnly: false,
   });
 
   // User State: Cart, Wishlist, Library
@@ -268,7 +268,7 @@ export default function App() {
       if (activeTab === 'audiobooks' && book.format !== 'audiobook' && book.format !== 'bundle') {
         return false;
       }
-      if (activeTab === 'koboplus' && !book.isKoboPlus && !book.isBookatlasPlus) {
+      if (activeTab === 'bookatlasplus' && !book.isBookatlasPlus) {
         return false;
       }
       if (activeTab === 'deals' && !book.isDeal && book.price > 4.99) {
@@ -298,8 +298,8 @@ export default function App() {
         if (filters.format === 'audiobook' && book.format !== 'audiobook' && book.format !== 'bundle') return false;
       }
 
-      // Kobo / Bookatlas Plus Only filter
-      if (filters.koboPlusOnly && !book.isKoboPlus && !book.isBookatlasPlus) {
+      // Bookatlas Plus Only filter
+      if (filters.bookatlasPlusOnly && !book.isBookatlasPlus) {
         return false;
       }
 
@@ -353,7 +353,7 @@ export default function App() {
   }, [books]);
 
   const plusPicks = useMemo(() => {
-    return books.filter(b => b.isBookatlasPlus || b.isKoboPlus);
+    return books.filter(b => b.isBookatlasPlus);
   }, [books]);
 
   const sciFiPicks = useMemo(() => {
@@ -615,12 +615,12 @@ export default function App() {
                 onOpenBookDetail={(b) => setSelectedBookForDetail(b)}
                 onReadSample={handleReadSample}
                 onAddToCart={handleAddToCart}
-                onExploreKoboPlus={() => setActiveTab('koboplus')}
+                onExploreBookatlasPlus={() => setActiveTab('bookatlasplus')}
               />
             )}
 
             {/* Special Section Banners for Sub-Tabs */}
-            {activeTab === 'koboplus' && (
+            {activeTab === 'bookatlasplus' && (
               <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 text-white rounded-2xl p-6 sm:p-8 shadow-lg flex flex-col md:flex-row items-center justify-between gap-6 border border-indigo-400/20">
                 <div className="space-y-2 max-w-xl">
                   <span className="text-xs font-bold uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full flex items-center gap-1 w-fit text-amber-300">
@@ -743,7 +743,7 @@ export default function App() {
                   badge="Included in Plus"
                   icon={<Sparkles className="w-5 h-5 text-indigo-600" />}
                   books={plusPicks}
-                  onViewAll={() => setActiveTab('koboplus')}
+                  onViewAll={() => setActiveTab('bookatlasplus')}
                   onOpenDetail={(b) => setSelectedBookForDetail(b)}
                   onReadSample={handleReadSample}
                   onAddToCart={handleAddToCart}
@@ -885,7 +885,7 @@ export default function App() {
                           priceCategory: 'all',
                           minRating: 0,
                           sortBy: 'featured',
-                          koboPlusOnly: false,
+                          bookatlasPlusOnly: false,
                         });
                       }}
                       className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-500 cursor-pointer shadow-sm"
@@ -939,7 +939,7 @@ export default function App() {
             <ul className="space-y-1.5">
               <li><button onClick={() => setActiveTab('store')} className="hover:text-white cursor-pointer">All eBooks</button></li>
               <li><button onClick={() => setActiveTab('audiobooks')} className="hover:text-white cursor-pointer">Audiobooks</button></li>
-              <li><button onClick={() => setActiveTab('koboplus')} className="hover:text-white cursor-pointer">Bookatlas Plus Unlimited</button></li>
+              <li><button onClick={() => setActiveTab('bookatlasplus')} className="hover:text-white cursor-pointer">Bookatlas Plus Unlimited</button></li>
               <li><button onClick={() => setActiveTab('deals')} className="hover:text-white cursor-pointer">Daily Deals Under €4.99</button></li>
               <li>
                 <button 

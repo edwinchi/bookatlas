@@ -29,8 +29,8 @@ import {
 import { GENRES, AFRICAN_LITERATURE_GENRES, CONSCIOUSNESS_COMMUNITY_GENRES, GENERAL_GENRES } from '../data/booksData';
 
 interface HeaderProps {
-  activeTab: 'store' | 'library' | 'deals' | 'audiobooks' | 'koboplus' | 'manager';
-  setActiveTab: (tab: 'store' | 'library' | 'deals' | 'audiobooks' | 'koboplus' | 'manager') => void;
+  activeTab: 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager';
+  setActiveTab: (tab: 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager') => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   selectedGenre: string;
@@ -562,9 +562,9 @@ export const Header: React.FC<HeaderProps> = ({
               <span>Audiobooks</span>
             </button>
             <button
-              onClick={() => { setActiveTab('koboplus'); }}
+              onClick={() => { setActiveTab('bookatlasplus'); }}
               className={`flex items-center gap-1.5 px-3 py-2.5 font-medium border-b-2 whitespace-nowrap transition-colors cursor-pointer ${
-                activeTab === 'koboplus'
+                activeTab === 'bookatlasplus'
                   ? 'border-indigo-600 text-indigo-900 font-semibold'
                   : 'border-transparent text-slate-700 hover:text-slate-950 hover:border-slate-300'
               }`}
@@ -687,7 +687,7 @@ export const Header: React.FC<HeaderProps> = ({
             <Headphones className="w-4 h-4 text-indigo-600" /> Audiobooks
           </button>
           <button
-            onClick={() => { setActiveTab('koboplus'); setMobileMenuOpen(false); }}
+            onClick={() => { setActiveTab('bookatlasplus'); setMobileMenuOpen(false); }}
             className="w-full text-left py-2 font-medium text-indigo-700 flex items-center gap-2"
           >
             <Compass className="w-4 h-4" /> Bookatlas Plus (Unlimited Reads)

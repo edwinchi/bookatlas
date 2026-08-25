@@ -46,12 +46,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
   const applyPromo = (e: React.FormEvent) => {
     e.preventDefault();
-    if (promoCode.trim().toUpperCase() === 'KOBO20' || promoCode.trim().toUpperCase() === 'READMORE') {
+    if (promoCode.trim().toUpperCase() === 'BOOKATLAS20' || promoCode.trim().toUpperCase() === 'READMORE') {
       setDiscountPercent(20);
       setPromoApplied(true);
       setPromoError('');
     } else {
-      setPromoError('Invalid promo code. Try "KOBO20" for 20% off.');
+      setPromoError('Invalid promo code. Try "BOOKATLAS20" for 20% off.');
     }
   };
 
@@ -174,7 +174,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     type="text"
                     value={promoCode}
                     onChange={(e) => setPromoCode(e.target.value)}
-                    placeholder="Promo code (e.g. KOBO20)"
+                    placeholder="Promo code (e.g. BOOKATLAS20)"
                     disabled={promoApplied}
                     className="w-full pl-8 pr-3 py-1.5 text-xs bg-white rounded-lg border border-gray-300 focus:outline-hidden focus:ring-1 focus:ring-[#bf0000] focus:border-[#bf0000] uppercase font-mono"
                   />

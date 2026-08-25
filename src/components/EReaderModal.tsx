@@ -725,7 +725,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                 <span>Buy Full eBook for {symbol}{book.price.toFixed(2)}</span>
               </button>
 
-              {(book.isBookatlasPlus || book.isKoboPlus) && (
+              {(book.isBookatlasPlus) && (
                 <button
                   onClick={onClose}
                   className="px-4 py-2.5 bg-white/20 hover:bg-white/30 border border-current/20 font-semibold text-xs sm:text-sm rounded-xl transition-colors cursor-pointer"

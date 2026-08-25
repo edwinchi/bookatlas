@@ -133,7 +133,7 @@ export const BookCard: React.FC<BookCardProps> = ({
               )}
             </span>
 
-            {(book.isBookatlasPlus || book.isKoboPlus) && (
+            {(book.isBookatlasPlus) && (
               <span className="flex items-center gap-0.5 text-indigo-700 font-bold bg-indigo-50 px-1.5 py-0.5 rounded-md text-[10px]">
                 <Sparkles className="w-2.5 h-2.5 text-amber-500" /> Plus
               </span>

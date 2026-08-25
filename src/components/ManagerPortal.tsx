@@ -245,7 +245,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
 
   // Dynamic Metrics
   const totalRevenue = Math.round(books.reduce((acc, b) => acc + (b.price * 52), 0) + (8450 * 9.99));
-  const plusBooksCount = books.filter(b => b.isBookatlasPlus || b.isKoboPlus).length;
+  const plusBooksCount = books.filter(b => b.isBookatlasPlus).length;
   const audioCount = books.filter(b => b.format === 'audiobook' || b.format === 'bundle' || b.audioDurationMinutes).length;
 
   const filteredBooks = books.filter((b) => {
@@ -1121,14 +1121,14 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                         {/* Plus Toggle */}
                         <td className="py-3 px-3">
                           <button
-                            onClick={() => onUpdateBook({ ...b, isBookatlasPlus: !b.isBookatlasPlus, isKoboPlus: !b.isBookatlasPlus })}
+                            onClick={() => onUpdateBook({ ...b, isBookatlasPlus: !b.isBookatlasPlus })}
                             className={`px-2.5 py-1 rounded-full text-[10px] font-bold cursor-pointer transition-colors ${
-                              b.isBookatlasPlus || b.isKoboPlus
+                              b.isBookatlasPlus
                                 ? 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200'
                                 : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                             }`}
                           >
-                            {b.isBookatlasPlus || b.isKoboPlus ? '✓ Included' : 'No'}
+                            {b.isBookatlasPlus ? '✓ Included' : 'No'}
                           </button>
                         </td>
 
@@ -2373,7 +2373,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                   <input
                     type="checkbox"
                     checked={editingBook?.isBookatlasPlus ?? true}
-                    onChange={(e) => setEditingBook((prev) => ({ ...prev, isBookatlasPlus: e.target.checked, isKoboPlus: e.target.checked }))}
+                    onChange={(e) => setEditingBook((prev) => ({ ...prev, isBookatlasPlus: e.target.checked }))}
                     className="w-4 h-4 text-indigo-600 rounded-sm"
                   />
                   Include in Bookatlas Plus Unlimited

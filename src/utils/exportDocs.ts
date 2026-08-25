@@ -188,7 +188,7 @@ export async function downloadWordDocument(books: Book[]) {
                       new TableCell({ children: [new Paragraph(b.author)] }),
                       new TableCell({ children: [new Paragraph(b.primaryGenre)] }),
                       new TableCell({ children: [new Paragraph(`€${b.price.toFixed(2)}`)] }),
-                      new TableCell({ children: [new Paragraph(b.isBookatlasPlus || b.isKoboPlus ? 'Yes' : 'No')] }),
+                      new TableCell({ children: [new Paragraph(b.isBookatlasPlus ? 'Yes' : 'No')] }),
                       new TableCell({ children: [new Paragraph(`★ ${b.rating}`)] }),
                     ],
                   })

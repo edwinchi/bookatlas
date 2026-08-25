@@ -7,7 +7,7 @@ interface HeroCarouselProps {
   onOpenBookDetail: (book: Book) => void;
   onReadSample: (book: Book) => void;
   onAddToCart: (book: Book) => void;
-  onExploreKoboPlus: () => void;
+  onExploreBookatlasPlus: () => void;
   currency?: string;
 }
 
@@ -16,7 +16,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
   onOpenBookDetail,
   onReadSample,
   onAddToCart,
-  onExploreKoboPlus,
+  onExploreBookatlasPlus,
   currency = 'EUR',
 }) => {
   const featuredBooks = books.slice(0, 4);
@@ -58,7 +58,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500 text-slate-950 shadow-xs">
                 <Flame className="w-3.5 h-3.5 fill-slate-950" /> Spotlight of the Week
               </span>
-              {(currentBook.isBookatlasPlus || currentBook.isKoboPlus) && (
+              {(currentBook.isBookatlasPlus) && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-950/80 text-indigo-200 border border-indigo-700/50">
                   <Sparkles className="w-3 h-3 text-amber-300" /> Bookatlas Plus Unlimited
                 </span>
@@ -224,7 +224,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
           </span>
         </div>
         <button
-          onClick={onExploreKoboPlus}
+          onClick={onExploreBookatlasPlus}
           className="text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 cursor-pointer"
         >
           <span>Explore Bookatlas Plus Plans</span>

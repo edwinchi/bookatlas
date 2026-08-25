@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import crypto from 'crypto';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { INITIAL_BOOKS, GENRES } from './src/data/booksData.js';
@@ -7,6 +8,17 @@ import { isDbConfigured } from './db/supabaseClient.js';
 import * as db from './db/repository.js';
 
 dotenv.config();
+
+function isPlaceholderEnvValue(value?: string): boolean {
+  if (!value) return true;
+  const v = value.trim();
+  return !v || v.startsWith('MY_') || v.startsWith('YOUR_') || v.startsWith('your_');
+}
+
+// Absolute base URL for links embedded in outbound campaign emails (CTA
+// buttons, 1-click unsubscribe). Relative links don't resolve inside an
+// email client, so this must always be an absolute origin.
+const APP_URL = (isPlaceholderEnvValue(process.env.APP_URL) ? 'http://localhost:3000' : process.env.APP_URL!.trim()).replace(/\/$/, '');
 
 // In-Memory Live Store Database for Single Manager Operations
 let liveCatalog = JSON.parse(JSON.stringify(INITIAL_BOOKS));
@@ -146,14 +158,26 @@ export interface ServerCampaign {
 const subscribersMap = new Map<string, ServerSubscriber>();
 let subscriberCampaigns: ServerCampaign[] = [];
 
+// Set UNSUBSCRIBE_TOKEN_SECRET in production — the fallback below is public
+// (it ships in this source file), so anyone could forge tokens against it.
+const UNSUBSCRIBE_TOKEN_SECRET = process.env.UNSUBSCRIBE_TOKEN_SECRET || 'bookatlas_unsub_hmac_default_secret_2026';
+
 function generateUnsubToken(email: string): string {
-  let hash = 0;
-  const str = email.toLowerCase().trim() + '_bookatlas_secret_salt_2026';
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return 'unsub_' + Math.abs(hash).toString(36) + '_' + Math.abs(str.length * 31).toString(36);
+  const normalized = email.toLowerCase().trim();
+  const digest = crypto.createHmac('sha256', UNSUBSCRIBE_TOKEN_SECRET).update(normalized).digest('hex');
+  return 'unsub_' + digest.slice(0, 32);
+}
+
+// The Preference Center also supports a token-less, self-service flow (a
+// reader typing their own email address directly), so a missing token is
+// allowed through — only a *wrong* token (a forged or stale 1-click link)
+// is rejected.
+function isUnsubTokenValid(provided: unknown, expected: string): boolean {
+  if (!provided || typeof provided !== 'string') return true;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 // Helper to seed or upsert a subscriber
@@ -246,7 +270,7 @@ subscriberCampaigns.push({
   bookAuthor: 'Hendrik van der Meer',
   bookCoverUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=700&q=80',
   ctaText: 'Open in eReader',
-  ctaUrl: 'https://ais-dev-qtrg2il2zjjrzw6jmqhlzw-137829090392.europe-west2.run.app',
+  ctaUrl: APP_URL,
   discountCode: 'AUTUMN2026',
   templatePreset: 'new_release',
   targetFilter: 'all_active',
@@ -404,7 +428,10 @@ export async function createApp() {
   // Initialize Gemini AI Client lazily/safely
   let aiClient: GoogleGenAI | null = null;
   function getGeminiClient(): GoogleGenAI | null {
-    if (!aiClient && process.env.GEMINI_API_KEY) {
+    if (isPlaceholderEnvValue(process.env.GEMINI_API_KEY)) {
+      return null;
+    }
+    if (!aiClient) {
       aiClient = new GoogleGenAI({
         apiKey: process.env.GEMINI_API_KEY,
         httpOptions: {
@@ -1244,7 +1271,7 @@ export async function createApp() {
         bookCoverUrl: resolvedBookCover,
         bookAuthor: resolvedBookAuthor,
         ctaText,
-        ctaUrl: ctaUrl || 'https://ais-dev-qtrg2il2zjjrzw6jmqhlzw-137829090392.europe-west2.run.app',
+        ctaUrl: ctaUrl || APP_URL,
         discountCode,
         templatePreset: templatePreset as any,
         targetFilter: targetFilter as any,
@@ -1306,7 +1333,7 @@ export async function createApp() {
             .replace(/\{\{reading_stats_streak\}\}/g, String(sub.readingStreakDays || 7))
             .replace(/\{\{reading_stats_pages\}\}/g, String(sub.pagesReadTotal || 450))
             .replace(/\{\{tier_badge\}\}/g, sub.tier === 'vip_patron' ? 'VIP Patron Circle' : (sub.tier === 'member_subscriber' ? 'Bookatlas Plus Member' : 'Reader Pass'))
-            .replace(/\{\{1_click_unsubscribe_url\}\}/g, `/?action=unsubscribe&email=${encodeURIComponent(sub.email)}&token=${sub.unsubscribeToken}`);
+            .replace(/\{\{1_click_unsubscribe_url\}\}/g, `${APP_URL}/?action=unsubscribe&email=${encodeURIComponent(sub.email)}&token=${sub.unsubscribeToken}`);
 
           emailDispatches.unshift({
             id: `disp-${campaignId}-${i}`,
@@ -1506,6 +1533,10 @@ export async function createApp() {
         });
       }
 
+      if (!isUnsubTokenValid(token, sub.unsubscribeToken)) {
+        return res.status(403).json({ success: false, error: 'Invalid or expired unsubscribe token.' });
+      }
+
       res.json({
         success: true,
         exists: true,
@@ -1531,6 +1562,10 @@ export async function createApp() {
 
       const cleanEmail = email.trim().toLowerCase();
       let sub = subscribersMap.get(cleanEmail);
+
+      if (sub && !isUnsubTokenValid(token, sub.unsubscribeToken)) {
+        return res.status(403).json({ success: false, error: 'Invalid or expired unsubscribe token.' });
+      }
 
       if (!sub) {
         // Register as unsubscribed to honor future suppression
@@ -1618,9 +1653,21 @@ export async function createApp() {
   });
 
   // 15. AI Email Campaign Generator (Gemini 3.7)
+  function heuristicCampaignCopy(bookTitle?: string) {
+    return {
+      subject: `✨ Special Dispatch: Discover "${bookTitle || 'New Literary Masterpieces'}"`,
+      variantBSubject: `🌌 Must Read: Why "${bookTitle || 'Our New Release'}" is taking Europe by storm`,
+      previewText: 'Instant eReader delivery + exclusive subscriber privilege.',
+      salutation: 'Dear {{subscriber_name}},',
+      body: `We are thrilled to share our newest spotlight title with our community of readers. "{{book_recommendation_title}}" bridges ancient metaphysical insights and visionary prose, crafted for those who cherish authentic intellectual exploration.\n\nAs a valued {{tier_badge}}, your personalized perk code is {{user_discount_code}}.\n\nKeep your reading streak active (current streak: {{reading_stats_streak}} days)!`,
+      ctaText: 'Open & Explore Book',
+      recommendedTags: ['general_audience', 'vip']
+    };
+  }
+
   app.post('/api/subscribers/ai-compose', async (req, res) => {
+    const { topic, bookTitle, tone = 'compelling, warm, and intellectual', discountCode = 'BOOKATLAS25', targetGenre, targetTier = 'all' } = req.body;
     try {
-      const { topic, bookTitle, tone = 'compelling, warm, and intellectual', discountCode = 'BOOKATLAS25', targetGenre, targetTier = 'all' } = req.body;
       const ai = getGeminiClient();
 
       if (ai) {
@@ -1658,22 +1705,11 @@ Return ONLY a clean JSON object with this exact schema:
         const parsed = JSON.parse(response.text || '{}');
         return res.json({ success: true, aiGenerated: true, campaign: parsed });
       } else {
-        return res.json({
-          success: true,
-          aiGenerated: false,
-          campaign: {
-            subject: `✨ Special Dispatch: Discover "${bookTitle || 'New Literary Masterpieces'}"`,
-            variantBSubject: `🌌 Must Read: Why "${bookTitle || 'Our New Release'}" is taking Europe by storm`,
-            previewText: 'Instant eReader delivery + exclusive subscriber privilege.',
-            salutation: 'Dear {{subscriber_name}},',
-            body: `We are thrilled to share our newest spotlight title with our community of readers. "{{book_recommendation_title}}" bridges ancient metaphysical insights and visionary prose, crafted for those who cherish authentic intellectual exploration.\n\nAs a valued {{tier_badge}}, your personalized perk code is {{user_discount_code}}.\n\nKeep your reading streak active (current streak: {{reading_stats_streak}} days)!`,
-            ctaText: 'Open & Explore Book',
-            recommendedTags: ['general_audience', 'vip']
-          }
-        });
+        return res.json({ success: true, aiGenerated: false, campaign: heuristicCampaignCopy(bookTitle) });
       }
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      console.error('AI Compose Error:', error);
+      res.json({ success: true, aiGenerated: false, campaign: heuristicCampaignCopy(bookTitle) });
     }
   });
 
@@ -2268,7 +2304,6 @@ Return ONLY valid JSON matching this schema:
         liveCatalog.forEach((b: any) => {
           if (b.price <= 14.99) {
             b.isBookatlasPlus = true;
-            b.isKoboPlus = true;
             updatedCount++;
           }
         });
@@ -3442,7 +3477,6 @@ function generateOriginalBookProcedural(category: string, tone?: string, customT
     price: chosen.price,
     originalPrice: Number((chosen.price * 1.5).toFixed(2)),
     isBookatlasPlus: true,
-    isKoboPlus: true,
     isDeal: chosen.price < 6.00,
     isBestseller: true,
     isNewRelease: true,

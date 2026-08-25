@@ -195,7 +195,7 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
                       #1 Bestseller
                     </span>
                   )}
-                  {(book.isBookatlasPlus || book.isKoboPlus) && (
+                  {(book.isBookatlasPlus) && (
                     <span className="bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold px-2.5 py-0.5 rounded-md flex items-center gap-1">
                       <Sparkles className="w-3 h-3 text-amber-500" /> Bookatlas Plus Eligible
                     </span>
@@ -319,7 +319,7 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
                   </button>
                 </div>
 
-                {(book.isBookatlasPlus || book.isKoboPlus) && (
+                {(book.isBookatlasPlus) && (
                   <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-2.5 flex items-center justify-between text-xs">
                     <span className="text-slate-700 font-medium">
                       Or read for <span className="font-bold text-indigo-700">{currencySymbol}0.00</span> with Bookatlas Plus

@@ -38,7 +38,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
       priceCategory: 'all',
       minRating: 0,
       sortBy: 'featured',
-      koboPlusOnly: false,
+      bookatlasPlusOnly: false,
     });
   };
 
@@ -47,7 +47,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     filters.format !== 'all' ||
     filters.priceCategory !== 'all' ||
     filters.minRating > 0 ||
-    filters.koboPlusOnly;
+    filters.bookatlasPlusOnly;
 
   return (
     <aside className="w-full bg-white rounded-xl border border-gray-200 p-5 shadow-xs space-y-6">
@@ -75,8 +75,8 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
         <label className="flex items-start gap-3 cursor-pointer">
           <input
             type="checkbox"
-            checked={filters.koboPlusOnly}
-            onChange={(e) => setFilters((prev) => ({ ...prev, koboPlusOnly: e.target.checked }))}
+            checked={filters.bookatlasPlusOnly}
+            onChange={(e) => setFilters((prev) => ({ ...prev, bookatlasPlusOnly: e.target.checked }))}
             className="mt-1 w-4 h-4 text-indigo-600 rounded-sm focus:ring-indigo-600 border-slate-300"
           />
           <div>
