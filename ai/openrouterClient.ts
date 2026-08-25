@@ -80,13 +80,20 @@ export async function generateWithOpenRouter(opts: GenerateOptions): Promise<str
   // some serverless runtimes don't reliably honor AbortSignal cancellation,
   // and a hung call here must never be allowed to run out the clock on the
   // whole request (Vercel functions have their own hard timeout).
-  return Promise.race([
+  const startedAt = Date.now();
+  const result = await Promise.race([
     generateWithOpenRouterInner(opts, cacheKey),
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), 30000)),
+    new Promise<'__timeout__'>((resolve) => setTimeout(() => resolve('__timeout__'), 30000)),
   ]);
+  if (result === '__timeout__') {
+    console.error(`[ai] OpenRouter call exceeded the 30s budget (started ${Date.now() - startedAt}ms ago) — falling back`);
+    return null;
+  }
+  return result;
 }
 
 async function generateWithOpenRouterInner(opts: GenerateOptions, cacheKey: string): Promise<string | null> {
+  const fetchStartedAt = Date.now();
   try {
     const messages: Array<{ role: string; content: string }> = [];
     if (opts.systemInstruction) {
@@ -120,19 +127,25 @@ async function generateWithOpenRouterInner(opts: GenerateOptions, cacheKey: stri
       signal: controller.signal,
     }).finally(() => clearTimeout(timeout));
 
+    const fetchMs = Date.now() - fetchStartedAt;
+
     if (!res.ok) {
-      console.error(`[ai] OpenRouter request failed: ${res.status} ${await res.text().catch(() => '')}`);
+      console.error(`[ai] OpenRouter request failed after ${fetchMs}ms: ${res.status} ${await res.text().catch(() => '')}`);
       return null;
     }
 
     const data: any = await res.json();
     const text = data?.choices?.[0]?.message?.content;
-    if (!text || typeof text !== 'string') return null;
+    if (!text || typeof text !== 'string') {
+      console.error(`[ai] OpenRouter returned no usable content after ${fetchMs}ms:`, JSON.stringify(data).slice(0, 500));
+      return null;
+    }
 
+    console.log(`[ai] OpenRouter call succeeded in ${fetchMs}ms`);
     writeCache(cacheKey, text);
     return text;
   } catch (err) {
-    console.error('[ai] OpenRouter call errored:', err);
+    console.error(`[ai] OpenRouter call errored after ${Date.now() - fetchStartedAt}ms:`, err);
     return null;
   }
 }
