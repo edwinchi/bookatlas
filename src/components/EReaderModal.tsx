@@ -42,6 +42,8 @@ interface EReaderModalProps {
   initialParagraphIndex?: number;
   onSaveProgress?: (chapterIndex: number, paragraphIndex: number, progressPct: number) => void;
   currency?: string;
+  hasAiAccess?: boolean;
+  onRequireAiAccess?: (featureTitle: string, featureDescription: string, action: () => void) => void;
 }
 
 export const EReaderModal: React.FC<EReaderModalProps> = ({
@@ -52,6 +54,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   initialParagraphIndex = 0,
   onSaveProgress,
   currency = 'EUR',
+  hasAiAccess = true,
+  onRequireAiAccess,
 }) => {
   const [currentChapterIndex, setCurrentChapterIndex] = useState(initialChapterIndex);
   const [currentParagraphIndex, setCurrentParagraphIndex] = useState(initialParagraphIndex);
@@ -188,26 +192,36 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
   // Run AI Copilot
   const runAICopilot = async (type: 'explain' | 'themes' | 'historical_context' | 'character_dynamics', passageText?: string) => {
+    if (!hasAiAccess) {
+      onRequireAiAccess?.('AI Reading Copilot', 'Get instant AI explanations, thematic analysis, and character insights for any passage.', () => runAICopilot(type, passageText));
+      return;
+    }
     setCopilotLoading(true);
     setCopilotQueryType(type);
     const passage = passageText || selectedPassage || currentChapter.content[0] || book.synopsis;
 
     try {
+      const actionMap: Record<typeof type, string> = {
+        explain: 'explain',
+        themes: 'thematic_analysis',
+        historical_context: 'historical_context',
+        character_dynamics: 'character_intent',
+      };
       const res = await fetch('/api/ai/reader-copilot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: actionMap[type],
+          text: passage,
           bookTitle: book.title,
           author: book.author,
-          passage,
           chapterTitle: currentChapter.title,
-          analysisType: type,
         })
       });
 
       if (res.ok) {
         const data = await res.json();
-        setCopilotResponse(data.analysis || 'Analysis generated.');
+        setCopilotResponse(data.result || 'Analysis generated.');
       } else {
         throw new Error('Fallback needed');
       }
@@ -229,6 +243,10 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
   // 2. Run Conceptual Deep Dive
   const runDeepDive = async (termToLookup?: string) => {
+    if (!hasAiAccess) {
+      onRequireAiAccess?.('Conceptual Deep Dive', 'Get an AI-generated glossary breakdown of any term or concept in this book.', () => runDeepDive(termToLookup));
+      return;
+    }
     const query = termToLookup || deepDiveTerm || '42 Principles of Ma’at';
     setDeepDiveLoading(true);
     setDeepDiveTerm(query);
@@ -269,6 +287,10 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
   // 3. Run Mind Map Synthesis
   const runMindMap = async () => {
+    if (!hasAiAccess) {
+      onRequireAiAccess?.('Visual Mind Map Synthesis', 'Get an AI-generated visual mind map and key takeaways for this chapter.', () => runMindMap());
+      return;
+    }
     setMindMapLoading(true);
     try {
       const res = await fetch('/api/ai/mind-map', {
@@ -306,6 +328,10 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
   // 4. Run Pronunciation Guide
   const runPronounce = async (term?: string) => {
+    if (!hasAiAccess) {
+      onRequireAiAccess?.('Pronunciation Guide', 'Get an AI-generated phonetic and IPA pronunciation guide for any term.', () => runPronounce(term));
+      return;
+    }
     const t = term || pronounceTerm || 'Medu Neter';
     setPronounceLoading(true);
     setPronounceTerm(t);

@@ -22,10 +22,11 @@ import { AIStudioHub } from './components/AIStudioHub';
 import { AdminAuthModal } from './components/AdminAuthModal';
 import { UserRegistrationGateModal } from './components/UserRegistrationGateModal';
 import { UnsubscribePageModal } from './components/UnsubscribePageModal';
+import { AIAccessGateModal } from './components/AIAccessGateModal';
 import { TRANSLATIONS } from './data/translations';
 import { INITIAL_BOOKS } from './data/booksData';
 
-import { Book, CartItem, UserLibraryItem, FilterOptions, AdminSession } from './types';
+import { Book, CartItem, UserLibraryItem, FilterOptions, AdminSession, SubscriberTier } from './types';
 import { 
   Sparkles, 
   ArrowUpDown, 
@@ -62,6 +63,55 @@ export default function App() {
     }
     return null;
   });
+
+  // AI feature access — Member/VIP Patron subscribers only
+  const [currentUserTier, setCurrentUserTier] = useState<SubscriberTier>('free_reader');
+  const [aiAccessGate, setAiAccessGate] = useState<{ featureTitle: string; featureDescription: string } | null>(null);
+  const [isUpgradingTier, setIsUpgradingTier] = useState(false);
+  const hasAiAccess = currentUserTier === 'member_subscriber' || currentUserTier === 'vip_patron';
+
+  useEffect(() => {
+    if (!registeredUser?.email) return;
+    fetch(`/api/subscribers/unsubscribe-info?email=${encodeURIComponent(registeredUser.email)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.exists && data.tier) setCurrentUserTier(data.tier);
+      })
+      .catch(() => {});
+  }, [registeredUser?.email]);
+
+  const requireAiAccess = (featureTitle: string, featureDescription: string, action: () => void) => {
+    if (hasAiAccess) {
+      action();
+    } else {
+      setAiAccessGate({ featureTitle, featureDescription });
+    }
+  };
+
+  const handleUpgradeToMember = async () => {
+    if (!registeredUser?.email || isUpgradingTier) return;
+    setIsUpgradingTier(true);
+    try {
+      const res = await fetch('/api/subscribers/single', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: registeredUser.email,
+          name: registeredUser.name,
+          tier: 'member_subscriber',
+          tags: ['plus_member', 'self_upgrade'],
+        }),
+      });
+      if (res.ok) {
+        setCurrentUserTier('member_subscriber');
+        setAiAccessGate(null);
+      }
+    } catch (e) {
+      console.error('Tier upgrade failed', e);
+    } finally {
+      setIsUpgradingTier(false);
+    }
+  };
 
   // 1-Click Unsubscribe Modal state
   const [isUnsubscribeModalOpen, setIsUnsubscribeModalOpen] = useState(false);
@@ -382,8 +432,8 @@ export default function App() {
     setIsCartOpen(true);
   };
 
-  const handleRemoveFromCart = (bookId: string, format: 'ebook' | 'audiobook') => {
-    setCart((prev) => prev.filter((item) => !(item.book.id === bookId && item.format === format)));
+  const handleRemoveFromCart = (index: number) => {
+    setCart((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleToggleWishlist = (book: Book) => {
@@ -506,12 +556,12 @@ export default function App() {
         onOpenCart={() => setIsCartOpen(true)}
         onOpenWishlist={() => setActiveTab('library')}
         onOpenArchitectureGuide={() => setIsArchitectureGuideOpen(true)}
-        onOpenAIMatchmaker={() => setIsAIMatchmakerOpen(true)}
+        onOpenAIMatchmaker={() => requireAiAccess('AI Book Matchmaker', 'Get personalized reading recommendations, matched by mood and theme, powered by AI.', () => setIsAIMatchmakerOpen(true))}
         onOpenAIHub={() => setIsAIHubOpen(true)}
-        onOpenChat={() => setIsChatOpen(true)}
-        onOpenVoice={() => setIsVoiceOpen(true)}
+        onOpenChat={() => requireAiAccess('Interactive Literary Assistant', 'Chat with our persona-driven AI literary companion.', () => setIsChatOpen(true))}
+        onOpenVoice={() => requireAiAccess('Live Voice Companion', 'Have a real-time spoken conversation with our AI voice companion.', () => setIsVoiceOpen(true))}
         onOpenVideo={() => setIsVideoOpen(true)}
-        onOpenSearch={() => setIsSearchOpen(true)}
+        onOpenSearch={() => requireAiAccess('Search Grounding Literary Radar', 'Get real-time bestseller trends and literary news grounded in live Google Search.', () => setIsSearchOpen(true))}
         onOpenDocs={() => setIsDocsOpen(true)}
         currency={currency}
         setCurrency={setCurrency}
@@ -539,10 +589,10 @@ export default function App() {
               onPreviewBook={handleReadSample}
               onReturnToStore={() => setActiveTab('store')}
               onOpenAIHub={() => setIsAIHubOpen(true)}
-              onOpenChat={() => setIsChatOpen(true)}
-              onOpenVoice={() => setIsVoiceOpen(true)}
+              onOpenChat={() => requireAiAccess('Interactive Literary Assistant', 'Chat with our persona-driven AI literary companion.', () => setIsChatOpen(true))}
+              onOpenVoice={() => requireAiAccess('Live Voice Companion', 'Have a real-time spoken conversation with our AI voice companion.', () => setIsVoiceOpen(true))}
               onOpenVideo={() => setIsVideoOpen(true)}
-              onOpenSearch={() => setIsSearchOpen(true)}
+              onOpenSearch={() => requireAiAccess('Search Grounding Literary Radar', 'Get real-time bestseller trends and literary news grounded in live Google Search.', () => setIsSearchOpen(true))}
               onOpenDocs={() => setIsDocsOpen(true)}
               currencySymbol={currencySymbol}
               adminEmail={adminEmail}
@@ -784,7 +834,7 @@ export default function App() {
                 {/* Editorial Content Blocks */}
                 <EditorialCuratorBlock
                   onExploreGenre={(genre) => handleViewAllCategory(genre)}
-                  onOpenMatchmaker={() => setIsAIMatchmakerOpen(true)}
+                  onOpenMatchmaker={() => requireAiAccess('AI Book Matchmaker', 'Get personalized reading recommendations, matched by mood and theme, powered by AI.', () => setIsAIMatchmakerOpen(true))}
                 />
 
                 {/* Carousel 4: Immersive Audiobooks with Narrator Previews */}
@@ -967,7 +1017,7 @@ export default function App() {
           <div className="space-y-2">
             <h4 className="font-bold text-white uppercase tracking-wider text-[11px]">Reading Experience</h4>
             <ul className="space-y-1.5">
-              <li><button onClick={() => setIsAIMatchmakerOpen(true)} className="hover:text-white cursor-pointer flex items-center gap-1"><Sparkles className="w-3 h-3 text-purple-400" /> AI Book Matchmaker</button></li>
+              <li><button onClick={() => requireAiAccess('AI Book Matchmaker', 'Get personalized reading recommendations, matched by mood and theme, powered by AI.', () => setIsAIMatchmakerOpen(true))} className="hover:text-white cursor-pointer flex items-center gap-1"><Sparkles className="w-3 h-3 text-purple-400" /> AI Book Matchmaker</button></li>
               <li><button onClick={() => setActiveTab('library')} className="hover:text-white cursor-pointer">My Bookshelf & Reading Progress</button></li>
               <li><button onClick={() => setIsArchitectureGuideOpen(true)} className="hover:text-amber-400 cursor-pointer font-semibold">Bookatlas Architecture Blueprint</button></li>
             </ul>
@@ -1024,6 +1074,8 @@ export default function App() {
         onPlayAudioSample={(b) => setActiveAudiobook(b)}
         isWishlisted={selectedBookForDetail ? wishlist.some((w) => w.id === selectedBookForDetail.id) : false}
         currencySymbol={currencySymbol}
+        hasAiAccess={hasAiAccess}
+        onRequireAiAccess={requireAiAccess}
       />
 
       {/* In-Browser eReader Modal */}
@@ -1035,6 +1087,8 @@ export default function App() {
           initialChapterIndex={activeReadingBook.chapterIndex}
           initialParagraphIndex={activeReadingBook.paragraphIndex}
           onSaveProgress={handleSaveProgress}
+          hasAiAccess={hasAiAccess}
+          onRequireAiAccess={requireAiAccess}
         />
       )}
 
@@ -1058,6 +1112,16 @@ export default function App() {
         onAddToCart={handleAddToCart}
       />
 
+      {/* AI Feature Subscription Gate — Member/VIP Patron only */}
+      <AIAccessGateModal
+        isOpen={!!aiAccessGate}
+        onClose={() => setAiAccessGate(null)}
+        featureTitle={aiAccessGate?.featureTitle || ''}
+        featureDescription={aiAccessGate?.featureDescription || ''}
+        onUpgrade={handleUpgradeToMember}
+        isUpgrading={isUpgradingTier}
+      />
+
       {/* Architecture Guide Blueprint Modal */}
       <ArchitectureGuideModal
         isOpen={isArchitectureGuideOpen}
@@ -1068,10 +1132,10 @@ export default function App() {
       <AIStudioHub
         isOpen={isAIHubOpen}
         onClose={() => setIsAIHubOpen(false)}
-        onOpenChat={() => setIsChatOpen(true)}
-        onOpenVoice={() => setIsVoiceOpen(true)}
+        onOpenChat={() => requireAiAccess('Interactive Literary Assistant', 'Chat with our persona-driven AI literary companion.', () => setIsChatOpen(true))}
+        onOpenVoice={() => requireAiAccess('Live Voice Companion', 'Have a real-time spoken conversation with our AI voice companion.', () => setIsVoiceOpen(true))}
         onOpenVideo={() => setIsVideoOpen(true)}
-        onOpenSearch={() => setIsSearchOpen(true)}
+        onOpenSearch={() => requireAiAccess('Search Grounding Literary Radar', 'Get real-time bestseller trends and literary news grounded in live Google Search.', () => setIsSearchOpen(true))}
         onOpenDocs={() => setIsDocsOpen(true)}
         booksCount={books.length}
         isAdminAuthenticated={isAdminAuthenticated}

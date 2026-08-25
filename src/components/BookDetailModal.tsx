@@ -30,6 +30,8 @@ interface BookDetailModalProps {
   onPlayAudioSample: (book: Book) => void;
   isWishlisted: boolean;
   currencySymbol?: string;
+  hasAiAccess?: boolean;
+  onRequireAiAccess?: (featureTitle: string, featureDescription: string, action: () => void) => void;
 }
 
 export const BookDetailModal: React.FC<BookDetailModalProps> = ({
@@ -41,6 +43,8 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
   onPlayAudioSample,
   isWishlisted,
   currencySymbol = '€',
+  hasAiAccess = true,
+  onRequireAiAccess,
 }) => {
   if (!book) return null;
 
@@ -65,24 +69,22 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
       const res = await fetch('/api/ai/book-summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookTitle: book.title,
-          author: book.author,
-          synopsis: book.synopsis,
-          genre: book.primaryGenre,
-        })
+        body: JSON.stringify({ book })
       });
       if (res.ok) {
         const data = await res.json();
-        setAiSummary(data);
+        setAiSummary(data.data);
       } else {
         throw new Error('Fallback needed');
       }
     } catch {
       setAiSummary({
-        quickTake: `A standout masterpiece in ${book.primaryGenre} by ${book.author}, offering nuanced character arcs and captivating world-building.`,
-        keyThemes: ['Human resilience', 'Identity and legacy', 'Moral complexity', 'Courage under pressure'],
-        whoShouldRead: `Ideal for readers who appreciate high-depth narratives, rich European and global storytelling, and atmospheric writing.`,
+        executiveSummary: `A standout masterpiece in ${book.primaryGenre} by ${book.author}, offering nuanced character arcs and captivating world-building.`,
+        coreTakeaways: ['Human resilience', 'Identity and legacy', 'Moral complexity', 'Courage under pressure'],
+        targetAudience: `Ideal for readers who appreciate high-depth narratives, rich European and global storytelling, and atmospheric writing.`,
+        philosophicalQuestion: `What does it truly mean to persevere when the world around you offers no clear answers?`,
+        keyQuotes: [],
+        similarMasterpieces: [],
         estimatedReadingTime: `${Math.round(book.pageCount * 1.5)} mins (approx ${Math.ceil(book.pageCount / 40)} reading sessions)`,
         vibeRating: book.aiVibe || 'Thought-provoking & Cinematic'
       });
@@ -377,8 +379,19 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
 
               <button
                 onClick={() => {
-                  setActiveTab('ai_summary');
-                  fetchAISummary();
+                  const openAiSummary = () => {
+                    setActiveTab('ai_summary');
+                    fetchAISummary();
+                  };
+                  if (hasAiAccess || !onRequireAiAccess) {
+                    openAiSummary();
+                  } else {
+                    onRequireAiAccess(
+                      'AI Executive Briefing',
+                      'Get an AI-generated 5-minute executive summary, key themes, and a dynamic story preview for this book.',
+                      openAiSummary
+                    );
+                  }
                 }}
                 className={`pb-2.5 px-3 transition-colors cursor-pointer border-b-2 flex items-center gap-1.5 whitespace-nowrap ${
                   activeTab === 'ai_summary'
@@ -464,39 +477,57 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
                   </div>
                 ) : aiSummary ? (
                   <div className="space-y-5">
-                    {/* Quick Take Card */}
+                    {/* Executive Summary Card */}
                     <div className="p-4.5 bg-indigo-50/80 border border-indigo-200 rounded-2xl space-y-2">
                       <div className="flex items-center gap-2 text-indigo-900 font-bold text-xs uppercase tracking-wider">
                         <Sparkles className="w-4 h-4 text-indigo-600" />
                         <span>AI Executive Summary</span>
                       </div>
                       <p className="text-sm text-slate-800 leading-relaxed font-medium">
-                        {aiSummary.quickTake}
+                        {aiSummary.executiveSummary}
                       </p>
                     </div>
 
-                    {/* Key Themes & Target Reader */}
+                    {/* Core Takeaways & Target Reader */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Core Themes</h4>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Core Takeaways</h4>
                         <div className="flex flex-wrap gap-1.5">
-                          {Array.isArray(aiSummary.keyThemes) ? (
-                            aiSummary.keyThemes.map((t: string, i: number) => (
+                          {Array.isArray(aiSummary.coreTakeaways) ? (
+                            aiSummary.coreTakeaways.map((t: string, i: number) => (
                               <span key={i} className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700">
                                 {t}
                               </span>
                             ))
                           ) : (
-                            <span className="text-xs text-slate-700">{aiSummary.keyThemes}</span>
+                            <span className="text-xs text-slate-700">{aiSummary.coreTakeaways}</span>
                           )}
                         </div>
                       </div>
 
                       <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Ideal Reader Profile</h4>
-                        <p className="text-xs text-slate-700 leading-relaxed">{aiSummary.whoShouldRead}</p>
+                        <p className="text-xs text-slate-700 leading-relaxed">{aiSummary.targetAudience}</p>
                       </div>
                     </div>
+
+                    {aiSummary.philosophicalQuestion && (
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-1.5">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-amber-700">Philosophical Question</h4>
+                        <p className="text-xs text-amber-900 leading-relaxed italic">{aiSummary.philosophicalQuestion}</p>
+                      </div>
+                    )}
+
+                    {Array.isArray(aiSummary.keyQuotes) && aiSummary.keyQuotes.length > 0 && (
+                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Key Quotes</h4>
+                        <ul className="space-y-1.5">
+                          {aiSummary.keyQuotes.map((q: string, i: number) => (
+                            <li key={i} className="text-xs text-slate-700 italic leading-relaxed">"{q}"</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
                     {/* AI Dynamic Story Preview Generator */}
                     <div className="p-5 bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-2xl space-y-4 shadow-lg">

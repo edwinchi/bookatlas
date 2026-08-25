@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
-import { 
-  X, 
-  Trash2, 
-  ShoppingBag, 
-  Sparkles, 
-  ArrowRight, 
-  Check, 
-  ShieldCheck, 
+import {
+  X,
+  Trash2,
+  ShoppingBag,
+  Sparkles,
+  ArrowRight,
+  Check,
+  ShieldCheck,
   Tag,
   BookOpen,
-  Headphones
+  Headphones,
+  Landmark,
+  CreditCard,
+  Wallet,
+  Smartphone
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CartItem } from '../types';
@@ -36,8 +40,23 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const [promoError, setPromoError] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'ideal' | 'card' | 'paypal' | 'applepay'>('ideal');
 
   if (!isOpen) return null;
+
+  const paymentMethods: Array<{ id: 'ideal' | 'card' | 'paypal' | 'applepay'; label: string; icon: React.ReactNode }> = [
+    { id: 'ideal', label: 'iDEAL', icon: <Landmark className="w-4 h-4" /> },
+    { id: 'card', label: 'Credit / Debit Card', icon: <CreditCard className="w-4 h-4" /> },
+    { id: 'paypal', label: 'PayPal', icon: <Wallet className="w-4 h-4" /> },
+    { id: 'applepay', label: 'Apple Pay', icon: <Smartphone className="w-4 h-4" /> },
+  ];
+
+  const paymentProcessingLabel: Record<typeof paymentMethod, string> = {
+    ideal: 'Redirecting to your iDEAL bank...',
+    card: 'Authorizing card payment...',
+    paypal: 'Confirming with PayPal...',
+    applepay: 'Confirming with Apple Pay...',
+  };
 
   const rawSubtotal = cart.reduce((acc, item) => acc + item.book.price, 0);
   const discountAmount = (rawSubtotal * discountPercent) / 100;
@@ -233,6 +252,29 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               )}
             </div>
 
+            {/* Payment Method Selector */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">Pay with</span>
+              <div className="grid grid-cols-2 gap-2">
+                {paymentMethods.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setPaymentMethod(m.id)}
+                    disabled={isCheckingOut}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 ${
+                      paymentMethod === m.id
+                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    {m.icon}
+                    <span>{m.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Checkout Action */}
             <button
               onClick={handleCompleteOrder}
@@ -242,7 +284,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               {isCheckingOut ? (
                 <span className="flex items-center gap-2">
                   <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  Processing Instant Digital Delivery...
+                  {paymentProcessingLabel[paymentMethod]}
                 </span>
               ) : (
                 <>
