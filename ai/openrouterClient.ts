@@ -82,7 +82,7 @@ export async function generateWithOpenRouter(opts: GenerateOptions): Promise<str
   // whole request (Vercel functions have their own hard timeout).
   return Promise.race([
     generateWithOpenRouterInner(opts, cacheKey),
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), 12000)),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 30000)),
   ]);
 }
 
@@ -106,7 +106,7 @@ async function generateWithOpenRouterInner(opts: GenerateOptions, cacheKey: stri
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 25000);
 
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
