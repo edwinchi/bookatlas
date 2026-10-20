@@ -8,8 +8,8 @@ Bookatlas is an imported eBook and audiobook storefront with a sample reader, br
 - The web artifact serves `/`; the API artifact handles `/api`. Managed workflows supply the required ports and base paths.
 - Do not run a root-level `pnpm dev` or add a Vite API proxy.
 - Install workspace dependencies with `pnpm install`.
-- Run the migration checks with `node --test scripts/src/bookatlas-port.test.mjs` while both services are running. The registered `test` validation uses this command.
-- Browser tests use `/repl/tools/bin/chromium`. Evidence is saved under the ignored `generated-artifacts/bookatlas-tests/`.
+- Run the authentication policy, API protection, and public browser checks with `node --test scripts/src/bookatlas-port.test.mjs` while both services are running. The registered `test` validation uses this command.
+- Browser tests use `/repl/tools/bin/chromium`. Evidence is saved under the ignored `generated-artifacts/bookatlas-auth-tests/`.
 
 ## Project structure
 
@@ -26,9 +26,21 @@ Bookatlas is an imported eBook and audiobook storefront with a sample reader, br
 - Without Supabase credentials, the original backend runs from in-memory seed data and loses server-side changes when restarted. Bookshelf, wishlist, and registration also use the original browser-local storage.
 - Checkout is the imported simulation, not a live payment integration.
 - The original administrative gate and API access model are preserved, not replaced or hardened as part of the port.
-- Do not publish or connect live reader data until a separate security change adds server-enforced authorization: the imported user/subscriber listing and export routes and manager mutations are publicly accessible. The browser-local administrative PIN is not API protection.
-- The source has four existing frontend type errors involving administrator session fields and editorial book fields. Runtime/build and parity checks are the migration gates; strict typing cleanup is separate work.
-- The original header overflows narrow mobile screens. Components are preserved byte-for-byte, and the browser check records this rather than changing the design.
+- The previously public administrative routes now require server-verified authorization. Any already published version must be republished to receive this protection.
+- The source has two existing frontend type errors involving editorial book fields, and imported Express handlers have implicit-return warnings. Authentication modules type-check; strict typing cleanup of imported code is separate work.
+- The original storefront header can overflow narrow mobile screens. The new auth routes are checked at mobile width; a full storefront redesign is separate work.
+
+## Authentication
+
+- Clerk-managed signup, sign-in (email or Google), and custom sign-out controls replace the old email-only registration gate and client-side administrator PIN.
+- The storefront `/` remains public. Signed-in users go to `/user-portal`; guests visiting the portal return to the storefront. Auth routes use optional Wouter wildcards to handle verification and OAuth callbacks.
+- API requests use same-origin Clerk session cookies. The Clerk proxy is mounted before body parsers. No web client bearer-token plumbing is needed.
+- `BOOKATLAS_OWNER_EMAIL` is the explicitly configured owner address (server-only environment setting). On the first verified owner login in each Clerk environment, the server grants `publicMetadata.role=admin` and records a bootstrap marker. A subsequently revoked role is not automatically restored. Reader accounts never choose their role.
+- Roles are resolved from Clerk on the server, not from browser storage or client-provided email. Public catalog GETs are allowlisted; subscriber management, catalog changes, operations, and documentation export require admin. AI reading APIs require authenticated membership or admin.
+- Reader data, including offline-cache preferences, is browser-local and namespaced by verified Clerk user ID; account switching remounts the reader app. It is not cross-device synchronization.
+- Unsubscribe preferences require the matching signed-in account, admin, or a valid signed opt-out link. Public links cannot resubscribe an address. Tokens created with the legacy public default secret are intentionally invalid; newly sent campaigns sign links with the configured secret.
+- Automated checks cover anonymous denial, reader/admin policy, verified-owner bootstrap/revocation rules, forged legacy storage, and auth-page rendering. A real signed-in reader/admin UI session has not been browser-verified.
+- Republish the app to apply these changes to an already published version.
 
 ## Optional configuration
 
@@ -38,6 +50,6 @@ Configure credentials only through Replit Secrets; never put them in frontend co
 - `OPENROUTER_API_KEY`, optional `OPENROUTER_MODEL`: original text AI provider.
 - `GEMINI_API_KEY`: original Gemini-specific features (including speech, grounding, multimodal, and video). Without providers, retain the imported fallbacks and explicit unavailable-feature messages.
 - `APP_URL`: actual public app origin for email calls to action and unsubscribe links. Set this before using outbound campaigns; the import's localhost default is not appropriate for emailed links.
-- `UNSUBSCRIBE_TOKEN_SECRET`: stable signing secret for unsubscribe tokens.
+- `UNSUBSCRIBE_TOKEN_SECRET`: optional dedicated stable signing secret for unsubscribe tokens; otherwise the managed `SESSION_SECRET` is used.
 
 External AI calls and Supabase persistence cannot be verified until their credentials are configured. Publishing does not automatically copy the external Supabase data into Replit PostgreSQL.

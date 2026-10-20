@@ -19,14 +19,13 @@ import { VeoVideoAnimatorModal } from './components/VeoVideoAnimatorModal';
 import { GoogleSearchGroundingModal } from './components/GoogleSearchGroundingModal';
 import { ExportDocsModal } from './components/ExportDocsModal';
 import { AIStudioHub } from './components/AIStudioHub';
-import { AdminAuthModal } from './components/AdminAuthModal';
-import { UserRegistrationGateModal } from './components/UserRegistrationGateModal';
+import { useAccount, useAccountList } from './auth/AuthContext';
 import { UnsubscribePageModal } from './components/UnsubscribePageModal';
 import { AIAccessGateModal } from './components/AIAccessGateModal';
 import { TRANSLATIONS } from './data/translations';
 import { INITIAL_BOOKS } from './data/booksData';
 
-import { Book, CartItem, UserLibraryItem, FilterOptions, AdminSession, SubscriberTier } from './types';
+import { Book, CartItem, UserLibraryItem, FilterOptions, SubscriberTier } from './types';
 import { 
   Sparkles, 
   ArrowUpDown, 
@@ -47,40 +46,32 @@ import {
 } from 'lucide-react';
 
 export default function App() {
+  const { account, tier: accountTier, requireSignIn, requireAdmin, signOut } = useAccount();
   const [books, setBooks] = useState<Book[]>(INITIAL_BOOKS);
-  const [activeTab, setActiveTab] = useState<'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager'>('store');
+  const [activeTab, setActiveTabState] = useState<'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager'>('store');
+  const setActiveTab = (tab: typeof activeTab) => {
+    if (tab === 'library' && !requireSignIn()) return;
+    if (tab === 'manager' && !requireAdmin()) return;
+    setActiveTabState(tab);
+  };
   const [currency, setCurrency] = useState('EUR');
   const currencySymbol = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
   const [language, setLanguage] = useState<'en' | 'nl'>('en');
 
-  // Registration Gate state
-  const [registeredUser, setRegisteredUser] = useState<{ email: string; name?: string } | null>(() => {
-    const saved = localStorage.getItem('bookatlas_registered_user');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {}
-    }
-    return null;
-  });
+  const registeredUser = account;
 
   // AI feature access — Member/VIP Patron subscribers only
-  const [currentUserTier, setCurrentUserTier] = useState<SubscriberTier>('free_reader');
+  const [currentUserTier, setCurrentUserTier] = useState<SubscriberTier>(accountTier);
   const [aiAccessGate, setAiAccessGate] = useState<{ featureTitle: string; featureDescription: string } | null>(null);
   const [isUpgradingTier, setIsUpgradingTier] = useState(false);
-  const hasAiAccess = currentUserTier === 'member_subscriber' || currentUserTier === 'vip_patron';
+  const hasAiAccess = account?.role === 'admin' || currentUserTier === 'member_subscriber' || currentUserTier === 'vip_patron';
 
   useEffect(() => {
-    if (!registeredUser?.email) return;
-    fetch(`/api/subscribers/unsubscribe-info?email=${encodeURIComponent(registeredUser.email)}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.exists && data.tier) setCurrentUserTier(data.tier);
-      })
-      .catch(() => {});
-  }, [registeredUser?.email]);
+    setCurrentUserTier(accountTier);
+  }, [accountTier]);
 
   const requireAiAccess = (featureTitle: string, featureDescription: string, action: () => void) => {
+    if (!requireSignIn()) return;
     if (hasAiAccess) {
       action();
     } else {
@@ -92,15 +83,10 @@ export default function App() {
     if (!registeredUser?.email || isUpgradingTier) return;
     setIsUpgradingTier(true);
     try {
-      const res = await fetch('/api/subscribers/single', {
+      const res = await fetch('/api/account/membership', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: registeredUser.email,
-          name: registeredUser.name,
-          tier: 'member_subscriber',
-          tags: ['plus_member', 'self_upgrade'],
-        }),
+        body: JSON.stringify({}),
       });
       if (res.ok) {
         setCurrentUserTier('member_subscriber');
@@ -174,57 +160,9 @@ export default function App() {
   });
 
   // User State: Cart, Wishlist, Library
-  const [cart, setCart] = useState<CartItem[]>([
-    { book: INITIAL_BOOKS[0], format: 'ebook', addedAt: Date.now() }
-  ]);
-
-  const [wishlist, setWishlist] = useState<Book[]>([
-    INITIAL_BOOKS[1],
-    INITIAL_BOOKS[5]
-  ]);
-
-  const [library, setLibrary] = useState<UserLibraryItem[]>([
-    {
-      book: INITIAL_BOOKS[0],
-      format: 'ebook',
-      progressPercent: 35,
-      currentChapterIndex: 0,
-      currentParagraphIndex: 3,
-      lastReadTimestamp: Date.now() - 3600000,
-      highlights: [
-        {
-          id: 'hl-1',
-          text: 'The astrolabe in Kaelen’s palm hummed with a resonance that felt colder than winter sea water.',
-          color: 'yellow',
-          chapterIndex: 0,
-          paragraphIndex: 0,
-          date: 'Yesterday'
-        }
-      ],
-      bookmarks: [0],
-    },
-    {
-      book: INITIAL_BOOKS[2],
-      format: 'ebook',
-      progressPercent: 78,
-      currentChapterIndex: 0,
-      currentParagraphIndex: 4,
-      lastReadTimestamp: Date.now() - 86400000,
-      highlights: [],
-      bookmarks: [],
-    },
-    {
-      book: INITIAL_BOOKS[11],
-      format: 'ebook',
-      progressPercent: 100,
-      currentChapterIndex: 0,
-      currentParagraphIndex: 0,
-      lastReadTimestamp: Date.now() - 172800000,
-      highlights: [],
-      bookmarks: [],
-      finished: true,
-    }
-  ]);
+  const [cart, setCart] = useAccountList<CartItem>('cart');
+  const [wishlist, setWishlist] = useAccountList<Book>('wishlist');
+  const [library, setLibrary] = useAccountList<UserLibraryItem>('library');
 
   // Active Modals & Views
   const [selectedBookForDetail, setSelectedBookForDetail] = useState<Book | null>(null);
@@ -242,72 +180,15 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isDocsOpen, setIsDocsOpen] = useState(false);
 
-  // Administrator Security & Authentication State
-  const [adminSession, setAdminSession] = useState<AdminSession | null>(() => {
-    const local = localStorage.getItem('bookatlas_admin_session');
-    if (local) {
-      try {
-        const parsed = JSON.parse(local);
-        if (parsed?.isAuthenticated) return parsed;
-      } catch (e) {}
-    }
-    const session = sessionStorage.getItem('bookatlas_admin_session');
-    if (session) {
-      try {
-        const parsed = JSON.parse(session);
-        if (parsed?.isAuthenticated) return parsed;
-      } catch (e) {}
-    }
-    return null;
-  });
-
-  const [isAdminAuthModalOpen, setIsAdminAuthModalOpen] = useState(false);
-  const [adminAuthRequestedFeature, setAdminAuthRequestedFeature] = useState('Bookatlas Administrator Console');
-  const [adminAuthSuccessCallback, setAdminAuthSuccessCallback] = useState<(() => void) | null>(null);
-
-  const isAdminAuthenticated = Boolean(adminSession?.isAuthenticated);
-  const adminEmail = adminSession?.adminEmail || 'eddyteddy78@gmail.com';
+  const isAdminAuthenticated = account?.role === 'admin';
+  const adminEmail = isAdminAuthenticated ? account.email : 'Administrator';
 
   const openAdminAuthForFeature = (featureName: string, callback?: () => void) => {
-    setAdminAuthRequestedFeature(featureName);
-    if (callback) {
-      setAdminAuthSuccessCallback(() => callback);
-    } else {
-      setAdminAuthSuccessCallback(null);
-    }
-    setIsAdminAuthModalOpen(true);
-  };
-
-  const handleAdminAuthSuccess = () => {
-    const raw = localStorage.getItem('bookatlas_admin_session') || sessionStorage.getItem('bookatlas_admin_session');
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        setAdminSession(parsed);
-      } catch (e) {}
-    } else {
-      setAdminSession({
-        isAuthenticated: true,
-        adminEmail: 'eddyteddy78@gmail.com',
-        adminName: 'Eddy (Platform Owner)',
-        loginTimestamp: Date.now(),
-        role: 'super_admin'
-      });
-    }
-    if (adminAuthSuccessCallback) {
-      const cb = adminAuthSuccessCallback;
-      setAdminAuthSuccessCallback(null);
-      cb();
-    }
+    if (requireAdmin(featureName)) callback?.();
   };
 
   const handleAdminLogout = () => {
-    localStorage.removeItem('bookatlas_admin_session');
-    sessionStorage.removeItem('bookatlas_admin_session');
-    setAdminSession(null);
-    if (activeTab === 'manager') {
-      setActiveTab('store');
-    }
+    signOut();
   };
 
 
@@ -424,6 +305,7 @@ export default function App() {
 
   // Cart & Wishlist Actions
   const handleAddToCart = (book: Book, format: 'ebook' | 'audiobook' = 'ebook') => {
+    if (!requireSignIn()) return;
     setCart((prev) => {
       const existing = prev.find((item) => item.book.id === book.id && item.format === format);
       if (existing) return prev;
@@ -437,6 +319,7 @@ export default function App() {
   };
 
   const handleToggleWishlist = (book: Book) => {
+    if (!requireSignIn()) return;
     setWishlist((prev) => {
       const exists = prev.some((b) => b.id === book.id);
       if (exists) {
@@ -457,6 +340,7 @@ export default function App() {
   };
 
   const handleCheckoutComplete = () => {
+    if (!requireSignIn()) return;
     // Transfer cart items to user bookshelf
     const newLibraryItems: UserLibraryItem[] = cart.map((item) => ({
       book: item.book,
@@ -612,7 +496,7 @@ export default function App() {
                   Manager Studio is Locked
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-                  This operational studio is restricted to the platform owner (<strong className="text-slate-800">{adminEmail}</strong>) of Atlantean Globals Services B.V. Please enter your Administrator Master PIN to proceed.
+                  This operational studio is restricted to verified administrator accounts. Sign in with an authorized account to proceed.
                 </p>
               </div>
 
@@ -622,7 +506,7 @@ export default function App() {
                   className="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Unlock className="w-4 h-4" />
-                  <span>Enter Administrator Master PIN</span>
+                  <span>Sign in as administrator</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('store')}
@@ -640,8 +524,8 @@ export default function App() {
             library={library}
             wishlist={wishlist}
             language={language}
-            userEmail={registeredUser?.email || adminEmail}
-            userName={registeredUser?.name || 'Eddy'}
+            userEmail={registeredUser?.email || ''}
+            userName={registeredUser?.name || 'Reader'}
             onOpenReader={(item) => {
               setActiveReadingBook({
                 book: item.book,
@@ -1175,22 +1059,6 @@ export default function App() {
         isOpen={isDocsOpen}
         onClose={() => setIsDocsOpen(false)}
         books={books}
-      />
-
-      {/* Admin Security Authentication & PIN Modal */}
-      <AdminAuthModal
-        isOpen={isAdminAuthModalOpen}
-        onClose={() => setIsAdminAuthModalOpen(false)}
-        onSuccess={handleAdminAuthSuccess}
-        restrictedFeatureName={adminAuthRequestedFeature}
-        adminEmail={adminEmail}
-      />
-
-      {/* Mandatory User Registration Gate Modal (Email required to explore) */}
-      <UserRegistrationGateModal
-        isOpen={!registeredUser}
-        onSuccess={(userData) => setRegisteredUser(userData)}
-        language={language}
       />
 
       {/* 1-Click Unsubscribe & Preference Center Modal */}

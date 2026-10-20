@@ -1,0 +1,3 @@
+- [Legacy reader-data ownership](auth-data-ownership.md) — do not silently assign anonymous/email-only browser data to the first authenticated account.
+- [Reader/admin boundaries](reader-admin-boundaries.md) — browsing is public; login is selective, and internal administration stays separate from reader content.
+- [Publishing expectations](publishing-expectations.md) — the ingest studio must produce real books/audio and launch campaigns, not simulated completion claims.

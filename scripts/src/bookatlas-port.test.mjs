@@ -1,103 +1,111 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, readdir, mkdir } from 'node:fs/promises';
+import { readFile, mkdir } from 'node:fs/promises';
+import { createHmac } from 'node:crypto';
 import { chromium, expect } from '@playwright/test';
+import { accessFor, authorizationStatus, canBootstrapOwner } from '../../artifacts/api-server/src/auth/policy.ts';
 
 const origin = 'http://localhost:80';
-const evidenceDir = 'generated-artifacts/bookatlas-tests';
+const reader = { id: 'unit-reader', email: 'reader@example.com', name: 'Reader', role: 'reader' };
+const admin = { ...reader, role: 'admin' };
 
-test('all imported API routes and storefront components are preserved', async () => {
-  const original = await readFile('.migration-backup/server.ts', 'utf8');
-  const migrated = await readFile('artifacts/api-server/src/bookatlas/server.ts', 'utf8');
-  const routes = text => [...text.matchAll(/app\.(get|post|put|patch|delete)\('([^']+)'/g)]
-    .filter(([, , path]) => path.startsWith('/api/'))
-    .map(([, method, path]) => `${method} ${path}`).sort();
-  assert.deepEqual(routes(migrated), routes(original));
-  assert.equal(
-    await readFile('artifacts/bookatlas/src/App.tsx', 'utf8'),
-    await readFile('.migration-backup/src/App.tsx', 'utf8'),
-    'the imported application state and main flows changed',
-  );
-  async function checkComponents(dir = '') {
-    for (const item of await readdir(`.migration-backup/src/components/${dir}`, { withFileTypes: true })) {
-      const relative = `${dir}${item.name}`;
-      if (item.isDirectory()) await checkComponents(`${relative}/`);
-      else assert.equal(
-        await readFile(`artifacts/bookatlas/src/components/${relative}`, 'utf8'),
-        await readFile(`.migration-backup/src/components/${relative}`, 'utf8'),
-        `${relative} changed during the port`,
-      );
+test('only the intended storefront routes are public; readers cannot access admin data or operations', async () => {
+  const source = await readFile('artifacts/api-server/src/bookatlas/server.ts', 'utf8');
+  for (const [, method, path] of source.matchAll(/app\.(get|post|put|patch|delete)\('([^']+)'/g)) {
+    if (!path.startsWith('/api/')) continue;
+    const access = accessFor(method.toUpperCase(), path);
+    if (['/api/health', '/api/books', '/api/categories'].includes(path) && method === 'get') {
+      assert.equal(access, 'public');
+    } else if (path.includes('/unsubscribe')) {
+      assert.equal(access, 'self-service');
+    } else {
+      assert.notEqual(access, 'public', path);
+      assert.equal(authorizationStatus(access), 401, path);
+      assert.equal(authorizationStatus(access, admin), 200, path);
+      if (access === 'admin') assert.equal(authorizationStatus(access, reader), 403, path);
     }
   }
-  await checkComponents();
-});
-
-test('health, catalog, filtering, categories, and manager APIs work through the shared proxy', async () => {
-  async function json(path) {
-    const response = await fetch(`${origin}${path}`);
-    assert.equal(response.status, 200, path);
-    assert.match(response.headers.get('content-type'), /application\/json/);
-    return response.json();
+  for (const path of ['/api/users', '/api/subscribers', '/api/subscribers/export', '/api/manager/stats', '/api/export/documentation-data']) {
+    assert.equal(accessFor('GET', path), 'admin');
+    assert.equal(authorizationStatus(accessFor('GET', path), reader), 403);
   }
-  assert.equal((await json('/api/healthz')).status, 'ok');
-  assert.equal((await json('/api/health')).status, 'ok');
-  const catalog = await json('/api/books');
-  assert.equal(catalog.success, true);
-  assert.ok(catalog.books.length > 0);
-  const filtered = await json(`/api/books?search=${encodeURIComponent(catalog.books[0].title)}`);
-  assert.ok(filtered.books.some(book => book.id === catalog.books[0].id));
-  assert.ok((await json('/api/categories')).allCategories.length > 0);
-  assert.equal((await json('/api/manager/stats')).success, true);
+  assert.equal(accessFor('GET', '/api/unknown-future-endpoint'), 'admin');
+  assert.equal(accessFor('DELETE', '/api/books/123/'), 'admin');
+  assert.equal(canBootstrapOwner('owner@example.com', false, 'owner@example.com', false), false);
+  assert.equal(canBootstrapOwner('attacker@example.com', true, 'owner@example.com', false), false);
+  assert.equal(canBootstrapOwner('owner@example.com', true, undefined, false), false);
+  assert.equal(canBootstrapOwner('owner@example.com', true, 'OWNER@example.com', false), true);
+  assert.equal(canBootstrapOwner('owner@example.com', true, 'owner@example.com', true), false, 'revoked roles must not be re-granted');
 });
 
-test('reader can register, preview, purchase, and reopen their library on desktop and mobile', { timeout: 120_000 }, async (t) => {
-  await mkdir(evidenceDir, { recursive: true });
+test('live API rejects unauthenticated administrative actions, identity spoofing, and forged unsubscribe links', async () => {
+  for (const path of ['/api/healthz', '/api/health', '/api/books', '/api/categories']) {
+    assert.equal((await fetch(origin + path)).status, 200, path);
+  }
+  const protectedRequests = [
+    ['GET', '/api/auth/me'], ['GET', '/api/users'], ['GET', '/api/subscribers'],
+    ['GET', '/api/subscribers/export'], ['GET', '/api/manager/stats'],
+    ['GET', '/api/export/documentation-data'], ['POST', '/api/books'],
+    ['DELETE', '/api/books/nonexistent-auth-test-book'], ['POST', '/api/books/reset-default'],
+    ['POST', '/api/subscribers/single'], ['POST', '/api/users/register'],
+    ['POST', '/api/manager/autopilot/toggle'], ['POST', '/api/ai/matchmaker'],
+    ['POST', '/api/account/membership'],
+  ];
+  for (const [method, path] of protectedRequests) {
+    const response = await fetch(origin + path, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'x-user-id': 'admin', 'x-user-role': 'admin' },
+      ...(method === 'POST' ? { body: JSON.stringify({ email: 'owner@example.com', role: 'admin' }) } : {}),
+    });
+    assert.equal(response.status, 401, `${method} ${path}`);
+  }
+  const email = 'reader@example.com';
+  const oldToken = 'unsub_' + createHmac('sha256', 'bookatlas_unsub_hmac_default_secret_2026').update(email).digest('hex').slice(0, 32);
+  for (const token of ['', oldToken]) {
+    assert.equal((await fetch(`${origin}/api/subscribers/unsubscribe-info?email=${email}&token=${token}`)).status, 403);
+    assert.equal((await fetch(`${origin}/api/subscribers/unsubscribe`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, token }),
+    })).status, 403);
+  }
+  assert.equal((await fetch(`${origin}/api/users/register`, {
+    method: 'POST', headers: { Origin: 'https://untrusted.example' },
+  })).status, 403, 'cross-origin mutations must be rejected');
+});
+
+test('public browsing, branded auth routes, callback paths, and fake legacy sessions are safe', { timeout: 90_000 }, async () => {
+  const directory = 'generated-artifacts/bookatlas-auth-tests';
+  await mkdir(directory, { recursive: true });
   const browser = await chromium.launch({ executablePath: '/repl/tools/bin/chromium', args: ['--no-sandbox'] });
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(origin);
-    await page.locator('input[type="email"]').fill(`port-test-${Date.now()}@example.com`);
-    await page.getByRole('button', { name: 'Unlock & Explore Bookatlas' }).click();
-    await expect(page.getByRole('heading', { name: /Registration Required/ })).toHaveCount(0);
-    await page.screenshot({ path: `${evidenceDir}/storefront.jpg` });
-    const title = 'The Celestial Griot of Sirius B';
-    await page.getByPlaceholder('Search by Title, Author, ISBN, Dutch translations, or AI Mood...').fill(title);
-    await page.getByRole('heading', { name: title, exact: true }).first().click();
-    await page.getByRole('button', { name: 'Read Free Instant Sample' }).click();
-    await expect(page.locator('.fixed.inset-0').last()).toBeVisible();
-    await page.screenshot({ path: `${evidenceDir}/reader.jpg` });
-    await page.locator('button').filter({ has: page.locator('svg.lucide-x') }).last().click();
-    // The sample reader replaces the detail modal; reopen it when necessary.
-    if (!(await page.getByRole('button', { name: /Buy Now for/ }).isVisible())) {
-      await page.getByRole('heading', { name: title, exact: true }).first().click();
-    }
-    await page.getByRole('button', { name: /Buy Now for/ }).click();
-    await expect(page.getByRole('heading', { name: 'Your Shopping Cart' })).toBeVisible();
-    await page.screenshot({ path: `${evidenceDir}/cart.jpg` });
-    await page.getByRole('button', { name: 'Complete Instant Purchase' }).click();
-    await expect(page.getByRole('heading', { name: 'Your Shopping Cart' })).toHaveCount(0);
-    if (await page.getByRole('button', { name: /Buy Now for/ }).isVisible()) {
-      await page.locator('button').filter({ has: page.locator('svg.lucide-x') }).last().click();
-    }
-    await page.getByRole('button', { name: 'My Bookshelf & Reading Progress', exact: true }).click();
-    await expect(page.getByRole('heading', { name: title, exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Create account', exact: true })).toBeVisible({ timeout: 30_000 });
+    assert.equal(new URL(page.url()).pathname, '/', 'visitors must land on the storefront, not a forced login');
+    await page.screenshot({ path: `${directory}/storefront.jpg` });
+    await page.evaluate(() => {
+      localStorage.setItem('bookatlas_admin_session', JSON.stringify({ isAuthenticated: true, role: 'super_admin' }));
+      sessionStorage.setItem('bookatlas_admin_session', JSON.stringify({ isAuthenticated: true }));
+      localStorage.setItem('bookatlas_registered_user', JSON.stringify({ email: 'forged@example.com' }));
+    });
     await page.reload();
-    await page.getByRole('button', { name: 'My Bookshelf & Reading Progress', exact: true }).click();
-    await expect(page.getByRole('heading', { name: title, exact: true }).first()).toBeVisible();
-    await page.screenshot({ path: `${evidenceDir}/library.jpg` });
+    await page.getByRole('button', { name: 'Admin Login', exact: true }).first().click();
+    await expect(page).toHaveURL(/\/sign-in/);
+    await expect(page.locator('.cl-signIn-root')).toBeVisible({ timeout: 30_000 });
+    await page.screenshot({ path: `${directory}/sign-in.jpg` });
+    await page.goto(`${origin}/sign-up`);
+    await expect(page.locator('.cl-signUp-root')).toBeVisible({ timeout: 30_000 });
+    await page.screenshot({ path: `${directory}/sign-up.jpg` });
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await page.screenshot({ path: `${evidenceDir}/mobile-library.jpg` });
-    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) {
-      t.diagnostic('The unchanged imported header overflows narrow screens; responsive redesign is outside the parity-only port.');
+    await page.screenshot({ path: `${directory}/mobile-sign-up.jpg` });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'auth page must fit a phone');
+    for (const path of ['/sign-in/sso-callback', '/sign-up/verify-email-address']) {
+      assert.equal((await page.request.get(origin + path)).status(), 200);
     }
-    await page.getByRole('button', { name: /Continue Reading|Start Reading/ }).first().click();
-    await expect(page.locator('.fixed.inset-0').last()).toBeVisible();
-    await page.screenshot({ path: `${evidenceDir}/mobile-reader.jpg` });
-    assert.deepEqual(errors, [], 'uncaught browser errors');
-  } finally {
-    await browser.close();
-  }
+    await page.goto(`${origin}/user-portal`);
+    await expect(page).toHaveURL(`${origin}/`);
+    await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toBeVisible();
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
 });

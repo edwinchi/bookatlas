@@ -160,22 +160,18 @@ export interface ServerCampaign {
 const subscribersMap = new Map<string, ServerSubscriber>();
 let subscriberCampaigns: ServerCampaign[] = [];
 
-// Set UNSUBSCRIBE_TOKEN_SECRET in production — the fallback below is public
-// (it ships in this source file), so anyone could forge tokens against it.
-const UNSUBSCRIBE_TOKEN_SECRET = process.env.UNSUBSCRIBE_TOKEN_SECRET || 'bookatlas_unsub_hmac_default_secret_2026';
+// Do not accept tokens made with the old, publicly known default secret.
+const UNSUBSCRIBE_TOKEN_SECRET = process.env.UNSUBSCRIBE_TOKEN_SECRET || process.env.SESSION_SECRET;
+if (!UNSUBSCRIBE_TOKEN_SECRET) throw new Error('A session or unsubscribe signing secret is required.');
 
 function generateUnsubToken(email: string): string {
   const normalized = email.toLowerCase().trim();
-  const digest = crypto.createHmac('sha256', UNSUBSCRIBE_TOKEN_SECRET).update(normalized).digest('hex');
+  const digest = crypto.createHmac('sha256', UNSUBSCRIBE_TOKEN_SECRET!).update(normalized).digest('hex');
   return 'unsub_' + digest.slice(0, 32);
 }
 
-// The Preference Center also supports a token-less, self-service flow (a
-// reader typing their own email address directly), so a missing token is
-// allowed through — only a *wrong* token (a forged or stale 1-click link)
-// is rejected.
 function isUnsubTokenValid(provided: unknown, expected: string): boolean {
-  if (!provided || typeof provided !== 'string') return true;
+  if (!provided || typeof provided !== 'string') return false;
   const a = Buffer.from(provided);
   const b = Buffer.from(expected);
   if (a.length !== b.length) return false;
@@ -427,6 +423,46 @@ export async function createApp() {
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+  app.get('/api/auth/me', (req, res) => {
+    const user = req.bookatlasIdentity!;
+    res.json({ user, tier: subscribersMap.get(user.email)?.tier || 'free_reader' });
+  });
+
+  // This remains the original simulated membership upgrade, scoped to self.
+  app.post('/api/account/membership', (req, res) => {
+    const user = req.bookatlasIdentity!;
+    const result = upsertSubscriber({
+      email: user.email, name: user.name, tier: 'member_subscriber',
+      tags: ['plus_member', 'self_upgrade'], source: 'account',
+    });
+    void db.upsertSubscriberInDb(result.subscriber);
+    res.json({ success: true, tier: result.subscriber.tier });
+  });
+
+  app.use(['/api/subscribers/unsubscribe-info', '/api/subscribers/unsubscribe'], (req, res, next) => {
+    const source = req.method === 'GET' ? req.query : req.body;
+    const email = typeof source?.email === 'string' ? source.email.trim().toLowerCase() : '';
+    if (email && (req.bookatlasIdentity?.role === 'admin' || req.bookatlasIdentity?.email === email)) {
+      next(); return;
+    }
+    if (!email || !isUnsubTokenValid(source?.token, generateUnsubToken(email))) {
+      res.status(403).json({ error: 'Sign in to manage your own preferences, or use a valid unsubscribe link.' }); return;
+    }
+    if (req.method !== 'GET' && source.resubscribe) {
+      res.status(403).json({ error: 'Sign in to subscribe again.' }); return;
+    }
+    next();
+  });
+
+  app.use(['/api/ai', '/api/gemini'], (req, res, next) => {
+    const user = req.bookatlasIdentity!;
+    const tier = subscribersMap.get(user.email)?.tier;
+    if (user.role !== 'admin' && tier !== 'member_subscriber' && tier !== 'vip_patron') {
+      res.status(403).json({ error: 'A member account is required for AI reading features.' }); return;
+    }
+    next();
+  });
+
   // Initialize Gemini AI Client lazily/safely
   let aiClient: GoogleGenAI | null = null;
   function getGeminiClient(): GoogleGenAI | null {
@@ -600,7 +636,7 @@ export async function createApp() {
   // ==========================================
   app.post('/api/users/register', (req, res) => {
     try {
-      const { email, name } = req.body;
+      const { email, name } = req.bookatlasIdentity!;
       if (!email || !email.includes('@')) {
         return res.status(400).json({ success: false, error: 'A valid email address is required to register.' });
       }
@@ -1380,7 +1416,7 @@ export async function createApp() {
             .replace(/\{\{reading_stats_streak\}\}/g, String(sub.readingStreakDays || 7))
             .replace(/\{\{reading_stats_pages\}\}/g, String(sub.pagesReadTotal || 450))
             .replace(/\{\{tier_badge\}\}/g, sub.tier === 'vip_patron' ? 'VIP Patron Circle' : (sub.tier === 'member_subscriber' ? 'Bookatlas Plus Member' : 'Reader Pass'))
-            .replace(/\{\{1_click_unsubscribe_url\}\}/g, `${APP_URL}/?action=unsubscribe&email=${encodeURIComponent(sub.email)}&token=${sub.unsubscribeToken}`);
+            .replace(/\{\{1_click_unsubscribe_url\}\}/g, `${APP_URL}/?action=unsubscribe&email=${encodeURIComponent(sub.email)}&token=${generateUnsubToken(sub.email)}`);
 
           emailDispatches.unshift({
             id: `disp-${campaignId}-${i}`,
@@ -1580,7 +1616,7 @@ export async function createApp() {
         });
       }
 
-      if (!isUnsubTokenValid(token, sub.unsubscribeToken)) {
+      if (!req.bookatlasIdentity && !isUnsubTokenValid(token, generateUnsubToken(cleanEmail))) {
         return res.status(403).json({ success: false, error: 'Invalid or expired unsubscribe token.' });
       }
 
@@ -1610,7 +1646,7 @@ export async function createApp() {
       const cleanEmail = email.trim().toLowerCase();
       let sub = subscribersMap.get(cleanEmail);
 
-      if (sub && !isUnsubTokenValid(token, sub.unsubscribeToken)) {
+      if (sub && !req.bookatlasIdentity && !isUnsubTokenValid(token, generateUnsubToken(cleanEmail))) {
         return res.status(403).json({ success: false, error: 'Invalid or expired unsubscribe token.' });
       }
 

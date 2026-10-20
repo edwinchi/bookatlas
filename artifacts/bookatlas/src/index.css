@@ -1,4 +1,8 @@
+@layer theme, base, clerk, components, utilities;
 @import "tailwindcss";
+@import "@clerk/themes/shadcn.css";
+
+.cl-formFieldInput::placeholder { color: #64748b; opacity: 1; }
 
 @theme {
   --font-sans: 'Plus Jakarta Sans', sans-serif;

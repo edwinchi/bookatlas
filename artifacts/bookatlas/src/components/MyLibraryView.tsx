@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAccount } from '../auth/AuthContext';
 import { 
   BookOpen, 
   Flame, 
@@ -51,9 +52,11 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
   onAddToCart,
   onExploreStore,
   language = 'en',
-  userEmail = 'eddyteddy78@gmail.com',
-  userName = 'Eddy',
+  userEmail = '',
+  userName = 'Reader',
 }) => {
+  const { account } = useAccount();
+  const storagePrefix = `bookatlas:account:${account?.id || 'guest'}:`;
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
   const [activeTab, setActiveTab] = useState<'reading' | 'all' | 'finished' | 'wishlist'>('reading');
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -61,7 +64,7 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
   
   // Offline Caching State
   const [offlineEnabled, setOfflineEnabled] = useState<boolean>(() => {
-    return localStorage.getItem('bookatlas_offline_caching_enabled') === 'true';
+    return localStorage.getItem(`${storagePrefix}offline_enabled`) === 'true';
   });
   const [isCaching, setIsCaching] = useState(false);
   const [cachedItemsCount, setCachedItemsCount] = useState(library.length);
@@ -102,13 +105,14 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
   const handleToggleOffline = () => {
     const nextState = !offlineEnabled;
     setOfflineEnabled(nextState);
-    localStorage.setItem('bookatlas_offline_caching_enabled', String(nextState));
+    localStorage.setItem(`${storagePrefix}offline_enabled`, String(nextState));
+    if (!nextState) localStorage.removeItem(`${storagePrefix}offline_library`);
 
     if (nextState) {
       setIsCaching(true);
       // Cache library items and manuscripts in localStorage / IndexedDB mockup
       try {
-        localStorage.setItem('bookatlas_offline_library_cache', JSON.stringify(library));
+        localStorage.setItem(`${storagePrefix}offline_library`, JSON.stringify(library));
         setTimeout(() => {
           setIsCaching(false);
           setCachedItemsCount(library.length);
@@ -169,7 +173,7 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
                 {t.myBookshelf}
               </span>
               <span className="text-xs text-slate-400 font-medium">
-                {userEmail} • Atlantean Cloud Sync
+                {userEmail} • Saved in this browser
               </span>
             </div>
 
@@ -177,7 +181,7 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
               {t.personalLibrary}
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
-              Pick up seamlessly on any browser, iOS/Android device, or Bookatlas eReader. Enjoy full offline caching for travel and zero-latency reading.
+              Your bookshelf and reading progress are saved for this account in this browser. Other devices have their own local library.
             </p>
 
             {/* Reading Challenge 2026 Progress */}
