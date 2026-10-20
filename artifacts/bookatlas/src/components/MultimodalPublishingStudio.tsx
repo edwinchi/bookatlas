@@ -15,15 +15,11 @@ import {
   ArrowRight,
   RefreshCw,
   Plus,
-  Trash2,
-  FolderPlus,
-  Share2,
-  Tag,
-  Clock,
-  Mic
+  Lock,
+  History
 } from 'lucide-react';
 import { Book } from '../types';
-import { GENRES } from '../data/booksData';
+import { PublishingReadinessPanel } from './PublishingReadinessPanel';
 import { TRANSLATIONS } from '../data/translations';
 
 interface MultimodalPublishingStudioProps {
@@ -57,13 +53,13 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
   const [targetLanguage, setTargetLanguage] = useState<string>('English');
   
   // Automation Flags
-  const [notifyPublisher, setNotifyPublisher] = useState<boolean>(true);
-  const [publisherEmail, setPublisherEmail] = useState<string>('eddyteddy78@gmail.com');
-  const [dispatchUserCampaign, setDispatchUserCampaign] = useState<boolean>(true);
+  const [notifyPublisher, setNotifyPublisher] = useState<boolean>(false);
+  const [publisherEmail, setPublisherEmail] = useState<string>('');
+  const [dispatchUserCampaign, setDispatchUserCampaign] = useState<boolean>(false);
+  const [canPublish, setCanPublish] = useState<boolean>(false);
 
   // Processing State
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [processStep, setProcessStep] = useState<string>('');
   const [resultData, setResultData] = useState<{
     book?: Book;
     publisherEmail?: any;
@@ -81,7 +77,8 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
 
   const fetchEmailDispatches = async () => {
     try {
-      const res = await fetch('/api/manager/email-dispatches');
+      const res = await fetch('/api/manager/email-dispatches', { credentials: 'include' });
+      if (!res.ok) return;
       const data = await res.json();
       if (data.success && data.dispatches) {
         setRecentDispatches(data.dispatches);
@@ -130,17 +127,15 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
 
   const handleSynthesizeAndPublish = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canPublish || isProcessing) return;
     setIsProcessing(true);
     setErrorMessage(null);
     setResultData(null);
-    setProcessStep('Ingesting Multimodal Files & Synthesizing Manuscript...');
 
     try {
-      setTimeout(() => setProcessStep('Generating Chapter Structure, EPUB3 & Studio TTS Audio...'), 700);
-      setTimeout(() => setProcessStep('Assigning Category, DRM Verification & Dispatching Campaigns...'), 1400);
-
       const response = await fetch('/api/manager/multimodal-ingest', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fileContents: fileTextContent,
@@ -151,25 +146,24 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
           notes: editorNotes,
           voiceNarrator,
           notifyPublisher,
-          publisherEmail,
+          publisherEmail: notifyPublisher ? publisherEmail : '',
           dispatchUserCampaign,
           targetLanguage
         })
       });
 
-      const data = await response.json();
-      if (data.success && data.book) {
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success && data.book) {
         setResultData(data);
         onBookPublished(data.book);
         fetchEmailDispatches();
       } else {
-        throw new Error(data.error || 'Failed to synthesize eBook and Audiobook');
+        throw new Error(data.error || `Publishing request failed (HTTP ${response.status}).`);
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'An error occurred during autonomous publishing.');
+      setErrorMessage(err.message || 'The publishing request could not be completed.');
     } finally {
       setIsProcessing(false);
-      setProcessStep('');
     }
   };
 
@@ -184,11 +178,11 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
               <Sparkles className="w-3.5 h-3.5" />
               Multimodal Ingest Studio
             </span>
-            <span className="text-xs text-slate-400">Autonomous eBook, Audiobook & Launch Engine</span>
+            <span className="text-xs text-slate-400">Administrator publishing workspace</span>
           </div>
 
-          <span className="text-xs text-indigo-300 font-bold bg-white/10 px-3 py-1 rounded-xl">
-            Model: Gemini 3.7 Flash & Studio Voice
+          <span className="text-xs text-amber-200 font-bold bg-white/10 px-3 py-1 rounded-xl">
+            AI models: unverified, configuration required
           </span>
         </div>
 
@@ -201,7 +195,7 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
       </div>
 
       {/* Success Notification Card */}
-      {resultData && resultData.book && (
+      {canPublish && resultData && resultData.book && (
         <div className="bg-emerald-950/40 border-2 border-emerald-500/60 rounded-3xl p-6 shadow-xl animate-fadeIn text-white space-y-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -210,7 +204,7 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
               </div>
               <div>
                 <h3 className="text-lg font-serif font-bold text-emerald-200">
-                  eBook & Audiobook Published Live in Storefront!
+                  Publishing request accepted
                 </h3>
                 <p className="text-xs text-slate-300">
                   Assigned Category: <strong className="text-amber-400">{resultData.book.primaryGenre}</strong> • ISBN: {resultData.book.isbn}
@@ -219,7 +213,7 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
             </div>
 
             <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-bold rounded-xl border border-emerald-500/30">
-              Live in Catalog
+              Server response
             </span>
           </div>
 
@@ -233,15 +227,12 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
             <div>
               <p className="text-[10px] uppercase font-bold text-slate-400">Narrator & Format</p>
               <p className="text-xs font-semibold text-slate-200">{resultData.book.narrator}</p>
-              <p className="text-xs text-amber-400 font-bold">EPUB3 + {resultData.book.audioDurationMinutes} min Studio Audio</p>
+              <p className="text-xs text-amber-400 font-bold">{resultData.book.audioDurationMinutes ? `Reported audio length: ${resultData.book.audioDurationMinutes} min` : 'No audio reported'}</p>
             </div>
             <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400">Campaign Dispatch Status</p>
-              <p className="text-xs text-emerald-400 font-bold">
-                ✓ Publisher Notification Sent
-              </p>
-              <p className="text-xs text-indigo-300 font-bold">
-                ✓ Campaign Broadcasted to {resultData.dispatchedUsersCount || 3} Registered Readers
+              <p className="text-[10px] uppercase font-bold text-slate-400">Notifications</p>
+              <p className="text-xs text-slate-300">
+                Delivery is not confirmed by an email provider. Check provider logs before treating any message as sent.
               </p>
             </div>
           </div>
@@ -251,7 +242,7 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
             {resultData.publisherEmail && (
               <div className="p-3.5 bg-white/5 rounded-xl border border-white/10">
                 <p className="font-bold text-amber-300 flex items-center gap-1.5 mb-1">
-                  <Mail className="w-3.5 h-3.5" /> Publisher Letter Delivered:
+                  <Mail className="w-3.5 h-3.5" /> Publisher letter draft:
                 </p>
                 <p className="text-slate-300 line-clamp-3 italic">"{resultData.publisherEmail.body}"</p>
               </div>
@@ -259,7 +250,7 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
             {resultData.userCampaign && (
               <div className="p-3.5 bg-white/5 rounded-xl border border-white/10">
                 <p className="font-bold text-indigo-300 flex items-center gap-1.5 mb-1">
-                  <Send className="w-3.5 h-3.5" /> Reader Launch Campaign:
+                  <Send className="w-3.5 h-3.5" /> Reader campaign draft:
                 </p>
                 <p className="text-slate-300 line-clamp-3 italic">"{resultData.userCampaign.emailBody}"</p>
               </div>
@@ -274,6 +265,8 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
           <p className="text-xs font-semibold">{errorMessage}</p>
         </div>
       )}
+
+      <PublishingReadinessPanel onReadinessChange={setCanPublish} />
 
       {/* Main Form Layout */}
       <form onSubmit={handleSynthesizeAndPublish} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -476,7 +469,7 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
           <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
             <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
               <Mail className="w-4 h-4 text-emerald-600" />
-              Autonomous Distribution & Campaigns
+              Optional Notifications (off by default)
             </h4>
 
             <div className="space-y-3">
@@ -499,7 +492,8 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
                     type="email"
                     value={publisherEmail}
                     onChange={(e) => setPublisherEmail(e.target.value)}
-                    placeholder="publisher@atlanteanglobals.nl"
+                    placeholder="publisher@example.com"
+                    aria-label="Publisher email address"
                     className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
                   />
                 )}
@@ -520,7 +514,7 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
                   </label>
                 </div>
                 <p className="text-[10px] text-slate-500 mt-1 pl-6">
-                  Broadcasts new release newsletter, BookTok hooks, and subscriber discount codes to all registered emails.
+                  Requests a release announcement to registered readers. Only takes effect once a verified email provider is configured.
                 </p>
               </div>
             </div>
@@ -529,14 +523,20 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
           {/* Main Action Publish Button */}
           <button
             type="submit"
-            disabled={isProcessing}
-            className="w-full py-4 bg-gradient-to-r from-slate-950 via-indigo-900 to-slate-950 hover:from-slate-900 hover:to-indigo-800 disabled:opacity-50 text-white font-extrabold text-sm rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2.5 cursor-pointer"
+            disabled={isProcessing || !canPublish}
+            aria-describedby="publish-status-note"
+            className="w-full py-4 bg-gradient-to-r from-slate-950 via-indigo-900 to-slate-950 hover:from-slate-900 hover:to-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2.5 cursor-pointer"
           >
             {isProcessing ? (
               <span className="flex items-center gap-2">
                 <RefreshCw className="w-5 h-5 animate-spin text-amber-400" />
-                <span>{processStep || 'Synthesizing Multimodal Book...'}</span>
+                <span>Request in progress…</span>
               </span>
+            ) : !canPublish ? (
+              <>
+                <Lock className="w-5 h-5 text-amber-400" />
+                <span>Publishing unavailable</span>
+              </>
             ) : (
               <>
                 <Sparkles className="w-5 h-5 text-amber-400" />
@@ -545,6 +545,9 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
               </>
             )}
           </button>
+          <p id="publish-status-note" role="status" className="text-[11px] text-slate-500 text-center">
+            {isProcessing ? 'Waiting for the server to respond.' : canPublish ? 'Readiness checks passed.' : 'Submission is disabled until every readiness check passes. Your form entries are kept.'}
+          </p>
         </div>
 
       </form>
@@ -554,14 +557,15 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
         <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-              <Mail className="w-4 h-4 text-indigo-600" />
-              Live Publisher & Reader Email Dispatch Logs
+              <History className="w-4 h-4 text-slate-500" />
+              Legacy demo records
             </h4>
             <span className="text-xs text-slate-400 font-medium">
-              {recentDispatches.length} emails dispatched
+              {recentDispatches.length} records, not provider deliveries
             </span>
           </div>
 
+          <p className="text-[11px] text-slate-500">These entries were created by the earlier demo flow. No email provider confirmed delivery of any of them.</p>
           <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto pr-1">
             {recentDispatches.slice(0, 8).map((d) => (
               <div key={d.id} className="py-2.5 flex items-center justify-between text-xs">
@@ -572,8 +576,8 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
                     <p className="text-[11px] text-slate-500">To: {d.recipient} • {d.timestamp}</p>
                   </div>
                 </div>
-                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 font-bold text-[10px] rounded-md">
-                  Delivered
+                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 font-bold text-[10px] rounded-md whitespace-nowrap">
+                  Demo record
                 </span>
               </div>
             ))}

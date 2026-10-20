@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { logger } from '../../lib/logger';
+import { bookatlasTable, type BookatlasTable } from './tables.js';
 
 // Server-side only. Never import this module from client code or expose
 // SUPABASE_SERVICE_ROLE_KEY to the browser — it bypasses Row Level Security.
@@ -18,6 +19,12 @@ export const isDbConfigured = !isPlaceholder(url) && !isPlaceholder(serviceKey);
 export const supabase: SupabaseClient | null = isDbConfigured
   ? createClient(url as string, serviceKey as string, { auth: { persistSession: false } })
   : null;
+
+const persistenceClient = supabase;
+/** Scoped repository surface; raw shared-project table names are not accepted. */
+export const bookatlasDb = persistenceClient ? {
+  from: (table: BookatlasTable) => persistenceClient.from(bookatlasTable(table)),
+} : null;
 
 if (isDbConfigured) {
   logger.info('[db] Supabase persistence enabled');

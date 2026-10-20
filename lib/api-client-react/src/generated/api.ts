@@ -22,7 +22,8 @@ import type {
 import type {
   AccountProfile,
   HealthStatus,
-  MembershipResult
+  MembershipResult,
+  PublishingReadiness
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -51,6 +52,83 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetPublishingReadinessUrl = () => {
+
+
+
+
+  return `/api/manager/publishing-readiness`
+}
+
+/**
+ * @summary Administrator-only publishing dependency and implementation checks
+ */
+export const getPublishingReadiness = async ( options?: Parameters<typeof customFetch>[1]): Promise<PublishingReadiness> => {
+
+  return customFetch<PublishingReadiness>(getGetPublishingReadinessUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPublishingReadinessQueryKey = () => {
+    return [
+    `/api/manager/publishing-readiness`
+    ] as const;
+    }
+
+
+export const getGetPublishingReadinessQueryOptions = <TData = Awaited<ReturnType<typeof getPublishingReadiness>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPublishingReadiness>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPublishingReadinessQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPublishingReadiness>>> = ({ signal }) => getPublishingReadiness({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPublishingReadiness>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPublishingReadinessQueryResult = NonNullable<Awaited<ReturnType<typeof getPublishingReadiness>>>
+export type GetPublishingReadinessQueryError = ErrorType<void>
+
+
+/**
+ * @summary Administrator-only publishing dependency and implementation checks
+ */
+
+export function useGetPublishingReadiness<TData = Awaited<ReturnType<typeof getPublishingReadiness>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPublishingReadiness>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPublishingReadinessQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetAccountUrl = () => {
 

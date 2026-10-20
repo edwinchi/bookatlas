@@ -10,6 +10,7 @@ import { isDbConfigured } from './db/supabaseClient.js';
 import * as db from './db/repository.js';
 import { generateWithOpenRouter, isOpenRouterConfigured, type AiMessage } from './ai/openrouterClient.js';
 import { logger } from '../lib/logger';
+import { mountPublishingReadiness } from './publishing/routes.js';
 
 function isPlaceholderEnvValue(value?: string): boolean {
   if (!value) return true;
@@ -395,26 +396,22 @@ export async function createApp() {
         db.hydrateCampaignsFromDb(),
       ]);
 
-      if (dbBooks && dbBooks.length) liveCatalog = dbBooks;
-      else void db.seedBooksInDb(liveCatalog);
+      // Connecting an existing database is not consent to write demo records.
+      // In particular, seeded subscribers must never become a live audience.
+      if (dbBooks) liveCatalog = dbBooks;
 
-      if (dbCategories && dbCategories.length) customCategories = dbCategories;
-      else void db.seedCategoriesInDb(customCategories);
+      if (dbCategories) customCategories = dbCategories;
 
-      if (dbUsers && dbUsers.length) registeredUsers = dbUsers;
-      else void db.seedUsersInDb(registeredUsers);
+      if (dbUsers) registeredUsers = dbUsers;
 
-      if (dbSubscribers && dbSubscribers.size) {
+      if (dbSubscribers) {
         subscribersMap.clear();
         dbSubscribers.forEach((sub, email) => subscribersMap.set(email, sub));
-      } else {
-        void db.seedSubscribersInDb(Array.from(subscribersMap.values()));
       }
 
-      if (dbCampaigns && dbCampaigns.length) subscriberCampaigns = dbCampaigns;
-      else void db.seedCampaignsInDb(subscriberCampaigns);
+      if (dbCampaigns) subscriberCampaigns = dbCampaigns;
 
-      logger.info('[db] Hydrated application state from Supabase');
+      logger.info('[db] Read application state from Supabase without seeding demo records');
     } catch (err) {
       logger.error({ err }, '[db] Hydration failed, continuing with in-memory seed data');
     }
@@ -422,6 +419,7 @@ export async function createApp() {
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+  mountPublishingReadiness(app);
 
   app.get('/api/auth/me', (req, res) => {
     const user = req.bookatlasIdentity!;

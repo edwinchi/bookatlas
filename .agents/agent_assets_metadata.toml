@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "VUjKNXpxS7YJDT9P-8Mi0"
+uri = "file://docs/bookatlas-functionality-audit.html"
+type = "html"
+title = "Bookatlas functionality audit"
+description = "Feature-by-feature findings, verification limits, publishing blockers, and recommended implementation order."
+logical_id = "a46b8c6f-ca66-4cfa-af35-456c742a4327"
+content_hash = "sha256:a32699fda3c1d3e39909cc69fd7cda59f4ec2139e7ceaf5306f949aa9249a1c3"
+size = 14719
+mtime_ms = 1792532098845
+storage_uri = "gcs://replit-rams-assets-kira/rams/assets/repl:d486b277-c7f1-4b0d-b520-fd975aa0a668/a46b8c6f-ca66-4cfa-af35-456c742a4327/2b22ddc1-30a0-4602-bfc8-de135134b5c1"
+storage_version_token = "1792532107363119"
+content_type = "text/html"

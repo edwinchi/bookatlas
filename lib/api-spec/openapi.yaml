@@ -11,6 +11,23 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /manager/publishing-readiness:
+    get:
+      operationId: getPublishingReadiness
+      summary: Administrator-only publishing dependency and implementation checks
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Readiness checks; a successful check response does not mean publishing is enabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublishingReadiness"
+        "401":
+          description: Sign-in required
+        "403":
+          description: Administrator access required
   /auth/me:
     get:
       operationId: getAccount
@@ -74,6 +91,24 @@ components:
       in: cookie
       name: __session
   schemas:
+    PublishingReadinessCheck:
+      type: object
+      required: [id, label, state, detail]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        state: { type: string, enum: [missing, configured, verified, blocked, error] }
+        detail: { type: string }
+    PublishingReadiness:
+      type: object
+      required: [canPublish, summary, checks]
+      properties:
+        canPublish: { type: boolean }
+        summary: { type: string }
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublishingReadinessCheck"
     AccountIdentity:
       type: object
       required: [id, email, name, role]

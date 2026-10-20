@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bookatlas — functionality and publishing audit</title>
+<style>
+  :root{color-scheme:light;font:16px/1.55 system-ui,sans-serif;color:#162035;background:#f4f6fa}
+  body{max-width:1120px;margin:auto;padding:32px 22px}
+  header,section{background:white;border:1px solid #dce1ea;border-radius:12px;padding:24px;margin-bottom:20px}
+  h1{font-size:30px;line-height:1.2;margin:8px 0 14px}h2{font-size:22px;margin-top:0}h3{font-size:18px}
+  p{max-width:95ch}a{color:#4338ca}code{font-size:13px;overflow-wrap:anywhere}
+  .label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:#596580}
+  .warning{border-left:5px solid #b45309;background:#fffbeb;padding:14px 18px}
+  .ok{color:#166534;font-weight:700}.partial{color:#92400e;font-weight:700}.blocked{color:#b91c1c;font-weight:700}
+  .table{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px;min-width:780px}
+  th,td{padding:12px;text-align:left;vertical-align:top;border-bottom:1px solid #e3e7ef}th{background:#eef2ff}
+  th:first-child{width:19%}th:nth-child(2){width:15%}td:last-child{width:31%}
+  li{margin-bottom:8px}.note{color:#596580;font-size:14px}footer{padding:12px;color:#596580}
+  @media print{body{padding:0;background:white}header,section{break-inside:avoid;border-radius:0}.table{overflow:visible}table{min-width:0;font-size:11px}}
+</style>
+<header>
+  <div class="label">Development audit · 20 October 2026</div>
+  <h1>Bookatlas: what works, what is simulated, and what publishing needs</h1>
+  <p>This is an audit of the current development app and its implementation, not a certification that every interactive flow has passed an end-to-end test. No real reader campaign was sent and no test book was published.</p>
+  <p class="warning"><strong>Main finding:</strong> the original Multimodal Ingest Studio reported a published eBook, studio audiobook, and delivered campaigns without creating those deliverables. The legacy publishing and campaign-send paths are now blocked. The real publishing pipeline is not yet implemented.</p>
+</header>
+<section>
+  <h2>What was actually checked</h2>
+  <ul>
+    <li><strong>Live HTTP checks:</strong> public health, catalog, and category endpoints returned HTTP 200. Anonymous requests to manager statistics and email-dispatch logs returned HTTP 401.</li>
+    <li><strong>Public desktop screenshot:</strong> the catalog renders without requiring sign-in. Internal-tool links remain visible in the public navigation. One resource returned HTTP 404; its cause has not yet been isolated.</li>
+    <li><strong>Implementation review:</strong> publishing, campaign processing, reading/audio controls, checkout, account access policy, catalog persistence, and the principal frontend API calls were inspected.</li>
+    <li><strong>Configuration check:</strong> Gemini and Supabase credentials are now configured. Both model-metadata checks passed. Supabase accepted the connection, but explicit GET queries confirmed that the app tables are absent. Resend's sending domain is verified and a sender mailbox has been configured. No email has been sent.</li>
+    <li><strong>Safety changes verified:</strong> five focused unit tests passed for fail-closed readiness, sender-domain checks, read-only pagination, and provider errors. Frontend and backend production bundles built successfully; workflows restarted. The app-side Resend adapter passed a real read-only domain check. Public routes stayed accessible and anonymous readiness/publishing/campaign requests returned HTTP 401.</li>
+    <li><strong>Not tested live:</strong> administrator sign-in, the new authenticated readiness panel, binary extraction, generated EPUB validity, provider TTS, real email delivery, job restart recovery, payment, or cross-device account synchronization. Full backend type-checking still reports pre-existing missing-return errors in legacy handlers; no publishing-module type errors were reported.</li>
+  </ul>
+  <p class="note">Evidence comes from the development preview and current source. Existing synthetic catalog entries and metrics are not proof of real sales, generation, consent, or delivery.</p>
+</section>
+<section>
+  <h2>Functionality inventory</h2>
+  <div class="table"><table>
+    <thead><tr><th>Area</th><th>Status / evidence</th><th>Current behavior</th><th>Required next step</th></tr></thead>
+    <tbody>
+      <tr><td>Public catalog and categories</td><td class="ok">Live routes checked</td><td>Catalog loads anonymously; the current health response reports 24 titles.</td><td>Preserve public browsing. Identify demo titles and avoid treating their claims as verified commercial facts.</td></tr>
+      <tr><td>Account and administrator protection</td><td class="partial">Partially checked</td><td>Server access policy distinguishes readers from administrators; anonymous manager requests are denied.</td><td>Verify real reader/admin sessions and revocation. Keep the separate public/admin navigation work isolated.</td></tr>
+      <tr><td>Public/internal navigation</td><td class="partial">Screenshot reviewed</td><td>Admin Login, Manager Studio, Specs Export, and other internal links are visible to visitors.</td><td>Move internal operations to an administrator-only destination; do not make the public storefront look like a control panel.</td></tr>
+      <tr><td>Search, category filters, deals</td><td class="partial">Not interaction-tested</td><td>Frontend discovery controls exist; their data is the local catalog.</td><td>Test empty results, combined filters, category changes, language/currency display, and mobile navigation.</td></tr>
+      <tr><td>Book details and reviews</td><td class="blocked">Source defects</td><td>Some review counts and star displays are manufactured; format/download labels do not prove a downloadable asset exists.</td><td>Use real reviews and availability. New generated titles must start with no invented ratings, purchases, awards, or ISBN registration.</td></tr>
+      <tr><td>eReader and samples</td><td class="partial">Partial implementation</td><td>Reads sample chapters or a synopsis. Highlights/bookmarks are not fully durable across sessions.</td><td>Distinguish a free sample from the complete manuscript. Persist reader state using verified account ownership.</td></tr>
+      <tr><td>Wishlist, cart, bookshelf</td><td class="partial">Browser-local</td><td>Personal state is account-scoped locally, not a verified cross-device entitlement system.</td><td>Keep ownership isolation; add server synchronization separately. Do not grant paid assets from an editable browser cart.</td></tr>
+      <tr><td>Checkout and membership</td><td class="blocked">Simulated</td><td>A timer completes checkout without a payment provider; membership upgrades are not backed by billing.</td><td>Clearly identify demos. A production checkout needs verified payments, webhooks, entitlements, refunds, and pricing consistency.</td></tr>
+      <tr><td>Audiobook player</td><td class="blocked">Simulated playback</td><td>The dock advances a timer rather than playing an audio asset.</td><td>Use actual media URLs and an audio element, measured duration, seek, mute, rate, chapter transitions, and media-error handling.</td></tr>
+      <tr><td>Reader AI and voice tools</td><td class="partial">Provider-blocked / fallbacks</td><td>Several endpoints fall back to canned output. Reader TTS uses browser speech rather than the returned studio audio. Story-preview calls a missing route.</td><td>Label browser speech and fallback output honestly; wire supported provider responses and add or remove the missing feature.</td></tr>
+      <tr><td>Multimodal file ingestion</td><td class="blocked">Binary ingestion absent</td><td>Text files are read. PDF/image uploads send a descriptive string, not file bytes. Accepted extensions overstate supported processing.</td><td>Validate actual file bytes, MIME/signatures, sizes, encoding, OCR/extraction, and source quality. Reject unsupported or unreadable input explicitly.</td></tr>
+      <tr><td>Manuscript and EPUB</td><td class="blocked">Not a complete deliverable</td><td>The AI prompt uses only the first 8,000 source characters and asks for three sample chapters. Without AI it manufactures a book record. No EPUB is built.</td><td>Persist a source-grounded outline and full chapters, validate structured results, and generate a valid EPUB with metadata and navigation.</td></tr>
+      <tr><td>Studio audiobook generation</td><td class="blocked">No generated audio</td><td>The ingest endpoint fabricates audiobook duration and metadata; it does not synthesize chapter audio.</td><td>Connect a supported speech provider, synthesize every chapter, validate audio bytes, measure duration, and store files privately.</td></tr>
+      <tr><td>Publishing and recovery</td><td class="blocked">Legacy publishing disabled</td><td>Fake stage timers have been removed. Server-side safety guards now reject the legacy ingest/send operations; credentials alone cannot re-enable them. A readiness panel explains blockers.</td><td>Implement persisted jobs, real stage state, bounded retries, restart recovery, preview/review, and idempotent publication after asset completion.</td></tr>
+      <tr><td>Campaign delivery</td><td class="blocked">Connected, sending blocked</td><td>Resend is connected and domain access was verified read-only. Legacy send operations are disabled; notification switches default off. Historical in-app dispatch records are labelled demos.</td><td>Select a verified sender; require explicit consent, suppression checks, unsubscribe links, deduplication, and durable provider event tracking. Accepted is not delivered.</td></tr>
+      <tr><td>Subscriber imports and analytics</td><td class="blocked">Unsafe/demo assumptions</td><td>Seed contacts and generated benchmarks exist. CSV validation has permissive fallback behavior. Campaign engagement includes synthetic numbers.</td><td>Separate test/demo contacts from real consented contacts; fail closed on validation errors and remove fabricated reporting from live campaigns.</td></tr>
+      <tr><td>Manager statistics and autopilot</td><td class="blocked">Synthetic / incomplete</td><td>Revenue and readership figures include seeded formulas. The autopilot control is a boolean, not a durable autonomous scheduler.</td><td>Label demonstration metrics. Base reporting on actual events; do not imply scheduled automation exists until a real worker is deployed.</td></tr>
+      <tr><td>Catalog editing, pricing, translation, exports</td><td class="partial">Source reviewed only</td><td>Endpoints and UI exist, but persistence is optional and some client errors are silently ignored.</td><td>Verify create/edit/delete and reload behavior, surface errors, and distinguish an AI draft from applied changes or external distribution.</td></tr>
+      <tr><td>Persistence and file storage</td><td class="blocked">Isolated schema awaiting setup</td><td>App Storage is provisioned. Supabase connection works. The user chose dedicated Bookatlas tables, and repository access/readiness checks now use the fixed <code>bookatlas_</code> namespace. Demo-data seeding is disabled.</td><td>Apply the isolated schema using database-administrator access; then implement strict job/catalog writes and protected App Storage reads/writes.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+<section>
+  <h2>Recommended login policy</h2>
+  <p><strong>No login:</strong> browsing, search, categories, book information, free samples, publicly offered audio previews, and valid unsubscribe links.</p>
+  <p><strong>Reader login:</strong> a persistent personal bookshelf, cross-device progress, saved notes/highlights, account management, membership, purchase history, and services that incur AI usage. A real purchase must also establish a server-verified entitlement.</p>
+  <p><strong>Administrator only:</strong> source uploads, draft manuscripts, private generated assets, catalog mutation, publication approval, campaign recipients/sending, subscriber imports, operational metrics, and configuration.</p>
+  <p class="note">The separate public-reading/admin-separation work already covers the broader navigation and login-policy changes. This audit does not claim those changes have been implemented.</p>
+</section>
+<section>
+  <h2>Publishing: implementation and test order</h2>
+  <ol>
+    <li><strong>Block false success — initial safety guard implemented.</strong> Legacy ingest and campaign sends are disabled, fake progress is removed, notification defaults are off, and readiness distinguishes configured from verified. The replacement must preserve fail-closed behavior for incomplete stages.</li>
+    <li><strong>Connect dependencies.</strong> Configure direct Gemini text/multimodal and speech access, existing Supabase, private file storage, and an email provider with a verified sender.</li>
+    <li><strong>Build a durable draft pipeline.</strong> Upload → extract/OCR → outline → full chapters → validated EPUB → chapter audio → administrator preview. Use real job records and progress, not timers.</li>
+    <li><strong>Add explicit publication approval.</strong> Default to draft/review. If automatic publication is offered, require deliberate opt-in and completed required assets. Never invent ISBNs or reviews.</li>
+    <li><strong>Add controlled campaign delivery.</strong> Respect separate publisher/reader switches, consent, suppressions, unsubscribe, deduplication, and the difference between queued, accepted, delivered, and failed.</li>
+    <li><strong>Run one bounded fixture through the full system.</strong> Use a short synthetic manuscript, validated PDF/image fixtures, and an allowlisted test inbox. Confirm actual EPUB contents and playable audio, then test failure, retry, reload, and restart behavior.</li>
+  </ol>
+  <p class="warning"><strong>Safety boundary:</strong> fixture tests must not publish into the live storefront or email existing readers. No live campaign or production database mutation has been authorized as part of this audit.</p>
+</section>
+<section>
+  <h2>Current setup blockers</h2>
+  <ul>
+    <li><strong>AI:</strong> direct Gemini credentials and model access are verified through free metadata requests. Google routes the requested <code>gemini-3.7-flash</code> identifier to 3.8 Flash; <code>gemini-3.8-flash-tts</code> is available for speech. No paid generation has run. The user authorized a synthetic generation/audio test with a US$1 total limit.</li>
+    <li><strong>Database:</strong> the user chose isolated <code>bookatlas_</code> tables in the shared Supabase project. Repository access and schema probes now use only those tables. The updated <code>artifacts/api-server/src/bookatlas/db/schema.sql</code> changes only prefixed tables, enables row-level security, and inserts no demo data. Eight focused tests passed, including namespace isolation checks. Applying the schema still requires PostgreSQL administrator access or the Supabase SQL Editor. No schema changes or demo inserts have been made remotely.</li>
+    <li><strong>Storage:</strong> App Storage is provisioned. Protected uploads, output writes, and authorized playback/downloads still need implementation and verification.</li>
+    <li><strong>Email:</strong> Resend is connected, its sending-domain check passed, and the user selected a sender mailbox. Explicit recipient consent, controlled test-recipient configuration, and durable send records are still required.</li>
+  </ul>
+  <p>Until these dependencies and the implementation are in place, complete multimodal publishing and real campaign delivery remain <strong>blocked, not passed</strong>.</p>
+</section>
+<section>
+  <h2>Source evidence</h2>
+  <p class="note">Principal locations inspected: <code>artifacts/api-server/src/bookatlas/server.ts</code>, <code>artifacts/api-server/src/auth/policy.ts</code>, <code>artifacts/api-server/src/bookatlas/db/</code>, and the Bookatlas components <code>MultimodalPublishingStudio</code>, <code>AudiobookPlayerDock</code>, <code>EReaderModal</code>, <code>BookDetailModal</code>, <code>CartDrawer</code>, <code>ManagerPortal</code>, and <code>SubscriberManagerHub</code>.</p>
+</section>
+<footer>Bookatlas development audit. Findings distinguish runtime observations from source review and untested journeys.</footer>
+</html>

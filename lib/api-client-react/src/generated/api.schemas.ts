@@ -5,6 +5,30 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type PublishingReadinessCheckState = typeof PublishingReadinessCheckState[keyof typeof PublishingReadinessCheckState];
+
+
+export const PublishingReadinessCheckState = {
+  missing: 'missing',
+  configured: 'configured',
+  verified: 'verified',
+  blocked: 'blocked',
+  error: 'error',
+} as const;
+
+export interface PublishingReadinessCheck {
+  id: string;
+  label: string;
+  state: PublishingReadinessCheckState;
+  detail: string;
+}
+
+export interface PublishingReadiness {
+  canPublish: boolean;
+  summary: string;
+  checks: PublishingReadinessCheck[];
+}
+
 export type AccountIdentityRole = typeof AccountIdentityRole[keyof typeof AccountIdentityRole];
 
 

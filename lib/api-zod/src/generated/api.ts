@@ -9,6 +9,21 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Administrator-only publishing dependency and implementation checks
+ */
+export const GetPublishingReadinessResponse = zod.object({
+  "canPublish": zod.boolean(),
+  "summary": zod.string(),
+  "checks": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "state": zod.enum(['missing', 'configured', 'verified', 'blocked', 'error']),
+  "detail": zod.string()
+}))
+})
+
+
+/**
  * @summary Get the verified current account and application role
  */
 export const GetAccountResponse = zod.object({

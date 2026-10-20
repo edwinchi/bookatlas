@@ -43,3 +43,7 @@ timeoutMs = 20000
 
 [userenv.shared]
 BOOKATLAS_OWNER_EMAIL = "apehgongedwin@gmail.com"
+BOOKATLAS_EMAIL_FROM = "getintouch@apps-pilot.nl"
+BOOKATLAS_EMAIL_MODE = "test"
+SUPABASE_URL = "https://nodzslouearhjsiwhvst.supabase.co"
+BOOKATLAS_TEST_BUDGET_USD = "1.00"

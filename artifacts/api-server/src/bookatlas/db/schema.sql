@@ -1,10 +1,24 @@
 -- Bookatlas Supabase schema.
--- Run this once in the Supabase SQL Editor for a new project before setting
--- SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY in .env. All access from the app
--- goes through the service role key from server.ts (never from the browser),
--- so these tables can keep RLS disabled — the service role bypasses it anyway.
+-- Review and run in the intended Supabase project's SQL Editor, or through a
+-- separately authorized PostgreSQL administrator connection. The REST service
+-- key alone cannot create these tables. This script does not insert demo data
+-- or delete records. Keep service-role credentials on the server only.
+-- Every table and index below is Bookatlas-prefixed. Existing unprefixed
+-- tables (including public.categories) are deliberately left untouched.
+begin;
 
-create table if not exists books (
+-- An incompatible already-prefixed table also requires explicit review.
+do $$
+begin
+  if to_regclass('public.bookatlas_categories') is not null and not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'bookatlas_categories' and column_name = 'name'
+  ) then
+    raise exception 'Setup stopped: existing bookatlas_categories has an incompatible schema. Review it before proceeding.';
+  end if;
+end $$;
+
+create table if not exists public.bookatlas_books (
   id text primary key,
   title text not null,
   author text not null,
@@ -13,14 +27,14 @@ create table if not exists books (
   data jsonb not null,
   updated_at timestamptz not null default now()
 );
-create index if not exists books_primary_genre_idx on books (primary_genre);
+create index if not exists bookatlas_books_primary_genre_idx on public.bookatlas_books (primary_genre);
 
-create table if not exists categories (
+create table if not exists public.bookatlas_categories (
   name text primary key,
   created_at timestamptz not null default now()
 );
 
-create table if not exists registered_users (
+create table if not exists public.bookatlas_registered_users (
   email text primary key,
   name text,
   registered_at bigint not null,
@@ -29,7 +43,7 @@ create table if not exists registered_users (
   books_read integer not null default 0
 );
 
-create table if not exists subscribers (
+create table if not exists public.bookatlas_subscribers (
   email text primary key,
   name text,
   tier text,
@@ -49,11 +63,78 @@ create table if not exists subscribers (
   reading_streak_days integer,
   pages_read_total integer
 );
-create index if not exists subscribers_status_idx on subscribers (status);
+create index if not exists bookatlas_subscribers_status_idx on public.bookatlas_subscribers (status);
 
-create table if not exists campaigns (
+create table if not exists public.bookatlas_campaigns (
   id text primary key,
   sent_at bigint not null,
   data jsonb not null,
   created_at timestamptz not null default now()
 );
+
+-- Existing/seeded contacts are NOT assumed to have consented to marketing.
+alter table public.bookatlas_subscribers add column if not exists marketing_consent_at timestamptz;
+alter table public.bookatlas_subscribers add column if not exists marketing_consent_source text;
+alter table public.bookatlas_subscribers add column if not exists is_demo boolean not null default true;
+alter table public.bookatlas_subscribers add column if not exists suppressed boolean not null default false;
+
+-- Job payloads contain metadata and private object paths, never uploaded files,
+-- full manuscript text, EPUB bytes, or audio encoded as base64.
+create table if not exists public.bookatlas_publishing_jobs (
+  id uuid primary key,
+  owner_id text not null,
+  status text not null default 'queued'
+    check (status in ('queued','running','review','published','failed','cancelled')),
+  stage text not null default 'upload',
+  version integer not null default 0,
+  lease_token uuid,
+  lease_until timestamptz,
+  is_test boolean not null default true,
+  data jsonb not null default '{}',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists bookatlas_publishing_jobs_queue_idx
+  on public.bookatlas_publishing_jobs (status, lease_until, created_at);
+
+create table if not exists public.bookatlas_publishing_messages (
+  id text primary key,
+  job_id uuid not null references public.bookatlas_publishing_jobs(id),
+  recipient text not null,
+  kind text not null check (kind in ('publisher','reader','test')),
+  status text not null default 'queued'
+    check (status in ('queued','sending','accepted','delivered','failed','suppressed','unknown')),
+  provider_id text,
+  attempts integer not null default 0,
+  error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (job_id, recipient, kind)
+);
+
+-- Controlled fixtures are isolated from the public books table.
+create table if not exists public.bookatlas_publishing_test_books (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+-- Only the backend service role may access application tables directly.
+-- Public catalog requests still go through Bookatlas's explicit public API.
+alter table public.bookatlas_books enable row level security;
+alter table public.bookatlas_categories enable row level security;
+alter table public.bookatlas_registered_users enable row level security;
+alter table public.bookatlas_subscribers enable row level security;
+alter table public.bookatlas_campaigns enable row level security;
+alter table public.bookatlas_publishing_jobs enable row level security;
+alter table public.bookatlas_publishing_messages enable row level security;
+alter table public.bookatlas_publishing_test_books enable row level security;
+revoke all on table public.bookatlas_books, public.bookatlas_categories,
+  public.bookatlas_registered_users, public.bookatlas_subscribers, public.bookatlas_campaigns,
+  public.bookatlas_publishing_jobs, public.bookatlas_publishing_messages,
+  public.bookatlas_publishing_test_books from anon, authenticated;
+grant select, insert, update, delete on table public.bookatlas_books, public.bookatlas_categories,
+  public.bookatlas_registered_users, public.bookatlas_subscribers, public.bookatlas_campaigns,
+  public.bookatlas_publishing_jobs, public.bookatlas_publishing_messages,
+  public.bookatlas_publishing_test_books to service_role;
+commit;

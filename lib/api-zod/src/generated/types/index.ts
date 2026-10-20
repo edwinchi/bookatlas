@@ -13,3 +13,6 @@ export * from './accountProfileTier';
 export * from './healthStatus';
 export * from './membershipResult';
 export * from './membershipResultTier';
+export * from './publishingReadiness';
+export * from './publishingReadinessCheck';
+export * from './publishingReadinessCheckState';
