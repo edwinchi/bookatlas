@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Bookatlas"
+description = "An eBook and audiobook storefront with a reader, personal library, AI reading tools, and publishing and subscriber management."
+version = "1.0.0"
+id = "artifacts/bookatlas"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21395
+
+[services.development]
+run = "pnpm --filter @workspace/bookatlas run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/bookatlas", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/bookatlas/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21395"
+BASE_PATH = "/"

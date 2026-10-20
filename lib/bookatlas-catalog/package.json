@@ -1,0 +1,10 @@
+{
+  "name": "@workspace/bookatlas-catalog",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/data/booksData.ts",
+    "./types": "./src/types.ts"
+  }
+}
