@@ -1,14 +1,11 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { TierAccessGate } from './subscriber/TierAccessGate';
 
 interface AIAccessGateModalProps {
   isOpen: boolean;
   onClose: () => void;
   featureTitle: string;
   featureDescription: string;
-  onUpgrade: () => void;
-  isUpgrading?: boolean;
 }
 
 // Shown instead of an AI feature when the browsing reader isn't at least a
@@ -20,30 +17,27 @@ export const AIAccessGateModal: React.FC<AIAccessGateModalProps> = ({
   onClose,
   featureTitle,
   featureDescription,
-  onUpgrade,
-  isUpgrading = false,
 }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fadeIn">
-      <div className="relative w-full max-w-md">
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-slate-950/80 p-4 backdrop-blur-xs" role="presentation">
+      <section role="dialog" aria-modal="true" aria-labelledby="access-gate-title" className="relative w-full max-w-md space-y-4 rounded-2xl bg-white p-6 text-slate-950 shadow-2xl">
         <button
           onClick={onClose}
-          className="absolute -top-3 -right-3 z-10 p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full border border-slate-700 shadow-md cursor-pointer"
+          aria-label="Close membership information"
+          className="absolute right-3 top-3 grid min-h-11 min-w-11 place-items-center rounded-full text-slate-600 hover:bg-slate-100"
         >
           <X className="w-4 h-4" />
         </button>
-        <TierAccessGate
-          currentTier="free_reader"
-          minTierRequired="member_subscriber"
-          featureTitle={featureTitle}
-          featureDescription={featureDescription}
-          onUpgradeTier={isUpgrading ? undefined : onUpgrade}
-        >
-          {null}
-        </TierAccessGate>
-      </div>
+        <p className="text-xs font-bold uppercase tracking-wider text-indigo-700">Bookatlas Plus membership required</p>
+        <h2 id="access-gate-title" className="pr-8 text-2xl font-bold">{featureTitle}</h2>
+        <p className="text-sm leading-relaxed text-slate-700">{featureDescription}</p>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950">
+          Membership enrollment is unavailable while checkout is a demo. Signing in does not grant Plus access.
+        </div>
+        <button type="button" onClick={onClose} className="min-h-12 w-full rounded-xl bg-indigo-700 px-4 font-bold text-white">Back to browsing</button>
+      </section>
     </div>
   );
 };

@@ -436,15 +436,12 @@ export async function createApp() {
     res.json({ user, tier: subscribersMap.get(user.email)?.tier || 'free_reader' });
   });
 
-  // This remains the original simulated membership upgrade, scoped to self.
+  // Membership must come from verified billing; a signed-in session is not an entitlement.
   app.post('/api/account/membership', (req, res) => {
-    const user = req.bookatlasIdentity!;
-    const result = upsertSubscriber({
-      email: user.email, name: user.name, tier: 'member_subscriber',
-      tags: ['plus_member', 'self_upgrade'], source: 'account',
+    res.status(409).json({
+      success: false,
+      error: 'Membership enrollment is unavailable while checkout is simulated. No membership was created.',
     });
-    void db.upsertSubscriberInDb(result.subscriber);
-    res.json({ success: true, tier: result.subscriber.tier });
   });
 
   app.use(['/api/subscribers/unsubscribe-info', '/api/subscribers/unsubscribe'], (req, res, next) => {

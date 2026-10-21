@@ -40,6 +40,7 @@ interface MyLibraryViewProps {
   language?: 'en' | 'nl';
   userEmail?: string;
   userName?: string;
+  initialTab?: 'reading' | 'wishlist';
 }
 
 export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
@@ -54,11 +55,12 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
   language = 'en',
   userEmail = '',
   userName = 'Reader',
+  initialTab = 'reading',
 }) => {
   const { account } = useAccount();
   const storagePrefix = `bookatlas:account:${account?.id || 'guest'}:`;
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
-  const [activeTab, setActiveTab] = useState<'reading' | 'all' | 'finished' | 'wishlist'>('reading');
+  const [activeTab, setActiveTab] = useState<'reading' | 'all' | 'finished' | 'wishlist'>(initialTab);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [pdfSuccessBanner, setPdfSuccessBanner] = useState(false);
   

@@ -131,7 +131,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-stone-200 shadow-xs">
       {/* Top micro announcement bar */}
-      <div className="bg-[#0f172a] text-slate-200 text-xs py-1.5 px-4">
+      <div className="hidden bg-[#0f172a] text-slate-200 text-xs py-1.5 px-4 sm:block">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <span className="flex items-center gap-1.5 font-medium text-white">
@@ -164,16 +164,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <span>Lock</span>
                 </button>
               </div>
-            ) : (
-              <button
-                onClick={() => onOpenAdminAuth('Administrator Verification & Control Panel')}
-                className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all cursor-pointer"
-                title="Log in as Administrator"
-              >
-                <Lock className="w-3 h-3 text-amber-400" />
-                <span className="hidden sm:inline">Admin Login</span>
-              </button>
-            )}
+            ) : null}
 
             {/* AI Studio Hub in Topbar */}
             <button
@@ -196,7 +187,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {/* Download Official Docs (.docx & .pdf) - Admin Protected */}
-            <button
+            {isAdminAuthenticated && <button
               onClick={handleDocsClick}
               className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-blue-900/80 hover:bg-blue-800 text-blue-200 border border-blue-700/50 transition-all cursor-pointer"
               title={isAdminAuthenticated ? "Download Platform Specifications in Word (.docx) & PDF (.pdf)" : "Admin Only: Download Platform Specifications"}
@@ -208,10 +199,10 @@ export const Header: React.FC<HeaderProps> = ({
               )}
               <span className="hidden sm:inline">Specs Export</span>
               <span className="sm:hidden">Docs</span>
-            </button>
+            </button>}
 
             {/* Manager Switch in Topbar - Admin Protected */}
-            <button
+            {isAdminAuthenticated && <button
               onClick={handleManagerTabClick}
               className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
                 activeTab === 'manager'
@@ -231,15 +222,15 @@ export const Header: React.FC<HeaderProps> = ({
               {!isAdminAuthenticated && (
                 <span className="text-[9px] bg-slate-900 text-amber-300 px-1 py-0.2 rounded-xs">Admin</span>
               )}
-            </button>
+            </button>}
 
-            <button
+            {isAdminAuthenticated && <button
               onClick={onOpenArchitectureGuide}
               className="hidden sm:flex items-center gap-1 text-xs text-amber-300 hover:text-amber-200 font-semibold transition-colors cursor-pointer"
             >
               <HelpCircle className="w-3.5 h-3.5" />
               <span>Blueprint</span>
-            </button>
+            </button>}
             {/* Language Switcher (Dutch / English) */}
             {setLanguage && (
               <div className="flex items-center gap-1 bg-slate-800/80 px-2 py-0.5 rounded-lg border border-slate-700">
@@ -275,8 +266,8 @@ export const Header: React.FC<HeaderProps> = ({
 
 
       {/* Main navigation row */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5">
-        <div className="flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3.5">
+        <div className="flex items-center justify-between gap-2 sm:gap-4">
           
           {/* Logo & Brand */}
           <div className="flex items-center gap-4">
@@ -446,7 +437,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Right actions: AI Matchmaker, Manager, Wishlist, My Bookshelf, Cart */}
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Manager Operations CTA */}
-            <button
+            {isAdminAuthenticated && <button
               onClick={() => setActiveTab(activeTab === 'manager' ? 'store' : 'manager')}
               className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'manager'
@@ -457,12 +448,12 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Bot className="w-4 h-4 text-indigo-600" />
               <span>Manager Studio</span>
-            </button>
+            </button>}
 
             {/* AI Book Matchmaker button */}
             <button
               onClick={onOpenAIMatchmaker}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-indigo-200 text-indigo-900 text-xs sm:text-sm font-semibold hover:border-indigo-400 hover:shadow-xs transition-all cursor-pointer"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-indigo-200 text-indigo-900 text-xs sm:text-sm font-semibold hover:border-indigo-400 hover:shadow-xs transition-all cursor-pointer"
               title="AI Book Recommender & Gemini Mood Matcher"
             >
               <Sparkles className="w-4 h-4 text-indigo-600 animate-pulse" />
@@ -473,7 +464,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* My Bookshelf tab */}
             <button
               onClick={() => setActiveTab('library')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === 'library'
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950'
@@ -486,8 +477,9 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Wishlist */}
             <button
               onClick={onOpenWishlist}
-              className="relative p-2 text-slate-700 hover:text-slate-950 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              className="relative hidden md:flex min-h-12 min-w-12 items-center justify-center p-2 text-slate-700 hover:text-slate-950 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
               title="Saved Wishlist"
+              aria-label={`Open wishlist${wishlistCount ? `, ${wishlistCount} saved` : ''}`}
             >
               <Heart className="w-5 h-5" />
               {wishlistCount > 0 && (
@@ -500,7 +492,8 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Cart Button */}
             <button
               onClick={onOpenCart}
-              className="relative flex items-center gap-2 px-3 py-1.5 bg-[#0f172a] hover:bg-slate-800 text-white rounded-lg text-sm font-semibold shadow-xs transition-colors cursor-pointer"
+              className="relative flex min-h-12 min-w-12 items-center justify-center gap-2 px-3 py-1.5 bg-[#0f172a] hover:bg-slate-800 text-white rounded-lg text-sm font-semibold shadow-xs transition-colors cursor-pointer"
+              aria-label={`Open shopping cart${cartCount ? `, ${cartCount} items` : ''}`}
             >
               <ShoppingBag className="w-4 h-4 text-amber-400" />
               <span className="hidden sm:inline">Cart</span>
@@ -514,7 +507,9 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Mobile menu toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer"
+              className="grid min-h-12 min-w-12 place-items-center md:hidden text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer"
+              aria-label={mobileMenuOpen ? 'Close bookstore menu' : 'Open bookstore menu'}
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -529,7 +524,7 @@ export const Header: React.FC<HeaderProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search books, authors, genres..."
-              className="w-full pl-9 pr-8 py-1.5 bg-slate-100 text-sm rounded-lg border border-slate-200 focus:outline-hidden focus:bg-white"
+              className="min-h-12 w-full pl-9 pr-8 py-1.5 bg-slate-100 text-sm rounded-lg border border-slate-200 focus:outline-hidden focus:bg-white"
             />
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           </div>
@@ -605,7 +600,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {/* Manager Studio Tab - Protected */}
-            <button
+            {isAdminAuthenticated && <button
               onClick={handleManagerTabClick}
               className={`flex items-center gap-1.5 px-3 py-2.5 font-medium border-b-2 whitespace-nowrap transition-colors cursor-pointer ${
                 activeTab === 'manager'
@@ -624,7 +619,7 @@ export const Header: React.FC<HeaderProps> = ({
               ) : (
                 <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wide">Admin Lock</span>
               )}
-            </button>
+            </button>}
           </div>
 
 
@@ -639,7 +634,21 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-t border-slate-200 px-4 py-3 space-y-2">
+        <div className="md:hidden max-h-[calc(100dvh-8rem)] overflow-y-auto bg-white border-t border-slate-200 px-4 py-3 space-y-2">
+          <button onClick={() => { setActiveTab('library'); setMobileMenuOpen(false); }} className="min-h-12 w-full rounded-lg bg-slate-50 px-3 text-left font-semibold text-slate-900">My Bookshelf</button>
+          <button onClick={() => { onOpenWishlist(); setMobileMenuOpen(false); }} className="min-h-12 w-full rounded-lg bg-slate-50 px-3 text-left font-semibold text-slate-900">Wishlist{wishlistCount ? ` (${wishlistCount})` : ''}</button>
+          {setLanguage && <label className="flex min-h-12 items-center justify-between gap-3 rounded-lg px-3 text-sm font-medium text-slate-800">
+            <span>Language</span>
+            <select value={language} onChange={event => setLanguage(event.target.value as 'en' | 'nl')} aria-label="Language" className="min-h-11 rounded-lg border border-slate-300 bg-white px-2">
+              <option value="en">English</option><option value="nl">Nederlands</option>
+            </select>
+          </label>}
+          <label className="flex min-h-12 items-center justify-between gap-3 rounded-lg px-3 text-sm font-medium text-slate-800">
+            <span>Currency</span>
+            <select value={currency} onChange={event => setCurrency(event.target.value)} aria-label="Currency" className="min-h-11 max-w-40 rounded-lg border border-slate-300 bg-white px-2">
+              <option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CAD">CAD ($)</option><option value="JPY">JPY (¥)</option>
+            </select>
+          </label>
           {/* Admin Session Mobile Bar */}
           {isAdminAuthenticated ? (
             <div className="flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
@@ -654,75 +663,64 @@ export const Header: React.FC<HeaderProps> = ({
                 Lock
               </button>
             </div>
-          ) : (
-            <button
-              onClick={() => { onOpenAdminAuth('Administrator Verification'); setMobileMenuOpen(false); }}
-              className="w-full text-left py-2 font-bold text-slate-700 flex items-center justify-between bg-slate-100 px-3 rounded-lg text-xs"
-            >
-              <div className="flex items-center gap-2">
-                <Lock className="w-4 h-4 text-amber-500" />
-                <span>Admin Login ({adminEmail})</span>
-              </div>
-              <span className="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold">Lock</span>
-            </button>
-          )}
+          ) : null}
 
-          <button
+          {isAdminAuthenticated && <button
             onClick={() => { handleManagerTabClick(); setMobileMenuOpen(false); }}
             className="w-full text-left py-2 font-bold text-indigo-700 flex items-center gap-2 bg-indigo-50 px-3 rounded-lg"
           >
             {isAdminAuthenticated ? <ShieldCheck className="w-4 h-4 text-indigo-600" /> : <Lock className="w-4 h-4 text-amber-600" />}
             <span>Manager Portal {isAdminAuthenticated ? '(Active)' : '(Admin Locked)'}</span>
-          </button>
+          </button>}
           <button
             onClick={() => { setActiveTab('store'); setMobileMenuOpen(false); }}
-            className="w-full text-left py-2 font-medium text-slate-800"
+            className="min-h-12 w-full text-left py-2 font-medium text-slate-800"
           >
             All eBooks
           </button>
           <button
             onClick={() => { setActiveTab('audiobooks'); setMobileMenuOpen(false); }}
-            className="w-full text-left py-2 font-medium text-slate-800 flex items-center gap-2"
+            className="min-h-12 w-full text-left py-2 font-medium text-slate-800 flex items-center gap-2"
           >
             <Headphones className="w-4 h-4 text-indigo-600" /> Audiobooks
           </button>
           <button
             onClick={() => { setActiveTab('bookatlasplus'); setMobileMenuOpen(false); }}
-            className="w-full text-left py-2 font-medium text-indigo-700 flex items-center gap-2"
+            className="min-h-12 w-full text-left py-2 font-medium text-indigo-700 flex items-center gap-2"
           >
             <Compass className="w-4 h-4" /> Bookatlas Plus (Unlimited Reads)
           </button>
           <button
             onClick={() => { setActiveTab('deals'); setMobileMenuOpen(false); }}
-            className="w-full text-left py-2 font-medium text-amber-700 flex items-center gap-2"
+            className="min-h-12 w-full text-left py-2 font-medium text-amber-700 flex items-center gap-2"
           >
             <Tag className="w-4 h-4" /> Deals & Free eBooks
           </button>
           <button
             onClick={() => { onOpenAIMatchmaker(); setMobileMenuOpen(false); }}
-            className="w-full text-left py-2 font-medium text-purple-700 flex items-center gap-2"
+            className="min-h-12 w-full text-left py-2 font-medium text-purple-700 flex items-center gap-2"
           >
             <Sparkles className="w-4 h-4" /> Gemini AI Matchmaker
           </button>
           <button
             onClick={() => { onOpenAIHub(); setMobileMenuOpen(false); }}
-            className="w-full text-left py-2 font-bold text-indigo-700 flex items-center gap-2 bg-purple-50 px-3 rounded-lg"
+            className="min-h-12 w-full text-left py-2 font-bold text-indigo-700 flex items-center gap-2 bg-purple-50 px-3 rounded-lg"
           >
-            <Bot className="w-4 h-4 text-purple-600" /> Gemini AI Studio (Chat, Voice, Video, Search)
+            <Bot className="w-4 h-4 text-purple-600" /> AI reading tools
           </button>
-          <button
+          {isAdminAuthenticated && <button
             onClick={() => { handleDocsClick(); setMobileMenuOpen(false); }}
             className="w-full text-left py-2 font-bold text-blue-700 flex items-center gap-2 bg-blue-50 px-3 rounded-lg"
           >
             {isAdminAuthenticated ? <ShieldCheck className="w-4 h-4 text-blue-600" /> : <Lock className="w-4 h-4 text-amber-600" />}
             <span>Download Documentation (Admin Only)</span>
-          </button>
-          <button
+          </button>}
+          {isAdminAuthenticated && <button
             onClick={() => { onOpenArchitectureGuide(); setMobileMenuOpen(false); }}
             className="w-full text-left py-2 font-medium text-slate-700 flex items-center gap-2 border-t border-slate-100 pt-2"
           >
             <HelpCircle className="w-4 h-4" /> Platform Blueprint
-          </button>
+          </button>}
         </div>
       )}
     </header>

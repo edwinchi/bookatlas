@@ -118,7 +118,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
             <div className="pt-3 flex flex-wrap items-center gap-3">
               <button
                 onClick={() => onReadSample(currentBook)}
-                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-white text-slate-900 hover:bg-slate-100 font-semibold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer group"
+                className="flex min-h-12 items-center gap-2 px-5 py-3 rounded-xl bg-white text-slate-900 hover:bg-slate-100 font-semibold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer group"
               >
                 <BookOpen className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
                 <span>Read Instant Sample</span>
@@ -126,10 +126,10 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
 
               <button
                 onClick={() => onAddToCart(currentBook)}
-                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer"
+                className="flex min-h-12 items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer"
               >
                 <ShoppingBag className="w-4 h-4 text-amber-300" />
-                <span>Buy eBook for {symbol}{currentBook.price.toFixed(2)}</span>
+                <span>Add eBook to cart · {symbol}{currentBook.price.toFixed(2)}</span>
                 {currentBook.originalPrice > currentBook.price && (
                   <span className="text-xs text-indigo-200 line-through opacity-80">
                     {symbol}{currentBook.originalPrice.toFixed(2)}

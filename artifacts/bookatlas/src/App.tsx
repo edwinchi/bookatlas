@@ -22,6 +22,7 @@ import { AIStudioHub } from './components/AIStudioHub';
 import { useAccount, useAccountList } from './auth/AuthContext';
 import { UnsubscribePageModal } from './components/UnsubscribePageModal';
 import { AIAccessGateModal } from './components/AIAccessGateModal';
+import { safeReaderReturnPath } from './auth/navigation';
 import { TRANSLATIONS } from './data/translations';
 import { INITIAL_BOOKS } from './data/booksData';
 
@@ -45,12 +46,34 @@ import {
   Compass
 } from 'lucide-react';
 
-export default function App() {
+const GUEST_CART_KEY = 'bookatlas:guest-cart:v1';
+type ReaderTab = 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager';
+function readGuestCart(): CartItem[] {
+  try {
+    const stored: unknown = JSON.parse(sessionStorage.getItem(GUEST_CART_KEY) || '[]');
+    return Array.isArray(stored) ? stored.filter((item): item is CartItem =>
+      !!item && typeof item === 'object' && typeof item.book?.id === 'string' &&
+      ['ebook', 'audiobook'].includes(item.format) && Number.isFinite(item.addedAt),
+    ) : [];
+  } catch { return []; }
+}
+function cartFingerprint(cart: CartItem[]) {
+  return cart.map(item => `${item.book.id}:${item.format}`).sort().join('|');
+}
+const normalizeCartReturn = (returnTo: string) =>
+  safeReaderReturnPath(returnTo, window.location.origin, import.meta.env.BASE_URL);
+
+export default function App({ initialTab = 'store', initialLibraryTab = 'reading', resumeCheckout = false, pendingReaderService }: {
+  initialTab?: ReaderTab;
+  initialLibraryTab?: 'reading' | 'wishlist';
+  resumeCheckout?: boolean;
+  pendingReaderService?: string;
+}) {
   const { account, tier: accountTier, requireSignIn, requireAdmin, signOut } = useAccount();
   const [books, setBooks] = useState<Book[]>(INITIAL_BOOKS);
-  const [activeTab, setActiveTabState] = useState<'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager'>('store');
+  const [activeTab, setActiveTabState] = useState<ReaderTab>(initialTab);
   const setActiveTab = (tab: typeof activeTab) => {
-    if (tab === 'library' && !requireSignIn()) return;
+    if (tab === 'library' && !requireSignIn('library', '/user-portal')) return;
     if (tab === 'manager' && !requireAdmin()) return;
     setActiveTabState(tab);
   };
@@ -63,39 +86,25 @@ export default function App() {
   // AI feature access — Member/VIP Patron subscribers only
   const [currentUserTier, setCurrentUserTier] = useState<SubscriberTier>(accountTier);
   const [aiAccessGate, setAiAccessGate] = useState<{ featureTitle: string; featureDescription: string } | null>(null);
-  const [isUpgradingTier, setIsUpgradingTier] = useState(false);
-  const hasAiAccess = account?.role === 'admin' || currentUserTier === 'member_subscriber' || currentUserTier === 'vip_patron';
+  const hasAiAccess = currentUserTier === 'member_subscriber' || currentUserTier === 'vip_patron';
 
   useEffect(() => {
     setCurrentUserTier(accountTier);
   }, [accountTier]);
 
   const requireAiAccess = (featureTitle: string, featureDescription: string, action: () => void) => {
-    if (!requireSignIn()) return;
+    if (!account) {
+      const service = featureTitle.toLowerCase().includes('voice') ? 'voice'
+        : featureTitle.toLowerCase().includes('matchmaker') ? 'matchmaker'
+          : featureTitle.toLowerCase().includes('literary assistant') ? 'chat'
+            : featureTitle.toLowerCase().includes('search') ? 'search' : 'studio';
+      requireSignIn('ai', `/user-portal?view=ai&service=${service}`);
+      return;
+    }
     if (hasAiAccess) {
       action();
     } else {
       setAiAccessGate({ featureTitle, featureDescription });
-    }
-  };
-
-  const handleUpgradeToMember = async () => {
-    if (!registeredUser?.email || isUpgradingTier) return;
-    setIsUpgradingTier(true);
-    try {
-      const res = await fetch('/api/account/membership', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      if (res.ok) {
-        setCurrentUserTier('member_subscriber');
-        setAiAccessGate(null);
-      }
-    } catch (e) {
-      console.error('Tier upgrade failed', e);
-    } finally {
-      setIsUpgradingTier(false);
     }
   };
 
@@ -172,7 +181,43 @@ export default function App() {
   });
 
   // User State: Cart, Wishlist, Library
-  const [cart, setCart] = useAccountList<CartItem>('cart');
+  const [accountCart, setAccountCart] = useAccountList<CartItem>('cart');
+  const [guestCart, setGuestCart] = useState<CartItem[]>(readGuestCart);
+  const [libraryDefaultTab, setLibraryDefaultTab] = useState<'reading' | 'wishlist'>(initialLibraryTab);
+  const cart = account ? accountCart : guestCart;
+  const setCart: React.Dispatch<React.SetStateAction<CartItem[]>> = update => {
+    if (account) setAccountCart(update);
+    else setGuestCart(update);
+  };
+  const guestCartFingerprint = cartFingerprint(guestCart);
+  const [showGuestCartMerge, setShowGuestCartMerge] = useState(false);
+  useEffect(() => {
+    try {
+      if (guestCart.length) sessionStorage.setItem(GUEST_CART_KEY, JSON.stringify(guestCart));
+      else sessionStorage.removeItem(GUEST_CART_KEY);
+    } catch { console.warn('The guest cart could not be saved in this browser session.'); }
+  }, [guestCart]);
+  useEffect(() => {
+    if (!account || !guestCart.length) { setShowGuestCartMerge(false); return; }
+    try {
+      setShowGuestCartMerge(!sessionStorage.getItem(`bookatlas:guest-cart-merge-dismissed:${account.id}:${guestCartFingerprint}`));
+    } catch { setShowGuestCartMerge(true); }
+  }, [account?.id, guestCartFingerprint, guestCart.length]);
+  const dismissGuestCartMerge = () => {
+    if (account && guestCartFingerprint) {
+      try { sessionStorage.setItem(`bookatlas:guest-cart-merge-dismissed:${account.id}:${guestCartFingerprint}`, 'true'); } catch { /* keep browsing regardless */ }
+    }
+    setShowGuestCartMerge(false);
+  };
+  const mergeGuestCart = () => {
+    if (!account || !guestCart.length) return;
+    setAccountCart(previous => {
+      const existing = new Set(previous.map(item => `${item.book.id}:${item.format}`));
+      return [...previous, ...guestCart.filter(item => !existing.has(`${item.book.id}:${item.format}`))];
+    });
+    setGuestCart([]);
+    setShowGuestCartMerge(false);
+  };
   const [wishlist, setWishlist] = useAccountList<Book>('wishlist');
   const [library, setLibrary] = useAccountList<UserLibraryItem>('library');
 
@@ -183,6 +228,9 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAIMatchmakerOpen, setIsAIMatchmakerOpen] = useState(false);
   const [isArchitectureGuideOpen, setIsArchitectureGuideOpen] = useState(false);
+  useEffect(() => {
+    if (resumeCheckout) setIsCartOpen(true);
+  }, [resumeCheckout]);
 
   // New Gemini AI & Export Modals State
   const [isAIHubOpen, setIsAIHubOpen] = useState(false);
@@ -190,10 +238,26 @@ export default function App() {
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  useEffect(() => {
+    if (!account || !pendingReaderService) return;
+    if (!hasAiAccess) {
+      setAiAccessGate({
+        featureTitle: 'Bookatlas Plus membership required',
+        featureDescription: 'Personalized AI features require an active membership. Signing in alone does not grant membership.',
+      });
+      return;
+    }
+    if (pendingReaderService === 'chat') setIsChatOpen(true);
+    else if (pendingReaderService === 'voice') setIsVoiceOpen(true);
+    else if (pendingReaderService === 'matchmaker') setIsAIMatchmakerOpen(true);
+    else if (pendingReaderService === 'search') setIsSearchOpen(true);
+    else setIsAIHubOpen(true);
+  }, [account?.id, pendingReaderService, hasAiAccess]);
   const [isDocsOpen, setIsDocsOpen] = useState(false);
 
-  const isAdminAuthenticated = account?.role === 'admin';
-  const adminEmail = isAdminAuthenticated ? account.email : 'Administrator';
+  // Administrative tools live only on the independently guarded /admin route.
+  const isAdminAuthenticated = false;
+  const adminEmail = 'Administrator';
 
   const openAdminAuthForFeature = (featureName: string, callback?: () => void) => {
     if (requireAdmin(featureName)) callback?.();
@@ -317,7 +381,6 @@ export default function App() {
 
   // Cart & Wishlist Actions
   const handleAddToCart = (book: Book, format: 'ebook' | 'audiobook' = 'ebook') => {
-    if (!requireSignIn()) return;
     setCart((prev) => {
       const existing = prev.find((item) => item.book.id === book.id && item.format === format);
       if (existing) return prev;
@@ -331,7 +394,7 @@ export default function App() {
   };
 
   const handleToggleWishlist = (book: Book) => {
-    if (!requireSignIn()) return;
+    if (!requireSignIn('wishlist', '/user-portal?view=wishlist')) return;
     setWishlist((prev) => {
       const exists = prev.some((b) => b.id === book.id);
       if (exists) {
@@ -340,6 +403,11 @@ export default function App() {
         return [...prev, book];
       }
     });
+  };
+  const openWishlist = () => {
+    if (!requireSignIn('wishlist', '/user-portal?view=wishlist')) return;
+    setLibraryDefaultTab('wishlist');
+    setActiveTab('library');
   };
 
   const handleReadSample = (book: Book) => {
@@ -351,31 +419,14 @@ export default function App() {
     });
   };
 
-  const handleCheckoutComplete = () => {
-    if (!requireSignIn()) return;
-    // Transfer cart items to user bookshelf
-    const newLibraryItems: UserLibraryItem[] = cart.map((item) => ({
-      book: item.book,
-      format: item.format,
-      progressPercent: 0,
-      currentChapterIndex: 0,
-      currentParagraphIndex: 0,
-      lastReadTimestamp: Date.now(),
-      highlights: [],
-      bookmarks: [],
-    }));
-
-    setLibrary((prev) => {
-      const existingIds = new Set(prev.map((i) => i.book.id));
-      const filtered = newLibraryItems.filter((i) => !existingIds.has(i.book.id));
-      return [...filtered, ...prev];
-    });
-
-    setCart([]);
-    setIsCartOpen(false);
-    setActiveTab('library');
+  const requestCheckout = () => {
+    if (!account) {
+      const returnTo = normalizeCartReturn('/user-portal?resume=checkout');
+      requireSignIn('checkout', returnTo);
+      return false;
+    }
+    return true;
   };
-
   // Keep a ref to activeReadingBook so handleSaveProgress does not need it in dependencies
   const activeReadingBookRef = useRef(activeReadingBook);
   useEffect(() => {
@@ -383,6 +434,9 @@ export default function App() {
   }, [activeReadingBook]);
 
   const handleSaveProgress = useCallback((chapterIndex: number, paragraphIndex: number, progressPct: number) => {
+    // Public samples remain readable for guests, but reader progress belongs
+    // only to an authenticated account.
+    if (!account) return;
     const currentActive = activeReadingBookRef.current;
     if (!currentActive) return;
     const targetBook = currentActive.book;
@@ -450,10 +504,10 @@ export default function App() {
         cartCount={cart.length}
         wishlistCount={wishlist.length}
         onOpenCart={() => setIsCartOpen(true)}
-        onOpenWishlist={() => setActiveTab('library')}
+        onOpenWishlist={openWishlist}
         onOpenArchitectureGuide={() => setIsArchitectureGuideOpen(true)}
         onOpenAIMatchmaker={() => requireAiAccess('AI Book Matchmaker', 'Get personalized reading recommendations, matched by mood and theme, powered by AI.', () => setIsAIMatchmakerOpen(true))}
-        onOpenAIHub={() => setIsAIHubOpen(true)}
+        onOpenAIHub={() => requireAiAccess('AI Studio', 'Open personalized AI tools for your reading.', () => setIsAIHubOpen(true))}
         onOpenChat={() => requireAiAccess('Interactive Literary Assistant', 'Chat with our persona-driven AI literary companion.', () => setIsChatOpen(true))}
         onOpenVoice={() => requireAiAccess('Live Voice Companion', 'Have a real-time spoken conversation with our AI voice companion.', () => setIsVoiceOpen(true))}
         onOpenVideo={() => setIsVideoOpen(true)}
@@ -484,7 +538,7 @@ export default function App() {
               onDeleteBook={handleDeleteBook}
               onPreviewBook={handleReadSample}
               onReturnToStore={() => setActiveTab('store')}
-              onOpenAIHub={() => setIsAIHubOpen(true)}
+              onOpenAIHub={() => requireAiAccess('AI Studio', 'Open personalized AI tools for your reading.', () => setIsAIHubOpen(true))}
               onOpenChat={() => requireAiAccess('Interactive Literary Assistant', 'Chat with our persona-driven AI literary companion.', () => setIsChatOpen(true))}
               onOpenVoice={() => requireAiAccess('Live Voice Companion', 'Have a real-time spoken conversation with our AI voice companion.', () => setIsVoiceOpen(true))}
               onOpenVideo={() => setIsVideoOpen(true)}
@@ -538,6 +592,7 @@ export default function App() {
             language={language}
             userEmail={registeredUser?.email || ''}
             userName={registeredUser?.name || 'Reader'}
+            initialTab={libraryDefaultTab}
             onOpenReader={(item) => {
               setActiveReadingBook({
                 book: item.book,
@@ -994,9 +1049,31 @@ export default function App() {
         onClose={() => setIsCartOpen(false)}
         cart={cart}
         onRemoveItem={handleRemoveFromCart}
-        onCheckout={handleCheckoutComplete}
+        onCheckout={requestCheckout}
+        isAuthenticated={!!account}
         currencySymbol={currencySymbol}
       />
+      {showGuestCartMerge && account && guestCart.length > 0 && (
+        <div className="fixed inset-0 z-[80] grid place-items-center bg-slate-950/60 p-4" role="presentation">
+          <section role="dialog" aria-modal="true" aria-labelledby="guest-cart-title" className="w-full max-w-md space-y-4 rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
+            <h2 id="guest-cart-title" className="text-xl font-bold text-slate-950">Your guest cart</h2>
+            <p className="text-sm leading-relaxed text-slate-600">
+              You added {guestCart.length} book{guestCart.length === 1 ? '' : 's'} while browsing. Choose whether to merge these specific books into your reader account. Your bookshelf and saved data stay separate.
+            </p>
+            <ul className="max-h-44 space-y-2 overflow-y-auto" aria-label="Books in the guest cart">
+              {guestCart.map((item, index) => <li className="flex justify-between gap-3 border-b border-slate-100 py-2 text-sm" key={`${item.book.id}-${index}`}>
+                <span className="font-medium text-slate-800">{item.book.title}</span>
+                <span className="shrink-0 text-slate-500">{item.format === 'audiobook' ? 'Audiobook' : 'eBook'}</span>
+              </li>)}
+            </ul>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button type="button" onClick={mergeGuestCart} className="min-h-12 flex-1 rounded-xl bg-indigo-700 px-4 font-bold text-white">Merge these books</button>
+              <button type="button" onClick={dismissGuestCartMerge} className="min-h-12 rounded-xl border border-slate-300 px-4 font-semibold text-slate-800">Keep as guest cart</button>
+            </div>
+            <p className="text-xs text-slate-500">Only these new guest-cart items are offered. Older browser data is never imported.</p>
+          </section>
+        </div>
+      )}
 
       {/* AI Book Matchmaker Modal */}
       <AIMatchmakerModal
@@ -1014,8 +1091,6 @@ export default function App() {
         onClose={() => setAiAccessGate(null)}
         featureTitle={aiAccessGate?.featureTitle || ''}
         featureDescription={aiAccessGate?.featureDescription || ''}
-        onUpgrade={handleUpgradeToMember}
-        isUpgrading={isUpgradingTier}
       />
 
       {/* Architecture Guide Blueprint Modal */}
@@ -1034,7 +1109,7 @@ export default function App() {
         onOpenSearch={() => requireAiAccess('Search Grounding Literary Radar', 'Get real-time bestseller trends and literary news grounded in live Google Search.', () => setIsSearchOpen(true))}
         onOpenDocs={() => setIsDocsOpen(true)}
         booksCount={books.length}
-        isAdminAuthenticated={isAdminAuthenticated}
+        isAdminAuthenticated={false}
         onOpenAdminAuth={openAdminAuthForFeature}
       />
 
@@ -1081,21 +1156,6 @@ export default function App() {
         token={unsubTargetToken}
         language={language}
       />
-
-
-      {/* Floating Gemini AI Quick Launch Pill in Bottom Corner */}
-      <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2">
-        <button
-          onClick={() => setIsAIHubOpen(true)}
-          className="flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-700 hover:from-indigo-600 hover:to-pink-600 text-white rounded-full shadow-2xl hover:shadow-indigo-500/50 border border-white/20 transition-all hover:scale-105 cursor-pointer font-bold text-xs sm:text-sm"
-          title="Open Bookatlas AI Studio"
-        >
-          <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-          <span>Gemini AI Studio</span>
-          <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full">Hub</span>
-        </button>
-      </div>
-
     </div>
   );
 }

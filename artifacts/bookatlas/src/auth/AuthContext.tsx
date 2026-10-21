@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useClerk, useUser } from '@clerk/react';
 import { useLocation } from 'wouter';
+import { safeReaderReturnPath } from './navigation';
 
 export type Account = { id: string; email: string; name: string; role: 'reader' | 'admin' };
 type AuthState = {
@@ -9,7 +10,7 @@ type AuthState = {
   loading: boolean;
   error: string;
   refresh: () => void;
-  requireSignIn: () => boolean;
+  requireSignIn: (feature?: string, returnTo?: string) => boolean;
   requireAdmin: (feature?: string) => boolean;
   signOut: () => void;
 };
@@ -52,9 +53,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     return () => controller.abort();
   }, [isLoaded, isSignedIn, user?.id, revision]);
 
-  const requireSignIn = () => {
+  const requireSignIn = (feature = 'this service', returnTo?: string) => {
     if (account) return true;
-    navigate('/sign-in');
+    const currentPath = `${window.location.pathname}${window.location.search}`;
+    const destination = safeReaderReturnPath(returnTo ?? currentPath, window.location.origin, import.meta.env.BASE_URL);
+    navigate(`/sign-in?feature=${encodeURIComponent(feature)}&returnTo=${encodeURIComponent(destination)}`);
     return false;
   };
   const requireAdmin = (feature = 'Manager Studio') => {

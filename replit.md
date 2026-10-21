@@ -25,21 +25,22 @@ Bookatlas is an imported eBook and audiobook storefront with a sample reader, br
 - Retain Supabase as the existing persistence provider. Do not convert it to a different database without an explicit request.
 - Without Supabase credentials, the original backend runs from in-memory seed data and loses server-side changes when restarted. Bookshelf, wishlist, and registration also use the original browser-local storage.
 - Checkout is the imported simulation, not a live payment integration.
-- The original administrative gate and API access model are preserved, not replaced or hardened as part of the port.
-- The previously public administrative routes now require server-verified authorization. Any already published version must be republished to receive this protection.
+- Storefront browsing, catalog discovery, book details, and public samples remain available to guests. Sign-in is prompted only for account services such as a saved bookshelf, wishlist, preferences, personal AI, and checkout review.
+- The administrator workspace is isolated at `/admin`, with server-verified roles and a reader-denial state. Administrator actions and APIs remain unavailable from the storefront.
+- Checkout is a demo only: no payment or verified book license is created. Signing in never grants membership; enrollment remains unavailable until verified billing is connected.
 - The source has two existing frontend type errors involving editorial book fields, and imported Express handlers have implicit-return warnings. Authentication modules type-check; strict typing cleanup of imported code is separate work.
 - The original storefront header can overflow narrow mobile screens. The new auth routes are checked at mobile width; a full storefront redesign is separate work.
 
 ## Authentication
 
 - Clerk-managed signup, sign-in (email or Google), and custom sign-out controls replace the old email-only registration gate and client-side administrator PIN.
-- The storefront `/` remains public. Signed-in users go to `/user-portal`; guests visiting the portal return to the storefront. Auth routes use optional Wouter wildcards to handle verification and OAuth callbacks.
+- The storefront `/` remains public for signed-out and signed-in readers. `/user-portal` is a separate, explicit reader dashboard; `/admin` is the role-guarded administrative workspace. Guests return to the public storefront when they visit the reader dashboard.
 - API requests use same-origin Clerk session cookies. The Clerk proxy is mounted before body parsers. No web client bearer-token plumbing is needed.
 - `BOOKATLAS_OWNER_EMAIL` is the explicitly configured owner address (server-only environment setting). On the first verified owner login in each Clerk environment, the server grants `publicMetadata.role=admin` and records a bootstrap marker. A subsequently revoked role is not automatically restored. Reader accounts never choose their role.
 - Roles are resolved from Clerk on the server, not from browser storage or client-provided email. Public catalog GETs are allowlisted; subscriber management, catalog changes, operations, and documentation export require admin. AI reading APIs require authenticated membership or admin.
-- Reader data, including offline-cache preferences, is browser-local and namespaced by verified Clerk user ID; account switching remounts the reader app. It is not cross-device synchronization.
+- Reader library, wishlist, and preferences use browser-local data namespaced by verified Clerk user ID; they are not cross-device synchronization. A new guest cart uses session-scoped storage and can be merged only after a reader explicitly confirms. Do not import legacy email-only or anonymous browser data.
 - Unsubscribe preferences require the matching signed-in account, admin, or a valid signed opt-out link. Public links cannot resubscribe an address. Tokens created with the legacy public default secret are intentionally invalid; newly sent campaigns sign links with the configured secret.
-- Automated checks cover anonymous denial, reader/admin policy, verified-owner bootstrap/revocation rules, forged legacy storage, and auth-page rendering. A real signed-in reader/admin UI session has not been browser-verified.
+- Unit checks cover same-origin, allowlisted auth return paths and anonymous/reader/admin API policy. A real signed-in reader/admin UI session requires an authenticated test browser and must not be bypassed in preview testing.
 - Republish the app to apply these changes to an already published version.
 
 ## Optional configuration

@@ -158,8 +158,8 @@ export function AIStudioHub({
             </div>
           </div>
 
-          {/* Card 3: Veo Video Generator - Admin Secured */}
-          <div 
+          {/* Video generation tools are available only from the private admin workspace. */}
+          {isAdminAuthenticated && <div 
             onClick={handleVideoClick}
             className="p-5 bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-pink-500/60 rounded-2xl transition-all group cursor-pointer flex flex-col justify-between"
           >
@@ -192,7 +192,7 @@ export function AIStudioHub({
               <span>{isAdminAuthenticated ? 'Animate Video Trailers' : 'Unlock Video Studio (Admin)'}</span>
               <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
             </div>
-          </div>
+          </div>}
 
           {/* Card 4: Google Search Grounding */}
           <div 
@@ -225,8 +225,8 @@ export function AIStudioHub({
 
         </div>
 
-        {/* Documentation Export Banner - Admin Secured */}
-        <div className="p-6 bg-slate-950 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* Documentation is kept out of reader-facing feature hubs. */}
+        {isAdminAuthenticated && <div className="p-6 bg-slate-950 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
               <FileText className="w-5 h-5" />
@@ -251,7 +251,7 @@ export function AIStudioHub({
             {isAdminAuthenticated ? <FileText className="w-4 h-4" /> : <Lock className="w-4 h-4 text-amber-300" />}
             <span>{isAdminAuthenticated ? 'Open & Download Docs' : 'Admin Unlock & Download'}</span>
           </button>
-        </div>
+        </div>}
 
       </div>
     </div>

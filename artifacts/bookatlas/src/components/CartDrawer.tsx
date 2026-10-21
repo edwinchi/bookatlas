@@ -10,12 +10,7 @@ import {
   Tag,
   BookOpen,
   Headphones,
-  Landmark,
-  CreditCard,
-  Wallet,
-  Smartphone
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { CartItem } from '../types';
 
 interface CartDrawerProps {
@@ -23,7 +18,8 @@ interface CartDrawerProps {
   onClose: () => void;
   cart: CartItem[];
   onRemoveItem: (index: number) => void;
-  onCheckout: () => void;
+  onCheckout: () => boolean;
+  isAuthenticated: boolean;
   currencySymbol?: string;
 }
 
@@ -33,6 +29,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   cart,
   onRemoveItem,
   onCheckout,
+  isAuthenticated,
   currencySymbol = '$',
 }) => {
   const [promoCode, setPromoCode] = useState('');
@@ -40,23 +37,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const [promoError, setPromoError] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'ideal' | 'card' | 'paypal' | 'applepay'>('ideal');
+  const [demoResult, setDemoResult] = useState('');
 
   if (!isOpen) return null;
-
-  const paymentMethods: Array<{ id: 'ideal' | 'card' | 'paypal' | 'applepay'; label: string; icon: React.ReactNode }> = [
-    { id: 'ideal', label: 'iDEAL', icon: <Landmark className="w-4 h-4" /> },
-    { id: 'card', label: 'Credit / Debit Card', icon: <CreditCard className="w-4 h-4" /> },
-    { id: 'paypal', label: 'PayPal', icon: <Wallet className="w-4 h-4" /> },
-    { id: 'applepay', label: 'Apple Pay', icon: <Smartphone className="w-4 h-4" /> },
-  ];
-
-  const paymentProcessingLabel: Record<typeof paymentMethod, string> = {
-    ideal: 'Redirecting to your iDEAL bank...',
-    card: 'Authorizing card payment...',
-    paypal: 'Confirming with PayPal...',
-    applepay: 'Confirming with Apple Pay...',
-  };
 
   const rawSubtotal = cart.reduce((acc, item) => acc + item.book.price, 0);
   const discountAmount = (rawSubtotal * discountPercent) / 100;
@@ -75,18 +58,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   };
 
   const handleCompleteOrder = () => {
+    if (!onCheckout()) return;
+    setDemoResult('');
     setIsCheckingOut(true);
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
-
     setTimeout(() => {
       setIsCheckingOut(false);
-      onCheckout();
-      onClose();
-    }, 1200);
+      setDemoResult('Demo complete. No payment was processed, no order was placed, and no book was added to your library.');
+    }, 700);
   };
 
   return (
@@ -107,7 +85,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-200/60 cursor-pointer"
+            aria-label="Close shopping cart"
+            className="grid min-h-11 min-w-11 place-items-center rounded-lg text-gray-500 hover:bg-gray-200/60 hover:text-gray-800"
           >
             <X className="w-5 h-5" />
           </button>
@@ -126,7 +105,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </p>
               <button
                 onClick={onClose}
-                className="mt-2 px-4 py-2 bg-[#bf0000] text-white text-xs font-bold rounded-lg cursor-pointer hover:bg-[#a60000]"
+                className="mt-2 min-h-11 rounded-lg bg-[#bf0000] px-4 text-sm font-bold text-white hover:bg-[#a60000]"
               >
                 Browse Books
               </button>
@@ -169,7 +148,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     </span>
                     <button
                       onClick={() => onRemoveItem(index)}
-                      className="p-1 text-gray-400 hover:text-red-600 rounded-md hover:bg-gray-100 transition-colors cursor-pointer"
+                      aria-label={`Remove ${item.book.title} from cart`}
+                      className="grid min-h-11 min-w-11 place-items-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-red-600"
                       title="Remove from cart"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -184,6 +164,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         {/* Cart Summary & Checkout Footer */}
         {cart.length > 0 && (
           <div className="p-5 border-t border-gray-200 bg-gray-50/80 space-y-4">
+            {demoResult && <p role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-950">{demoResult}</p>}
+            <p className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[11px] text-amber-950">
+              Demo checkout only — no payment is taken and this demo does not verify a digital license.
+            </p>
             
             {/* Promo Code Form */}
             <form onSubmit={applyPromo} className="space-y-1.5">
@@ -252,27 +236,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               )}
             </div>
 
-            {/* Payment Method Selector */}
-            <div className="space-y-1.5">
-              <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">Pay with</span>
-              <div className="grid grid-cols-2 gap-2">
-                {paymentMethods.map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setPaymentMethod(m.id)}
-                    disabled={isCheckingOut}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 ${
-                      paymentMethod === m.id
-                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600'
-                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                    }`}
-                  >
-                    {m.icon}
-                    <span>{m.label}</span>
-                  </button>
-                ))}
-              </div>
+            <div className="rounded-lg border border-slate-200 bg-white p-3 text-xs leading-relaxed text-slate-700">
+              No payment provider is connected. This demo will not submit an order or add books to your library.
             </div>
 
             {/* Checkout Action */}
@@ -284,11 +249,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               {isCheckingOut ? (
                 <span className="flex items-center gap-2">
                   <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  {paymentProcessingLabel[paymentMethod]}
+                  Running a checkout demo…
                 </span>
               ) : (
                 <>
-                  <span>Complete Instant Purchase</span>
+                  <span>{isAuthenticated ? 'Run demo checkout' : 'Sign in to review checkout'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -296,7 +261,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
             <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-500">
               <ShieldCheck className="w-3 h-3 text-emerald-600" />
-              <span>Secure 256-bit SSL encrypted checkout • 30-Day Guarantee</span>
+              <span>Review your order before simulated checkout</span>
             </div>
 
           </div>
