@@ -6,11 +6,13 @@ import express from 'express';
 import crypto from 'crypto';
 import { GoogleGenAI } from '@google/genai';
 import { INITIAL_BOOKS, GENRES } from '@workspace/bookatlas-catalog';
-import { isDbConfigured } from './db/supabaseClient.js';
+import { isDbConfigured, bookatlasDb } from './db/supabaseClient.js';
 import * as db from './db/repository.js';
 import { generateWithOpenRouter, isOpenRouterConfigured, type AiMessage } from './ai/openrouterClient.js';
 import { logger } from '../lib/logger';
 import { mountPublishingReadiness } from './publishing/routes.js';
+import { mountPublishingJobs } from './publishing/jobRoutes.js';
+import { mountWorkforce } from './workforce/routes.js';
 
 function isPlaceholderEnvValue(value?: string): boolean {
   if (!value) return true;
@@ -420,6 +422,13 @@ export async function createApp() {
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
   mountPublishingReadiness(app);
+  mountPublishingJobs(app, (book) => {
+    const existing = liveCatalog.findIndex((item: { id: string }) => item.id === book.id);
+    if (existing >= 0) liveCatalog[existing] = book;
+    else liveCatalog.unshift(book);
+    if (!customCategories.includes(book.primaryGenre)) customCategories.push(book.primaryGenre);
+  });
+  mountWorkforce(app);
 
   app.get('/api/auth/me', (req, res) => {
     const user = req.bookatlasIdentity!;
@@ -543,7 +552,15 @@ export async function createApp() {
   });
 
   // 1. Get Live Books Catalog
-  app.get('/api/books', (req, res) => {
+  app.get('/api/books', async (req, res) => {
+    if (bookatlasDb) {
+      const persisted = await bookatlasDb.from('books').select('data');
+      if (persisted.error) {
+        res.status(503).json({ success: false, error: 'The live catalog could not be loaded.' });
+        return;
+      }
+      if (persisted.data.length) liveCatalog = persisted.data.map((row: { data: unknown }) => row.data);
+    }
     const { genre, format, deal, search, sort } = req.query;
     let results = [...liveCatalog];
 

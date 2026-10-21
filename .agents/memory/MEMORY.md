@@ -3,3 +3,5 @@
 - [Publishing expectations](publishing-expectations.md) — the ingest studio must produce real books/audio and launch campaigns, not simulated completion claims.
 - [Supabase schema probes](supabase-schema-probes.md) — HEAD can falsely appear healthy for missing tables; use explicit GET selections to validate readiness.
 - [Shared Supabase isolation](shared-supabase-isolation.md) — the user chose dedicated Bookatlas tables; leave unrelated tables and their access policies untouched.
+- [Supabase network access](supabase-network-access.md) — database administration needs an IPv4-compatible session-pooler URI; the direct IPv6 endpoint is unreachable here.
+- [AI workforce scope](ai-workforce-scope.md) — user wants both in-app AI roles and development specialists; initial workers produce reviewed reports, not autonomous external actions.

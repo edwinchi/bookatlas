@@ -1,4 +1,5 @@
 import type { PublishingReadiness, PublishingReadinessCheck } from '@workspace/api-zod';
+import { resolveSupabaseConfig } from '../db/config.js';
 
 function configured(value?: string): boolean {
   return !!value?.trim() && !/^(YOUR_|MY_|your_.*_here)/.test(value.trim());
@@ -9,7 +10,7 @@ export function publishingReadiness(
   email: PublishingReadinessCheck[],
 ): PublishingReadiness {
   const ai = configured(env.GEMINI_API_KEY);
-  const database = configured(env.SUPABASE_URL) && configured(env.SUPABASE_SERVICE_ROLE_KEY);
+  const database = resolveSupabaseConfig(env).isConfigured;
   const storage = configured(env.PRIVATE_OBJECT_DIR);
   return {
     // Deliberately fail closed while the real durable pipeline is being built.
@@ -44,7 +45,7 @@ export function publishingReadiness(
       ...email,
       {
         id: 'pipeline', label: 'Real publishing pipeline', state: 'blocked',
-        detail: 'The legacy simulated ingest and campaign-send paths are disabled. Complete generation, packaging, narration, review, consent checks, and durable delivery records are still required.',
+        detail: 'The simulated ingest and send paths remain disabled. Source validation, complete-manuscript EPUB packaging, WAV validation, and budget reservation calculations passed unit checks. They are not yet connected to a durable job worker. AI extraction/generation, stored assets, narration, review, consent checks, and delivery still require implementation and end-to-end verification.',
       },
     ],
   };

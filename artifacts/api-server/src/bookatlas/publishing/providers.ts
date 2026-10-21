@@ -8,6 +8,8 @@ import { bookatlasTable } from '../db/tables.js';
 const REQUIRED_TABLES = [
   ['books', 'id,title,author,primary_genre,price,data,updated_at'],
   ['categories', 'name'],
+  ['registered_users', 'email,name,registered_at,last_active,reading_streak,books_read'],
+  ['campaigns', 'id,sent_at,data,created_at'],
   ['subscribers', 'email,status,marketing_consent_at,marketing_consent_source,is_demo,suppressed'],
   ['publishing_jobs', 'id,owner_id,status,stage,version,lease_token,lease_until,is_test,data,created_at,updated_at'],
   ['publishing_messages', 'id,job_id,recipient,kind,status,provider_id,attempts,error,created_at,updated_at'],

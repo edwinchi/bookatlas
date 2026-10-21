@@ -48,6 +48,7 @@ import { GENRES } from '../data/booksData';
 import { MultimodalPublishingStudio } from './MultimodalPublishingStudio';
 import { SubscriberManagerHub } from './SubscriberManagerHub';
 import { TRANSLATIONS } from '../data/translations';
+import { AITeamWorkspace } from './workforce/AITeamWorkspace';
 
 interface ManagerPortalProps {
   books: Book[];
@@ -85,7 +86,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
   onAdminLogout
 }) => {
 
-  const [activeTab, setActiveTab] = useState<'inventory' | 'upload_publish' | 'categories_mgr' | 'subscribers_blast' | 'ai_studio' | 'market_radar' | 'translation' | 'pricing' | 'marketing' | 'autopilot' | 'security'>('upload_publish');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'upload_publish' | 'categories_mgr' | 'subscribers_blast' | 'ai_studio' | 'market_radar' | 'translation' | 'pricing' | 'marketing' | 'autopilot' | 'security' | 'ai_team'>('upload_publish');
   
   // Custom Dynamic Categories
   const [publisherCategories, setPublisherCategories] = useState<string[]>([
@@ -868,7 +869,22 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
           <ShieldCheck className="w-4 h-4 text-emerald-600" />
           Admin Security & PIN Vault
         </button>
+
+        <button
+          onClick={() => setActiveTab('ai_team')}
+          data-testid="tab-ai-team"
+          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+            activeTab === 'ai_team'
+              ? 'bg-teal-800 text-white shadow-sm'
+              : 'text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          AI Team
+        </button>
       </div>
+
+      {activeTab === 'ai_team' && <AITeamWorkspace />}
 
       {/* ========================================================================= */}
       {/* TAB 0: MULTIMODAL INGEST & AUTONOMOUS PUBLISHING STUDIO */}
@@ -877,14 +893,15 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
         <MultimodalPublishingStudio
           onBookPublished={(newBook) => {
             onAddBook(newBook);
-            setAiSuccessMessage(`✨ Multimodal Ingest Completed: "${newBook.title}" synthesized & published live in "${newBook.primaryGenre}"!`);
+            const formats = newBook.format === 'bundle' ? 'eBook and audiobook' : newBook.format === 'audiobook' ? 'audiobook' : 'eBook';
+            setAiSuccessMessage(`Publication completed: "${newBook.title}" (${formats}) in "${newBook.primaryGenre}".`);
             setLogs(prev => [
               {
                 id: `log-${Date.now()}`,
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 actionType: 'ai_generation',
-                title: `Multimodal Ingest: "${newBook.title}"`,
-                description: `eBook & Audiobook created. Published in category: ${newBook.primaryGenre}.`,
+                title: `Publication: "${newBook.title}"`,
+                description: `Published as ${formats} in category: ${newBook.primaryGenre}.`,
                 badge: 'Multimodal AI'
               },
               ...prev

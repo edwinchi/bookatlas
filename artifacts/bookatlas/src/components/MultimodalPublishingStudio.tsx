@@ -1,26 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { UploadCloud, Sparkles, Layers, Plus, RefreshCw, Lock, AlertCircle, FlaskConical, History, FileText } from 'lucide-react';
 import {
-  UploadCloud,
-  FileText,
-  FileSpreadsheet,
-  Image as ImageIcon,
-  Headphones,
-  BookOpen,
-  Sparkles,
-  Send,
-  Mail,
-  CheckCircle2,
-  AlertCircle,
-  Layers,
-  ArrowRight,
-  RefreshCw,
-  Plus,
-  Lock,
-  History
-} from 'lucide-react';
+  useListPublishingJobs,
+  getListPublishingJobsQueryKey,
+  useCreatePublishingJob,
+  getGetPublishingJobQueryKey,
+} from '@workspace/api-client-react';
+import type { PublishingJob, PublishingJobInputVoice } from '@workspace/api-client-react';
 import { Book } from '../types';
-import { PublishingReadinessPanel } from './PublishingReadinessPanel';
 import { TRANSLATIONS } from '../data/translations';
+import { useAccount } from '../auth/AuthContext';
+import { PublishingReadinessPanel } from './PublishingReadinessPanel';
+import { PublishingJobDetail, STATUS_STYLE } from './publishing/PublishingJobDetail';
+import { describeError } from './publishing/AuthedAudioPlayer';
 
 interface MultimodalPublishingStudioProps {
   onBookPublished: (book: Book) => void;
@@ -30,561 +23,333 @@ interface MultimodalPublishingStudioProps {
   onAddCategory: (categoryName: string) => void;
 }
 
+const MAX_BYTES = 5 * 1024 * 1024;
+const ACCEPT = '.txt,.md,.pdf,.png,.jpg,.jpeg';
+const ALLOWED_EXT = ['txt', 'md', 'pdf', 'png', 'jpg', 'jpeg'];
+const VOICES: { id: PublishingJobInputVoice; note: string }[] = [
+  { id: 'Kore', note: 'firm' },
+  { id: 'Puck', note: 'upbeat' },
+  { id: 'Aoede', note: 'breezy' },
+  { id: 'Charon', note: 'informative' },
+];
+
+type Source = { fileName: string; mimeType: string; base64: string; size: number };
+
+const readAsBase64 = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const s = String(r.result || '');
+      const i = s.indexOf(',');
+      resolve(i >= 0 ? s.slice(i + 1) : '');
+    };
+    r.onerror = () => reject(r.error || new Error('File could not be read.'));
+    r.readAsDataURL(file);
+  });
+
 export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProps> = ({
   onBookPublished,
   language = 'en',
-  currencySymbol = '€',
   categories,
-  onAddCategory
+  onAddCategory,
 }) => {
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
+  const qc = useQueryClient();
+  const { account } = useAccount();
+  const accountId = account?.id ?? null;
+  const storageKey = accountId ? `bookatlas.studio.selectedJob.${accountId}` : null;
 
-  // Form State
-  const [fileList, setFileList] = useState<File[]>([]);
-  const [fileTextContent, setFileTextContent] = useState<string>('');
-  const [fileName, setFileName] = useState<string>('');
-  const [authorName, setAuthorName] = useState<string>('Atlantean Scholar & Archivist');
-  const [rawTitle, setRawTitle] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>(categories[0] || 'African Philosophy & Ancient Wisdom');
-  const [newCategoryInput, setNewCategoryInput] = useState<string>('');
-  const [showAddCategoryBox, setShowAddCategoryBox] = useState<boolean>(false);
-  const [editorNotes, setEditorNotes] = useState<string>('Synthesize into a high-caliber publication with authentic chapter cadence, historical grounding, and expressive studio TTS narration.');
-  const [voiceNarrator, setVoiceNarrator] = useState<string>('Kore (Studio AI Vocalist)');
-  const [targetLanguage, setTargetLanguage] = useState<string>('English');
-  
-  // Automation Flags
-  const [notifyPublisher, setNotifyPublisher] = useState<boolean>(false);
-  const [publisherEmail, setPublisherEmail] = useState<string>('');
-  const [dispatchUserCampaign, setDispatchUserCampaign] = useState<boolean>(false);
-  const [canPublish, setCanPublish] = useState<boolean>(false);
+  // Readiness: provider able to CREATE jobs
+  const [readinessOk, setReadinessOk] = useState(false);
 
-  // Processing State
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [resultData, setResultData] = useState<{
-    book?: Book;
-    publisherEmail?: any;
-    userCampaign?: any;
-    dispatchedUsersCount?: number;
-  } | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Form
+  const [source, setSource] = useState<Source | null>(null);
+  const [fileError, setFileError] = useState('');
+  const [reading, setReading] = useState(false);
+  const [title, setTitle] = useState('');
+  const [author, setAuthor] = useState('');
+  const [bookLanguage, setBookLanguage] = useState<'en' | 'nl'>(language);
+  const [category, setCategory] = useState(categories[0] || '');
+  const [newCategory, setNewCategory] = useState('');
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [chapterCount, setChapterCount] = useState(2);
+  const [wordsPerChapter, setWordsPerChapter] = useState(100);
+  const [voice, setVoice] = useState<PublishingJobInputVoice>('Kore');
+  const [includeAudio, setIncludeAudio] = useState(true);
+  const [isTest, setIsTest] = useState(true);
+  const [budget, setBudget] = useState('0.75');
+  const [submitError, setSubmitError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Email Dispatches History
-  const [recentDispatches, setRecentDispatches] = useState<any[]>([]);
-
+  // Selected job, scoped to verified account
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [publishNotice, setPublishNotice] = useState('');
   useEffect(() => {
-    fetchEmailDispatches();
-  }, []);
+    qc.removeQueries({ queryKey: getListPublishingJobsQueryKey() });
+    setPublishNotice('');
+    setSubmitError('');
+    setSelectedId(storageKey ? localStorage.getItem(storageKey) : null);
+  }, [storageKey, qc]);
+  const selectJob = (id: string | null) => {
+    setSelectedId(id);
+    if (!storageKey) return;
+    if (id) localStorage.setItem(storageKey, id); else localStorage.removeItem(storageKey);
+  };
 
-  const fetchEmailDispatches = async () => {
+  const jobs = useListPublishingJobs({
+    query: { enabled: !!accountId, queryKey: getListPublishingJobsQueryKey(), refetchOnMount: 'always', refetchInterval: (q) => (q.state.data?.some((j) => j.status === 'queued' || j.status === 'running') ? 5000 : false) },
+  });
+  const create = useCreatePublishingJob();
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFileError('');
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!ALLOWED_EXT.includes(ext)) { setFileError('Use a TXT, MD, PDF, PNG or JPG file.'); e.target.value = ''; return; }
+    if (file.size > MAX_BYTES) { setFileError(`This file is ${(file.size / 1048576).toFixed(1)} MB. The limit is 5 MB.`); e.target.value = ''; return; }
+    if (file.size === 0) { setFileError('This file is empty.'); e.target.value = ''; return; }
+    setReading(true);
     try {
-      const res = await fetch('/api/manager/email-dispatches', { credentials: 'include' });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.success && data.dispatches) {
-        setRecentDispatches(data.dispatches);
-      }
-    } catch (e) {
-      // ignore
-    }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const file = files[0];
-    setFileName(file.name);
-    setFileList(Array.from(files));
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      setFileTextContent(content || '');
-      if (!rawTitle) {
-        setRawTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
-      }
-    };
-
-    if (file.type.includes('text') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-      reader.readAsText(file);
-    } else {
-      // For binary files (PDF/Images), read preview note
-      setFileTextContent(`[Ingested Document Stream: ${file.name}, size: ${(file.size / 1024).toFixed(1)} KB, type: ${file.type}]`);
-      if (!rawTitle) {
-        setRawTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
-      }
-    }
-  };
-
-  const handleCreateNewCategory = () => {
-    if (!newCategoryInput.trim()) return;
-    const cat = newCategoryInput.trim();
-    onAddCategory(cat);
-    setSelectedCategory(cat);
-    setNewCategoryInput('');
-    setShowAddCategoryBox(false);
-  };
-
-  const handleSynthesizeAndPublish = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canPublish || isProcessing) return;
-    setIsProcessing(true);
-    setErrorMessage(null);
-    setResultData(null);
-
-    try {
-      const response = await fetch('/api/manager/multimodal-ingest', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileContents: fileTextContent,
-          fileName,
-          targetCategory: selectedCategory,
-          authorName,
-          rawTitle,
-          notes: editorNotes,
-          voiceNarrator,
-          notifyPublisher,
-          publisherEmail: notifyPublisher ? publisherEmail : '',
-          dispatchUserCampaign,
-          targetLanguage
-        })
-      });
-
-      const data = await response.json().catch(() => ({}));
-      if (response.ok && data.success && data.book) {
-        setResultData(data);
-        onBookPublished(data.book);
-        fetchEmailDispatches();
-      } else {
-        throw new Error(data.error || `Publishing request failed (HTTP ${response.status}).`);
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'The publishing request could not be completed.');
+      const base64 = await readAsBase64(file);
+      setSource({ fileName: file.name.slice(0, 180), mimeType: file.type || '', base64, size: file.size });
+      if (!title) setTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ').slice(0, 180));
+    } catch (err) {
+      setFileError(describeError(err, 'The file could not be read.'));
+      setSource(null);
     } finally {
-      setIsProcessing(false);
+      setReading(false);
     }
   };
+
+  const clearSource = () => { setSource(null); if (fileInputRef.current) fileInputRef.current.value = ''; };
+
+  const budgetNum = Number(budget);
+  const budgetValid = Number.isFinite(budgetNum) && budgetNum > 0 && budgetNum <= 1;
+  const formValid = !!source && title.trim() && author.trim() && category.trim() && budgetValid;
+  const canSubmit = readinessOk && !!formValid && !create.isPending && !reading;
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit || !source) return;
+    setSubmitError('');
+    create.mutate(
+      {
+        data: {
+          fileName: source.fileName,
+          mimeType: source.mimeType || undefined,
+          base64: source.base64,
+          title: title.trim(),
+          author: author.trim(),
+          language: bookLanguage,
+          category: category.trim(),
+          chapterCount,
+          wordsPerChapter,
+          voice,
+          includeAudio,
+          isTest,
+          budgetUsd: budgetNum,
+        },
+      },
+      {
+        onSuccess: (job) => {
+          qc.setQueryData(getGetPublishingJobQueryKey(job.id), job);
+          qc.invalidateQueries({ queryKey: getListPublishingJobsQueryKey() });
+          selectJob(job.id);
+        },
+        onError: (err) => setSubmitError(describeError(err, 'The job could not be created.')),
+      },
+    );
+  };
+
+  const handlePublished = async (job: PublishingJob) => {
+    qc.invalidateQueries({ queryKey: ['/api/books'] });
+    if (job.isTest || job.status !== 'published') {
+      setPublishNotice(job.isTest ? 'Test publication placed in the isolated test catalog. The public storefront is unchanged.' : '');
+      return;
+    }
+    try {
+      const res = await fetch('/api/books', { credentials: 'include' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const list: (Book & { publicationId?: string })[] = Array.isArray(data) ? data : data.books || [];
+      const match = list.find((b) => b.id === job.id || b.publicationId === job.id);
+      if (match) {
+        onBookPublished(match);
+        setPublishNotice(`"${match.title}" is now in the public storefront.`);
+      } else {
+        setPublishNotice('Published, but the storefront has not listed this book yet. Reload the catalog shortly.');
+      }
+    } catch {
+      setPublishNotice('Published, but the storefront catalog could not be refreshed. Reload the catalog shortly.');
+    }
+  };
+
+  const input = 'w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-600';
+  const lbl = 'block text-xs font-bold text-slate-700 mb-1';
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      
-      {/* Hero Ingest Header */}
       <div className="bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
           <div className="flex items-center gap-2">
             <span className="bg-amber-400 text-slate-950 text-xs font-extrabold px-3 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" />
-              Multimodal Ingest Studio
+              <Sparkles className="w-3.5 h-3.5" aria-hidden />Publishing Studio
             </span>
-            <span className="text-xs text-slate-400">Administrator publishing workspace</span>
+            <span className="text-xs text-slate-400">Administrator workspace</span>
           </div>
-
-          <span className="text-xs text-amber-200 font-bold bg-white/10 px-3 py-1 rounded-xl">
-            AI models: unverified, configuration required
-          </span>
+          <span className="text-xs text-amber-200 font-bold bg-white/10 px-3 py-1 rounded-xl">Output requires review before publishing</span>
         </div>
-
-        <h2 className="text-2xl sm:text-3xl font-serif font-extrabold text-white">
-          {t.uploadManuscript}
-        </h2>
+        <h2 className="text-2xl sm:text-3xl font-serif font-extrabold text-white">{t.uploadManuscript}</h2>
         <p className="text-xs sm:text-sm text-slate-300 mt-2 max-w-3xl leading-relaxed">
-          {t.uploadSubtitle}
+          Upload one real source file. The server writes a short book from it, builds a private EPUB and, if selected, narrates each chapter. Nothing reaches readers until you review and publish it.
         </p>
       </div>
 
-      {/* Success Notification Card */}
-      {canPublish && resultData && resultData.book && (
-        <div className="bg-emerald-950/40 border-2 border-emerald-500/60 rounded-3xl p-6 shadow-xl animate-fadeIn text-white space-y-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center font-bold">
-                <CheckCircle2 className="w-6 h-6" />
+      <PublishingReadinessPanel onReadinessChange={setReadinessOk} />
+
+      {publishNotice && <p role="status" className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">{publishNotice}</p>}
+
+      <form onSubmit={submit} className="grid grid-cols-1 lg:grid-cols-12 gap-8" aria-label="New publishing job">
+        <div className="lg:col-span-7 space-y-6">
+          <div className="bg-white rounded-3xl border-2 border-dashed border-indigo-200 hover:border-indigo-500 focus-within:border-indigo-600 p-6 sm:p-8 transition-colors text-center relative group">
+            <input ref={fileInputRef} id="studio-source" type="file" accept={ACCEPT} onChange={handleFile} aria-describedby="studio-source-help" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" />
+            <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+              {reading ? <RefreshCw className="w-7 h-7 animate-spin" aria-hidden /> : <UploadCloud className="w-7 h-7" aria-hidden />}
+            </div>
+            <h3 className="text-base font-serif font-bold text-slate-900 mb-1">
+              {reading ? 'Reading file…' : source ? source.fileName : 'Choose one source file'}
+            </h3>
+            <p id="studio-source-help" className="text-xs text-slate-500 max-w-md mx-auto mb-3">
+              {source ? `${(source.size / 1024).toFixed(1)} KB, ${source.mimeType || 'unknown type'}. The exact file bytes are sent to the server.` : 'TXT, MD, PDF, PNG or JPG, up to 5 MB.'}
+            </p>
+            <span className="inline-block px-4 py-1.5 bg-slate-950 text-white text-xs font-bold rounded-xl shadow-sm">{source ? 'Replace file' : 'Browse files'}</span>
+          </div>
+          {source && (
+            <button type="button" onClick={clearSource} className="text-xs font-bold text-slate-600 underline cursor-pointer -mt-3">Remove file</button>
+          )}
+          {fileError && <p role="alert" className="text-xs text-rose-700 font-semibold flex items-center gap-1.5"><AlertCircle className="w-4 h-4" aria-hidden />{fileError}</p>}
+
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
+            <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5"><FileText className="w-4 h-4 text-indigo-600" aria-hidden />Book details</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div><label htmlFor="s-title" className={lbl}>Title</label><input id="s-title" maxLength={180} value={title} onChange={(e) => setTitle(e.target.value)} className={input} /></div>
+              <div><label htmlFor="s-author" className={lbl}>Author</label><input id="s-author" maxLength={120} value={author} onChange={(e) => setAuthor(e.target.value)} className={input} /></div>
+              <div><label htmlFor="s-lang" className={lbl}>Book language</label>
+                <select id="s-lang" value={bookLanguage} onChange={(e) => setBookLanguage(e.target.value as 'en' | 'nl')} className={input}>
+                  <option value="en">English</option><option value="nl">Nederlands</option>
+                </select>
               </div>
               <div>
-                <h3 className="text-lg font-serif font-bold text-emerald-200">
-                  Publishing request accepted
-                </h3>
-                <p className="text-xs text-slate-300">
-                  Assigned Category: <strong className="text-amber-400">{resultData.book.primaryGenre}</strong> • ISBN: {resultData.book.isbn}
-                </p>
+                <div className="flex items-center justify-between mb-1">
+                  <label htmlFor="s-cat" className="text-xs font-bold text-slate-700">Category</label>
+                  <button type="button" onClick={() => setShowAddCategory((v) => !v)} aria-expanded={showAddCategory} className="text-[11px] text-indigo-600 font-bold flex items-center gap-1 cursor-pointer"><Plus className="w-3 h-3" aria-hidden />{t.addCategory}</button>
+                </div>
+                <select id="s-cat" value={category} onChange={(e) => setCategory(e.target.value)} className={input}>
+                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
             </div>
+            {showAddCategory && (
+              <div className="flex gap-2">
+                <input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} maxLength={100} aria-label="New category name" className="flex-1 px-3 py-2 bg-white border border-indigo-200 rounded-xl text-xs" />
+                <button type="button" onClick={() => { const c = newCategory.trim(); if (!c) return; onAddCategory(c); setCategory(c); setNewCategory(''); setShowAddCategory(false); }} className="px-3 py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl cursor-pointer">
+                  <Layers className="w-3.5 h-3.5 inline mr-1" aria-hidden />Save
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
 
-            <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-bold rounded-xl border border-emerald-500/30">
-              Server response
-            </span>
+        <div className="lg:col-span-5 space-y-6">
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
+            <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Output</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label htmlFor="s-ch" className={lbl}>Chapters (2–8)</label><input id="s-ch" type="number" min={2} max={8} value={chapterCount} onChange={(e) => setChapterCount(Math.min(8, Math.max(2, Number(e.target.value) || 2)))} className={input} /></div>
+              <div><label htmlFor="s-w" className={lbl}>Words / chapter</label><input id="s-w" type="number" min={100} max={800} step={50} value={wordsPerChapter} onChange={(e) => setWordsPerChapter(Math.min(800, Math.max(100, Number(e.target.value) || 100)))} className={input} /></div>
+            </div>
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer">
+              <input type="checkbox" checked={includeAudio} onChange={(e) => setIncludeAudio(e.target.checked)} className="w-4 h-4" />Narrate each chapter
+            </label>
+            {includeAudio && (
+              <div><label htmlFor="s-voice" className={lbl}>Narration voice</label>
+                <select id="s-voice" value={voice} onChange={(e) => setVoice(e.target.value as PublishingJobInputVoice)} className={input}>
+                  {VOICES.map((v) => <option key={v.id} value={v.id}>{v.id} ({v.note})</option>)}
+                </select>
+              </div>
+            )}
           </div>
 
-          {/* Book Details Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-950/60 p-4 rounded-2xl border border-white/10">
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
+            <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5"><FlaskConical className="w-4 h-4 text-violet-600" aria-hidden />Run type and cost cap</h4>
+            <label className="flex items-start gap-2 text-xs text-slate-800 cursor-pointer">
+              <input type="checkbox" checked={isTest} onChange={(e) => setIsTest(e.target.checked)} className="w-4 h-4 mt-0.5" />
+              <span><strong>Test run.</strong> Output can only be published to the isolated test catalog, never the public storefront.</span>
+            </label>
             <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400">Title & Author</p>
-              <p className="text-sm font-bold text-white">{resultData.book.title}</p>
-              <p className="text-xs text-slate-300">by {resultData.book.author}</p>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400">Narrator & Format</p>
-              <p className="text-xs font-semibold text-slate-200">{resultData.book.narrator}</p>
-              <p className="text-xs text-amber-400 font-bold">{resultData.book.audioDurationMinutes ? `Reported audio length: ${resultData.book.audioDurationMinutes} min` : 'No audio reported'}</p>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400">Notifications</p>
-              <p className="text-xs text-slate-300">
-                Delivery is not confirmed by an email provider. Check provider logs before treating any message as sent.
+              <label htmlFor="s-budget" className={lbl}>Cost cap for this job (US$)</label>
+              <input id="s-budget" type="number" min={0.01} max={1} step={0.05} value={budget} onChange={(e) => setBudget(e.target.value)} aria-invalid={!budgetValid} aria-describedby="s-budget-help" className={input} />
+              <p id="s-budget-help" className={`text-[11px] mt-1 ${budgetValid ? 'text-slate-500' : 'text-rose-700 font-semibold'}`}>
+                {budgetValid ? 'The server stops the job before exceeding this amount.' : 'Enter an amount above 0 and at most 1.00.'}
               </p>
             </div>
-          </div>
-
-          {/* Quick Preview of Email and Campaign */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            {resultData.publisherEmail && (
-              <div className="p-3.5 bg-white/5 rounded-xl border border-white/10">
-                <p className="font-bold text-amber-300 flex items-center gap-1.5 mb-1">
-                  <Mail className="w-3.5 h-3.5" /> Publisher letter draft:
-                </p>
-                <p className="text-slate-300 line-clamp-3 italic">"{resultData.publisherEmail.body}"</p>
-              </div>
-            )}
-            {resultData.userCampaign && (
-              <div className="p-3.5 bg-white/5 rounded-xl border border-white/10">
-                <p className="font-bold text-indigo-300 flex items-center gap-1.5 mb-1">
-                  <Send className="w-3.5 h-3.5" /> Reader campaign draft:
-                </p>
-                <p className="text-slate-300 line-clamp-3 italic">"{resultData.userCampaign.emailBody}"</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
-          <p className="text-xs font-semibold">{errorMessage}</p>
-        </div>
-      )}
-
-      <PublishingReadinessPanel onReadinessChange={setCanPublish} />
-
-      {/* Main Form Layout */}
-      <form onSubmit={handleSynthesizeAndPublish} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Left Column: Upload & Content Details (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
-          
-          {/* File Dropzone */}
-          <div className="bg-white rounded-3xl border-2 border-dashed border-indigo-200 hover:border-indigo-500 p-6 sm:p-8 transition-colors text-center relative group">
-            <input
-              type="file"
-              accept=".txt,.md,.pdf,.png,.jpg,.jpeg,.json,.docx"
-              onChange={handleFileUpload}
-              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
-            />
-            <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-              <UploadCloud className="w-7 h-7" />
-            </div>
-
-            <h3 className="text-base font-serif font-bold text-slate-900 mb-1">
-              {fileName ? `Loaded: ${fileName}` : 'Drop Text Files, PDFs, Pictures or Notes here'}
-            </h3>
-            <p className="text-xs text-slate-500 max-w-md mx-auto mb-3">
-              Supports .txt, .md, PDF manuscript drafts, book cover art, chapter outlines, and audio transcripts.
+            <p className="text-[11px] text-slate-600 bg-violet-50 border border-violet-100 rounded-xl p-3 leading-relaxed">
+              Only one synthetic test totalling US$1 has been authorized so far. Every other run spends real provider credit, so set an explicit cap you accept.
             </p>
-            <span className="inline-block px-4 py-1.5 bg-slate-950 text-white text-xs font-bold rounded-xl shadow-sm">
-              Browse Local Files
-            </span>
           </div>
 
-          {/* Text/Manuscript Preview Area */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                <FileText className="w-4 h-4 text-indigo-600" />
-                Ingested Content & Manuscript Excerpt
-              </label>
-              <span className="text-[11px] text-slate-400 font-medium">
-                {fileTextContent.length} characters
-              </span>
-            </div>
+          {submitError && <p role="alert" className="text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-xl p-3">{submitError}</p>}
 
-            <textarea
-              rows={5}
-              value={fileTextContent}
-              onChange={(e) => setFileTextContent(e.target.value)}
-              placeholder="Paste raw text, manuscript chapters, research notes, or let the uploaded file populate here..."
-              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-mono text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all leading-relaxed"
-            ></textarea>
-          </div>
-
-          {/* Book Metadata Inputs */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
-            <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
-              Publication Coordinates
-            </h4>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Target / Suggested Title
-                </label>
-                <input
-                  type="text"
-                  value={rawTitle}
-                  onChange={(e) => setRawTitle(e.target.value)}
-                  placeholder="e.g. The Sacred Horizon of Nubia"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-indigo-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Author / Collective Name
-                </label>
-                <input
-                  type="text"
-                  value={authorName}
-                  onChange={(e) => setAuthorName(e.target.value)}
-                  placeholder="e.g. Dr. Cheikh Anta Diop"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-indigo-600"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Editorial & Synthesis Instructions
-              </label>
-              <input
-                type="text"
-                value={editorNotes}
-                onChange={(e) => setEditorNotes(e.target.value)}
-                placeholder="Direct the AI on tone, chapter depth, or philosophical themes..."
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:ring-2 focus:ring-indigo-600"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Category, Voice, Email & Publishing Automation (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          
-          {/* Category Assignment Box */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-amber-500" />
-                Target Bookstore Category
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowAddCategoryBox(!showAddCategoryBox)}
-                className="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                {t.addCategory}
-              </button>
-            </div>
-
-            {showAddCategoryBox && (
-              <div className="p-3.5 bg-indigo-50/70 rounded-2xl border border-indigo-100 space-y-2 animate-fadeIn">
-                <p className="text-[11px] font-bold text-indigo-950">Add Custom Publisher Category</p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newCategoryInput}
-                    onChange={(e) => setNewCategoryInput(e.target.value)}
-                    placeholder="e.g. Afrofuturism & Speculative Space"
-                    className="flex-1 px-3 py-1.5 bg-white border border-indigo-200 rounded-xl text-xs font-medium"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleCreateNewCategory}
-                    className="px-3 py-1.5 bg-indigo-600 text-white font-bold text-xs rounded-xl shadow cursor-pointer"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-indigo-600 cursor-pointer"
-            >
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Voice Narrator & Language */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
-            <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-              <Headphones className="w-4 h-4 text-indigo-600" />
-              Audiobook Synthesizer & Language
-            </h4>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                  TTS Narrator Voice
-                </label>
-                <select
-                  value={voiceNarrator}
-                  onChange={(e) => setVoiceNarrator(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
-                >
-                  <option value="Kore (Studio AI Vocalist)">Kore (Warm, Resonant)</option>
-                  <option value="Fenrir (Studio AI Vocalist)">Fenrir (Deep, Authoritative)</option>
-                  <option value="Puck (Studio AI Vocalist)">Puck (Playful, Dynamic)</option>
-                  <option value="Zephyr (Studio AI Vocalist)">Zephyr (Calm, Meditative)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                  Language / Taal
-                </label>
-                <select
-                  value={targetLanguage}
-                  onChange={(e) => setTargetLanguage(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
-                >
-                  <option value="English">English</option>
-                  <option value="Dutch">Nederlands (Dutch)</option>
-                  <option value="French">Français (French)</option>
-                  <option value="Spanish">Español (Spanish)</option>
-                  <option value="Swahili">Kiswahili</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Automated Notifications & Marketing Triggers */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
-            <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-              <Mail className="w-4 h-4 text-emerald-600" />
-              Optional Notifications (off by default)
-            </h4>
-
-            <div className="space-y-3">
-              {/* Publisher Email Checkbox */}
-              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="notify-pub-check"
-                    checked={notifyPublisher}
-                    onChange={(e) => setNotifyPublisher(e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 rounded cursor-pointer"
-                  />
-                  <label htmlFor="notify-pub-check" className="text-xs font-bold text-slate-900 cursor-pointer">
-                    {t.sendEmailToPublisher}
-                  </label>
-                </div>
-                {notifyPublisher && (
-                  <input
-                    type="email"
-                    value={publisherEmail}
-                    onChange={(e) => setPublisherEmail(e.target.value)}
-                    placeholder="publisher@example.com"
-                    aria-label="Publisher email address"
-                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
-                  />
-                )}
-              </div>
-
-              {/* User Launch Campaign Checkbox */}
-              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="dispatch-user-check"
-                    checked={dispatchUserCampaign}
-                    onChange={(e) => setDispatchUserCampaign(e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 rounded cursor-pointer"
-                  />
-                  <label htmlFor="dispatch-user-check" className="text-xs font-bold text-slate-900 cursor-pointer">
-                    {t.dispatchCampaignToUsers}
-                  </label>
-                </div>
-                <p className="text-[10px] text-slate-500 mt-1 pl-6">
-                  Requests a release announcement to registered readers. Only takes effect once a verified email provider is configured.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Action Publish Button */}
-          <button
-            type="submit"
-            disabled={isProcessing || !canPublish}
-            aria-describedby="publish-status-note"
-            className="w-full py-4 bg-gradient-to-r from-slate-950 via-indigo-900 to-slate-950 hover:from-slate-900 hover:to-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2.5 cursor-pointer"
-          >
-            {isProcessing ? (
-              <span className="flex items-center gap-2">
-                <RefreshCw className="w-5 h-5 animate-spin text-amber-400" />
-                <span>Request in progress…</span>
-              </span>
-            ) : !canPublish ? (
-              <>
-                <Lock className="w-5 h-5 text-amber-400" />
-                <span>Publishing unavailable</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5 text-amber-400" />
-                <span>Synthesize & Publish Book</span>
-                <ArrowRight className="w-5 h-5" />
-              </>
-            )}
+          <button type="submit" disabled={!canSubmit} aria-describedby="s-submit-note" className="w-full py-4 bg-gradient-to-r from-slate-950 via-indigo-900 to-slate-950 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm rounded-2xl shadow-xl flex items-center justify-center gap-2.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400">
+            {create.isPending ? <><RefreshCw className="w-5 h-5 animate-spin text-amber-400" aria-hidden />Sending request…</> : !readinessOk ? <><Lock className="w-5 h-5 text-amber-400" aria-hidden />Generation unavailable</> : <><Sparkles className="w-5 h-5 text-amber-400" aria-hidden />Create draft for review</>}
           </button>
-          <p id="publish-status-note" role="status" className="text-[11px] text-slate-500 text-center">
-            {isProcessing ? 'Waiting for the server to respond.' : canPublish ? 'Readiness checks passed.' : 'Submission is disabled until every readiness check passes. Your form entries are kept.'}
+          <p id="s-submit-note" role="status" className="text-[11px] text-slate-500 text-center">
+            {!readinessOk ? 'Generation is disabled until every readiness check passes. Your entries are kept.' : !formValid ? 'Add a source file, title, author, category and a valid cost cap.' : 'Creates a draft. Nothing is published automatically.'}
           </p>
         </div>
-
       </form>
 
-      {/* Recent Dispatches Log */}
-      {recentDispatches.length > 0 && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <section aria-labelledby="jobs-heading" className="lg:col-span-4 bg-white rounded-3xl border border-slate-200 p-6 space-y-3 self-start">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-              <History className="w-4 h-4 text-slate-500" />
-              Legacy demo records
-            </h4>
-            <span className="text-xs text-slate-400 font-medium">
-              {recentDispatches.length} records, not provider deliveries
-            </span>
+            <h4 id="jobs-heading" className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5"><History className="w-4 h-4 text-slate-500" aria-hidden />Recent jobs</h4>
+            <button type="button" onClick={() => jobs.refetch()} disabled={jobs.isFetching || !accountId} aria-label="Refresh job list" className="p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer disabled:opacity-50">
+              <RefreshCw className={`w-3.5 h-3.5 ${jobs.isFetching ? 'animate-spin' : ''}`} aria-hidden />
+            </button>
           </div>
+          {!accountId ? (
+            <p className="text-xs text-slate-500">Sign in with an administrator account to see jobs.</p>
+          ) : jobs.isLoading ? (
+            <div className="space-y-2" aria-busy="true">{[0, 1, 2].map((i) => <div key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse" />)}</div>
+          ) : jobs.isError ? (
+            <div role="alert" className="text-xs text-rose-800 space-y-1"><p>{describeError(jobs.error, 'Jobs could not be loaded.')}</p><button type="button" onClick={() => jobs.refetch()} className="font-bold underline cursor-pointer">Retry</button></div>
+          ) : !jobs.data || jobs.data.length === 0 ? (
+            <p className="text-xs text-slate-500 p-4 rounded-xl border border-dashed border-slate-200 text-center">No jobs yet. Created drafts are kept here across reloads.</p>
+          ) : (
+            <ul className="space-y-1.5 max-h-[28rem] overflow-y-auto pr-1">
+              {jobs.data.map((j) => (
+                <li key={j.id}>
+                  <button type="button" onClick={() => selectJob(j.id)} aria-current={selectedId === j.id} className={`w-full text-left p-3 rounded-xl border transition-colors cursor-pointer ${selectedId === j.id ? 'border-indigo-400 bg-indigo-50/60' : 'border-slate-200 hover:bg-slate-50'}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-slate-900 truncate">{j.title}</span>
+                      <span className={`px-1.5 py-0.5 text-[9px] font-bold uppercase rounded border ${STATUS_STYLE[j.status]}`}>{j.status}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">{j.isTest ? 'Test · ' : ''}{new Date(j.createdAt).toLocaleString()}</p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-          <p className="text-[11px] text-slate-500">These entries were created by the earlier demo flow. No email provider confirmed delivery of any of them.</p>
-          <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto pr-1">
-            {recentDispatches.slice(0, 8).map((d) => (
-              <div key={d.id} className="py-2.5 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${d.type === 'publisher_notification' ? 'bg-amber-500' : 'bg-indigo-500'}`}></span>
-                  <div>
-                    <p className="font-bold text-slate-900">{d.subject}</p>
-                    <p className="text-[11px] text-slate-500">To: {d.recipient} • {d.timestamp}</p>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 font-bold text-[10px] rounded-md whitespace-nowrap">
-                  Demo record
-                </span>
-              </div>
-            ))}
-          </div>
+        <div className="lg:col-span-8">
+          {selectedId && accountId ? (
+            <PublishingJobDetail key={selectedId} jobId={selectedId} onPublished={handlePublished} />
+          ) : (
+            <div className="bg-white rounded-3xl border border-dashed border-slate-200 p-10 text-center text-xs text-slate-500">Select a job to review its chapters, narration and EPUB.</div>
+          )}
         </div>
-      )}
-
+      </div>
     </div>
   );
 };

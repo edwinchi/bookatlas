@@ -1,0 +1,316 @@
+You are building MarketItNow, an AI-powered Knowledge Atlas platform inspired by BookAtlas.
+
+CRITICAL BUSINESS REQUIREMENT:
+
+90% of users will access the platform from mobile devices.
+
+Mobile is NOT a secondary experience.
+
+Mobile is the primary platform.
+
+Desktop is an enhancement.
+
+Every design, feature, workflow, and component must be designed for mobile first and desktop second.
+
+═══════════════════════════
+MOBILE-FIRST DESIGN RULES
+═══════════════════════════
+
+1. Design mobile first.
+2. Build mobile first.
+3. Test mobile first.
+4. Optimize mobile first.
+5. Never assume desktop usage.
+
+Target devices:
+
+- iPhone SE
+- iPhone 12
+- iPhone 15
+- Samsung Galaxy A Series
+- Samsung Galaxy S Series
+- Google Pixel
+
+Minimum screen width:
+
+320px
+
+Primary screen widths:
+
+320px
+375px
+390px
+414px
+428px
+
+Only after mobile is perfect should layouts be expanded for tablets and desktop.
+
+═══════════════════════════
+PERFORMANCE REQUIREMENTS
+═══════════════════════════
+
+Target metrics:
+
+First Contentful Paint < 1.5 seconds
+
+Largest Contentful Paint < 2.5 seconds
+
+Page Weight < 1 MB where possible
+
+Time To Interactive < 3 seconds
+
+Core Web Vitals must pass.
+
+Mobile Lighthouse score:
+
+95+
+
+Desktop Lighthouse score:
+
+90+
+
+═══════════════════════════
+UI REQUIREMENTS
+═══════════════════════════
+
+Touch Friendly:
+
+Minimum tap target:
+
+48px × 48px
+
+Preferred:
+
+56px × 56px
+
+No tiny buttons.
+
+No tiny links.
+
+No hover-only features.
+
+Everything must work through touch gestures.
+
+Support:
+
+- Tap
+- Long Press
+- Drag
+- Swipe
+- Pinch Zoom
+
+═══════════════════════════
+ATLAS VIEW REQUIREMENTS
+═══════════════════════════
+
+BookAtlas style visualization must be redesigned for mobile.
+
+DO NOT attempt to display large desktop tile grids.
+
+Requirements:
+
+- Single thumb navigation
+- Vertical scrolling
+- Smooth zoom
+- Swipe between chapters
+- Expandable cards
+- Progressive loading
+
+For mobile:
+
+Book
+↓
+Chapter
+↓
+Section
+↓
+Content
+
+Must be navigation tree based.
+
+Avoid overwhelming users.
+
+═══════════════════════════
+AI CHAT REQUIREMENTS
+═══════════════════════════
+
+AI chat is the primary feature.
+
+Requirements:
+
+Chat occupies at least 70% of screen.
+
+Sticky input bar.
+
+Voice input.
+
+Suggested prompts.
+
+Quick actions.
+
+One-thumb operation.
+
+Support:
+
+- Text
+- Voice
+- File upload
+- Camera upload
+
+═══════════════════════════
+SEARCH REQUIREMENTS
+═══════════════════════════
+
+Search must be available globally.
+
+Persistent search button.
+
+1 tap access.
+
+Support:
+
+- Semantic search
+- Voice search
+- History
+- Recent searches
+
+Maximum 2 taps to begin searching.
+
+═══════════════════════════
+CONTENT READING EXPERIENCE
+═══════════════════════════
+
+Reading mode optimized for mobile.
+
+Requirements:
+
+- Adjustable font size
+- Dark mode
+- Reading progress
+- Swipe navigation
+- Offline support
+
+Line length:
+
+50-70 characters
+
+Readable for long sessions.
+
+═══════════════════════════
+SEO DASHBOARD REQUIREMENTS
+═══════════════════════════
+
+All dashboards must work on mobile.
+
+Use:
+
+Cards
+Lists
+Accordions
+
+Avoid:
+
+Large tables
+Complex grids
+Spreadsheet layouts
+
+Mobile analytics should feel like:
+
+Instagram Insights
+YouTube Studio
+Google Analytics Mobile
+
+═══════════════════════════
+RESPONSIVE REQUIREMENTS
+═══════════════════════════
+
+Breakpoints:
+
+320
+375
+390
+414
+768
+1024
+1440
+
+Every component must have:
+
+Mobile design
+Tablet design
+Desktop design
+
+No desktop-only features.
+
+═══════════════════════════
+PWA REQUIREMENTS
+═══════════════════════════
+
+Platform must be installable.
+
+Required:
+
+- Add to Home Screen
+- Offline Mode
+- Push Notifications
+- Local Caching
+- Background Sync
+
+Must behave like a native app.
+
+═══════════════════════════
+ACCESSIBILITY
+═══════════════════════════
+
+WCAG AA compliance.
+
+Requirements:
+
+- Screen reader support
+- High contrast mode
+- Large text support
+- Keyboard navigation
+- Accessible forms
+
+═══════════════════════════
+DEVELOPER REQUIREMENTS
+═══════════════════════════
+
+Before implementing any feature ask:
+
+"How does this feel on a 375px wide phone?"
+
+If the answer is poor:
+
+Redesign before development.
+
+Never ship desktop-first UI.
+
+Never hide mobile issues.
+
+Mobile user experience has priority over desktop convenience.
+
+═══════════════════════════
+SUCCESS METRICS
+═══════════════════════════
+
+Target:
+
+90% mobile satisfaction score.
+
+Mobile bounce rate < 30%.
+
+Average session duration > 10 minutes.
+
+Mobile conversion rate > desktop conversion rate.
+
+All major workflows must be completable using one hand.
+
+The final product should feel like:
+
+ChatGPT Mobile
+Notion Mobile
+Instagram
+TikTok
+
+combined into an AI-powered Knowledge Atlas.

@@ -122,21 +122,33 @@ export default function App() {
 
   // Load books from backend API if available
   useEffect(() => {
-    fetch('/api/books')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.books && data.books.length > 0) {
-          setBooks(data.books);
-        }
-      })
-      .catch((err) => {
-        console.log('Using seeded catalog initialization:', err);
-      });
+    const controller = new AbortController();
+    const refresh = () => {
+      fetch('/api/books', { signal: controller.signal })
+        .then((res) => {
+          if (!res.ok) throw new Error('Catalog is temporarily unavailable.');
+          return res.json();
+        })
+        .then((data) => {
+          if (!controller.signal.aborted && data.success && Array.isArray(data.books)) setBooks(data.books);
+        })
+        .catch((err) => {
+          if (!controller.signal.aborted) console.warn('Catalog refresh failed:', err);
+        });
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 30_000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+    };
   }, []);
 
   // Manager Book CRUD handlers
   const handleAddBook = (newBook: Book) => {
-    setBooks((prev) => [newBook, ...prev]);
+    setBooks((prev) => [newBook, ...prev.filter(book => book.id !== newBook.id)]);
   };
 
   const handleUpdateBook = (updatedBook: Book) => {

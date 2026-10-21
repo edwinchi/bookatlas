@@ -30,6 +30,7 @@ export interface BookReview {
 
 export interface Book {
   id: string;
+  publicationId?: string;
   title: string;
   subtitle?: string;
   author: string;

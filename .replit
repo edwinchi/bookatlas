@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-24", "python-base-3.13"]
 
 [deployment]
 router = "application"
@@ -45,5 +45,9 @@ timeoutMs = 20000
 BOOKATLAS_OWNER_EMAIL = "apehgongedwin@gmail.com"
 BOOKATLAS_EMAIL_FROM = "getintouch@apps-pilot.nl"
 BOOKATLAS_EMAIL_MODE = "test"
-SUPABASE_URL = "https://nodzslouearhjsiwhvst.supabase.co"
+SUPABASE_URL = "https://aklxrbozgnwueswyerfz.supabase.co"
 BOOKATLAS_TEST_BUDGET_USD = "1.00"
+BOOKATLAS_SUPABASE_KEY_MODE = "secret"
+BOOKATLAS_PUBLISHING_ENABLED = "true"
+BOOKATLAS_PUBLIC_URL = "https://bookatlas.replit.app"
+BOOKATLAS_EMAIL_TEST_RECIPIENTS = "apehgongedwin@gmail.com"

@@ -20,6 +20,7 @@ import {
   BookmarkCheck
 } from 'lucide-react';
 import { Book } from '../types';
+import { ReaderPublicationAccess } from './publishing/ReaderPublicationAccess';
 
 interface BookDetailModalProps {
   book: Book | null;
@@ -34,7 +35,12 @@ interface BookDetailModalProps {
   onRequireAiAccess?: (featureTitle: string, featureDescription: string, action: () => void) => void;
 }
 
-export const BookDetailModal: React.FC<BookDetailModalProps> = ({
+export const BookDetailModal: React.FC<BookDetailModalProps> = (props) => {
+  if (!props.book) return null;
+  return <BookDetailContent {...props} book={props.book} />;
+};
+
+const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
   book,
   onClose,
   onReadSample,
@@ -46,7 +52,8 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
   hasAiAccess = true,
   onRequireAiAccess,
 }) => {
-  if (!book) return null;
+  const publicationId = (book as Book & { publicationId?: string }).publicationId;
+  const isGenerated = !!publicationId;
 
   const [activeTab, setActiveTab] = useState<'overview' | 'ai_summary' | 'reviews' | 'author'>('overview');
   const [selectedFormat, setSelectedFormat] = useState<'ebook' | 'audiobook'>('ebook');
@@ -202,7 +209,11 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
                       <Sparkles className="w-3 h-3 text-amber-500" /> Bookatlas Plus Eligible
                     </span>
                   )}
-                  <span className="text-xs text-slate-500 font-medium">ISBN: {book.isbn}</span>
+                  {isGenerated ? (
+                    <span className="text-xs text-violet-800 bg-violet-50 border border-violet-200 font-bold px-2 py-0.5 rounded-md">AI-assisted short edition</span>
+                  ) : (
+                    <span className="text-xs text-slate-500 font-medium">ISBN: {book.isbn}</span>
+                  )}
                 </div>
 
                 {/* Title & Subtitle */}
@@ -232,6 +243,9 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
                 </div>
 
                 {/* Star rating summary */}
+                {isGenerated ? (
+                  <p className="mt-3 text-xs text-slate-500">Generated from an uploaded source and reviewed by a Bookatlas editor. No reader ratings yet.</p>
+                ) : (
                 <div className="flex items-center gap-2 mt-3">
                   <div className="flex items-center text-amber-400">
                     {[...Array(5)].map((_, i) => (
@@ -243,6 +257,12 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
                     ({book.reviewCount.toLocaleString()} verified readers)
                   </span>
                 </div>
+                )}
+                {isGenerated && publicationId && (
+                  <div className="mt-4">
+                    <ReaderPublicationAccess publicationId={publicationId} />
+                  </div>
+                )}
               </div>
 
               {/* Format Switcher */}
@@ -271,7 +291,7 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
                         {book.price === 0 ? 'Free' : `${currencySymbol}${book.price.toFixed(2)}`}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-1">EPUB & PDF • {book.pageCount} pages</p>
+                    <p className="text-[11px] text-slate-500 mt-1">{isGenerated ? 'EPUB, reader sign-in required' : <>EPUB & PDF • {book.pageCount} pages</>}</p>
                   </button>
 
                   <button
@@ -291,7 +311,7 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      {book.audioDurationMinutes ? `${Math.round(book.audioDurationMinutes / 60)} hrs unabridged` : 'Full audio track'}
+                      {isGenerated ? 'Chapter narration, reader sign-in required' : book.audioDurationMinutes ? `${Math.round(book.audioDurationMinutes / 60)} hrs unabridged` : 'Full audio track'}
                     </p>
                   </button>
                 </div>
@@ -412,7 +432,7 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
                 }`}
               >
                 <MessageSquare className="w-4 h-4" />
-                <span>Reader Reviews ({book.reviews.length + 4})</span>
+                <span>Reader Reviews ({book.reviews.length})</span>
               </button>
 
               <button
@@ -619,7 +639,10 @@ export const BookDetailModal: React.FC<BookDetailModalProps> = ({
 
                 {/* Individual Reviews */}
                 <div className="space-y-3">
-                  {(book.reviews.length > 0 ? book.reviews : [
+                  {isGenerated && book.reviews.length === 0 && (
+                    <p className="text-xs text-slate-500 p-4 rounded-xl border border-dashed border-slate-200 text-center">No reader reviews yet.</p>
+                  )}
+                  {(book.reviews.length > 0 || isGenerated ? book.reviews : [
                     {
                       id: 'def1',
                       authorName: 'Hannah Vance',

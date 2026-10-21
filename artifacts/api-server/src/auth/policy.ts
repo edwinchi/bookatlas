@@ -7,6 +7,9 @@ const accountPaths = new Set(['/api/auth/me', '/api/users/register', '/api/accou
 /** Explicit public allowlist; unknown API routes fail closed. */
 export function accessFor(method: string, path: string): 'public' | 'self-service' | 'reader' | 'admin' {
   const normalized = path.replace(/\/+$/, '') || '/';
+  if (normalized === '/api/account/reading-updates') return 'reader';
+  if (normalized === '/api/reader-unsubscribe' && ['GET', 'POST'].includes(method)) return 'self-service';
+  if (method === 'GET' && /^\/api\/reader\/books\/[^/]+\/(?:publication|assets\/[^/]+)$/.test(normalized)) return 'reader';
   if (method === 'GET' && publicGets.has(normalized)) return 'public';
   if ((method === 'GET' && normalized.endsWith('/unsubscribe-info')) ||
       (method === 'POST' && normalized.endsWith('/unsubscribe'))) {

@@ -11,6 +11,205 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /manager/workforce:
+    get:
+      operationId: getWorkforce
+      security: [{ clerkSession: [] }]
+      responses:
+        "200":
+          description: Private administrator workforce and saved task documents
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorkforceWorkspace" }
+  /manager/workforce/tasks:
+    post:
+      operationId: createWorkforceTask
+      security: [{ clerkSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkforceTaskInput" }
+      responses:
+        "201":
+          description: Saved assignment; no paid call has started
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorkforceTask" }
+  /manager/workforce/tasks/{id}/workers/{workerId}/run:
+    post:
+      operationId: runWorkforceWorker
+      security: [{ clerkSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: workerId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkforceRunInput" }
+      responses:
+        "200":
+          description: Updated assignment with real report or explicit failure
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorkforceTask" }
+  /manager/workforce/tasks/{id}/review:
+    post:
+      operationId: reviewWorkforceTask
+      security: [{ clerkSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkforceReviewInput" }
+      responses:
+        "200":
+          description: Report approval, cancellation, or interrupted-run recovery
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorkforceTask" }
+  /account/reading-updates:
+    get:
+      operationId: getReadingUpdatePreference
+      security: [{ clerkSession: [] }]
+      responses:
+        "200":
+          description: Current reader's explicit marketing preference
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReadingUpdatePreference" }
+    post:
+      operationId: setReadingUpdatePreference
+      security: [{ clerkSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReadingUpdateInput" }
+      responses:
+        "200":
+          description: Saved consent or opt-out for the verified current reader only
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReadingUpdatePreference" }
+  /reader-unsubscribe:
+    get:
+      operationId: getEmailUnsubscribePage
+      parameters:
+        - { name: token, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Confirmation page for a signed unsubscribe link
+          content:
+            text/html:
+              schema: { type: string }
+    post:
+      operationId: optOutFromMarketing
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: "#/components/schemas/UnsubscribeTokenInput" }
+      responses:
+        "200":
+          description: Marketing opt-out saved without signing in
+          content:
+            text/html:
+              schema: { type: string }
+  /manager/publishing-jobs:
+    get:
+      operationId: listPublishingJobs
+      security: [{ clerkSession: [] }]
+      responses:
+        "200":
+          description: Latest administrator publishing jobs
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/PublishingJob" } }
+    post:
+      operationId: createPublishingJob
+      security: [{ clerkSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PublishingJobInput" }
+      responses:
+        "201":
+          description: Queued durable job
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublishingJob" }
+  /manager/publishing-jobs/{id}:
+    get:
+      operationId: getPublishingJob
+      security: [{ clerkSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Job including private preview links and completed chapter text
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublishingJob" }
+  /manager/publishing-jobs/{id}/actions:
+    post:
+      operationId: actOnPublishingJob
+      security: [{ clerkSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PublishingJobAction" }
+      responses:
+        "200":
+          description: Updated job
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublishingJob" }
+  /manager/publishing-jobs/{id}/assets/{asset}:
+    get:
+      operationId: downloadPublishingAsset
+      security: [{ clerkSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: asset, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Authenticated private asset bytes
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+  /reader/books/{id}/publication:
+    get:
+      operationId: getReaderPublication
+      security: [{ clerkSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Published generated book assets for a signed-in reader
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublishingJob" }
+  /reader/books/{id}/assets/{asset}:
+    get:
+      operationId: downloadReaderPublicationAsset
+      security: [{ clerkSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: asset, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Published free book asset; drafts and test books are forbidden
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
   /manager/publishing-readiness:
     get:
       operationId: getPublishingReadiness
@@ -91,6 +290,178 @@ components:
       in: cookie
       name: __session
   schemas:
+    WorkforceRole:
+      type: object
+      required: [id, name, department, mandate, deliverable]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        department: { type: string }
+        mandate: { type: string }
+        deliverable: { type: string }
+    WorkforceTeam:
+      type: object
+      required: [id, name, humanHeadcount, disciplines, workerIds]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        humanHeadcount: { type: integer }
+        disciplines:
+          type: array
+          items: { $ref: "#/components/schemas/WorkforceDiscipline" }
+        workerIds:
+          type: array
+          items: { type: string }
+    WorkforceDiscipline:
+      type: object
+      required: [name, count]
+      properties:
+        name: { type: string }
+        count: { type: integer }
+    WorkforceWorkerResult:
+      type: object
+      required: [workerId, status, report, error, reservedUsd]
+      properties:
+        workerId: { type: string }
+        status: { type: string, enum: [pending, running, completed, failed, unknown] }
+        report: { type: string }
+        error: { type: string }
+        reservedUsd: { type: number }
+        startedAt: { type: string }
+    WorkforceTask:
+      type: object
+      required: [id, objective, context, createdAt, updatedAt, budgetUsd, reservedUsd, status, workers, approvalNote]
+      properties:
+        id: { type: string }
+        objective: { type: string }
+        context: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+        budgetUsd: { type: number }
+        reservedUsd: { type: number }
+        status: { type: string, enum: [draft, running, review, approved, cancelled, blocked] }
+        workers:
+          type: array
+          items: { $ref: "#/components/schemas/WorkforceWorkerResult" }
+        approvalNote: { type: string }
+    WorkforceTaskInput:
+      type: object
+      additionalProperties: false
+      required: [idempotencyKey, objective, workerIds, budgetUsd]
+      properties:
+        idempotencyKey: { type: string, format: uuid }
+        objective: { type: string, minLength: 10, maxLength: 1000 }
+        context: { type: string, maxLength: 12000, default: "" }
+        workerIds:
+          type: array
+          minItems: 1
+          maxItems: 5
+          uniqueItems: true
+          items: { type: string }
+        budgetUsd: { type: number, minimum: 0.05, maximum: 1 }
+    WorkforceRunInput:
+      type: object
+      required: [approveSpend]
+      properties:
+        approveSpend: { type: boolean, enum: [true] }
+    WorkforceReviewInput:
+      type: object
+      required: [action]
+      properties:
+        action: { type: string, enum: [approve, cancel, recover] }
+        note: { type: string, maxLength: 2000, default: "" }
+    WorkforceWorkspace:
+      type: object
+      required: [roles, teams, tasks, aiConfigured, storageReady, executionPolicy]
+      properties:
+        roles:
+          type: array
+          items: { $ref: "#/components/schemas/WorkforceRole" }
+        teams:
+          type: array
+          items: { $ref: "#/components/schemas/WorkforceTeam" }
+        tasks:
+          type: array
+          items: { $ref: "#/components/schemas/WorkforceTask" }
+        aiConfigured: { type: boolean }
+        storageReady: { type: boolean }
+        executionPolicy: { type: string }
+    ReadingUpdateInput:
+      type: object
+      required: [subscribed]
+      properties:
+        subscribed: { type: boolean }
+    ReadingUpdatePreference:
+      type: object
+      required: [subscribed, consentAt]
+      properties:
+        subscribed: { type: boolean }
+        consentAt: { type: [string, "null"] }
+    UnsubscribeTokenInput:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string, minLength: 1, maxLength: 1500 }
+    PublishingJobInput:
+      type: object
+      required: [fileName, base64, title, author, language, category, chapterCount, wordsPerChapter, voice, includeAudio, isTest, budgetUsd]
+      properties:
+        fileName: { type: string, minLength: 1, maxLength: 180 }
+        mimeType: { type: string }
+        base64: { type: string, minLength: 4, maxLength: 6990508 }
+        title: { type: string, minLength: 1, maxLength: 180 }
+        author: { type: string, minLength: 1, maxLength: 120 }
+        language: { type: string, enum: [en, nl] }
+        category: { type: string, minLength: 1, maxLength: 100 }
+        chapterCount: { type: integer, minimum: 2, maximum: 8 }
+        wordsPerChapter: { type: integer, minimum: 100, maximum: 800 }
+        voice: { type: string, enum: [Kore, Puck, Aoede, Charon] }
+        includeAudio: { type: boolean }
+        isTest: { type: boolean }
+        budgetUsd: { type: number, exclusiveMinimum: 0, maximum: 1 }
+    PublishingJobAction:
+      type: object
+      required: [action]
+      properties:
+        action: { type: string, enum: [retry, cancel, publish, launch, refresh-delivery] }
+        notifyPublisher: { type: boolean }
+        publisherEmail: { type: string, format: email }
+        readerCampaign: { type: boolean }
+    PublishingChapter:
+      type: object
+      required: [title, text]
+      properties:
+        title: { type: string }
+        text: { type: string }
+        audioUrl: { type: string }
+        durationSeconds: { type: number }
+    PublishingJob:
+      type: object
+      required: [id, status, stage, title, author, isTest, budgetUsd, reservedUsd, createdAt, updatedAt, chapters, canPublish]
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [queued, running, review, published, failed, cancelled] }
+        stage: { type: string }
+        title: { type: string }
+        author: { type: string }
+        isTest: { type: boolean }
+        budgetUsd: { type: number }
+        reservedUsd: { type: number }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+        error: { type: string }
+        chapters: { type: array, items: { $ref: "#/components/schemas/PublishingChapter" } }
+        canPublish: { type: boolean }
+        epubUrl: { type: string }
+        messages: { type: array, items: { $ref: "#/components/schemas/PublishingMessage" } }
+    PublishingMessage:
+      type: object
+      required: [recipient, kind, status]
+      properties:
+        recipient: { type: string }
+        kind: { type: string }
+        status: { type: string }
+        error: { type: string }
     PublishingReadinessCheck:
       type: object
       required: [id, label, state, detail]

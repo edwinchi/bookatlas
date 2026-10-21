@@ -8,6 +8,409 @@
 import * as zod from 'zod';
 
 
+export const GetWorkforceResponse = zod.object({
+  "roles": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "department": zod.string(),
+  "mandate": zod.string(),
+  "deliverable": zod.string()
+})),
+  "teams": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "humanHeadcount": zod.number().int(),
+  "disciplines": zod.array(zod.object({
+  "name": zod.string(),
+  "count": zod.number().int()
+})),
+  "workerIds": zod.array(zod.string())
+})),
+  "tasks": zod.array(zod.object({
+  "id": zod.string(),
+  "objective": zod.string(),
+  "context": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "budgetUsd": zod.number(),
+  "reservedUsd": zod.number(),
+  "status": zod.enum(['draft', 'running', 'review', 'approved', 'cancelled', 'blocked']),
+  "workers": zod.array(zod.object({
+  "workerId": zod.string(),
+  "status": zod.enum(['pending', 'running', 'completed', 'failed', 'unknown']),
+  "report": zod.string(),
+  "error": zod.string(),
+  "reservedUsd": zod.number(),
+  "startedAt": zod.string().optional()
+})),
+  "approvalNote": zod.string()
+})),
+  "aiConfigured": zod.boolean(),
+  "storageReady": zod.boolean(),
+  "executionPolicy": zod.string()
+})
+
+
+export const createWorkforceTaskBodyObjectiveMin = 10;
+export const createWorkforceTaskBodyObjectiveMax = 1000;
+
+export const createWorkforceTaskBodyContextDefault = ``;
+export const createWorkforceTaskBodyContextMax = 12000;
+
+export const createWorkforceTaskBodyWorkerIdsMax = 5;
+
+export const createWorkforceTaskBodyBudgetUsdMin = 0.05;
+export const createWorkforceTaskBodyBudgetUsdMax = 1;
+
+
+
+export const CreateWorkforceTaskBody = zod.object({
+  "idempotencyKey": zod.string().uuid(),
+  "objective": zod.string().min(createWorkforceTaskBodyObjectiveMin).max(createWorkforceTaskBodyObjectiveMax),
+  "context": zod.string().max(createWorkforceTaskBodyContextMax).default(createWorkforceTaskBodyContextDefault),
+  "workerIds": zod.array(zod.string()).min(1).max(createWorkforceTaskBodyWorkerIdsMax),
+  "budgetUsd": zod.number().min(createWorkforceTaskBodyBudgetUsdMin).max(createWorkforceTaskBodyBudgetUsdMax)
+})
+
+export const CreateWorkforceTaskResponse = zod.object({
+  "id": zod.string(),
+  "objective": zod.string(),
+  "context": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "budgetUsd": zod.number(),
+  "reservedUsd": zod.number(),
+  "status": zod.enum(['draft', 'running', 'review', 'approved', 'cancelled', 'blocked']),
+  "workers": zod.array(zod.object({
+  "workerId": zod.string(),
+  "status": zod.enum(['pending', 'running', 'completed', 'failed', 'unknown']),
+  "report": zod.string(),
+  "error": zod.string(),
+  "reservedUsd": zod.number(),
+  "startedAt": zod.string().optional()
+})),
+  "approvalNote": zod.string()
+})
+
+
+export const RunWorkforceWorkerParams = zod.object({
+  "id": zod.coerce.string().uuid(),
+  "workerId": zod.coerce.string()
+})
+
+export const RunWorkforceWorkerBody = zod.object({
+  "approveSpend": zod.literal(true)
+})
+
+export const RunWorkforceWorkerResponse = zod.object({
+  "id": zod.string(),
+  "objective": zod.string(),
+  "context": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "budgetUsd": zod.number(),
+  "reservedUsd": zod.number(),
+  "status": zod.enum(['draft', 'running', 'review', 'approved', 'cancelled', 'blocked']),
+  "workers": zod.array(zod.object({
+  "workerId": zod.string(),
+  "status": zod.enum(['pending', 'running', 'completed', 'failed', 'unknown']),
+  "report": zod.string(),
+  "error": zod.string(),
+  "reservedUsd": zod.number(),
+  "startedAt": zod.string().optional()
+})),
+  "approvalNote": zod.string()
+})
+
+
+export const ReviewWorkforceTaskParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const reviewWorkforceTaskBodyNoteDefault = ``;
+export const reviewWorkforceTaskBodyNoteMax = 2000;
+
+
+
+export const ReviewWorkforceTaskBody = zod.object({
+  "action": zod.enum(['approve', 'cancel', 'recover']),
+  "note": zod.string().max(reviewWorkforceTaskBodyNoteMax).default(reviewWorkforceTaskBodyNoteDefault)
+})
+
+export const ReviewWorkforceTaskResponse = zod.object({
+  "id": zod.string(),
+  "objective": zod.string(),
+  "context": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "budgetUsd": zod.number(),
+  "reservedUsd": zod.number(),
+  "status": zod.enum(['draft', 'running', 'review', 'approved', 'cancelled', 'blocked']),
+  "workers": zod.array(zod.object({
+  "workerId": zod.string(),
+  "status": zod.enum(['pending', 'running', 'completed', 'failed', 'unknown']),
+  "report": zod.string(),
+  "error": zod.string(),
+  "reservedUsd": zod.number(),
+  "startedAt": zod.string().optional()
+})),
+  "approvalNote": zod.string()
+})
+
+
+export const GetReadingUpdatePreferenceResponse = zod.object({
+  "subscribed": zod.boolean(),
+  "consentAt": zod.string().nullable()
+})
+
+
+export const SetReadingUpdatePreferenceBody = zod.object({
+  "subscribed": zod.boolean()
+})
+
+export const SetReadingUpdatePreferenceResponse = zod.object({
+  "subscribed": zod.boolean(),
+  "consentAt": zod.string().nullable()
+})
+
+
+export const GetEmailUnsubscribePageQueryParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const GetEmailUnsubscribePageResponse = zod.unknown()
+
+
+export const optOutFromMarketingBodyTokenMax = 1500;
+
+
+
+export const OptOutFromMarketingBody = zod.object({
+  "token": zod.string().min(1).max(optOutFromMarketingBodyTokenMax)
+})
+
+export const OptOutFromMarketingResponse = zod.unknown()
+
+
+export const ListPublishingJobsResponseItem = zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['queued', 'running', 'review', 'published', 'failed', 'cancelled']),
+  "stage": zod.string(),
+  "title": zod.string(),
+  "author": zod.string(),
+  "isTest": zod.boolean(),
+  "budgetUsd": zod.number(),
+  "reservedUsd": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "error": zod.string().optional(),
+  "chapters": zod.array(zod.object({
+  "title": zod.string(),
+  "text": zod.string(),
+  "audioUrl": zod.string().optional(),
+  "durationSeconds": zod.number().optional()
+})),
+  "canPublish": zod.boolean(),
+  "epubUrl": zod.string().optional(),
+  "messages": zod.array(zod.object({
+  "recipient": zod.string(),
+  "kind": zod.string(),
+  "status": zod.string(),
+  "error": zod.string().optional()
+})).optional()
+})
+export const ListPublishingJobsResponse = zod.array(ListPublishingJobsResponseItem)
+
+
+export const createPublishingJobBodyFileNameMax = 180;
+
+export const createPublishingJobBodyBase64Min = 4;
+export const createPublishingJobBodyBase64Max = 6990508;
+
+export const createPublishingJobBodyTitleMax = 180;
+
+export const createPublishingJobBodyAuthorMax = 120;
+
+export const createPublishingJobBodyCategoryMax = 100;
+
+export const createPublishingJobBodyChapterCountMin = 2;
+export const createPublishingJobBodyChapterCountMax = 8;
+
+export const createPublishingJobBodyWordsPerChapterMin = 100;
+export const createPublishingJobBodyWordsPerChapterMax = 800;
+
+export const createPublishingJobBodyBudgetUsdExclusiveMin = 0;
+export const createPublishingJobBodyBudgetUsdMax = 1;
+
+
+
+export const CreatePublishingJobBody = zod.object({
+  "fileName": zod.string().min(1).max(createPublishingJobBodyFileNameMax),
+  "mimeType": zod.string().optional(),
+  "base64": zod.string().min(createPublishingJobBodyBase64Min).max(createPublishingJobBodyBase64Max),
+  "title": zod.string().min(1).max(createPublishingJobBodyTitleMax),
+  "author": zod.string().min(1).max(createPublishingJobBodyAuthorMax),
+  "language": zod.enum(['en', 'nl']),
+  "category": zod.string().min(1).max(createPublishingJobBodyCategoryMax),
+  "chapterCount": zod.number().int().min(createPublishingJobBodyChapterCountMin).max(createPublishingJobBodyChapterCountMax),
+  "wordsPerChapter": zod.number().int().min(createPublishingJobBodyWordsPerChapterMin).max(createPublishingJobBodyWordsPerChapterMax),
+  "voice": zod.enum(['Kore', 'Puck', 'Aoede', 'Charon']),
+  "includeAudio": zod.boolean(),
+  "isTest": zod.boolean(),
+  "budgetUsd": zod.number().gt(createPublishingJobBodyBudgetUsdExclusiveMin).max(createPublishingJobBodyBudgetUsdMax)
+})
+
+export const CreatePublishingJobResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['queued', 'running', 'review', 'published', 'failed', 'cancelled']),
+  "stage": zod.string(),
+  "title": zod.string(),
+  "author": zod.string(),
+  "isTest": zod.boolean(),
+  "budgetUsd": zod.number(),
+  "reservedUsd": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "error": zod.string().optional(),
+  "chapters": zod.array(zod.object({
+  "title": zod.string(),
+  "text": zod.string(),
+  "audioUrl": zod.string().optional(),
+  "durationSeconds": zod.number().optional()
+})),
+  "canPublish": zod.boolean(),
+  "epubUrl": zod.string().optional(),
+  "messages": zod.array(zod.object({
+  "recipient": zod.string(),
+  "kind": zod.string(),
+  "status": zod.string(),
+  "error": zod.string().optional()
+})).optional()
+})
+
+
+export const GetPublishingJobParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetPublishingJobResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['queued', 'running', 'review', 'published', 'failed', 'cancelled']),
+  "stage": zod.string(),
+  "title": zod.string(),
+  "author": zod.string(),
+  "isTest": zod.boolean(),
+  "budgetUsd": zod.number(),
+  "reservedUsd": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "error": zod.string().optional(),
+  "chapters": zod.array(zod.object({
+  "title": zod.string(),
+  "text": zod.string(),
+  "audioUrl": zod.string().optional(),
+  "durationSeconds": zod.number().optional()
+})),
+  "canPublish": zod.boolean(),
+  "epubUrl": zod.string().optional(),
+  "messages": zod.array(zod.object({
+  "recipient": zod.string(),
+  "kind": zod.string(),
+  "status": zod.string(),
+  "error": zod.string().optional()
+})).optional()
+})
+
+
+export const ActOnPublishingJobParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ActOnPublishingJobBody = zod.object({
+  "action": zod.enum(['retry', 'cancel', 'publish', 'launch', 'refresh-delivery']),
+  "notifyPublisher": zod.boolean().optional(),
+  "publisherEmail": zod.string().email().optional(),
+  "readerCampaign": zod.boolean().optional()
+})
+
+export const ActOnPublishingJobResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['queued', 'running', 'review', 'published', 'failed', 'cancelled']),
+  "stage": zod.string(),
+  "title": zod.string(),
+  "author": zod.string(),
+  "isTest": zod.boolean(),
+  "budgetUsd": zod.number(),
+  "reservedUsd": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "error": zod.string().optional(),
+  "chapters": zod.array(zod.object({
+  "title": zod.string(),
+  "text": zod.string(),
+  "audioUrl": zod.string().optional(),
+  "durationSeconds": zod.number().optional()
+})),
+  "canPublish": zod.boolean(),
+  "epubUrl": zod.string().optional(),
+  "messages": zod.array(zod.object({
+  "recipient": zod.string(),
+  "kind": zod.string(),
+  "status": zod.string(),
+  "error": zod.string().optional()
+})).optional()
+})
+
+
+export const DownloadPublishingAssetParams = zod.object({
+  "id": zod.coerce.string().uuid(),
+  "asset": zod.coerce.string()
+})
+
+export const DownloadPublishingAssetResponse = zod.unknown()
+
+
+export const GetReaderPublicationParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetReaderPublicationResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['queued', 'running', 'review', 'published', 'failed', 'cancelled']),
+  "stage": zod.string(),
+  "title": zod.string(),
+  "author": zod.string(),
+  "isTest": zod.boolean(),
+  "budgetUsd": zod.number(),
+  "reservedUsd": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "error": zod.string().optional(),
+  "chapters": zod.array(zod.object({
+  "title": zod.string(),
+  "text": zod.string(),
+  "audioUrl": zod.string().optional(),
+  "durationSeconds": zod.number().optional()
+})),
+  "canPublish": zod.boolean(),
+  "epubUrl": zod.string().optional(),
+  "messages": zod.array(zod.object({
+  "recipient": zod.string(),
+  "kind": zod.string(),
+  "status": zod.string(),
+  "error": zod.string().optional()
+})).optional()
+})
+
+
+export const DownloadReaderPublicationAssetParams = zod.object({
+  "id": zod.coerce.string(),
+  "asset": zod.coerce.string()
+})
+
+export const DownloadReaderPublicationAssetResponse = zod.unknown()
+
+
 /**
  * @summary Administrator-only publishing dependency and implementation checks
  */

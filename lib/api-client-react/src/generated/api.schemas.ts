@@ -5,6 +5,267 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface WorkforceRole {
+  id: string;
+  name: string;
+  department: string;
+  mandate: string;
+  deliverable: string;
+}
+
+export interface WorkforceDiscipline {
+  name: string;
+  count: number;
+}
+
+export interface WorkforceTeam {
+  id: string;
+  name: string;
+  humanHeadcount: number;
+  disciplines: WorkforceDiscipline[];
+  workerIds: string[];
+}
+
+export type WorkforceWorkerResultStatus = typeof WorkforceWorkerResultStatus[keyof typeof WorkforceWorkerResultStatus];
+
+
+export const WorkforceWorkerResultStatus = {
+  pending: 'pending',
+  running: 'running',
+  completed: 'completed',
+  failed: 'failed',
+  unknown: 'unknown',
+} as const;
+
+export interface WorkforceWorkerResult {
+  workerId: string;
+  status: WorkforceWorkerResultStatus;
+  report: string;
+  error: string;
+  reservedUsd: number;
+  startedAt?: string;
+}
+
+export type WorkforceTaskStatus = typeof WorkforceTaskStatus[keyof typeof WorkforceTaskStatus];
+
+
+export const WorkforceTaskStatus = {
+  draft: 'draft',
+  running: 'running',
+  review: 'review',
+  approved: 'approved',
+  cancelled: 'cancelled',
+  blocked: 'blocked',
+} as const;
+
+export interface WorkforceTask {
+  id: string;
+  objective: string;
+  context: string;
+  createdAt: string;
+  updatedAt: string;
+  budgetUsd: number;
+  reservedUsd: number;
+  status: WorkforceTaskStatus;
+  workers: WorkforceWorkerResult[];
+  approvalNote: string;
+}
+
+export interface WorkforceTaskInput {
+  idempotencyKey: string;
+  /**
+     * @minLength 10
+     * @maxLength 1000
+     */
+  objective: string;
+  /** @maxLength 12000 */
+  context?: string;
+  /**
+     * @minItems 1
+     * @maxItems 5
+     */
+  workerIds: string[];
+  /**
+     * @minimum 0.05
+     * @maximum 1
+     */
+  budgetUsd: number;
+}
+
+export interface WorkforceRunInput {
+  approveSpend: true;
+}
+
+export type WorkforceReviewInputAction = typeof WorkforceReviewInputAction[keyof typeof WorkforceReviewInputAction];
+
+
+export const WorkforceReviewInputAction = {
+  approve: 'approve',
+  cancel: 'cancel',
+  recover: 'recover',
+} as const;
+
+export interface WorkforceReviewInput {
+  action: WorkforceReviewInputAction;
+  /** @maxLength 2000 */
+  note?: string;
+}
+
+export interface WorkforceWorkspace {
+  roles: WorkforceRole[];
+  teams: WorkforceTeam[];
+  tasks: WorkforceTask[];
+  aiConfigured: boolean;
+  storageReady: boolean;
+  executionPolicy: string;
+}
+
+export interface ReadingUpdateInput {
+  subscribed: boolean;
+}
+
+export interface ReadingUpdatePreference {
+  subscribed: boolean;
+  /** @nullable */
+  consentAt: string | null;
+}
+
+export interface UnsubscribeTokenInput {
+  /**
+     * @minLength 1
+     * @maxLength 1500
+     */
+  token: string;
+}
+
+export type PublishingJobInputLanguage = typeof PublishingJobInputLanguage[keyof typeof PublishingJobInputLanguage];
+
+
+export const PublishingJobInputLanguage = {
+  en: 'en',
+  nl: 'nl',
+} as const;
+
+export type PublishingJobInputVoice = typeof PublishingJobInputVoice[keyof typeof PublishingJobInputVoice];
+
+
+export const PublishingJobInputVoice = {
+  Kore: 'Kore',
+  Puck: 'Puck',
+  Aoede: 'Aoede',
+  Charon: 'Charon',
+} as const;
+
+export interface PublishingJobInput {
+  /**
+     * @minLength 1
+     * @maxLength 180
+     */
+  fileName: string;
+  mimeType?: string;
+  /**
+     * @minLength 4
+     * @maxLength 6990508
+     */
+  base64: string;
+  /**
+     * @minLength 1
+     * @maxLength 180
+     */
+  title: string;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  author: string;
+  language: PublishingJobInputLanguage;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  category: string;
+  /**
+     * @minimum 2
+     * @maximum 8
+     */
+  chapterCount: number;
+  /**
+     * @minimum 100
+     * @maximum 800
+     */
+  wordsPerChapter: number;
+  voice: PublishingJobInputVoice;
+  includeAudio: boolean;
+  isTest: boolean;
+  /**
+     * @maximum 1
+     * @exclusiveMinimum 0
+     */
+  budgetUsd: number;
+}
+
+export type PublishingJobActionAction = typeof PublishingJobActionAction[keyof typeof PublishingJobActionAction];
+
+
+export const PublishingJobActionAction = {
+  retry: 'retry',
+  cancel: 'cancel',
+  publish: 'publish',
+  launch: 'launch',
+  'refresh-delivery': 'refresh-delivery',
+} as const;
+
+export interface PublishingJobAction {
+  action: PublishingJobActionAction;
+  notifyPublisher?: boolean;
+  publisherEmail?: string;
+  readerCampaign?: boolean;
+}
+
+export interface PublishingChapter {
+  title: string;
+  text: string;
+  audioUrl?: string;
+  durationSeconds?: number;
+}
+
+export type PublishingJobStatus = typeof PublishingJobStatus[keyof typeof PublishingJobStatus];
+
+
+export const PublishingJobStatus = {
+  queued: 'queued',
+  running: 'running',
+  review: 'review',
+  published: 'published',
+  failed: 'failed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface PublishingMessage {
+  recipient: string;
+  kind: string;
+  status: string;
+  error?: string;
+}
+
+export interface PublishingJob {
+  id: string;
+  status: PublishingJobStatus;
+  stage: string;
+  title: string;
+  author: string;
+  isTest: boolean;
+  budgetUsd: number;
+  reservedUsd: number;
+  createdAt: string;
+  updatedAt: string;
+  error?: string;
+  chapters: PublishingChapter[];
+  canPublish: boolean;
+  epubUrl?: string;
+  messages?: PublishingMessage[];
+}
+
 export type PublishingReadinessCheckState = typeof PublishingReadinessCheckState[keyof typeof PublishingReadinessCheckState];
 
 
@@ -75,4 +336,8 @@ export interface AccountProfile {
 export interface HealthStatus {
   status: string;
 }
+
+export type GetEmailUnsubscribePageParams = {
+token: string;
+};
 

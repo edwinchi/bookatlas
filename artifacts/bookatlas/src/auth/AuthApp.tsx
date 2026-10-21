@@ -4,6 +4,7 @@ import { shadcn } from '@clerk/themes';
 import { Router as WouterRouter, Switch, Route, Redirect, Link, useLocation } from 'wouter';
 import App from '../App';
 import { AccountProvider, useAccount } from './AuthContext';
+import { ReadingUpdatePreferences } from '../components/ReadingUpdatePreferences';
 
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
@@ -53,7 +54,7 @@ function SessionBar() {
     <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 text-xs text-indigo-950">
       <span>{account ? `Signed in as ${account.email}${account.role === 'admin' ? ' · Administrator' : ''}` : 'Your next chapter starts here. Browse freely, or sign in to build your bookshelf.'}</span>
       <div className="flex items-center gap-4">
-        {account ? <button onClick={signOut} className="font-bold underline underline-offset-4">Sign out</button> :
+        {account ? <><ReadingUpdatePreferences /><button onClick={signOut} className="font-bold underline underline-offset-4">Sign out</button></> :
           <><Link href="/sign-in" className="font-bold">Sign in</Link><Link href="/sign-up" className="rounded-lg bg-indigo-700 px-3 py-1.5 font-bold text-white">Create account</Link></>}
       </div>
     </div>
