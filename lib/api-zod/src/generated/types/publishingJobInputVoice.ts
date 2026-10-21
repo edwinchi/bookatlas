@@ -10,8 +10,11 @@ export type PublishingJobInputVoice = typeof PublishingJobInputVoice[keyof typeo
 
 
 export const PublishingJobInputVoice = {
+  Sulafat: 'Sulafat',
+  Charon: 'Charon',
   Kore: 'Kore',
   Puck: 'Puck',
   Aoede: 'Aoede',
-  Charon: 'Charon',
+  Fenrir: 'Fenrir',
+  Zephyr: 'Zephyr',
 } as const;

@@ -5,3 +5,5 @@
 - [Shared Supabase isolation](shared-supabase-isolation.md) — the user chose dedicated Bookatlas tables; leave unrelated tables and their access policies untouched.
 - [Supabase network access](supabase-network-access.md) — database administration needs an IPv4-compatible session-pooler URI; the direct IPv6 endpoint is unreachable here.
 - [AI workforce scope](ai-workforce-scope.md) — user wants both in-app AI roles and development specialists; initial workers produce reviewed reports, not autonomous external actions.
+- [Frontend styling expectations](frontend-styling.md) — user requests advanced Tailwind CSS practices for Bookatlas.
+- [Voice quality and auto mode](voice-quality.md) — user wants high-quality male/female voices and autonomous implementation; preserve truthful playback and approval boundaries.

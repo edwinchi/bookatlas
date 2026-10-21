@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { STUDIO_SPEECH_MODEL } from '@workspace/bookatlas-catalog/voices';
 import type { PublishingReadinessCheck } from '@workspace/api-zod';
 import { supabase } from '../db/supabaseClient.js';
 import { bookatlasTable } from '../db/tables.js';
@@ -24,7 +25,7 @@ async function models(): Promise<PublishingReadinessCheck[]> {
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { timeout: 10_000 } });
   return Promise.all([
     { id: 'text-model', label: 'Text and document generation', model: 'gemini-3.7-flash' },
-    { id: 'speech-model', label: 'Studio narration', model: 'gemini-3.8-flash-tts' },
+    { id: 'speech-model', label: 'Studio narration', model: STUDIO_SPEECH_MODEL },
   ].map(async ({ id, label, model }): Promise<PublishingReadinessCheck> => {
     try {
       const metadata = await ai.models.get({ model });

@@ -148,7 +148,7 @@ export function AIStudioHub({
                   Real-Time Live Voice Dialogue Companion
                 </h3>
                 <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  Hands-free spoken conversations with visual audio waveforms, customizable voices (Zephyr, Kore, Puck), and conversational transcripts.
+                  Hands-free spoken conversations with visual audio waveforms, your device's installed voices, and conversational transcripts.
                 </p>
               </div>
             </div>

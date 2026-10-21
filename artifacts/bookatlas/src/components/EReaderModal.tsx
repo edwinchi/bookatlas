@@ -32,6 +32,7 @@ import {
   Send,
   Sparkle
 } from 'lucide-react';
+import { StudioNarrationPanel } from './voice/StudioNarrationPanel';
 import { Book, ReaderSettings, ReaderTheme, ReaderFont, Highlight } from '../types';
 
 interface EReaderModalProps {
@@ -93,9 +94,6 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   ]);
   const [voiceLoading, setVoiceLoading] = useState(false);
 
-  // AI TTS Studio State
-  const [selectedVoice, setSelectedVoice] = useState<'Kore' | 'Fenrir' | 'Puck' | 'Zephyr' | 'Charon'>('Kore');
-  const [isGeneratingTts, setIsGeneratingTts] = useState(false);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -378,8 +376,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userUtterance: userMsg,
-          conversationHistory: voiceDialogueMessages,
-          voicePersona: selectedVoice
+          conversationHistory: voiceDialogueMessages
         })
       });
 
@@ -401,36 +398,6 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       ]);
     } finally {
       setVoiceLoading(false);
-    }
-  };
-
-  // 6. Expressive AI TTS Studio Trigger
-  const handleTriggerAITts = async () => {
-    setIsGeneratingTts(true);
-    const textChunk = currentChapter.content.slice(0, 3).join(' ');
-
-    try {
-      const res = await fetch('/api/ai/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: textChunk,
-          voiceName: selectedVoice
-        })
-      });
-
-      if (synthRef.current) {
-        synthRef.current.cancel();
-        const utterance = new SpeechSynthesisUtterance(textChunk);
-        utterance.rate = selectedVoice === 'Fenrir' ? 0.88 : selectedVoice === 'Puck' ? 1.05 : 0.95;
-        utterance.pitch = selectedVoice === 'Fenrir' ? 0.85 : selectedVoice === 'Kore' ? 1.1 : 1.0;
-        synthRef.current.speak(utterance);
-        setIsSpeaking(true);
-      }
-    } catch (err) {
-      toggleSpeech();
-    } finally {
-      setIsGeneratingTts(false);
     }
   };
 
@@ -633,7 +600,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
               isSpeaking ? 'text-indigo-600 animate-pulse bg-indigo-50' : 'hover:bg-black/10 opacity-75'
             }`}
-            title={isSpeaking ? 'Pause Narration' : 'Listen to Chapter'}
+            title={isSpeaking ? 'Stop device read-aloud' : 'Read chapter with device voice'}
+            aria-label={isSpeaking ? 'Stop device read-aloud' : 'Read chapter with device voice'}
           >
             {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
@@ -1244,55 +1212,12 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
             {/* 6. AI STUDIO TTS NARRATION TAB */}
             {activeAITab === 'tts_studio' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-2">
-                    Studio Voice Persona (Gemini Expressive Speech)
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: 'Kore', name: 'Kore', desc: 'Warm, empathetic, melodic scholar' },
-                      { id: 'Fenrir', name: 'Fenrir', desc: 'Deep, resonant, cinematic baritone' },
-                      { id: 'Puck', name: 'Puck', desc: 'Lively, crisp, energetic narrator' },
-                      { id: 'Zephyr', name: 'Zephyr', desc: 'Calm, meditative, spacious pacing' },
-                    ].map((v) => (
-                      <button
-                        key={v.id}
-                        onClick={() => setSelectedVoice(v.id as any)}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                          selectedVoice === v.id
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                            : 'bg-slate-50 text-slate-800 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        <div className="font-bold text-xs">{v.name}</div>
-                        <div className="text-[10px] opacity-75">{v.desc}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-bold text-slate-700">Narrating: {currentChapter.title}</span>
-                    <span className="text-slate-500 font-mono">{selectedVoice} Voice Model</span>
-                  </div>
-                  <button
-                    onClick={handleTriggerAITts}
-                    disabled={isGeneratingTts}
-                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
-                  >
-                    {isGeneratingTts ? (
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    ) : isSpeaking ? (
-                      <Pause className="w-4 h-4 text-amber-300" />
-                    ) : (
-                      <Play className="w-4 h-4 text-amber-300" />
-                    )}
-                    <span>{isSpeaking ? 'Pause Studio Narration' : 'Start Studio Narration'}</span>
-                  </button>
-                </div>
-              </div>
+              <StudioNarrationPanel
+                bookId={book.id}
+                chapterTitle={currentChapter.title}
+                text={currentChapter.content.join(' ')}
+                bookLanguage={book.language === 'Dutch' ? 'nl' : book.language === 'English' ? 'en' : undefined}
+              />
             )}
 
           </div>

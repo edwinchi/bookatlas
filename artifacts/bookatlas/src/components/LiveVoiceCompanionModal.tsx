@@ -14,21 +14,17 @@ import {
   Check
 } from 'lucide-react';
 import { VoiceConversationMessage } from '../types';
+import { useDeviceVoices, pickDefaultDeviceVoice, deviceVoiceLabel } from './voice/useDeviceVoices';
 
 interface LiveVoiceCompanionModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const VOICE_PERSONAS = [
-  { id: 'Zephyr', name: 'Zephyr', style: 'Charismatic, erudite & articulate', lang: 'en-GB' },
-  { id: 'Kore', name: 'Kore', style: 'Warm, empathetic & meditative', lang: 'en-US' },
-  { id: 'Puck', name: 'Puck', style: 'Energetic, witty & imaginative', lang: 'en-US' },
-  { id: 'Fenrir', name: 'Fenrir', style: 'Deep, atmospheric & dramatic', lang: 'en-GB' }
-];
-
 export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionModalProps) {
-  const [selectedVoice, setSelectedVoice] = useState(VOICE_PERSONAS[0].id);
+  const { supported: ttsSupported, voices: deviceVoices } = useDeviceVoices();
+  const [deviceVoiceUri, setDeviceVoiceUri] = useState('');
+  const deviceVoice = deviceVoices.find(v => v.voiceURI === deviceVoiceUri) || pickDefaultDeviceVoice(deviceVoices);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -37,7 +33,7 @@ export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionM
     {
       id: 'init-1',
       speaker: 'assistant',
-      text: "Hello! I am Zephyr, your Bookatlas Voice Companion. Speak naturally with me about books, literary theories, or ask for instant recommendations.",
+      text: "Hello! I am your Bookatlas Voice Companion. Ask about books, literary ideas, or recommendations. Replies are written by AI and read aloud with a voice installed on your device.",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -91,14 +87,10 @@ export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionM
     synthRef.current.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.05;
-    utterance.pitch = selectedVoice === 'Zephyr' ? 1.0 : selectedVoice === 'Kore' ? 1.15 : 0.85;
-
-    // Try to find a nice English voice
-    const voices = synthRef.current.getVoices();
-    const englishVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Daniel') || v.name.includes('Samantha')));
-    if (englishVoice) {
-      utterance.voice = englishVoice;
+    utterance.rate = 1;
+    if (deviceVoice) {
+      utterance.voice = deviceVoice;
+      utterance.lang = deviceVoice.lang;
     }
 
     utterance.onstart = () => setIsSpeaking(true);
@@ -126,8 +118,7 @@ export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionM
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userUtterance: utteranceText,
-          conversationHistory: newHistory.slice(-4),
-          voicePersona: selectedVoice
+          conversationHistory: newHistory.slice(-4)
         })
       });
 
@@ -147,7 +138,7 @@ export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionM
       };
 
       setConversation(prev => [...prev, assistantMsg]);
-      setStatusMessage(`Speaking via ${selectedVoice}...`);
+      setStatusMessage(isMuted || !ttsSupported ? 'Reply received.' : `Reading reply with device voice ${deviceVoice?.name ?? ''}...`);
       speakText(assistantText);
     } catch (err) {
       console.error('Voice dialogue error:', err);
@@ -178,14 +169,7 @@ export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionM
           console.warn('Recognition start issue:', e);
         }
       } else {
-        // Fallback simulation for environments without Web Speech
-        const samplePrompts = [
-          "What are the best Amsterdam classics in the store?",
-          "Recommend a deep philosophical science fiction novel.",
-          "Tell me why Bookatlas Plus is great for avid readers."
-        ];
-        const randomPrompt = samplePrompts[Math.floor(Math.random() * samplePrompts.length)];
-        handleUserUtterance(randomPrompt);
+        setStatusMessage('Voice input is not supported in this browser. Use the sample question below.');
       }
     }
   };
@@ -210,14 +194,14 @@ export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionM
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-white tracking-tight">
-                  Gemini Live Voice Companion
+                  Voice Companion
                 </h2>
                 <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
-                  <Activity className="w-3 h-3 animate-spin" /> Live API
+                  <Activity className="w-3 h-3" /> Device audio
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Model: gemini-3.1-flash-live-preview with real-time audio synthesis
+                AI text replies, spoken by your device's built-in voice. Not live Gemini audio streaming.
               </p>
             </div>
           </div>
@@ -296,39 +280,31 @@ export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionM
           </div>
         </div>
 
-        {/* Voice Persona Selector */}
-        <div className="px-6 py-3 bg-slate-950 border-t border-b border-slate-800 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
-            Companion Voice:
-          </span>
-          <div className="flex items-center gap-2">
-            {VOICE_PERSONAS.map((vp) => {
-              const isSelected = selectedVoice === vp.id;
-              return (
-                <button
-                  key={vp.id}
-                  onClick={() => {
-                    setSelectedVoice(vp.id);
-                    speakText(`Voice switched to ${vp.name}. Ready for our dialogue.`);
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-violet-600 text-white shadow-xs'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
-                  }`}
-                >
-                  <Headphones className="w-3 h-3" />
-                  <span>{vp.name}</span>
-                </button>
-              );
-            })}
-          </div>
+        {/* Device Voice Selector */}
+        <div className="px-6 py-3 bg-slate-950 border-t border-b border-slate-800 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+          <label htmlFor="companion-device-voice" className="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+            Device voice:
+          </label>
+          {!ttsSupported || deviceVoices.length === 0 ? (
+            <span className="text-xs text-slate-400">{ttsSupported ? 'No device voices reported yet. Replies stay as text.' : 'Read-aloud is not supported in this browser. Replies stay as text.'}</span>
+          ) : (
+            <select
+              id="companion-device-voice"
+              value={deviceVoice?.voiceURI ?? ''}
+              onChange={(e) => { setDeviceVoiceUri(e.target.value); }}
+              data-testid="select-companion-device-voice"
+              className="flex-1 min-w-0 bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            >
+              {deviceVoices.map((v) => <option key={v.voiceURI} value={v.voiceURI}>{deviceVoiceLabel(v)}</option>)}
+            </select>
+          )}
+          <span className="flex items-center gap-1 text-[10px] text-slate-500 whitespace-nowrap"><Headphones className="w-3 h-3" /> Studio female and male voices: Reader TTS Studio</span>
         </div>
 
         {/* Live Conversation Transcript */}
         <div className="p-4 sm:p-6 max-h-60 overflow-y-auto space-y-3 bg-slate-900/90 scrollbar-none">
           <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-1">
-            Real-Time Transcript Log:
+            Transcript:
           </div>
           {conversation.map((msg) => (
             <div
@@ -340,7 +316,7 @@ export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionM
               }`}
             >
               <div className="flex items-center justify-between text-[10px] font-bold mb-1 opacity-75">
-                <span>{msg.speaker === 'user' ? 'You (Voice Input)' : `${selectedVoice} (Live Gemini Companion)`}</span>
+                <span>{msg.speaker === 'user' ? 'You (Voice Input)' : 'Companion (AI text, device voice)'}</span>
                 <span>{msg.timestamp}</span>
               </div>
               <p>{msg.text}</p>

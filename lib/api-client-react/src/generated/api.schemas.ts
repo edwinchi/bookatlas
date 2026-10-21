@@ -5,6 +5,48 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type ReaderNarrationInputVoiceName = typeof ReaderNarrationInputVoiceName[keyof typeof ReaderNarrationInputVoiceName];
+
+
+export const ReaderNarrationInputVoiceName = {
+  Sulafat: 'Sulafat',
+  Charon: 'Charon',
+  Kore: 'Kore',
+  Puck: 'Puck',
+  Aoede: 'Aoede',
+  Fenrir: 'Fenrir',
+  Zephyr: 'Zephyr',
+} as const;
+
+export type ReaderNarrationInputBudgetUsd = typeof ReaderNarrationInputBudgetUsd[keyof typeof ReaderNarrationInputBudgetUsd];
+
+
+export const ReaderNarrationInputBudgetUsd = {
+  '01': 0.1,
+} as const;
+
+export interface ReaderNarrationInput {
+  requestId: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  text: string;
+  voiceName: ReaderNarrationInputVoiceName;
+  approveSpend: true;
+  budgetUsd: ReaderNarrationInputBudgetUsd;
+}
+
+export interface ReaderNarration {
+  success: boolean;
+  source: string;
+  voiceName: string;
+  audioBase64: string;
+  mimeType: string;
+  durationSeconds: number;
+  reservedUsd: number;
+}
+
 export interface WorkforceRole {
   id: string;
   name: string;
@@ -150,10 +192,13 @@ export type PublishingJobInputVoice = typeof PublishingJobInputVoice[keyof typeo
 
 
 export const PublishingJobInputVoice = {
+  Sulafat: 'Sulafat',
+  Charon: 'Charon',
   Kore: 'Kore',
   Puck: 'Puck',
   Aoede: 'Aoede',
-  Charon: 'Charon',
+  Fenrir: 'Fenrir',
+  Zephyr: 'Zephyr',
 } as const;
 
 export interface PublishingJobInput {

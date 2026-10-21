@@ -28,6 +28,8 @@ import type {
   PublishingJobAction,
   PublishingJobInput,
   PublishingReadiness,
+  ReaderNarration,
+  ReaderNarrationInput,
   ReadingUpdateInput,
   ReadingUpdatePreference,
   UnsubscribeTokenInput,
@@ -64,6 +66,88 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getCreateReaderNarrationUrl = () => {
+
+
+
+
+  return `/api/ai/tts`
+}
+
+export const createReaderNarration = async (readerNarrationInput: ReaderNarrationInput, options?: Parameters<typeof customFetch>[1]): Promise<ReaderNarration> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ReaderNarration>(getCreateReaderNarrationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(readerNarrationInput)
+  }
+);}
+
+
+
+
+
+export const getCreateReaderNarrationMutationKey = () => ['createReaderNarration'] as const;
+
+export const getCreateReaderNarrationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createReaderNarration>>, TError,CreateReaderNarrationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createReaderNarration>>, TError,CreateReaderNarrationMutationVariables, TContext> => {
+
+const mutationKey = getCreateReaderNarrationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createReaderNarration>>, CreateReaderNarrationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createReaderNarration(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateReaderNarrationMutationResult = NonNullable<Awaited<ReturnType<typeof createReaderNarration>>>
+    export type CreateReaderNarrationMutationBody = BodyType<ReaderNarrationInput>
+    export type CreateReaderNarrationMutationError = ErrorType<unknown>
+    export type CreateReaderNarrationMutationVariables = {data: BodyType<ReaderNarrationInput>}
+
+    export const useCreateReaderNarration = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createReaderNarration>>, TError,CreateReaderNarrationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createReaderNarration>>,
+        TError,
+        CreateReaderNarrationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateReaderNarrationMutationOptions(options));
+    }
 
 export const getGetWorkforceUrl = () => {
 

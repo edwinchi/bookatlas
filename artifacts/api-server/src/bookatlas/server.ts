@@ -13,6 +13,7 @@ import { logger } from '../lib/logger';
 import { mountPublishingReadiness } from './publishing/routes.js';
 import { mountPublishingJobs } from './publishing/jobRoutes.js';
 import { mountWorkforce } from './workforce/routes.js';
+import { mountReaderTts } from './publishing/readerTts.js';
 
 function isPlaceholderEnvValue(value?: string): boolean {
   if (!value) return true;
@@ -3018,58 +3019,8 @@ Return a valid JSON object:
     }
   });
 
-  // 7. AI Text-to-Speech Studio Narration (Gemini TTS Preview)
-  app.post('/api/ai/tts', async (req, res) => {
-    try {
-      const { text, voiceName } = req.body;
-      const selectedVoice = voiceName || 'Kore';
-      const ai = getGeminiClient();
-
-      if (!ai) {
-        return res.json({
-          success: true,
-          source: 'browser_speech_compatible',
-          voiceName: selectedVoice,
-          message: 'Client-side SpeechSynthesis with expressive audio settings is active.'
-        });
-      }
-
-      try {
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.1-flash-tts-preview',
-          contents: [{ parts: [{ text: text.slice(0, 500) }] }],
-          config: {
-            responseModalities: ['AUDIO'],
-            speechConfig: {
-              voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: selectedVoice },
-              },
-            },
-          },
-        });
-
-        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-        if (base64Audio) {
-          return res.json({
-            success: true,
-            source: 'gemini-3.1-flash-tts-preview',
-            audioBase64: base64Audio,
-            voiceName: selectedVoice,
-          });
-        }
-      } catch (ttsErr: any) {
-        logger.info({ message: ttsErr.message }, 'Gemini TTS direct note (falling back to browser speech synthesis)');
-      }
-
-      res.json({
-        success: true,
-        source: 'browser_speech_fallback',
-        voiceName: selectedVoice,
-      });
-    } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  });
+  // Reader narration is durable, explicitly approved and never falls back to synthetic browser success.
+  mountReaderTts(app);
 
   // ==========================================
   // MULTI-TURN GEMINI CHATBOT API

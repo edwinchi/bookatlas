@@ -8,6 +8,7 @@ import {
   getGetPublishingJobQueryKey,
 } from '@workspace/api-client-react';
 import type { PublishingJob, PublishingJobInputVoice } from '@workspace/api-client-react';
+import { STUDIO_VOICES, DEFAULT_FEMALE_VOICE } from '@workspace/bookatlas-catalog/voices';
 import { Book } from '../types';
 import { TRANSLATIONS } from '../data/translations';
 import { useAccount } from '../auth/AuthContext';
@@ -26,12 +27,6 @@ interface MultimodalPublishingStudioProps {
 const MAX_BYTES = 5 * 1024 * 1024;
 const ACCEPT = '.txt,.md,.pdf,.png,.jpg,.jpeg';
 const ALLOWED_EXT = ['txt', 'md', 'pdf', 'png', 'jpg', 'jpeg'];
-const VOICES: { id: PublishingJobInputVoice; note: string }[] = [
-  { id: 'Kore', note: 'firm' },
-  { id: 'Puck', note: 'upbeat' },
-  { id: 'Aoede', note: 'breezy' },
-  { id: 'Charon', note: 'informative' },
-];
 
 type Source = { fileName: string; mimeType: string; base64: string; size: number };
 
@@ -74,7 +69,7 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [chapterCount, setChapterCount] = useState(2);
   const [wordsPerChapter, setWordsPerChapter] = useState(100);
-  const [voice, setVoice] = useState<PublishingJobInputVoice>('Kore');
+  const [voice, setVoice] = useState<PublishingJobInputVoice>(DEFAULT_FEMALE_VOICE);
   const [includeAudio, setIncludeAudio] = useState(true);
   const [isTest, setIsTest] = useState(true);
   const [budget, setBudget] = useState('0.75');
@@ -274,8 +269,12 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
             {includeAudio && (
               <div><label htmlFor="s-voice" className={lbl}>Narration voice</label>
                 <select id="s-voice" value={voice} onChange={(e) => setVoice(e.target.value as PublishingJobInputVoice)} className={input}>
-                  {VOICES.map((v) => <option key={v.id} value={v.id}>{v.id} ({v.note})</option>)}
+                  {['Female', 'Male'].map(gender => <optgroup key={gender} label={gender}>
+                    {STUDIO_VOICES.filter(v => v.gender === gender).map(v =>
+                      <option key={v.id} value={v.id}>{v.name} — {v.style}{v.recommended ? ' · Recommended' : ''}</option>)}
+                  </optgroup>)}
                 </select>
+                <p className="mt-2 text-xs text-slate-500">Gemini 3.8 Flash TTS. Recommended: Sulafat (warm female) or Charon (informative male). Chapter narration uses your approved publishing-job budget.</p>
               </div>
             )}
           </div>

@@ -14,7 +14,7 @@ const storage = new Storage({
   },
 });
 
-function object(jobId: string, key: string) {
+export function privateAssetFile(jobId: string, key: string) {
   if (!/^[0-9a-f-]{36}$/.test(jobId) || !/^[a-z0-9-]+\.[a-z0-9]+$/.test(key)) {
     throw new Error('Invalid private publishing asset identity.');
   }
@@ -25,14 +25,14 @@ function object(jobId: string, key: string) {
 }
 
 export async function writeAsset(jobId: string, key: string, bytes: Buffer, contentType: string, ownerId: string) {
-  await object(jobId, key).save(bytes, {
+  await privateAssetFile(jobId, key).save(bytes, {
     resumable: false, validation: 'crc32c',
     metadata: { contentType, cacheControl: 'private, no-store', metadata: { ownerId, jobId, visibility: 'private' } },
   });
 }
 
 export async function readAsset(jobId: string, key: string) {
-  const file = object(jobId, key);
+  const file = privateAssetFile(jobId, key);
   const [metadata] = await file.getMetadata();
   if (!Number.isSafeInteger(Number(metadata.size)) || Number(metadata.size) > 64 * 1024 * 1024) {
     throw new Error('Publishing asset exceeds the supported size.');

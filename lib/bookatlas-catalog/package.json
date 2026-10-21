@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/data/booksData.ts",
-    "./types": "./src/types.ts"
+    "./types": "./src/types.ts",
+    "./voices": "./src/voices.ts"
   }
 }

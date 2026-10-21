@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { GoogleGenAI, type GenerateContentParameters } from '@google/genai';
 import { z } from 'zod';
+import { STUDIO_SPEECH_MODEL, narrationDirection } from '@workspace/bookatlas-catalog/voices';
 import { reserveBudget, tokenCostUpperBound } from './budget.js';
 import { decodeBase64 } from './source.js';
 import { decodeStudioWav, inspectWav, wrapPcm16LE } from './audio.js';
@@ -77,8 +78,8 @@ export class Generator {
   async narration(text: string) {
     const words = text.match(/\S+/gu)?.length ?? 0;
     const response = await this.request({
-      model: 'gemini-3.8-flash-tts',
-      contents: [{ role: 'user', parts: [{ text, speechMetadata: { style: 'Warm, clear, expressive audiobook narration. Read the script exactly, without additions.' } }] }],
+      model: STUDIO_SPEECH_MODEL,
+      contents: [{ role: 'user', parts: [{ text, speechMetadata: { style: narrationDirection(this.job.data.config.voice) } }] }],
       config: {
         responseModalities: ['AUDIO'],
         maxOutputTokens: Math.min(16_000, Math.ceil(words / 1.8 * 25) + 512),

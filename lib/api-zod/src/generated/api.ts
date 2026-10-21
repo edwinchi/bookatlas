@@ -8,6 +8,29 @@
 import * as zod from 'zod';
 
 
+export const createReaderNarrationBodyTextMax = 500;
+
+
+
+export const CreateReaderNarrationBody = zod.object({
+  "requestId": zod.string().uuid(),
+  "text": zod.string().min(1).max(createReaderNarrationBodyTextMax),
+  "voiceName": zod.enum(['Sulafat', 'Charon', 'Kore', 'Puck', 'Aoede', 'Fenrir', 'Zephyr']),
+  "approveSpend": zod.literal(true),
+  "budgetUsd": zod.literal(0.1)
+})
+
+export const CreateReaderNarrationResponse = zod.object({
+  "success": zod.boolean(),
+  "source": zod.string(),
+  "voiceName": zod.string(),
+  "audioBase64": zod.string(),
+  "mimeType": zod.string(),
+  "durationSeconds": zod.number(),
+  "reservedUsd": zod.number()
+})
+
+
 export const GetWorkforceResponse = zod.object({
   "roles": zod.array(zod.object({
   "id": zod.string(),
@@ -254,7 +277,7 @@ export const CreatePublishingJobBody = zod.object({
   "category": zod.string().min(1).max(createPublishingJobBodyCategoryMax),
   "chapterCount": zod.number().int().min(createPublishingJobBodyChapterCountMin).max(createPublishingJobBodyChapterCountMax),
   "wordsPerChapter": zod.number().int().min(createPublishingJobBodyWordsPerChapterMin).max(createPublishingJobBodyWordsPerChapterMax),
-  "voice": zod.enum(['Kore', 'Puck', 'Aoede', 'Charon']),
+  "voice": zod.enum(['Sulafat', 'Charon', 'Kore', 'Puck', 'Aoede', 'Fenrir', 'Zephyr']),
   "includeAudio": zod.boolean(),
   "isTest": zod.boolean(),
   "budgetUsd": zod.number().gt(createPublishingJobBodyBudgetUsdExclusiveMin).max(createPublishingJobBodyBudgetUsdMax)

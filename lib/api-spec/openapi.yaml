@@ -11,6 +11,21 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /ai/tts:
+    post:
+      operationId: createReaderNarration
+      security: [{ clerkSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReaderNarrationInput" }
+      responses:
+        "200":
+          description: Real generated WAV clip, with durable spending reservation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReaderNarration" }
   /manager/workforce:
     get:
       operationId: getWorkforce
@@ -290,6 +305,27 @@ components:
       in: cookie
       name: __session
   schemas:
+    ReaderNarrationInput:
+      type: object
+      additionalProperties: false
+      required: [requestId, text, voiceName, approveSpend, budgetUsd]
+      properties:
+        requestId: { type: string, format: uuid }
+        text: { type: string, minLength: 1, maxLength: 500 }
+        voiceName: { type: string, enum: [Sulafat, Charon, Kore, Puck, Aoede, Fenrir, Zephyr] }
+        approveSpend: { type: boolean, enum: [true] }
+        budgetUsd: { type: number, enum: [0.1] }
+    ReaderNarration:
+      type: object
+      required: [success, source, voiceName, audioBase64, mimeType, durationSeconds, reservedUsd]
+      properties:
+        success: { type: boolean }
+        source: { type: string }
+        voiceName: { type: string }
+        audioBase64: { type: string }
+        mimeType: { type: string }
+        durationSeconds: { type: number }
+        reservedUsd: { type: number }
     WorkforceRole:
       type: object
       required: [id, name, department, mandate, deliverable]
@@ -415,7 +451,7 @@ components:
         category: { type: string, minLength: 1, maxLength: 100 }
         chapterCount: { type: integer, minimum: 2, maximum: 8 }
         wordsPerChapter: { type: integer, minimum: 100, maximum: 800 }
-        voice: { type: string, enum: [Kore, Puck, Aoede, Charon] }
+        voice: { type: string, enum: [Sulafat, Charon, Kore, Puck, Aoede, Fenrir, Zephyr] }
         includeAudio: { type: boolean }
         isTest: { type: boolean }
         budgetUsd: { type: number, exclusiveMinimum: 0, maximum: 1 }
