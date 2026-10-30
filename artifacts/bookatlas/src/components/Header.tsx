@@ -290,7 +290,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {/* Categories selector button */}
-            <div className="relative hidden md:block">
+            <div className="relative hidden lg:block">
               <button
                 onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
                 className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 rounded-md hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200 cursor-pointer"
@@ -439,7 +439,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Manager Operations CTA */}
             {isAdminAuthenticated && <button
               onClick={() => setActiveTab(activeTab === 'manager' ? 'store' : 'manager')}
-              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'manager'
                   ? 'bg-slate-900 text-amber-300 ring-2 ring-indigo-500 shadow-sm'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
@@ -453,7 +453,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* AI Book Matchmaker button */}
             <button
               onClick={onOpenAIMatchmaker}
-              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-indigo-200 text-indigo-900 text-xs sm:text-sm font-semibold hover:border-indigo-400 hover:shadow-xs transition-all cursor-pointer"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-indigo-200 text-indigo-900 text-xs sm:text-sm font-semibold hover:border-indigo-400 hover:shadow-xs transition-all cursor-pointer"
               title="AI Book Recommender & Gemini Mood Matcher"
             >
               <Sparkles className="w-4 h-4 text-indigo-600 animate-pulse" />
@@ -464,7 +464,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* My Bookshelf tab */}
             <button
               onClick={() => setActiveTab('library')}
-              className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === 'library'
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950'
@@ -477,7 +477,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Wishlist */}
             <button
               onClick={onOpenWishlist}
-              className="relative hidden md:flex min-h-12 min-w-12 items-center justify-center p-2 text-slate-700 hover:text-slate-950 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              className="relative hidden lg:flex min-h-12 min-w-12 items-center justify-center p-2 text-slate-700 hover:text-slate-950 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
               title="Saved Wishlist"
               aria-label={`Open wishlist${wishlistCount ? `, ${wishlistCount} saved` : ''}`}
             >
@@ -507,7 +507,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Mobile menu toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="grid min-h-12 min-w-12 place-items-center md:hidden text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer"
+              className="grid min-h-12 min-w-12 place-items-center lg:hidden text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer"
               aria-label={mobileMenuOpen ? 'Close bookstore menu' : 'Open bookstore menu'}
               aria-expanded={mobileMenuOpen}
             >
@@ -532,7 +532,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Sub Navigation Bar (eBooks, Audiobooks, Bookatlas Plus, Deals, Manager) */}
-      <nav className="bg-white border-t border-slate-100 hidden md:block">
+      <nav className="bg-white border-t border-slate-100 hidden lg:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between text-sm">
           <div className="flex items-center space-x-1 overflow-x-auto scrollbar-none py-0.5">
             <button
@@ -634,7 +634,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden max-h-[calc(100dvh-8rem)] overflow-y-auto bg-white border-t border-slate-200 px-4 py-3 space-y-2">
+        <div className="lg:hidden max-h-[calc(100dvh-8rem)] overflow-y-auto bg-white border-t border-slate-200 px-4 py-3 space-y-2">
           <button onClick={() => { setActiveTab('library'); setMobileMenuOpen(false); }} className="min-h-12 w-full rounded-lg bg-slate-50 px-3 text-left font-semibold text-slate-900">My Bookshelf</button>
           <button onClick={() => { onOpenWishlist(); setMobileMenuOpen(false); }} className="min-h-12 w-full rounded-lg bg-slate-50 px-3 text-left font-semibold text-slate-900">Wishlist{wishlistCount ? ` (${wishlistCount})` : ''}</button>
           {setLanguage && <label className="flex min-h-12 items-center justify-between gap-3 rounded-lg px-3 text-sm font-medium text-slate-800">

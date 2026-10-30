@@ -9,6 +9,18 @@ const origin = 'http://localhost:80';
 const reader = { id: 'unit-reader', email: 'reader@example.com', name: 'Reader', role: 'reader' };
 const admin = { ...reader, role: 'admin' };
 
+async function assertNoHorizontalOverflow(page, label) {
+  const dimensions = await page.evaluate(() => ({
+    viewport: innerWidth,
+    document: document.documentElement.scrollWidth,
+    body: document.body.scrollWidth,
+  }));
+  assert.ok(
+    dimensions.document <= dimensions.viewport && dimensions.body <= dimensions.viewport,
+    `${label}: ${JSON.stringify(dimensions)}`,
+  );
+}
+
 test('only the intended storefront routes are public; readers cannot access admin data or operations', async () => {
   const source = await readFile('artifacts/api-server/src/bookatlas/server.ts', 'utf8');
   for (const [, method, path] of source.matchAll(/app\.(get|post|put|patch|delete)\('([^']+)'/g)) {
@@ -83,6 +95,7 @@ test('public browsing, branded auth routes, callback paths, and fake legacy sess
     await page.goto(origin);
     await expect(page.getByRole('link', { name: 'Create account', exact: true })).toBeVisible({ timeout: 30_000 });
     assert.equal(new URL(page.url()).pathname, '/', 'visitors must land on the storefront, not a forced login');
+    await assertNoHorizontalOverflow(page, 'desktop storefront at 1280px');
     await page.screenshot({ path: `${directory}/storefront.jpg` });
     await page.evaluate(() => {
       localStorage.setItem('bookatlas_admin_session', JSON.stringify({ isAuthenticated: true, role: 'super_admin' }));
@@ -92,15 +105,109 @@ test('public browsing, branded auth routes, callback paths, and fake legacy sess
     await page.reload();
     await expect(page.getByRole('button', { name: /Admin Login|Manager Studio|Platform Blueprint|Download Documentation/ })).toHaveCount(0);
     await expect(page.getByText(/Veo Cover Image-to-Video Animator/)).toHaveCount(0);
-    await page.setViewportSize({ width: 390, height: 844 });
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'public storefront must fit a phone');
-    await page.screenshot({ path: `${directory}/mobile-storefront.jpg` });
+    await page.setViewportSize({ width: 320, height: 844 });
     await page.getByRole('button', { name: 'Open bookstore menu' }).click();
-    await expect(page.getByRole('button', { name: 'My Bookshelf', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'AI reading tools' })).toBeVisible();
+    const languageSelect = page.locator('select[aria-label="Language"]');
+    const currencySelect = page.locator('select[aria-label="Currency"]');
+    await languageSelect.selectOption('nl');
+    await currencySelect.selectOption('CAD');
+    await page.waitForFunction(() => {
+      try {
+        const value = JSON.parse(localStorage.getItem('bookatlas:store-preferences:v1') || '{}');
+        return value.language === 'nl' && value.currency === 'CAD';
+      } catch { return false; }
+    });
+    await page.reload();
+    await page.getByRole('button', { name: 'Open bookstore menu' }).click();
+    await expect(page.locator('select[aria-label="Language"]')).toHaveValue('nl');
+    await expect(page.locator('select[aria-label="Currency"]')).toHaveValue('CAD');
+    await page.locator('select[aria-label="Language"]').selectOption('en');
+    await page.locator('select[aria-label="Currency"]').selectOption('EUR');
+    await page.waitForFunction(() => {
+      try {
+        const value = JSON.parse(localStorage.getItem('bookatlas:store-preferences:v1') || '{}');
+        return value.language === 'en' && value.currency === 'EUR';
+      } catch { return false; }
+    });
     await page.getByRole('button', { name: 'Close bookstore menu' }).click();
+    for (const width of [320, 360, 375, 390, 414, 430, 768, 900, 1023, 1024]) {
+      await page.setViewportSize({ width, height: 844 });
+      await assertNoHorizontalOverflow(page, `storefront at ${width}px`);
+      if (width < 1024) {
+        await page.getByRole('button', { name: 'Open bookstore menu' }).click();
+        await expect(page.getByRole('button', { name: 'My Bookshelf', exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'AI reading tools' })).toBeVisible();
+        await assertNoHorizontalOverflow(page, `mobile menu at ${width}px`);
+        await page.getByRole('button', { name: 'Close bookstore menu' }).click();
+      }
+      if ([320, 390, 430, 768, 1024].includes(width)) {
+        await page.screenshot({ path: `${directory}/storefront-${width}px.jpg` });
+      }
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileSearch = page.getByPlaceholder('Search books, authors, genres...');
+    await expect(mobileSearch).toBeVisible();
+    await mobileSearch.fill('Sirius');
+    await expect(mobileSearch).toHaveValue('Sirius');
+    await mobileSearch.fill('');
+    await page.getByRole('button', { name: /Read Instant Sample/i }).first().click();
+    const readerDialog = page.getByRole('dialog', { name: /^Reader:/ });
+    await expect(readerDialog).toBeVisible();
+    for (const width of [320, 375, 390, 430, 768, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      await assertNoHorizontalOverflow(page, `sample reader at ${width}px`);
+      const readerWidth = await readerDialog.evaluate(element => element.scrollWidth);
+      assert.ok(readerWidth <= width, `reader contents must fit ${width}px (scroll width ${readerWidth}px)`);
+    }
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.screenshot({ path: `${directory}/reader-320px.jpg` });
+    await page.getByRole('button', { name: 'Font & Theme Settings' }).click();
+    await expect(page.getByRole('heading', { name: 'Reading Display' })).toBeVisible();
+    const settingsBounds = await page.getByRole('heading', { name: 'Reading Display' }).evaluate(element => {
+      const rect = element.closest('.absolute')?.getBoundingClientRect();
+      return rect ? { left: rect.left, right: rect.right } : null;
+    });
+    assert.ok(settingsBounds && settingsBounds.left >= 0 && settingsBounds.right <= 320, 'reader settings must stay inside a 320px viewport');
+    await page.getByRole('button', { name: 'Night', exact: true }).click();
+    await page.getByRole('button', { name: 'Dyslexic / Mono' }).click();
+    await page.getByRole('button', { name: 'wide', exact: true }).click();
+    await page.getByRole('slider').nth(1).press('End');
+    await expect(page.getByRole('slider').nth(1)).toHaveValue('26');
+    await page.getByRole('button', { name: 'Close reading settings' }).click();
+    await page.getByRole('button', { name: 'Open table of contents' }).click();
+    await expect(page.getByRole('heading', { name: 'Table of Contents' })).toBeVisible();
+    await page.getByRole('button', { name: 'Close table of contents' }).click();
+    await readerDialog.getByRole('button', { name: 'Next Chapter' }).click();
+    await expect(readerDialog).toContainText('Chapter 2 of 2');
+    await readerDialog.getByRole('button', { name: 'Previous Chapter' }).click();
+    await expect(readerDialog).toContainText('Chapter 1 of 2');
+    await page.getByRole('button', { name: 'Exit reader' }).click();
+    await page.reload();
+    await page.getByRole('button', { name: /Read Instant Sample/i }).first().click();
+    await page.getByRole('button', { name: 'Font & Theme Settings' }).click();
+    await expect(page.getByRole('slider').nth(1)).toHaveValue('26');
+    await expect(page.getByRole('button', { name: 'Night', exact: true })).toHaveClass(/ring-2 ring-indigo-600/);
+    await expect(page.getByRole('button', { name: 'Dyslexic / Mono' })).toHaveClass(/bg-slate-900/);
+    await expect(page.getByRole('button', { name: 'wide', exact: true })).toHaveClass(/bg-slate-900/);
+    await page.getByRole('button', { name: 'Reset to defaults' }).click();
+    await expect(page.getByRole('slider').nth(1)).toHaveValue('18');
+    await expect(page.getByRole('button', { name: 'Sepia', exact: true })).toHaveClass(/ring-2 ring-indigo-600/);
+    await page.getByRole('button', { name: 'Close reading settings' }).click();
+    await page.getByRole('button', { name: 'Exit reader' }).click();
+    await page.reload();
+    await page.getByRole('button', { name: /Read Instant Sample/i }).first().click();
+    await page.getByRole('button', { name: 'Font & Theme Settings' }).click();
+    await expect(page.getByRole('slider').nth(1)).toHaveValue('18');
+    await expect(page.getByRole('button', { name: 'Sepia', exact: true })).toHaveClass(/ring-2 ring-indigo-600/);
+    await page.screenshot({ path: `${directory}/reader-settings-320px.jpg` });
+    await page.getByRole('button', { name: 'Close reading settings' }).click();
+    await page.getByRole('button', { name: 'Exit reader' }).click();
+    await page.setViewportSize({ width: 320, height: 844 });
     await page.getByRole('button', { name: /Add eBook to cart/ }).first().click();
+    await expect(page.getByRole('dialog', { name: 'Your Shopping Cart' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign in to review checkout' })).toBeVisible();
+    await assertNoHorizontalOverflow(page, 'shopping cart at 390px');
+    await page.screenshot({ path: `${directory}/cart-320px.jpg` });
     assert.equal(new URL(page.url()).pathname, '/', 'a guest can add a book before checkout');
     await page.getByRole('button', { name: 'Sign in to review checkout' }).click();
     await expect(page).toHaveURL(/\/sign-in\?/);

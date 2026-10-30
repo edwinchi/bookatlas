@@ -70,6 +70,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
       <div 
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cart-dialog-title"
         className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-250"
         onClick={(e) => e.stopPropagation()}
       >
@@ -78,7 +81,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         <div className="p-5 border-b border-gray-200 flex items-center justify-between bg-gray-50/70">
           <div className="flex items-center gap-2">
             <ShoppingBag className="w-5 h-5 text-[#bf0000]" />
-            <h2 className="text-base font-bold text-gray-900">Your Shopping Cart</h2>
+            <h2 id="cart-dialog-title" className="text-base font-bold text-gray-900">Your Shopping Cart</h2>
             <span className="text-xs bg-[#bf0000]/10 text-[#bf0000] px-2 py-0.5 rounded-full font-bold">
               {cart.length}
             </span>

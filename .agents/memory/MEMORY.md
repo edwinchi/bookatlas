@@ -1,9 +1,10 @@
 - [Legacy reader-data ownership](auth-data-ownership.md) — do not silently assign anonymous/email-only browser data to the first authenticated account.
 - [Reader/admin boundaries](reader-admin-boundaries.md) — browsing is public; login is selective, and internal administration stays separate from reader content.
+- [Local reader preferences](local-reader-preferences.md) — storefront locale and reader display choices persist in browser storage, not account data.
 - [Publishing expectations](publishing-expectations.md) — the ingest studio must produce real books/audio and launch campaigns, not simulated completion claims.
 - [Supabase schema probes](supabase-schema-probes.md) — HEAD can falsely appear healthy for missing tables; use explicit GET selections to validate readiness.
 - [Shared Supabase isolation](shared-supabase-isolation.md) — the user chose dedicated Bookatlas tables; leave unrelated tables and their access policies untouched.
 - [Supabase network access](supabase-network-access.md) — database administration needs an IPv4-compatible session-pooler URI; the direct IPv6 endpoint is unreachable here.
 - [AI workforce scope](ai-workforce-scope.md) — user wants both in-app AI roles and development specialists; initial workers produce reviewed reports, not autonomous external actions.
-- [Frontend styling expectations](frontend-styling.md) — user requests advanced Tailwind CSS practices for Bookatlas.
+- [Frontend styling expectations](frontend-styling.md) — use advanced Tailwind; prioritize mobile and simplicity, and test mobile, iOS/Android, Lighthouse, and touch each sprint.
 - [Voice quality and auto mode](voice-quality.md) — user wants high-quality male/female voices and autonomous implementation; preserve truthful playback and approval boundaries.

@@ -47,6 +47,28 @@ import {
 } from 'lucide-react';
 
 const GUEST_CART_KEY = 'bookatlas:guest-cart:v1';
+const STORE_PREFERENCES_KEY = 'bookatlas:store-preferences:v1';
+const STORE_CURRENCIES = new Set(['EUR', 'USD', 'GBP', 'CAD', 'JPY']);
+type StoreLanguage = 'en' | 'nl';
+type StorePreferences = { currency: string; language: StoreLanguage };
+
+function readStorePreferences(): StorePreferences {
+  const defaults: StorePreferences = { currency: 'EUR', language: 'en' };
+  try {
+    const stored: unknown = JSON.parse(localStorage.getItem(STORE_PREFERENCES_KEY) || 'null');
+    if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return defaults;
+    const values = stored as Record<string, unknown>;
+    return {
+      currency: typeof values.currency === 'string' && STORE_CURRENCIES.has(values.currency)
+        ? values.currency
+        : defaults.currency,
+      language: values.language === 'nl' ? 'nl' : defaults.language,
+    };
+  } catch {
+    return defaults;
+  }
+}
+
 type ReaderTab = 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager';
 function readGuestCart(): CartItem[] {
   try {
@@ -77,9 +99,17 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
     if (tab === 'manager' && !requireAdmin()) return;
     setActiveTabState(tab);
   };
-  const [currency, setCurrency] = useState('EUR');
+  const [currency, setCurrency] = useState<string>(() => readStorePreferences().currency);
   const currencySymbol = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
-  const [language, setLanguage] = useState<'en' | 'nl'>('en');
+  const [language, setLanguage] = useState<StoreLanguage>(() => readStorePreferences().language);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORE_PREFERENCES_KEY, JSON.stringify({ currency, language }));
+    } catch {
+      // The storefront remains usable when browser storage is unavailable.
+    }
+  }, [currency, language]);
 
   const registeredUser = account;
 

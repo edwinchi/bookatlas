@@ -35,6 +35,51 @@ import {
 import { StudioNarrationPanel } from './voice/StudioNarrationPanel';
 import { Book, ReaderSettings, ReaderTheme, ReaderFont, Highlight } from '../types';
 
+const READER_DISPLAY_PREFERENCES_KEY = 'bookatlas:reader-display:v1';
+const DEFAULT_READER_SETTINGS: ReaderSettings = {
+  fontSize: 18,
+  lineHeight: 1.7,
+  fontFamily: 'literata',
+  theme: 'sepia',
+  marginWidth: 'normal',
+};
+
+function readSavedReaderSettings(): ReaderSettings {
+  try {
+    const stored: unknown = JSON.parse(localStorage.getItem(READER_DISPLAY_PREFERENCES_KEY) || 'null');
+    if (!stored || typeof stored !== 'object' || Array.isArray(stored)) {
+      return { ...DEFAULT_READER_SETTINGS };
+    }
+
+    const values = stored as Record<string, unknown>;
+    const fontSize = values.fontSize;
+    const lineHeight = values.lineHeight;
+    const fontFamilies: ReaderFont[] = ['literata', 'sans', 'mono'];
+    const themes: ReaderTheme[] = ['day', 'sepia', 'night', 'mint', 'black'];
+    const margins: ReaderSettings['marginWidth'][] = ['narrow', 'normal', 'wide'];
+
+    return {
+      fontSize: typeof fontSize === 'number' && Number.isFinite(fontSize) && fontSize >= 14 && fontSize <= 26
+        ? fontSize
+        : DEFAULT_READER_SETTINGS.fontSize,
+      lineHeight: typeof lineHeight === 'number' && Number.isFinite(lineHeight) && lineHeight >= 1.4 && lineHeight <= 2.2
+        ? lineHeight
+        : DEFAULT_READER_SETTINGS.lineHeight,
+      fontFamily: fontFamilies.includes(values.fontFamily as ReaderFont)
+        ? values.fontFamily as ReaderFont
+        : DEFAULT_READER_SETTINGS.fontFamily,
+      theme: themes.includes(values.theme as ReaderTheme)
+        ? values.theme as ReaderTheme
+        : DEFAULT_READER_SETTINGS.theme,
+      marginWidth: margins.includes(values.marginWidth as ReaderSettings['marginWidth'])
+        ? values.marginWidth as ReaderSettings['marginWidth']
+        : DEFAULT_READER_SETTINGS.marginWidth,
+    };
+  } catch {
+    return { ...DEFAULT_READER_SETTINGS };
+  }
+}
+
 interface EReaderModalProps {
   book: Book;
   onClose: () => void;
@@ -102,13 +147,15 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const [selectedHighlightColor, setSelectedHighlightColor] = useState<'yellow' | 'green' | 'blue' | 'pink'>('yellow');
   const [activeHighlightMode, setActiveHighlightMode] = useState(false);
 
-  const [settings, setSettings] = useState<ReaderSettings>({
-    fontSize: 18,
-    lineHeight: 1.7,
-    fontFamily: 'literata',
-    theme: 'sepia',
-    marginWidth: 'normal',
-  });
+  const [settings, setSettings] = useState<ReaderSettings>(readSavedReaderSettings);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(READER_DISPLAY_PREFERENCES_KEY, JSON.stringify(settings));
+    } catch {
+      // Reading remains available when browser storage is unavailable.
+    }
+  }, [settings]);
 
   const readerContainerRef = useRef<HTMLDivElement>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
@@ -507,20 +554,24 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   return (
     <div 
       ref={readerContainerRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Reader: ${book.title}`}
       className={`fixed inset-0 z-50 flex flex-col transition-colors duration-200 select-text ${getThemeClasses(settings.theme)}`}
     >
       {/* Top eReader Control Header */}
-      <header className={`px-4 sm:px-6 py-3 border-b flex items-center justify-between transition-colors ${
+      <header className={`flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-2 py-2 border-b transition-colors sm:flex-nowrap sm:px-6 sm:py-3 ${
         settings.theme === 'night' || settings.theme === 'black'
           ? 'bg-black/70 border-white/10 text-slate-200'
           : 'bg-white/80 border-slate-200 text-slate-800'
       } backdrop-blur-md`}>
         
         {/* Left: Close & Table of Contents */}
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-1 sm:gap-3">
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-black/10 transition-colors cursor-pointer"
+            aria-label="Exit reader"
+            className="grid min-h-12 min-w-12 shrink-0 place-items-center rounded-lg hover:bg-black/10 transition-colors cursor-pointer"
             title="Exit Reader"
           >
             <X className="w-5 h-5" />
@@ -528,7 +579,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
           <button
             onClick={() => setShowToc(!showToc)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-black/10 text-xs font-semibold transition-colors cursor-pointer"
+            aria-label="Open table of contents"
+            className="flex min-h-12 min-w-12 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors hover:bg-black/10 cursor-pointer"
             title="Table of Contents"
           >
             <List className="w-4 h-4" />
@@ -542,7 +594,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
         </div>
 
         {/* Center: Current Chapter Indicator */}
-        <div className="text-center truncate px-2">
+        <div className="min-w-0 flex-1 truncate px-1 text-center sm:px-2">
           <span className="text-xs sm:text-sm font-serif font-bold">
             {currentChapter.title}
           </span>
@@ -552,7 +604,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
         </div>
 
         {/* Right: Tools & Settings */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="ml-auto flex basis-full items-center justify-end gap-1 overflow-x-auto sm:ml-0 sm:basis-auto sm:gap-2 sm:overflow-visible">
           {/* Gemini AI Co-Pilot Button */}
           <button
             onClick={() => {
@@ -561,7 +613,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                 runAICopilot('explain', currentChapter.content[0]);
               }
             }}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            aria-label={showAICopilot ? 'Close AI reading assistant' : 'Open AI reading assistant'}
+            className={`flex min-h-12 min-w-12 items-center justify-center gap-1 rounded-lg px-2.5 text-xs font-bold transition-all cursor-pointer ${
               showAICopilot 
                 ? 'bg-indigo-600 text-white shadow-xs' 
                 : 'bg-indigo-50 text-indigo-900 border border-indigo-200 hover:bg-indigo-100'
@@ -575,7 +628,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           {/* Highlight Marker Mode */}
           <button
             onClick={() => setActiveHighlightMode(!activeHighlightMode)}
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+            aria-label={activeHighlightMode ? 'Turn off highlight mode' : 'Turn on highlight mode'}
+            className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${
               activeHighlightMode ? 'bg-amber-400 text-slate-950 font-bold shadow-xs' : 'hover:bg-black/10'
             }`}
             title="Highlight Mode (Click paragraph to highlight)"
@@ -586,7 +640,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           {/* Bookmark toggle */}
           <button
             onClick={() => setBookmarked(!bookmarked)}
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+            aria-label={bookmarked ? 'Remove page bookmark' : 'Bookmark this page'}
+            className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${
               bookmarked ? 'text-indigo-600' : 'hover:bg-black/10 opacity-75'
             }`}
             title={bookmarked ? 'Bookmark Saved' : 'Bookmark this page'}
@@ -597,7 +652,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           {/* Text to Speech toggle */}
           <button
             onClick={toggleSpeech}
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+            className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${
               isSpeaking ? 'text-indigo-600 animate-pulse bg-indigo-50' : 'hover:bg-black/10 opacity-75'
             }`}
             title={isSpeaking ? 'Stop device read-aloud' : 'Read chapter with device voice'}
@@ -609,7 +664,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           {/* Display Settings Toggle */}
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+            aria-label="Font & Theme Settings"
+            className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${
               showSettings ? 'bg-black/15' : 'hover:bg-black/10'
             }`}
             title="Font & Theme Settings"
@@ -628,6 +684,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                 setIsFullscreen(false);
               }
             }}
+            aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
             className="p-1.5 rounded-lg hover:bg-black/10 transition-colors hidden sm:block cursor-pointer opacity-75"
             title="Toggle Fullscreen"
           >
@@ -776,12 +833,12 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
       {/* Table of Contents Drawer */}
       {showToc && (
-        <div className="absolute inset-y-0 left-0 w-80 bg-slate-950 text-white z-50 shadow-2xl p-5 overflow-y-auto animate-in slide-in-from-left duration-200">
+        <div className="absolute inset-y-0 left-0 z-50 w-full max-w-80 overflow-y-auto bg-slate-950 p-4 text-white shadow-2xl animate-in slide-in-from-left duration-200">
           <div className="flex items-center justify-between pb-4 border-b border-slate-800">
             <h3 className="font-bold text-sm uppercase tracking-wider text-slate-300 flex items-center gap-2">
               <List className="w-4 h-4" /> Table of Contents
             </h3>
-            <button onClick={() => setShowToc(false)} className="p-1 hover:text-slate-400">
+            <button onClick={() => setShowToc(false)} aria-label="Close table of contents" className="grid min-h-12 min-w-12 place-items-center rounded-lg hover:text-slate-400">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -795,7 +852,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                   setCurrentParagraphIndex(0);
                   setShowToc(false);
                 }}
-                className={`w-full text-left p-3 rounded-xl text-xs sm:text-sm font-medium transition-colors cursor-pointer flex items-center justify-between ${
+                className={`min-h-12 w-full text-left p-3 rounded-xl text-xs sm:text-sm font-medium transition-colors cursor-pointer flex items-center justify-between ${
                   currentChapterIndex === idx
                     ? 'bg-indigo-600 text-white font-bold'
                     : 'text-slate-300 hover:bg-slate-900 hover:text-white'
@@ -1226,12 +1283,12 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
       {/* Reader Settings Floating Popup */}
       {showSettings && (
-        <div className="absolute top-16 right-4 sm:right-6 w-80 bg-white text-slate-900 rounded-2xl shadow-2xl border border-slate-200 p-5 z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-5">
+        <div className="absolute top-16 right-2 sm:right-6 w-[calc(100vw-1rem)] max-w-80 bg-white text-slate-900 rounded-2xl shadow-2xl border border-slate-200 p-4 sm:p-5 z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
               <Type className="w-4 h-4 text-indigo-600" /> Reading Display
             </h3>
-            <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-700">
+            <button onClick={() => setShowSettings(false)} aria-label="Close reading settings" className="grid min-h-12 min-w-12 place-items-center text-slate-400 hover:text-slate-700">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -1250,7 +1307,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                 <button
                   key={t.id}
                   onClick={() => setSettings((s) => ({ ...s, theme: t.id as ReaderTheme }))}
-                  className={`h-10 rounded-lg flex flex-col items-center justify-center text-[10px] font-bold border transition-all cursor-pointer ${t.bg} ${t.text} ${t.border} ${
+                  className={`min-h-12 rounded-lg flex flex-col items-center justify-center text-[10px] font-bold border transition-all cursor-pointer ${t.bg} ${t.text} ${t.border} ${
                     settings.theme === t.id ? 'ring-2 ring-indigo-600 shadow-sm scale-105' : 'opacity-80 hover:opacity-100'
                   }`}
                 >
@@ -1272,7 +1329,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                 <button
                   key={f.id}
                   onClick={() => setSettings((s) => ({ ...s, fontFamily: f.id as ReaderFont }))}
-                  className={`py-2 px-2 rounded-lg border transition-colors cursor-pointer text-center ${
+                  className={`min-h-12 py-2 px-2 rounded-lg border transition-colors cursor-pointer text-center ${
                     settings.fontFamily === f.id
                       ? 'bg-slate-900 text-white border-slate-900 font-bold'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -1312,7 +1369,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                 <button
                   key={m}
                   onClick={() => setSettings((s) => ({ ...s, marginWidth: m }))}
-                  className={`py-1.5 capitalize rounded-md border cursor-pointer ${
+                  className={`min-h-12 py-1.5 capitalize rounded-md border cursor-pointer ${
                     settings.marginWidth === m
                       ? 'bg-slate-900 text-white border-slate-900'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -1323,6 +1380,13 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
               ))}
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setSettings({ ...DEFAULT_READER_SETTINGS })}
+            className="min-h-12 w-full rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+          >
+            Reset to defaults
+          </button>
         </div>
       )}
     </div>
