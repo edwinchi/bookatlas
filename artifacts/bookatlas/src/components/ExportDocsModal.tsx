@@ -27,30 +27,35 @@ export function ExportDocsModal({ isOpen, onClose, books }: ExportDocsModalProps
   const [isExportingWord, setIsExportingWord] = useState(false);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState('');
 
   if (!isOpen) return null;
 
   const handleDownloadWord = async () => {
     setIsExportingWord(true);
+    setDownloadError('');
+    setDownloadSuccess(null);
     try {
       await downloadWordDocument(books);
       setDownloadSuccess('Microsoft Word document (.docx) successfully generated and downloaded!');
       setTimeout(() => setDownloadSuccess(null), 4000);
     } catch (err) {
-      console.error('Word export error:', err);
+      setDownloadError('Word download failed. Please try again.');
     } finally {
       setIsExportingWord(false);
     }
   };
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     setIsExportingPDF(true);
+    setDownloadError('');
+    setDownloadSuccess(null);
     try {
-      downloadPDFDocument(books);
+      await downloadPDFDocument(books);
       setDownloadSuccess('PDF document (.pdf) successfully generated and downloaded!');
       setTimeout(() => setDownloadSuccess(null), 4000);
     } catch (err) {
-      console.error('PDF export error:', err);
+      setDownloadError('PDF download failed. Please try again.');
     } finally {
       setIsExportingPDF(false);
     }
@@ -58,6 +63,7 @@ export function ExportDocsModal({ isOpen, onClose, books }: ExportDocsModalProps
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+      {downloadError && <p role="alert" className="fixed bottom-4 left-4 right-4 z-[100] rounded-xl bg-red-50 p-4 text-sm text-red-900">{downloadError}</p>}
       <div className="bg-white text-slate-900 w-full max-w-4xl h-[90vh] max-h-[860px] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
         
         {/* Header */}

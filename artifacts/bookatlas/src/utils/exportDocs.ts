@@ -1,5 +1,3 @@
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, BorderStyle, AlignmentType } from 'docx';
-import { jsPDF } from 'jspdf';
 import { Book } from '../types';
 
 export interface PlatformDocumentationData {
@@ -14,6 +12,7 @@ export interface PlatformDocumentationData {
  * Generates and triggers download of a genuine Microsoft Word (.docx) document
  */
 export async function downloadWordDocument(books: Book[]) {
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, BorderStyle, AlignmentType } = await import('docx');
   const currentDate = new Date().toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
@@ -230,7 +229,8 @@ export async function downloadWordDocument(books: Book[]) {
 /**
  * Generates and triggers download of a genuine, high-quality PDF document
  */
-export function downloadPDFDocument(books: Book[]) {
+export async function downloadPDFDocument(books: Book[]) {
+  const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',

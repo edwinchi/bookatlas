@@ -42,6 +42,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         if (!response.ok) throw new Error(data.error || 'Could not verify your account.');
         if (data.user.id !== user.id) throw new Error('Your session changed. Please reload the page.');
         setProfile(data);
+        setLoading(false);
         // The server derives this identity from the verified session, not a form.
         try {
           const sync = await fetch('/api/users/register', { method: 'POST', signal: controller.signal });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   ShoppingBag, 
@@ -91,6 +91,19 @@ export const Header: React.FC<HeaderProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
 
+  useEffect(() => {
+    const closeMenus = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { setMobileMenuOpen(false); setCategoryDropdownOpen(false); }
+    };
+    window.addEventListener('keydown', closeMenus);
+    return () => window.removeEventListener('keydown', closeMenus);
+  }, []);
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    if (activeTab !== 'store') setActiveTab('store');
+  };
+
   // Helper for Manager Access
   const handleManagerTabClick = () => {
     if (activeTab === 'manager') {
@@ -132,7 +145,7 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-40 bg-white border-b border-stone-200 shadow-xs">
       {/* Top micro announcement bar */}
       <div className="hidden bg-[#0f172a] text-slate-200 text-xs py-1.5 px-4 sm:block">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center space-x-3">
             <span className="flex items-center gap-1.5 font-medium text-white">
               <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -148,7 +161,7 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center space-x-2 sm:space-x-3 text-slate-300">
+          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 text-slate-300">
             {/* Admin Session Indicator & Quick Lock */}
             {isAdminAuthenticated ? (
               <div className="flex items-center gap-1.5 bg-emerald-950/90 border border-emerald-600/60 px-2.5 py-0.5 rounded text-[11px] text-emerald-300">
@@ -270,12 +283,12 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between gap-2 sm:gap-4">
           
           {/* Logo & Brand */}
-          <div className="flex items-center gap-4">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
             <button 
               onClick={() => { setActiveTab('store'); setSelectedGenre('All Genres'); setSearchQuery(''); }}
-              className="flex items-center gap-2.5 text-left group focus:outline-hidden cursor-pointer"
+              className="flex min-w-0 items-center gap-1.5 sm:gap-2.5 text-left group focus-visible:outline-2 focus-visible:outline-indigo-600 cursor-pointer"
             >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900 text-amber-400 flex items-center justify-center font-serif font-black text-xl shadow-md group-hover:scale-105 transition-transform border border-blue-800/40">
+              <div className="h-8 w-8 shrink-0 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900 text-amber-400 flex items-center justify-center font-serif font-black text-xl shadow-md group-hover:scale-105 transition-transform border border-blue-800/40">
                 <Compass className="w-5 h-5 text-amber-300" />
               </div>
               <div className="leading-tight">
@@ -283,25 +296,28 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="text-[10px] tracking-widest uppercase font-bold text-slate-400">ATLANTEAN</span>
                   <span className="text-[9px] px-1 py-0.2 rounded-xs bg-slate-100 text-slate-600 font-semibold">NL</span>
                 </div>
-                <div className="text-xl font-extrabold tracking-tight text-slate-950 flex items-center font-serif">
+                <div className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-950 flex items-center font-serif">
                   bookatlas<span className="text-amber-600 font-sans">.</span>
                 </div>
               </div>
             </button>
 
             {/* Categories selector button */}
-            <div className="relative hidden lg:block">
+            <div className="relative hidden xl:block">
               <button
                 onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
+                aria-expanded={categoryDropdownOpen}
+                aria-controls="bookstore-categories"
                 className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 rounded-md hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200 cursor-pointer"
               >
                 <Layers className="w-4 h-4 text-slate-500" />
-                <span>{selectedGenre === 'All Genres' ? 'Categories' : selectedGenre}</span>
+                <span className="max-w-36 truncate">{selectedGenre === 'All Genres' ? 'Categories' : selectedGenre}</span>
                 <span className="text-xs text-slate-400">▾</span>
               </button>
 
               {categoryDropdownOpen && (
                 <div 
+                  id="bookstore-categories"
                   className="absolute left-0 top-full mt-1.5 w-80 bg-white rounded-xl shadow-2xl border border-stone-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 max-h-[480px] overflow-y-auto"
                   onMouseLeave={() => setCategoryDropdownOpen(false)}
                 >
@@ -410,22 +426,21 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Search bar */}
-          <div className="flex-1 max-w-xl hidden sm:block">
+          <div className="min-w-0 flex-1 max-w-xl hidden sm:block">
             <div className="relative">
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (activeTab !== 'store') setActiveTab('store');
-                }}
-                placeholder="Search by Title, Author, ISBN, Dutch translations, or AI Mood..."
+                onChange={(e) => handleSearchChange(e.target.value)}
+                aria-label="Search the book catalog"
+                placeholder="Search title, author, ISBN, genre, or tags…"
                 className="w-full pl-10 pr-10 py-2 bg-slate-100 focus:bg-white border border-slate-200 rounded-full text-sm text-slate-900 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
               />
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
+                  aria-label="Clear catalog search"
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full"
                 >
                   <X className="w-4 h-4" />
@@ -435,7 +450,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right actions: AI Matchmaker, Manager, Wishlist, My Bookshelf, Cart */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
             {/* Manager Operations CTA */}
             {isAdminAuthenticated && <button
               onClick={() => setActiveTab(activeTab === 'manager' ? 'store' : 'manager')}
@@ -510,6 +525,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="grid min-h-12 min-w-12 place-items-center lg:hidden text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer"
               aria-label={mobileMenuOpen ? 'Close bookstore menu' : 'Open bookstore menu'}
               aria-expanded={mobileMenuOpen}
+              aria-controls="bookstore-mobile-menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -522,7 +538,8 @@ export const Header: React.FC<HeaderProps> = ({
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              aria-label="Search the book catalog"
               placeholder="Search books, authors, genres..."
               className="min-h-12 w-full pl-9 pr-8 py-1.5 bg-slate-100 text-sm rounded-lg border border-slate-200 focus:outline-hidden focus:bg-white"
             />
@@ -634,7 +651,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="lg:hidden max-h-[calc(100dvh-8rem)] overflow-y-auto bg-white border-t border-slate-200 px-4 py-3 space-y-2">
+        <div id="bookstore-mobile-menu" className="lg:hidden max-h-[calc(100dvh-8rem)] overflow-y-auto bg-white border-t border-slate-200 px-4 py-3 space-y-2">
           <button onClick={() => { setActiveTab('library'); setMobileMenuOpen(false); }} className="min-h-12 w-full rounded-lg bg-slate-50 px-3 text-left font-semibold text-slate-900">My Bookshelf</button>
           <button onClick={() => { onOpenWishlist(); setMobileMenuOpen(false); }} className="min-h-12 w-full rounded-lg bg-slate-50 px-3 text-left font-semibold text-slate-900">Wishlist{wishlistCount ? ` (${wishlistCount})` : ''}</button>
           {setLanguage && <label className="flex min-h-12 items-center justify-between gap-3 rounded-lg px-3 text-sm font-medium text-slate-800">

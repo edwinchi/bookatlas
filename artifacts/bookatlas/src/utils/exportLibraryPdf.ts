@@ -1,4 +1,3 @@
-import { jsPDF } from 'jspdf';
 import { UserLibraryItem, Book } from '../types';
 
 export interface LibraryExportStats {
@@ -17,7 +16,8 @@ export interface LibraryExportStats {
 /**
  * Generates and downloads an elegant, publication-grade PDF report of the user's personal digital library, reading stats, and bookshelf manifest.
  */
-export function exportUserLibraryPDF(stats: LibraryExportStats, language: 'en' | 'nl' = 'en') {
+export async function exportUserLibraryPDF(stats: LibraryExportStats, language: 'en' | 'nl' = 'en') {
+  const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',

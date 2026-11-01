@@ -18,7 +18,7 @@ export function filterCatalog(books: Book[], filters: FilterOptions, activeTab: 
         return false;
       }
 
-      const searchable = normalizeSearch([book.title, book.subtitle, book.author, book.narrator, book.primaryGenre, ...(book.genres || []), ...(book.tags || [])].filter(Boolean).join(' '));
+      const searchable = normalizeSearch([book.title, book.subtitle, book.author, book.narrator, book.primaryGenre, book.isbn, book.isbn?.replace(/[^0-9Xx]/g, ''), ...(book.genres || []), ...(book.tags || [])].filter(Boolean).join(' '));
       if (!terms.every(term => searchable.includes(term))) return false;
       if (filters.language && filters.language !== 'all' && book.language !== filters.language) return false;
 
@@ -55,7 +55,10 @@ export function filterCatalog(books: Book[], filters: FilterOptions, activeTab: 
       if (filters.sortBy === 'priceAsc') return a.price - b.price;
       if (filters.sortBy === 'priceDesc') return b.price - a.price;
       if (filters.sortBy === 'bestseller') return (b.isBestseller ? 1 : 0) - (a.isBestseller ? 1 : 0);
-      if (filters.sortBy === 'newest') return (b.isNewRelease ? 1 : 0) - (a.isNewRelease ? 1 : 0);
+      if (filters.sortBy === 'newest') {
+        const date = (value: string) => { const timestamp = Date.parse(value); return Number.isFinite(timestamp) ? timestamp : 0; };
+        return date(b.publishDate) - date(a.publishDate) || Number(Boolean(b.isNewRelease)) - Number(Boolean(a.isNewRelease));
+      }
       return (b.isEditorPick ? 1 : 0) - (a.isEditorPick ? 1 : 0);
     });
 }

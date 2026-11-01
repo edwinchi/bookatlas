@@ -17,3 +17,13 @@ test('language, price, format and tab constraints combine; source order stays un
   assert.deepEqual(filterCatalog(books, { ...filters, sortBy: 'rating' }, 'store').map(b => b.id), ['b', 'a']);
   assert.deepEqual(books.map(b => b.id), ['a', 'b']);
 });
+
+test('ISBN search accepts stored hyphenated identifiers and newest uses publication dates', () => {
+  const catalog = [
+    { ...books[0], isbn: '978-1-2345-6789-0', publishDate: '2020-01-01', isNewRelease: true },
+    { ...books[1], isbn: '9780000000000', publishDate: '2026-10-01', isNewRelease: false },
+    { ...books[0], id: 'c', publishDate: 'not-a-date', isNewRelease: true },
+  ];
+  assert.deepEqual(filterCatalog(catalog, { ...filters, searchQuery: '9781234567890' }, 'store').map(book => book.id), ['a']);
+  assert.deepEqual(filterCatalog(catalog, { ...filters, sortBy: 'newest' }, 'store').map(book => book.id), ['b', 'a', 'c']);
+});
