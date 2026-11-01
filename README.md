@@ -13,6 +13,8 @@ React/Vite book storefront and Express API, using Clerk for authentication and o
 
 Use the VS Code **BookAtlas: debug browser** launch configuration after starting the app. `WEB_PORT` and `API_PORT` can override ports in `.env.local`; adjust the debugger URL if changing the web port.
 
+`pnpm test:unit` runs the offline regression suite without credentials or running services. Pull requests run this suite and the build on Windows and Linux through GitHub Actions.
+
 `pnpm build` typechecks every application and the smoke scripts, then builds all artifacts. `pnpm test:catalog` tests catalog discovery. `node --test scripts/src/auth-navigation.test.mjs` tests authentication routing. The local launcher fails with setup guidance if Clerk keys are absent; it never bypasses authentication.
 
 Without Supabase settings, the API uses seed data and server changes are lost on restart. Checkout remains simulated. AI services require their own provider credentials.
