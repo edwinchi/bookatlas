@@ -9,7 +9,7 @@ export const logger = pino({
     "req.headers.cookie",
     "res.headers['set-cookie']",
   ],
-  ...(isProduction
+  ...(isProduction || process.env.BOOKATLAS_LOCAL_DEV === "true"
     ? {}
     : {
         transport: {

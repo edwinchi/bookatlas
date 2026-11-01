@@ -28,7 +28,7 @@ Bookatlas is an imported eBook and audiobook storefront with a sample reader, br
 - Storefront browsing, catalog discovery, book details, and public samples remain available to guests. Sign-in is prompted only for account services such as a saved bookshelf, wishlist, preferences, personal AI, and checkout review.
 - The administrator workspace is isolated at `/admin`, with server-verified roles and a reader-denial state. Administrator actions and APIs remain unavailable from the storefront.
 - Checkout is a demo only: no payment or verified book license is created. Signing in never grants membership; enrollment remains unavailable until verified billing is connected.
-- The source has two existing frontend type errors involving editorial book fields, and imported Express handlers have implicit-return warnings. Authentication modules type-check; strict typing cleanup of imported code is separate work.
+- Build typing has been corrected for editorial book fields, Express handler returns, and cross-package smoke-script imports. Run `pnpm build` for the complete check. See `README.md` for the explicit local VS Code launcher.
 - The original storefront header can overflow narrow mobile screens. The new auth routes are checked at mobile width; a full storefront redesign is separate work.
 
 ## Authentication

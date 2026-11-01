@@ -7,12 +7,14 @@ interface FilterSidebarProps {
   filters: FilterOptions;
   setFilters: React.Dispatch<React.SetStateAction<FilterOptions>>;
   totalResults: number;
+  languages: string[];
 }
 
 export const FilterSidebar: React.FC<FilterSidebarProps> = ({
   filters,
   setFilters,
   totalResults,
+  languages,
 }) => {
   const handleGenreChange = (g: string) => {
     setFilters((prev) => ({ ...prev, genre: g }));
@@ -47,7 +49,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     filters.format !== 'all' ||
     filters.priceCategory !== 'all' ||
     filters.minRating > 0 ||
-    filters.bookatlasPlusOnly;
+    filters.bookatlasPlusOnly || Boolean(filters.searchQuery.trim()) || Boolean(filters.language && filters.language !== 'all');
 
   return (
     <aside className="w-full bg-white rounded-xl border border-gray-200 p-5 shadow-xs space-y-6">
@@ -70,6 +72,15 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
         )}
       </div>
 
+      <label className="block text-sm font-semibold text-slate-900">
+        Language
+        <select aria-label="Book language" value={filters.language || 'all'}
+          onChange={event => setFilters(previous => ({ ...previous, language: event.target.value }))}
+          className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 focus:ring-2 focus:ring-indigo-600">
+          <option value="all">All languages</option>
+          {languages.map(language => <option key={language} value={language}>{language}</option>)}
+        </select>
+      </label>
       {/* Bookatlas Plus Toggle */}
       <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200/80 rounded-xl p-3.5">
         <label className="flex items-start gap-3 cursor-pointer">

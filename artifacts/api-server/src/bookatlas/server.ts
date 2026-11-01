@@ -612,7 +612,7 @@ export async function createApp() {
     try {
       const { name, description } = req.body;
       if (!name || typeof name !== 'string') {
-        return res.status(400).json({ success: false, error: 'Category name is required' });
+        res.status(400).json({ success: false, error: 'Category name is required' }); return;
       }
 
       const trimmedName = name.trim();
@@ -651,7 +651,7 @@ export async function createApp() {
     try {
       const { email, name } = req.bookatlasIdentity!;
       if (!email || !email.includes('@')) {
-        return res.status(400).json({ success: false, error: 'A valid email address is required to register.' });
+        res.status(400).json({ success: false, error: 'A valid email address is required to register.' }); return;
       }
 
       const cleanEmail = email.trim().toLowerCase();
@@ -795,12 +795,12 @@ export async function createApp() {
     try {
       const { csvContent, mapping } = req.body;
       if (!csvContent || typeof csvContent !== 'string') {
-        return res.status(400).json({ success: false, error: 'CSV file content is required for validation.' });
+        res.status(400).json({ success: false, error: 'CSV file content is required for validation.' }); return;
       }
 
       const lines = csvContent.split(/\r\n|\n|\r/).filter(l => l.trim().length > 0);
       if (lines.length === 0) {
-        return res.status(400).json({ success: false, error: 'CSV file is empty.' });
+        res.status(400).json({ success: false, error: 'CSV file is empty.' }); return;
       }
 
       // Detect delimiter: comma, semicolon, tab
@@ -949,7 +949,7 @@ export async function createApp() {
       } else if (typeof csvContent === 'string' && csvContent.trim()) {
         const lines = csvContent.split(/\r\n|\n|\r/);
         if (lines.length === 0) {
-          return res.status(400).json({ success: false, error: 'CSV file is empty.' });
+          res.status(400).json({ success: false, error: 'CSV file is empty.' }); return;
         }
 
         // Detect delimiter
@@ -1010,7 +1010,7 @@ export async function createApp() {
       }
 
       if (parsedRows.length === 0) {
-        return res.status(400).json({ success: false, error: 'No valid email records could be parsed from the provided CSV data.' });
+        res.status(400).json({ success: false, error: 'No valid email records could be parsed from the provided CSV data.' }); return;
       }
 
       // Fast Batch Upsert
@@ -1275,7 +1275,7 @@ export async function createApp() {
       } = req.body;
 
       if (!subject || !content) {
-        return res.status(400).json({ success: false, error: 'Campaign subject and email content body are required.' });
+        res.status(400).json({ success: false, error: 'Campaign subject and email content body are required.' }); return;
       }
 
       // Gather active subscribers
@@ -1292,7 +1292,7 @@ export async function createApp() {
       }
 
       if (recipients.length === 0) {
-        return res.status(400).json({ success: false, error: 'No active subscribers match the chosen filter target.' });
+        res.status(400).json({ success: false, error: 'No active subscribers match the chosen filter target.' }); return;
       }
 
       const campaignId = `camp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -1484,7 +1484,7 @@ export async function createApp() {
     const campaign = subscriberCampaigns.find(c => c.id === id) || subscriberCampaigns[0];
 
     if (!campaign) {
-      return res.status(404).json({ success: false, error: 'Campaign not found' });
+      res.status(404).json({ success: false, error: 'Campaign not found' }); return;
     }
 
     res.json({
@@ -1568,7 +1568,7 @@ export async function createApp() {
     try {
       const { email, name, tier = 'free_reader', tags = ['manual_entry'], readingInterests } = req.body;
       if (!email || !email.includes('@')) {
-        return res.status(400).json({ success: false, error: 'Valid email address is required.' });
+        res.status(400).json({ success: false, error: 'Valid email address is required.' }); return;
       }
 
       const result = upsertSubscriber({
@@ -1614,23 +1614,24 @@ export async function createApp() {
     try {
       const { email, token } = req.query;
       if (!email || typeof email !== 'string') {
-        return res.status(400).json({ success: false, error: 'Email parameter required.' });
+        res.status(400).json({ success: false, error: 'Email parameter required.' }); return;
       }
 
       const cleanEmail = email.trim().toLowerCase();
       const sub = subscribersMap.get(cleanEmail);
 
       if (!sub) {
-        return res.json({
+        res.json({
           success: true,
           exists: false,
           email: cleanEmail,
           status: 'not_found'
         });
+        return;
       }
 
       if (!req.bookatlasIdentity && !isUnsubTokenValid(token, generateUnsubToken(cleanEmail))) {
-        return res.status(403).json({ success: false, error: 'Invalid or expired unsubscribe token.' });
+        res.status(403).json({ success: false, error: 'Invalid or expired unsubscribe token.' }); return;
       }
 
       res.json({
@@ -1653,14 +1654,14 @@ export async function createApp() {
     try {
       const { email, token, reason = 'Reader preference', resubscribe = false } = req.body;
       if (!email || typeof email !== 'string' || !email.includes('@')) {
-        return res.status(400).json({ success: false, error: 'Valid email required to process subscription preference.' });
+        res.status(400).json({ success: false, error: 'Valid email required to process subscription preference.' }); return;
       }
 
       const cleanEmail = email.trim().toLowerCase();
       let sub = subscribersMap.get(cleanEmail);
 
       if (sub && !req.bookatlasIdentity && !isUnsubTokenValid(token, generateUnsubToken(cleanEmail))) {
-        return res.status(403).json({ success: false, error: 'Invalid or expired unsubscribe token.' });
+        res.status(403).json({ success: false, error: 'Invalid or expired unsubscribe token.' }); return;
       }
 
       if (!sub) {
@@ -1685,25 +1686,27 @@ export async function createApp() {
         sub.unsubscribedAt = undefined;
         void db.upsertSubscriberInDb(sub);
         addLog('marketing_blast', `Reader Resubscribed: ${cleanEmail}`, 'User re-activated email newsletter notifications.', 'Subscription Center');
-        return res.json({
+        res.json({
           success: true,
           message: `You have successfully re-subscribed to Bookatlas updates!`,
           status: 'subscribed',
           email: sub.email
         });
+        return;
       } else {
         sub.status = 'unsubscribed';
         sub.unsubscribedAt = Date.now();
         void db.upsertSubscriberInDb(sub);
         addLog('marketing_blast', `1-Click Unsubscribe Processed: ${cleanEmail}`, `Reason: ${reason}. Contact removed from future active dispatches.`, 'Unsubscribe Center');
         
-        return res.json({
+        res.json({
           success: true,
           message: `You have been successfully unsubscribed from all Bookatlas marketing emails. You can re-subscribe anytime.`,
           status: 'unsubscribed',
           email: sub.email,
           unsubscribedAt: sub.unsubscribedAt
         });
+        return;
       }
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
@@ -1789,9 +1792,9 @@ Return ONLY a clean JSON object with this exact schema:
       const text = await generateAiText({ messages: [{ role: 'user', text: prompt }], jsonMode: true, temperature: 0.7 });
       if (text) {
         const parsed = JSON.parse(text);
-        return res.json({ success: true, aiGenerated: true, campaign: parsed });
+        res.json({ success: true, aiGenerated: true, campaign: parsed }); return;
       }
-      return res.json({ success: true, aiGenerated: false, campaign: heuristicCampaignCopy(bookTitle) });
+      res.json({ success: true, aiGenerated: false, campaign: heuristicCampaignCopy(bookTitle) }); return;
     } catch (error: any) {
       logger.error({ err: error }, 'AI Compose Error');
       res.json({ success: true, aiGenerated: false, campaign: heuristicCampaignCopy(bookTitle) });
@@ -2101,7 +2104,7 @@ Return a valid JSON object matching this schema:
     try {
       const newBook = req.body;
       if (!newBook.title || !newBook.author) {
-        return res.status(400).json({ success: false, error: 'Title and Author are required.' });
+        res.status(400).json({ success: false, error: 'Title and Author are required.' }); return;
       }
 
       const bookId = newBook.id || `atlas-custom-${Date.now()}`;
@@ -2151,7 +2154,7 @@ Return a valid JSON object matching this schema:
     const index = liveCatalog.findIndex((b: any) => b.id === id);
 
     if (index === -1) {
-      return res.status(404).json({ success: false, error: 'Book not found' });
+      res.status(404).json({ success: false, error: 'Book not found' }); return;
     }
 
     const updated = {
@@ -2280,7 +2283,7 @@ Return ONLY valid JSON matching this schema:
       });
 
       if (!text) {
-        return res.json({ success: true, source: 'procedural_synthesis', book: proceduralFallback() });
+        res.json({ success: true, source: 'procedural_synthesis', book: proceduralFallback() }); return;
       }
 
       const parsedBook = JSON.parse(text);
@@ -2456,7 +2459,7 @@ Return ONLY a JSON object:
 
       const text = await generateAiText({ messages: [{ role: 'user', text: prompt }], jsonMode: true });
       if (!text) {
-        return res.json({ success: true, source: 'local_synthesis', marketingKit: marketingKitFallback(book) });
+        res.json({ success: true, source: 'local_synthesis', marketingKit: marketingKitFallback(book) }); return;
       }
 
       const marketingKit = JSON.parse(text);
@@ -2520,7 +2523,7 @@ Return a valid JSON object matching this schema:
 
       const text = await generateAiText({ messages: [{ role: 'user', text: prompt }], jsonMode: true });
       if (!text) {
-        return res.json({ success: true, source: 'local_translation_synthesis', translatedBook: translateBookFallback(book, lang) });
+        res.json({ success: true, source: 'local_translation_synthesis', translatedBook: translateBookFallback(book, lang) }); return;
       }
 
       const parsed = JSON.parse(text);
@@ -2547,7 +2550,7 @@ Return a valid JSON object matching this schema:
       const ai = getGeminiClient();
 
       if (!ai) {
-        return res.json({
+        res.json({
           success: true,
           source: 'local_radar_cache',
           insights: {
@@ -2562,6 +2565,7 @@ Return a valid JSON object matching this schema:
             projectedQuarterlyDemandGrowth: '+38.4% in diaspora studies & ancient wisdom texts'
           }
         });
+        return;
       }
 
       const prompt = `Conduct an enterprise publishing market intelligence analysis for: "${focus}".
@@ -2729,11 +2733,12 @@ Return ONLY a valid JSON array matching this exact format:
       });
 
       if (!text) {
-        return res.json({
+        res.json({
           success: true,
           source: 'local_heuristic',
           recommendations: generateHeuristicMatches(userPrompt, candidateBooks || liveCatalog),
         });
+        return;
       }
 
       const parsed = JSON.parse(text);
@@ -2787,11 +2792,12 @@ Current Context: "${context || ''}"`;
       });
 
       if (!text_) {
-        return res.json({
+        res.json({
           success: true,
           source: 'local_synthesis',
           result: getFallbackCopilotResult(action, text, bookTitle),
         });
+        return;
       }
 
       res.json({
@@ -2835,11 +2841,12 @@ Return a structured JSON object:
 
       const text = await generateAiText({ messages: [{ role: 'user', text: prompt }], jsonMode: true });
       if (!text) {
-        return res.json({
+        res.json({
           success: true,
           source: 'local_synthesis',
           data: getFallbackSummary(book),
         });
+        return;
       }
 
       const data = JSON.parse(text);
@@ -2896,7 +2903,7 @@ Return a valid JSON object:
 
       const text = await generateAiText({ messages: [{ role: 'user', text: prompt }], jsonMode: true });
       if (!text) {
-        return res.json({ success: true, source: 'local_glossary_heuristic', deepDive: deepDiveFallback(term) });
+        res.json({ success: true, source: 'local_glossary_heuristic', deepDive: deepDiveFallback(term) }); return;
       }
 
       const parsed = JSON.parse(text);
@@ -2955,7 +2962,7 @@ Return a valid JSON object:
 
       const text = await generateAiText({ messages: [{ role: 'user', text: prompt }], jsonMode: true });
       if (!text) {
-        return res.json({ success: true, source: 'local_mindmap_heuristic', mindMap: mindMapFallback(chapterTitle) });
+        res.json({ success: true, source: 'local_mindmap_heuristic', mindMap: mindMapFallback(chapterTitle) }); return;
       }
 
       const mindMap = JSON.parse(text);
@@ -3001,7 +3008,7 @@ Return a valid JSON object:
 
       const text = await generateAiText({ messages: [{ role: 'user', text: prompt }], jsonMode: true });
       if (!text) {
-        return res.json({ success: true, source: 'local_pronunciation_heuristic', guide: pronounceTermFallback(term, languageFamily) });
+        res.json({ success: true, source: 'local_pronunciation_heuristic', guide: pronounceTermFallback(term, languageFamily) }); return;
       }
 
       const guide = JSON.parse(text);
@@ -3046,12 +3053,13 @@ Be articulate, insightful, engaging, and provide rich recommendations, historica
 
       if (!text) {
         const lastUserMsg = messages && messages.length > 0 ? messages[messages.length - 1].content : 'Hello';
-        return res.json({
+        res.json({
           success: true,
           source: 'local_heuristic',
           model: chosenModel,
           reply: generateFallbackChatResponse(lastUserMsg, systemInstruction),
         });
+        return;
       }
 
       res.json({
@@ -3084,11 +3092,12 @@ Be articulate, insightful, engaging, and provide rich recommendations, historica
       const ai = getGeminiClient();
 
       if (!ai) {
-        return res.json({
+        res.json({
           success: true,
           source: 'local_grounded_fallback',
           data: generateFallbackSearchGrounding(query || 'Latest Bestsellers & Literary Awards 2026'),
         });
+        return;
       }
 
       const prompt = `Search the live web and provide an accurate, up-to-date, grounded literary intelligence report for this query:
@@ -3172,12 +3181,13 @@ Rules for voice responses:
       });
 
       if (!text) {
-        return res.json({
+        res.json({
           success: true,
           source: 'local_voice_synthesis',
           spokenText: `Welcome to Bookatlas! I'm your voice companion. I'd love to recommend our top Amsterdam picks or help you explore new releases in sci-fi, European classics, or audiobooks. What are you in the mood to read today?`,
           voicePersona: voicePersona || 'Zephyr',
         });
+        return;
       }
 
       res.json({
@@ -3223,12 +3233,13 @@ Rules for voice responses:
           createdAt: new Date().toISOString(),
         };
 
-        return res.json({
+        res.json({
           success: true,
           source: 'veo-simulation',
           operationName: opId,
           video: activeVideoOperations[opId],
         });
+        return;
       }
 
       try {
@@ -3292,7 +3303,7 @@ Rules for voice responses:
     const op = activeVideoOperations[operationName];
 
     if (!op) {
-      return res.json({ done: true, progress: 100, videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4' });
+      res.json({ done: true, progress: 100, videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4' }); return;
     }
 
     res.json({

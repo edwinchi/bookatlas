@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { useClerk, useUser } from '@clerk/react';
 import { useLocation } from 'wouter';
 import { safeReaderReturnPath } from './navigation';
+import { completeSignOut } from './session';
 
 export type Account = { id: string; email: string; name: string; role: 'reader' | 'admin' };
 type AuthState = {
@@ -41,9 +42,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         if (!response.ok) throw new Error(data.error || 'Could not verify your account.');
         if (data.user.id !== user.id) throw new Error('Your session changed. Please reload the page.');
         setProfile(data);
+        setLoading(false);
         // The server derives this identity from the verified session, not a form.
-        const sync = await fetch('/api/users/register', { method: 'POST', signal: controller.signal });
-        if (!sync.ok) throw new Error('Your account is verified, but your reader profile could not be synced. Please retry.');
+        try {
+          const sync = await fetch('/api/users/register', { method: 'POST', signal: controller.signal });
+          if (!sync.ok) throw new Error('Reader profile sync failed.');
+        } catch {
+          if (!controller.signal.aborted) setNotice('You are signed in. Reader profile sync failed; please retry later.');
+        }
       } catch (err) {
         if (!controller.signal.aborted) setError(err instanceof Error ? err.message : 'Account verification failed.');
       } finally {
@@ -71,12 +77,18 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       account, tier: account ? profile!.tier : 'free_reader',
       loading: !isLoaded || loading, error, refresh: () => setRevision(value => value + 1),
       requireSignIn, requireAdmin,
-      signOut: () => { setProfile(null); void signOut({ redirectUrl: import.meta.env.BASE_URL }); },
+      signOut: () => {
+        void completeSignOut(
+          () => signOut({ redirectUrl: new URL(import.meta.env.BASE_URL, window.location.origin).href }),
+          () => { setProfile(null); setError(''); },
+          () => setNotice('Sign out failed. Please check your connection and try again.'),
+        );
+      },
     }}>
       {children}
       {notice && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-5">
         <section role="alertdialog" aria-labelledby="admin-notice-title" className="max-w-md rounded-2xl bg-white p-7 text-slate-900 shadow-xl">
-          <h2 id="admin-notice-title" className="text-xl font-bold">Administrator access required</h2>
+          <h2 id="admin-notice-title" className="text-xl font-bold">Account notice</h2>
           <p className="my-4 text-sm leading-relaxed text-slate-600">{notice}</p>
           <button onClick={() => setNotice('')} className="rounded-xl bg-indigo-700 px-5 py-2.5 font-semibold text-white">Back to Bookatlas</button>
         </section>

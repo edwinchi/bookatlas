@@ -5,17 +5,17 @@ import { Router as WouterRouter, Switch, Route, Redirect, Link, useLocation } fr
 import App from '../App';
 import { AccountProvider, useAccount } from './AuthContext';
 import { ReadingUpdatePreferences } from '../components/ReadingUpdatePreferences';
-import { readerReturnUrl, safeReaderReturnPath } from './navigation';
+import { readerReturnUrl, safeReaderReturnPath, clerkRouterPath } from './navigation';
 import { AdminEntry } from './AdminWorkspace';
 
-const clerkPubKey = publishableKeyFromHost(
+const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || publishableKeyFromHost(
   window.location.hostname,
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
 );
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 function stripBase(path: string): string {
-  return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || '/' : path;
+  return clerkRouterPath(path, window.location.origin, basePath);
 }
 
 const appearance = {

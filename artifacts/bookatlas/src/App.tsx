@@ -1,3 +1,4 @@
+import { filterCatalog } from './catalog';
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Header } from './components/Header';
 import { HeroCarousel } from './components/HeroCarousel';
@@ -298,67 +299,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
   };
 
 
-  // Filter & Search Logic
-  const filteredBooks = useMemo(() => {
-    return books.filter((book) => {
-      // Tab specific constraints
-      if (activeTab === 'audiobooks' && book.format !== 'audiobook' && book.format !== 'bundle') {
-        return false;
-      }
-      if (activeTab === 'bookatlasplus' && !book.isBookatlasPlus) {
-        return false;
-      }
-      if (activeTab === 'deals' && !book.isDeal && book.price > 4.99) {
-        return false;
-      }
-
-      // Search Query
-      if (filters.searchQuery.trim()) {
-        const q = filters.searchQuery.toLowerCase();
-        const matchTitle = book.title.toLowerCase().includes(q);
-        const matchAuthor = book.author.toLowerCase().includes(q);
-        const matchGenre = book.genres?.some((g) => g.toLowerCase().includes(q));
-        const matchTags = book.tags?.some((t) => t.toLowerCase().includes(q));
-        if (!matchTitle && !matchAuthor && !matchGenre && !matchTags) return false;
-      }
-
-      // Genre filter
-      if (filters.genre !== 'All Genres') {
-        if (!book.genres?.includes(filters.genre) && book.primaryGenre !== filters.genre) {
-          return false;
-        }
-      }
-
-      // Format filter
-      if (filters.format !== 'all') {
-        if (filters.format === 'ebook' && book.format !== 'ebook' && book.format !== 'bundle') return false;
-        if (filters.format === 'audiobook' && book.format !== 'audiobook' && book.format !== 'bundle') return false;
-      }
-
-      // Bookatlas Plus Only filter
-      if (filters.bookatlasPlusOnly && !book.isBookatlasPlus) {
-        return false;
-      }
-
-      // Price category filter
-      if (filters.priceCategory === 'free' && book.price > 0) return false;
-      if (filters.priceCategory === 'under5' && book.price > 4.99) return false;
-      if (filters.priceCategory === 'under10' && book.price > 9.99) return false;
-      if (filters.priceCategory === 'deals' && !book.isDeal && book.price > 4.99) return false;
-
-      // Rating filter
-      if (book.rating < filters.minRating) return false;
-
-      return true;
-    }).sort((a, b) => {
-      if (filters.sortBy === 'rating') return b.rating - a.rating;
-      if (filters.sortBy === 'priceAsc') return a.price - b.price;
-      if (filters.sortBy === 'priceDesc') return b.price - a.price;
-      if (filters.sortBy === 'bestseller') return (b.isBestseller ? 1 : 0) - (a.isBestseller ? 1 : 0);
-      if (filters.sortBy === 'newest') return (b.isNewRelease ? 1 : 0) - (a.isNewRelease ? 1 : 0);
-      return (b.isEditorPick ? 1 : 0) - (a.isEditorPick ? 1 : 0);
-    });
-  }, [books, filters, activeTab]);
+  const filteredBooks = useMemo(() => filterCatalog(books, filters, activeTab), [books, filters, activeTab]);
 
   // Derived Book Subsets for Netflix-Style Horizontal Carousels
   const africanLitPicks = useMemo(() => {
@@ -862,6 +803,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                   filters={filters}
                   setFilters={setFilters}
                   totalResults={filteredBooks.length}
+                  languages={[...new Set(books.map(book => book.language).filter(Boolean))].sort()}
                 />
               </div>
 
@@ -874,7 +816,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                     <h2 className="text-base font-bold text-slate-900">
                       {filters.genre !== 'All Genres' ? filters.genre : activeTab === 'audiobooks' ? 'Audiobook Collection' : activeTab === 'deals' ? 'Special Offers' : 'Complete Bookstore Catalog'}
                     </h2>
-                    <p className="text-xs text-slate-500">
+                    <p role="status" aria-live="polite" className="text-xs text-slate-500">
                       Showing {filteredBooks.length} titles
                     </p>
                   </div>

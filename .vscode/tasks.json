@@ -1,0 +1,24 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "BookAtlas: local development",
+      "type": "shell",
+      "command": "pnpm dev:local",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "BookAtlas: build",
+      "type": "shell",
+      "command": "pnpm build",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [
+        "$tsc"
+      ]
+    }
+  ]
+}

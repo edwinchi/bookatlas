@@ -32,7 +32,7 @@ app.use(
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 app.use(
   clerkMiddleware((req) => ({
-    publishableKey: publishableKeyFromHost(
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY || publishableKeyFromHost(
       getClerkProxyHost(req) ?? "",
       process.env.CLERK_PUBLISHABLE_KEY,
     ),

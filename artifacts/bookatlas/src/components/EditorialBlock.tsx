@@ -67,11 +67,11 @@ export const PromotionalFeatureBanner: React.FC<FeaturedPromotionProps> = ({
           </h2>
 
           <p className="text-sm text-indigo-200 font-semibold">
-            By {featuredBook.author} • {featuredBook.genre} • {featuredBook.pageCount} Pages
+            By {featuredBook.author} • {featuredBook.primaryGenre} • {featuredBook.pageCount} Pages
           </p>
 
           <p className="text-xs sm:text-sm text-slate-300 line-clamp-3 leading-relaxed max-w-2xl">
-            {featuredBook.description}
+            {featuredBook.synopsis}
           </p>
 
           {/* Price & Action Row */}

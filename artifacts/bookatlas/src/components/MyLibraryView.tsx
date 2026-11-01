@@ -1,3 +1,4 @@
+import { libraryStats } from '../libraryStats';
 import React, { useState, useEffect } from 'react';
 import { useAccount } from '../auth/AuthContext';
 import { 
@@ -63,65 +64,53 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
   const [activeTab, setActiveTab] = useState<'reading' | 'all' | 'finished' | 'wishlist'>(initialTab);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [pdfSuccessBanner, setPdfSuccessBanner] = useState(false);
+  const [libraryNotice, setLibraryNotice] = useState('');
   
   // Offline Caching State
   const [offlineEnabled, setOfflineEnabled] = useState<boolean>(() => {
-    return localStorage.getItem(`${storagePrefix}offline_enabled`) === 'true';
+    try { return localStorage.getItem(`${storagePrefix}offline_enabled`) === 'true'; } catch { return false; }
   });
-  const [isCaching, setIsCaching] = useState(false);
-  const [cachedItemsCount, setCachedItemsCount] = useState(library.length);
+  const [cachedItemsCount, setCachedItemsCount] = useState(() => {
+    try { const cached = JSON.parse(localStorage.getItem(`${storagePrefix}offline_library`) || '[]'); return Array.isArray(cached) ? cached.length : 0; } catch { return 0; }
+  });
 
   // Dynamic Reading Stats
   const currentlyReading = library.filter((item) => !item.finished && item.progressPercent < 100);
   const finishedBooks = library.filter((item) => item.finished || item.progressPercent >= 100);
   const totalHighlightsCount = library.reduce((sum, item) => sum + (item.highlights?.length || 0), 0);
-  const totalReadingHours = Math.round((library.reduce((sum, item) => sum + (item.progressPercent * (item.book.pageCount || 300) / 100), 0) / 45) + 12);
-  const readingStreakDays = 14;
+  const { completedBooks, totalReadingHours, recordedStreakDays: readingStreakDays } = libraryStats(library);
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     setIsExportingPdf(true);
-    setTimeout(() => {
-      try {
-        exportUserLibraryPDF({
-          userEmail,
-          userName,
-          streakDays: readingStreakDays,
-          totalReadingHours,
-          booksCompleted: finishedBooks.length + 3,
-          totalShelfCount: library.length,
-          libraryItems: library,
-          wishlistItems: wishlist,
-          highlightsCount: totalHighlightsCount,
-        }, (language === 'nl' ? 'nl' : 'en'));
-
-        setPdfSuccessBanner(true);
-        setTimeout(() => setPdfSuccessBanner(false), 5000);
-      } catch (err) {
-        console.error('PDF generation error:', err);
-      } finally {
-        setIsExportingPdf(false);
-      }
-    }, 400);
+    setLibraryNotice('');
+    try {
+      await exportUserLibraryPDF({
+        userEmail, userName, streakDays: readingStreakDays, totalReadingHours,
+        booksCompleted: completedBooks, totalShelfCount: library.length,
+        libraryItems: library, wishlistItems: wishlist, highlightsCount: totalHighlightsCount,
+      }, language === 'nl' ? 'nl' : 'en');
+      setPdfSuccessBanner(true);
+      setTimeout(() => setPdfSuccessBanner(false), 5000);
+    } catch {
+      setLibraryNotice(language === 'nl' ? 'PDF downloaden mislukt. Probeer het opnieuw.' : 'PDF download failed. Please try again.');
+    } finally { setIsExportingPdf(false); }
   };
 
   const handleToggleOffline = () => {
-    const nextState = !offlineEnabled;
-    setOfflineEnabled(nextState);
-    localStorage.setItem(`${storagePrefix}offline_enabled`, String(nextState));
-    if (!nextState) localStorage.removeItem(`${storagePrefix}offline_library`);
-
-    if (nextState) {
-      setIsCaching(true);
-      // Cache library items and manuscripts in localStorage / IndexedDB mockup
-      try {
+    setLibraryNotice('');
+    try {
+      if (offlineEnabled) {
+        localStorage.removeItem(`${storagePrefix}offline_library`);
+        localStorage.setItem(`${storagePrefix}offline_enabled`, 'false');
+        setCachedItemsCount(0);
+      } else {
         localStorage.setItem(`${storagePrefix}offline_library`, JSON.stringify(library));
-        setTimeout(() => {
-          setIsCaching(false);
-          setCachedItemsCount(library.length);
-        }, 800);
-      } catch (e) {
-        setIsCaching(false);
+        localStorage.setItem(`${storagePrefix}offline_enabled`, 'true');
+        setCachedItemsCount(library.length);
       }
+      setOfflineEnabled(!offlineEnabled);
+    } catch {
+      setLibraryNotice(language === 'nl' ? 'Opslaan mislukt. Controleer de browseropslag.' : 'Could not update saved books. Browser storage may be full or disabled.');
     }
   };
 
@@ -143,6 +132,7 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
   return (
     <div className="space-y-8 animate-fadeIn">
       
+      {libraryNotice && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">{libraryNotice}</p>}
       {/* PDF Success Alert Banner */}
       {pdfSuccessBanner && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl flex items-center justify-between shadow-sm animate-fadeIn">
@@ -192,12 +182,12 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
                 <span className="flex items-center gap-1.5 text-amber-300">
                   <Trophy className="w-4 h-4" /> {t.readingChallenge}
                 </span>
-                <span>{finishedBooks.length + 3} of 20 books</span>
+                <span>{completedBooks} of 20 books</span>
               </div>
               <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden border border-white/10">
                 <div 
                   className="h-full bg-gradient-to-r from-amber-400 via-rose-500 to-indigo-500 rounded-full transition-all duration-500" 
-                  style={{ width: `${Math.min(100, Math.round(((finishedBooks.length + 3) / 20) * 100))}%` }}
+                  style={{ width: `${Math.min(100, Math.round(((completedBooks) / 20) * 100))}%` }}
                 ></div>
               </div>
             </div>
@@ -234,12 +224,12 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
                 {offlineEnabled ? (
                   <>
                     <Wifi className="w-4 h-4 text-emerald-400" />
-                    <span>{t.offlineReady} ({cachedItemsCount})</span>
+                    <span>{language === 'nl' ? 'Op dit apparaat opgeslagen' : 'Saved on this device'} ({cachedItemsCount})</span>
                   </>
                 ) : (
                   <>
                     <HardDriveDownload className="w-4 h-4 text-slate-300" />
-                    <span>{t.enableOffline}</span>
+                    <span>{language === 'nl' ? 'Op dit apparaat opslaan' : 'Save on this device'}</span>
                   </>
                 )}
               </button>
@@ -253,7 +243,7 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
                 <Flame className="w-5 h-5 fill-amber-400" />
               </div>
               <div className="text-2xl font-extrabold text-white">{readingStreakDays}</div>
-              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{t.readingStreak}</p>
+              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{language === 'nl' ? 'Vastgelegde leesreeks' : 'Recorded reading streak'}</p>
             </div>
 
             <div className="space-y-1.5 p-2 border-x border-white/10">
