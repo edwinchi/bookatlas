@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -22,7 +22,7 @@ const webDir = path.join(root, 'artifacts/bookatlas');
 const apiRequire = createRequire(path.join(apiDir, 'package.json'));
 const webRequire = createRequire(path.join(webDir, 'package.json'));
 for (const [name, port, cwd, args] of [
-  ['API', process.env.API_PORT || '3001', apiDir, ['--watch', '--import', apiRequire.resolve('tsx'), 'src/index.ts']],
+  ['API', process.env.API_PORT || '3001', apiDir, ['--watch', '--import', pathToFileURL(apiRequire.resolve('tsx')).href, 'src/index.ts']],
   ['web', process.env.WEB_PORT || '5173', webDir, [path.join(path.dirname(webRequire.resolve('vite/package.json')), 'bin/vite.js'), '--host', '127.0.0.1']],
 ]) {
   const child = spawn(process.execPath, args, { cwd, env: { ...env, PORT: port }, stdio: 'inherit' });
