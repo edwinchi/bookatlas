@@ -5,27 +5,9 @@ import { defineConfig } from 'vite';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
 
-const rawPort = process.env.PORT;
-
-if (!rawPort) {
-  throw new Error(
-    'PORT environment variable is required but was not provided.',
-  );
-}
-
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
-const basePath = process.env.BASE_PATH;
-
-if (!basePath) {
-  throw new Error(
-    'BASE_PATH environment variable is required but was not provided.',
-  );
-}
+const port = Number(process.env.PORT || 5173);
+if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid PORT');
+const basePath = process.env.BASE_PATH || '/';
 
 export default defineConfig({
   base: basePath,
@@ -67,6 +49,10 @@ export default defineConfig({
   server: {
     port,
     strictPort: true,
+    // Replit supplies routing; only the explicit local launcher enables this proxy.
+    proxy: process.env.BOOKATLAS_LOCAL_DEV === 'true' ? {
+      '/api': { target: `http://127.0.0.1:${process.env.API_PORT || 3001}`, changeOrigin: false },
+    } : undefined,
     host: '0.0.0.0',
     allowedHosts: true,
     fs: {

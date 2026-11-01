@@ -48,3 +48,13 @@ export function readerReturnUrl(path: string, origin: string, basePath: string):
   const base = basePath === '/' ? '' : `/${basePath.replace(/^\/+|\/+$/g, '')}`;
   return `${origin}${base}${safePath === '/' ? '/' : safePath}`;
 }
+
+/** Clerk may pass absolute same-origin URLs to its router callbacks. */
+export function clerkRouterPath(candidate: string, origin: string, basePath: string): string {
+  const url = new URL(candidate, origin);
+  if (url.origin !== origin) throw new Error('Authentication navigation must stay on this origin.');
+  const base = basePath.replace(/\/$/, '');
+  const pathname = base && (url.pathname === base || url.pathname.startsWith(`${base}/`))
+    ? url.pathname.slice(base.length) || '/' : url.pathname;
+  return `${pathname}${url.search}${url.hash}`;
+}
