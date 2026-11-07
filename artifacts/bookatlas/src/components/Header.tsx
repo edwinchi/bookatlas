@@ -551,7 +551,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Sub Navigation Bar (eBooks, Audiobooks, Bookatlas Plus, Deals, Manager) */}
       <nav className="bg-white border-t border-slate-100 hidden lg:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between text-sm">
-          <div className="flex items-center space-x-1 overflow-x-auto scrollbar-none py-0.5">
+          <div className="flex min-w-0 items-center space-x-1 overflow-x-auto scrollbar-none py-0.5">
             <button
               onClick={() => { setActiveTab('store'); setSelectedGenre('All Genres'); }}
               className={`px-3 py-2.5 font-medium border-b-2 whitespace-nowrap transition-colors cursor-pointer ${
@@ -640,10 +640,10 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
 
-          <div className="flex items-center space-x-4 text-xs text-slate-500 font-medium">
-            <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+          <div className="hidden 2xl:flex shrink-0 items-center pl-4 text-xs text-slate-500 font-medium">
+            <span className="flex items-center gap-1 whitespace-nowrap text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
               <Award className="w-3.5 h-3.5 text-emerald-600" />
-              Earn Bookatlas Super Points on every order
+              Earn Super Points on every order
             </span>
           </div>
         </div>

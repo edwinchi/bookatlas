@@ -898,10 +898,10 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
           
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-md bg-indigo-600 text-white flex items-center justify-center font-serif font-black text-sm shadow-xs">
-                B
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900 flex items-center justify-center border border-blue-800/60 shadow-xs">
+                <Compass className="w-4 h-4 text-amber-300" />
               </div>
-              <span className="text-base font-bold text-white tracking-tight">bookatlas</span>
+              <span className="text-lg font-extrabold font-serif text-white tracking-tight">bookatlas<span className="text-amber-500 font-sans">.</span></span>
             </div>
             <p className="text-slate-400 leading-relaxed text-[11px]">
               The premier eBook Store and in-browser eReader by Atlantean Globals Services, registered in the Netherlands. Discover millions of curated eBooks, Audiobooks, and AI reading companions.
@@ -960,7 +960,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
 
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 mt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-8"><div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-400">
           <p>© 2026 Atlantean Globals Services B.V. (Netherlands). All rights reserved. Bookatlas™ eBook Store & Reader.</p>
           <div className="flex space-x-4">
             <button onClick={() => setIsArchitectureGuideOpen(true)} className="hover:text-white underline cursor-pointer">
@@ -976,7 +976,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
               Email Preferences & 1-Click Opt-Out
             </button>
           </div>
-        </div>
+        </div></div>
       </footer>
 
       {/* Floating Audiobook Player Dock */}

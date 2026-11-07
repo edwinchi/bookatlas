@@ -143,7 +143,7 @@ export const BookCard: React.FC<BookCardProps> = ({
           {/* Title */}
           <h3
             onClick={() => onOpenDetail(book)}
-            className="font-serif font-bold text-slate-900 text-sm line-clamp-1 group-hover:text-indigo-600 transition-colors cursor-pointer leading-tight"
+            className="font-serif font-bold text-slate-900 text-sm line-clamp-2 min-h-[2.5em] group-hover:text-indigo-600 transition-colors cursor-pointer leading-tight"
             title={book.title}
           >
             {book.title}

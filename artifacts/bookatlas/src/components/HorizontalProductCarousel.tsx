@@ -104,7 +104,7 @@ export const HorizontalProductCarousel: React.FC<HorizontalProductCarouselProps>
       <div className="relative group">
         <div
           ref={scrollRef}
-          className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent -mx-2 px-2"
+          className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x scroll-px-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent -mx-2 px-2"
           style={{ scrollSnapType: 'x mandatory' }}
         >
           {books.map((book) => (
