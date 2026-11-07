@@ -11,7 +11,9 @@
     "test:catalog": "node --experimental-strip-types --test scripts/src/catalog-search.test.mjs",
     "test:unit": "node scripts/run-unit-tests.mjs",
     "test:port": "node --import tsx --test scripts/src/bookatlas-port.test.mjs",
-    "test:e2e": "node scripts/run-e2e-tests.mjs"
+    "test:e2e": "node scripts/run-e2e-tests.mjs",
+    "test:security": "node --test tests/security/http.test.mjs",
+    "test:perf": "node scripts/perf-check.mjs"
   },
   "private": true,
   "dependencies": {

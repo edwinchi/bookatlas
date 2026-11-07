@@ -13,7 +13,7 @@ export const createReaderNarrationBodyTextMax = 500;
 
 
 export const CreateReaderNarrationBody = zod.object({
-  "requestId": zod.string().uuid(),
+  "requestId": zod.uuid(),
   "text": zod.string().min(1).max(createReaderNarrationBodyTextMax),
   "voiceName": zod.enum(['Sulafat', 'Charon', 'Kore', 'Puck', 'Aoede', 'Fenrir', 'Zephyr']),
   "approveSpend": zod.literal(true),
@@ -42,10 +42,10 @@ export const GetWorkforceResponse = zod.object({
   "teams": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "humanHeadcount": zod.number().int(),
+  "humanHeadcount": zod.int(),
   "disciplines": zod.array(zod.object({
   "name": zod.string(),
-  "count": zod.number().int()
+  "count": zod.int()
 })),
   "workerIds": zod.array(zod.string())
 })),
@@ -88,7 +88,7 @@ export const createWorkforceTaskBodyBudgetUsdMax = 1;
 
 
 export const CreateWorkforceTaskBody = zod.object({
-  "idempotencyKey": zod.string().uuid(),
+  "idempotencyKey": zod.uuid(),
   "objective": zod.string().min(createWorkforceTaskBodyObjectiveMin).max(createWorkforceTaskBodyObjectiveMax),
   "context": zod.string().max(createWorkforceTaskBodyContextMax).default(createWorkforceTaskBodyContextDefault),
   "workerIds": zod.array(zod.string()).min(1).max(createWorkforceTaskBodyWorkerIdsMax),
@@ -117,7 +117,7 @@ export const CreateWorkforceTaskResponse = zod.object({
 
 
 export const RunWorkforceWorkerParams = zod.object({
-  "id": zod.coerce.string().uuid(),
+  "id": zod.uuid(),
   "workerId": zod.coerce.string()
 })
 
@@ -147,7 +147,7 @@ export const RunWorkforceWorkerResponse = zod.object({
 
 
 export const ReviewWorkforceTaskParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.uuid()
 })
 
 export const reviewWorkforceTaskBodyNoteDefault = ``;
@@ -275,8 +275,8 @@ export const CreatePublishingJobBody = zod.object({
   "author": zod.string().min(1).max(createPublishingJobBodyAuthorMax),
   "language": zod.enum(['en', 'nl']),
   "category": zod.string().min(1).max(createPublishingJobBodyCategoryMax),
-  "chapterCount": zod.number().int().min(createPublishingJobBodyChapterCountMin).max(createPublishingJobBodyChapterCountMax),
-  "wordsPerChapter": zod.number().int().min(createPublishingJobBodyWordsPerChapterMin).max(createPublishingJobBodyWordsPerChapterMax),
+  "chapterCount": zod.int().min(createPublishingJobBodyChapterCountMin).max(createPublishingJobBodyChapterCountMax),
+  "wordsPerChapter": zod.int().min(createPublishingJobBodyWordsPerChapterMin).max(createPublishingJobBodyWordsPerChapterMax),
   "voice": zod.enum(['Sulafat', 'Charon', 'Kore', 'Puck', 'Aoede', 'Fenrir', 'Zephyr']),
   "includeAudio": zod.boolean(),
   "isTest": zod.boolean(),
@@ -313,7 +313,7 @@ export const CreatePublishingJobResponse = zod.object({
 
 
 export const GetPublishingJobParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.uuid()
 })
 
 export const GetPublishingJobResponse = zod.object({
@@ -346,13 +346,13 @@ export const GetPublishingJobResponse = zod.object({
 
 
 export const ActOnPublishingJobParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.uuid()
 })
 
 export const ActOnPublishingJobBody = zod.object({
   "action": zod.enum(['retry', 'cancel', 'publish', 'launch', 'refresh-delivery']),
   "notifyPublisher": zod.boolean().optional(),
-  "publisherEmail": zod.string().email().optional(),
+  "publisherEmail": zod.email().optional(),
   "readerCampaign": zod.boolean().optional()
 })
 
@@ -386,7 +386,7 @@ export const ActOnPublishingJobResponse = zod.object({
 
 
 export const DownloadPublishingAssetParams = zod.object({
-  "id": zod.coerce.string().uuid(),
+  "id": zod.uuid(),
   "asset": zod.coerce.string()
 })
 
@@ -455,7 +455,7 @@ export const GetPublishingReadinessResponse = zod.object({
 export const GetAccountResponse = zod.object({
   "user": zod.object({
   "id": zod.string(),
-  "email": zod.string().email(),
+  "email": zod.email(),
   "name": zod.string(),
   "role": zod.enum(['reader', 'admin'])
 }),
@@ -473,9 +473,67 @@ export const UpgradeOwnMembershipResponse = zod.object({
 
 
 /**
+ * Never subscribes the reader to marketing email; that requires the explicit reading-updates preference. Sign-up consent (age and privacy notice) is recorded server-side when supplied.
  * @summary Sync the reader profile using identity from the verified server session
  */
-export const SyncReaderProfileResponse = zod.unknown()
+export const syncReaderProfileBodyConsentPrivacyNoticeVersionMax = 32;
+
+
+
+export const SyncReaderProfileBody = zod.object({
+  "consent": zod.object({
+  "ageConfirmed": zod.literal(true),
+  "privacyNoticeVersion": zod.string().min(1).max(syncReaderProfileBodyConsentPrivacyNoticeVersionMax)
+}).optional()
+})
+
+export const SyncReaderProfileResponse = zod.object({
+  "success": zod.boolean(),
+  "user": zod.object({
+  "email": zod.string(),
+  "name": zod.string().optional(),
+  "registeredAt": zod.number(),
+  "lastActive": zod.number(),
+  "readingStreak": zod.number(),
+  "booksRead": zod.number()
+})
+})
+
+
+/**
+ * @summary Download every record Bookatlas holds about the signed-in reader (GDPR Art. 15/20)
+ */
+export const ExportOwnAccountResponse = zod.object({
+  "exportedAt": zod.string(),
+  "identity": zod.object({
+  "id": zod.string(),
+  "email": zod.email(),
+  "name": zod.string(),
+  "role": zod.enum(['reader', 'admin'])
+}),
+  "profile": zod.union([zod.object({
+  "email": zod.string(),
+  "name": zod.string().optional(),
+  "registeredAt": zod.number(),
+  "lastActive": zod.number(),
+  "readingStreak": zod.number(),
+  "booksRead": zod.number()
+}),zod.null()]),
+  "subscriber": zod.record(zod.string(), zod.unknown()).nullable(),
+  "emailDeliveries": zod.array(zod.record(zod.string(), zod.unknown()))
+})
+
+
+/**
+ * @summary Permanently erase the signed-in reader's data and sign-in account (GDPR Art. 17)
+ */
+export const DeleteOwnAccountBody = zod.object({
+  "confirm": zod.enum(['DELETE'])
+})
+
+export const DeleteOwnAccountResponse = zod.object({
+  "deleted": zod.literal(true)
+})
 
 
 /**

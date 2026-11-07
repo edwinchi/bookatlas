@@ -6,6 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './accountDeletionInput';
+export * from './accountDeletionInputConfirm';
+export * from './accountDeletionResult';
+export * from './accountExport';
+export * from './accountExportEmailDeliveriesItem';
+export * from './accountExportSubscriber';
 export * from './accountIdentity';
 export * from './accountIdentityRole';
 export * from './accountProfile';
@@ -30,8 +36,12 @@ export * from './readerNarration';
 export * from './readerNarrationInput';
 export * from './readerNarrationInputBudgetUsd';
 export * from './readerNarrationInputVoiceName';
+export * from './readerProfileSyncInput';
+export * from './readerProfileSyncResult';
+export * from './readerSignupConsent';
 export * from './readingUpdateInput';
 export * from './readingUpdatePreference';
+export * from './registeredReader';
 export * from './unsubscribeTokenInput';
 export * from './workforceDiscipline';
 export * from './workforceReviewInput';

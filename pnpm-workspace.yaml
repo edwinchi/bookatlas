@@ -35,7 +35,7 @@ catalog:
   tsx: 4.23.13
   vite: ^7.3.2
   wouter: ^3.3.5
-  zod: 3.25.76
+  zod: ^4.6.6
 
 minimumReleaseAge: 1440
 
@@ -64,3 +64,6 @@ overrides:
   esbuild: 0.28.2
   js-yaml: 4.3.2
   proxy-addr: ^2.0.8
+  # Security: body-parser DoS via trailing compressed bytes (<2.4.0), qs stringify DoS (<=6.16.0).
+  body-parser: ^2.4.0
+  qs: ^6.16.1

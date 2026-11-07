@@ -278,13 +278,72 @@ paths:
     post:
       operationId: syncReaderProfile
       summary: Sync the reader profile using identity from the verified server session
+      description: >
+        Never subscribes the reader to marketing email; that requires the explicit
+        reading-updates preference. Sign-up consent (age and privacy notice) is recorded
+        server-side when supplied.
       security:
         - clerkSession: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReaderProfileSyncInput" }
       responses:
         "200":
           description: Reader profile synced
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReaderProfileSyncResult" }
+        "400":
+          description: Invalid sign-up consent
         "401":
           description: Sign-in required
+        "429":
+          description: Too many requests
+  /account/export:
+    get:
+      operationId: exportOwnAccount
+      summary: Download every record Bookatlas holds about the signed-in reader (GDPR Art. 15/20)
+      security: [{ clerkSession: [] }]
+      responses:
+        "200":
+          description: Machine-readable export of the reader's own data
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountExport" }
+        "401":
+          description: Sign-in required
+        "429":
+          description: Too many requests
+        "503":
+          description: Data store temporarily unavailable
+  /account:
+    delete:
+      operationId: deleteOwnAccount
+      summary: Permanently erase the signed-in reader's data and sign-in account (GDPR Art. 17)
+      security: [{ clerkSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AccountDeletionInput" }
+      responses:
+        "200":
+          description: Data and sign-in account erased
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountDeletionResult" }
+        "400":
+          description: Explicit confirmation missing
+        "401":
+          description: Sign-in required
+        "409":
+          description: Administrator accounts cannot delete themselves
+        "502":
+          description: Data erased but the sign-in account could not be removed; retry
+        "503":
+          description: Data store temporarily unavailable; nothing was claimed as erased
   /healthz:
     get:
       operationId: healthCheck
@@ -427,6 +486,61 @@ components:
       required: [subscribed]
       properties:
         subscribed: { type: boolean }
+    ReaderSignupConsent:
+      type: object
+      required: [ageConfirmed, privacyNoticeVersion]
+      additionalProperties: false
+      properties:
+        ageConfirmed: { type: boolean, enum: [true] }
+        privacyNoticeVersion: { type: string, minLength: 1, maxLength: 32 }
+    ReaderProfileSyncInput:
+      type: object
+      additionalProperties: false
+      properties:
+        consent: { $ref: "#/components/schemas/ReaderSignupConsent" }
+    RegisteredReader:
+      type: object
+      required: [email, registeredAt, lastActive, readingStreak, booksRead]
+      properties:
+        email: { type: string }
+        name: { type: string }
+        registeredAt: { type: number }
+        lastActive: { type: number }
+        readingStreak: { type: number }
+        booksRead: { type: number }
+    ReaderProfileSyncResult:
+      type: object
+      required: [success, user]
+      properties:
+        success: { type: boolean }
+        user: { $ref: "#/components/schemas/RegisteredReader" }
+    AccountExport:
+      type: object
+      required: [exportedAt, identity, profile, subscriber, emailDeliveries]
+      properties:
+        exportedAt: { type: string }
+        identity: { $ref: "#/components/schemas/AccountIdentity" }
+        profile:
+          oneOf:
+            - { $ref: "#/components/schemas/RegisteredReader" }
+            - { type: "null" }
+        subscriber:
+          type: [object, "null"]
+          additionalProperties: true
+        emailDeliveries:
+          type: array
+          items: { type: object, additionalProperties: true }
+    AccountDeletionInput:
+      type: object
+      required: [confirm]
+      additionalProperties: false
+      properties:
+        confirm: { type: string, enum: [DELETE] }
+    AccountDeletionResult:
+      type: object
+      required: [deleted]
+      properties:
+        deleted: { type: boolean, enum: [true] }
     ReadingUpdatePreference:
       type: object
       required: [subscribed, consentAt]

@@ -20,6 +20,9 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AccountDeletionInput,
+  AccountDeletionResult,
+  AccountExport,
   AccountProfile,
   GetEmailUnsubscribePageParams,
   HealthStatus,
@@ -30,6 +33,8 @@ import type {
   PublishingReadiness,
   ReaderNarration,
   ReaderNarrationInput,
+  ReaderProfileSyncInput,
+  ReaderProfileSyncResult,
   ReadingUpdateInput,
   ReadingUpdatePreference,
   UnsubscribeTokenInput,
@@ -1552,16 +1557,31 @@ export const getSyncReaderProfileUrl = () => {
 }
 
 /**
+ * Never subscribes the reader to marketing email; that requires the explicit reading-updates preference. Sign-up consent (age and privacy notice) is recorded server-side when supplied.
  * @summary Sync the reader profile using identity from the verified server session
  */
-export const syncReaderProfile = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+export const syncReaderProfile = async (readerProfileSyncInput?: ReaderProfileSyncInput, options?: Parameters<typeof customFetch>[1]): Promise<ReaderProfileSyncResult> => {
 
-  return customFetch<void>(getSyncReaderProfileUrl(),
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ReaderProfileSyncResult>(getSyncReaderProfileUrl(),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(readerProfileSyncInput)
   }
 );}
 
@@ -1572,8 +1592,8 @@ export const syncReaderProfile = async ( options?: Parameters<typeof customFetch
 export const getSyncReaderProfileMutationKey = () => ['syncReaderProfile'] as const;
 
 export const getSyncReaderProfileMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncReaderProfile>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof syncReaderProfile>>, TError,void, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncReaderProfile>>, TError,SyncReaderProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncReaderProfile>>, TError,SyncReaderProfileMutationVariables, TContext> => {
 
 const mutationKey = getSyncReaderProfileMutationKey();
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -1585,10 +1605,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncReaderProfile>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncReaderProfile>>, SyncReaderProfileMutationVariables> = (props) => {
+          const {data} = props ?? {};
 
-
-          return  syncReaderProfile(requestOptions)
+          return  syncReaderProfile(data,requestOptions)
         }
 
 
@@ -1599,22 +1619,187 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type SyncReaderProfileMutationResult = NonNullable<Awaited<ReturnType<typeof syncReaderProfile>>>
-
+    export type SyncReaderProfileMutationBody = BodyType<ReaderProfileSyncInput> | undefined
     export type SyncReaderProfileMutationError = ErrorType<void>
-
+    export type SyncReaderProfileMutationVariables = {data?: BodyType<ReaderProfileSyncInput>}
 
     /**
  * @summary Sync the reader profile using identity from the verified server session
  */
 export const useSyncReaderProfile = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncReaderProfile>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncReaderProfile>>, TError,SyncReaderProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof syncReaderProfile>>,
         TError,
-        void,
+        SyncReaderProfileMutationVariables,
         TContext
       > => {
       return useMutation(getSyncReaderProfileMutationOptions(options));
+    }
+
+export const getExportOwnAccountUrl = () => {
+
+
+
+
+  return `/api/account/export`
+}
+
+/**
+ * @summary Download every record Bookatlas holds about the signed-in reader (GDPR Art. 15/20)
+ */
+export const exportOwnAccount = async ( options?: Parameters<typeof customFetch>[1]): Promise<AccountExport> => {
+
+  return customFetch<AccountExport>(getExportOwnAccountUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportOwnAccountQueryKey = () => {
+    return [
+    `/api/account/export`
+    ] as const;
+    }
+
+
+export const getExportOwnAccountQueryOptions = <TData = Awaited<ReturnType<typeof exportOwnAccount>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportOwnAccount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportOwnAccountQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportOwnAccount>>> = ({ signal }) => exportOwnAccount({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportOwnAccount>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportOwnAccountQueryResult = NonNullable<Awaited<ReturnType<typeof exportOwnAccount>>>
+export type ExportOwnAccountQueryError = ErrorType<void>
+
+
+/**
+ * @summary Download every record Bookatlas holds about the signed-in reader (GDPR Art. 15/20)
+ */
+
+export function useExportOwnAccount<TData = Awaited<ReturnType<typeof exportOwnAccount>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportOwnAccount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportOwnAccountQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDeleteOwnAccountUrl = () => {
+
+
+
+
+  return `/api/account`
+}
+
+/**
+ * @summary Permanently erase the signed-in reader's data and sign-in account (GDPR Art. 17)
+ */
+export const deleteOwnAccount = async (accountDeletionInput: AccountDeletionInput, options?: Parameters<typeof customFetch>[1]): Promise<AccountDeletionResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AccountDeletionResult>(getDeleteOwnAccountUrl(),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(accountDeletionInput)
+  }
+);}
+
+
+
+
+
+export const getDeleteOwnAccountMutationKey = () => ['deleteOwnAccount'] as const;
+
+export const getDeleteOwnAccountMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOwnAccount>>, TError,DeleteOwnAccountMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOwnAccount>>, TError,DeleteOwnAccountMutationVariables, TContext> => {
+
+const mutationKey = getDeleteOwnAccountMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOwnAccount>>, DeleteOwnAccountMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  deleteOwnAccount(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOwnAccountMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOwnAccount>>>
+    export type DeleteOwnAccountMutationBody = BodyType<AccountDeletionInput>
+    export type DeleteOwnAccountMutationError = ErrorType<void>
+    export type DeleteOwnAccountMutationVariables = {data: BodyType<AccountDeletionInput>}
+
+    /**
+ * @summary Permanently erase the signed-in reader's data and sign-in account (GDPR Art. 17)
+ */
+export const useDeleteOwnAccount = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOwnAccount>>, TError,DeleteOwnAccountMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOwnAccount>>,
+        TError,
+        DeleteOwnAccountMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteOwnAccountMutationOptions(options));
     }
 
 export const getHealthCheckUrl = () => {

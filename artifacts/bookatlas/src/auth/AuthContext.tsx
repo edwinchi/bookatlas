@@ -3,6 +3,7 @@ import { useClerk, useUser } from '@clerk/react';
 import { useLocation } from 'wouter';
 import { safeReaderReturnPath } from './navigation';
 import { completeSignOut } from './session';
+import { clearSignupConsent, readSignupConsent } from './signupConsent';
 
 export type Account = { id: string; email: string; name: string; role: 'reader' | 'admin' };
 type AuthState = {
@@ -45,8 +46,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         // The server derives this identity from the verified session, not a form.
         try {
-          const sync = await fetch('/api/users/register', { method: 'POST', signal: controller.signal });
+          const consent = readSignupConsent();
+          const sync = await fetch('/api/users/register', {
+            method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(consent ? { consent } : {}),
+          });
           if (!sync.ok) throw new Error('Reader profile sync failed.');
+          clearSignupConsent();
         } catch {
           if (!controller.signal.aborted) setNotice('You are signed in. Reader profile sync failed; please retry later.');
         }

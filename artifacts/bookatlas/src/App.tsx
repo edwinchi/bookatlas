@@ -962,7 +962,10 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-8"><div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-400">
           <p>© 2026 Atlantean Globals Services B.V. (Netherlands). All rights reserved. Bookatlas™ eBook Store & Reader.</p>
-          <div className="flex space-x-4">
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+            <a href={`${import.meta.env.BASE_URL}privacy`} className="text-slate-400 hover:text-slate-200 underline">
+              Privacy Notice
+            </a>
             <button onClick={() => setIsArchitectureGuideOpen(true)} className="hover:text-white underline cursor-pointer">
               Technical Architecture & EPUB Specs
             </button>

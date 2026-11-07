@@ -1,6 +1,6 @@
 import { clerkClient, getAuth } from '@clerk/express';
 import type { Request, Response, NextFunction } from 'express';
-import { accessFor, authorizationStatus, canBootstrapOwner, type Identity } from './policy';
+import { accessFor, authorizationStatus, canBootstrapOwner, isCrossSiteMutation, type Identity } from './policy';
 import { getClerkProxyHost } from '../middlewares/clerkProxyMiddleware';
 import { logger } from '../lib/logger';
 
@@ -37,14 +37,9 @@ export async function bookatlasAccess(req: Request, res: Response, next: NextFun
   const path = req.originalUrl.split('?')[0];
   const access = accessFor(req.method, path);
   // Cookie-authenticated mutations may only originate from this app.
-  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && req.headers.origin) {
-    try {
-      if (new URL(req.headers.origin).host !== getClerkProxyHost(req)) {
-        res.status(403).json({ error: 'Cross-origin changes are not allowed.' }); return;
-      }
-    } catch {
-      res.status(403).json({ error: 'Invalid request origin.' }); return;
-    }
+  if (isCrossSiteMutation(req.method, path, req.headers, getClerkProxyHost(req))) {
+    req.log.warn({ event: 'auth.csrf_blocked', method: req.method, path }, 'Cross-site mutation rejected');
+    res.status(403).json({ error: 'Cross-origin changes are not allowed.' }); return;
   }
   if (access === 'public') { next(); return; }
   res.setHeader('Cache-Control', 'no-store');
@@ -54,6 +49,7 @@ export async function bookatlasAccess(req: Request, res: Response, next: NextFun
     // inside the application, before any subscriber lookup or mutation.
     if (access === 'self-service') { next(); return; }
     const status = authorizationStatus(access, req.bookatlasIdentity);
+    if (status !== 200) req.log.info({ event: 'auth.denied', status, path }, 'Account access denied');
     if (status === 401) {
       res.status(401).json({ error: 'Please sign in with a verified email address.' }); return;
     }

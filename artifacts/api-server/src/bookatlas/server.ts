@@ -14,6 +14,9 @@ import { mountPublishingReadiness } from './publishing/routes.js';
 import { mountPublishingJobs } from './publishing/jobRoutes.js';
 import { mountWorkforce } from './workforce/routes.js';
 import { mountReaderTts } from './publishing/readerTts.js';
+import { clerkClient } from '@clerk/express';
+import { SyncReaderProfileBody } from '@workspace/api-zod';
+import { AccountStoreError, PRIVACY_NOTICE_VERSION, maskEmail, mountAccountRoutes } from './account.js';
 
 function isPlaceholderEnvValue(value?: string): boolean {
   if (!value) return true;
@@ -386,8 +389,25 @@ function addLog(actionType: any, title: string, description: string, badge = 'Ma
   if (automationLogs.length > 50) automationLogs.pop();
 }
 
-export async function createApp() {
+/** Identity-provider operations the app performs on a reader's own account; injectable for tests. */
+export interface IdentityProvider {
+  recordSignupConsent(userId: string, consent: { ageConfirmed: true; privacyNoticeVersion: string; acceptedAt: string }): Promise<void>;
+  deleteIdentity(userId: string): Promise<void>;
+}
+
+const clerkIdentityProvider: IdentityProvider = {
+  async recordSignupConsent(userId, consent) {
+    // Server-only metadata: readers cannot edit it, and it needs no database schema change.
+    await clerkClient.users.updateUserMetadata(userId, { privateMetadata: { bookatlasSignupConsent: consent } });
+  },
+  async deleteIdentity(userId) {
+    await clerkClient.users.deleteUser(userId);
+  },
+};
+
+export async function createApp(identityProvider: IdentityProvider = clerkIdentityProvider) {
   const app = express();
+  app.disable('x-powered-by');
 
   if (isDbConfigured) {
     try {
@@ -647,16 +667,26 @@ export async function createApp() {
   // ==========================================
   // USER REGISTRATION & EMAIL GATE APIS
   // ==========================================
-  app.post('/api/users/register', (req, res) => {
+  app.post('/api/users/register', async (req, res) => {
     try {
-      const { email, name } = req.bookatlasIdentity!;
+      const identity = req.bookatlasIdentity!;
+      const { email, name } = identity;
       if (!email || !email.includes('@')) {
         res.status(400).json({ success: false, error: 'A valid email address is required to register.' }); return;
       }
+      const body = SyncReaderProfileBody.safeParse(req.body ?? {});
+      if (!body.success) {
+        res.status(400).json({ success: false, error: 'Confirm your age and the privacy notice to finish signing up.' }); return;
+      }
 
       const cleanEmail = email.trim().toLowerCase();
-      let user = registeredUsers.find(u => u.email.toLowerCase() === cleanEmail);
+      if (body.data.consent) {
+        await identityProvider.recordSignupConsent(identity.id, { ...body.data.consent, acceptedAt: new Date().toISOString() });
+        logger.info({ event: 'auth.consent_recorded', user: maskEmail(cleanEmail), version: body.data.consent.privacyNoticeVersion }, 'Sign-up consent recorded');
+      }
 
+      let user = registeredUsers.find(u => u.email.toLowerCase() === cleanEmail);
+      const created = !user;
       if (!user) {
         user = {
           email: cleanEmail,
@@ -667,30 +697,43 @@ export async function createApp() {
           booksRead: 0
         };
         registeredUsers.push(user);
-        addLog('marketing_blast', `New Reader Registered: ${cleanEmail}`, 'Unlocked lifetime access pass to Bookatlas catalog and reader.', 'Reader Gate');
+        addLog('marketing_blast', `New Reader Registered: ${maskEmail(cleanEmail)}`, 'Unlocked lifetime access pass to Bookatlas catalog and reader.', 'Reader Gate');
       } else {
         user.lastActive = Date.now();
       }
       void db.upsertUserInDb(user);
+      logger.info({ event: 'auth.register', created, user: maskEmail(cleanEmail) }, 'Reader profile synced');
 
-      // Sync with master subscribers pool
-      const registrationSync = upsertSubscriber({
-        email: cleanEmail,
-        name: user.name,
-        tags: ['registered_reader', 'platform_user'],
-        source: 'registration_gate',
-        status: 'subscribed'
-      });
-      void db.upsertSubscriberInDb(registrationSync.subscriber);
-
-      res.json({
-        success: true,
-        user,
-        totalRegistered: registeredUsers.length
-      });
+      // Registration is not marketing consent: readers opt in through the reading-updates preference.
+      res.json({ success: true, user });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      logger.error({ err: error, event: 'auth.register_failed' }, 'Reader profile sync failed');
+      res.status(503).json({ success: false, error: 'Your profile could not be synced. Please try again.' });
     }
+  });
+
+  mountAccountRoutes(app, {
+    profile: email => registeredUsers.find(u => u.email === email) ?? null,
+    subscriber: email => (subscribersMap.get(email) as unknown as Record<string, unknown> | undefined) ?? null,
+    async emailDeliveries(email) {
+      if (!bookatlasDb) return [];
+      const { data, error } = await bookatlasDb.from('publishing_messages')
+        .select('kind,status,created_at,updated_at').eq('recipient', email);
+      if (error) throw new AccountStoreError('Email delivery records are unavailable.');
+      return data ?? [];
+    },
+    async erase(email) {
+      if (bookatlasDb) {
+        for (const [table, column] of [['publishing_messages', 'recipient'], ['subscribers', 'email'], ['registered_users', 'email']] as const) {
+          const { error } = await bookatlasDb.from(table).delete().eq(column, email);
+          if (error) throw new AccountStoreError(`Could not erase ${table}.`);
+        }
+      }
+      registeredUsers = registeredUsers.filter(u => u.email !== email);
+      subscribersMap.delete(email);
+      automationLogs = automationLogs.filter(log => !`${log.title} ${log.description}`.toLowerCase().includes(email));
+    },
+    deleteIdentity: userId => identityProvider.deleteIdentity(userId),
   });
 
   app.get('/api/users', (req, res) => {
@@ -1582,7 +1625,7 @@ export async function createApp() {
       });
       void db.upsertSubscriberInDb(result.subscriber);
 
-      addLog('marketing_blast', `Subscriber Added: ${email}`, `Tier: ${tier} | Tags: ${tags.join(', ')}`);
+      addLog('marketing_blast', `Subscriber Added: ${maskEmail(email)}`, `Tier: ${tier} | Tags: ${tags.join(', ')}`);
 
       res.status(201).json({
         success: true,
@@ -1601,7 +1644,7 @@ export async function createApp() {
       const existed = subscribersMap.delete(email);
       if (existed) {
         void db.deleteSubscriberFromDb(email);
-        addLog('marketing_blast', `Subscriber Deleted: ${email}`, 'Removed contact from audience map.');
+        addLog('marketing_blast', `Subscriber Deleted: ${maskEmail(email)}`, 'Removed contact from audience map.');
       }
       res.json({ success: true, message: 'Subscriber removed', remaining: subscribersMap.size });
     } catch (error: any) {
@@ -1685,7 +1728,7 @@ export async function createApp() {
         sub.status = 'subscribed';
         sub.unsubscribedAt = undefined;
         void db.upsertSubscriberInDb(sub);
-        addLog('marketing_blast', `Reader Resubscribed: ${cleanEmail}`, 'User re-activated email newsletter notifications.', 'Subscription Center');
+        addLog('marketing_blast', `Reader Resubscribed: ${maskEmail(cleanEmail)}`, 'User re-activated email newsletter notifications.', 'Subscription Center');
         res.json({
           success: true,
           message: `You have successfully re-subscribed to Bookatlas updates!`,
@@ -1697,7 +1740,7 @@ export async function createApp() {
         sub.status = 'unsubscribed';
         sub.unsubscribedAt = Date.now();
         void db.upsertSubscriberInDb(sub);
-        addLog('marketing_blast', `1-Click Unsubscribe Processed: ${cleanEmail}`, `Reason: ${reason}. Contact removed from future active dispatches.`, 'Unsubscribe Center');
+        addLog('marketing_blast', `1-Click Unsubscribe Processed: ${maskEmail(cleanEmail)}`, `Reason: ${reason}. Contact removed from future active dispatches.`, 'Unsubscribe Center');
         
         res.json({
           success: true,

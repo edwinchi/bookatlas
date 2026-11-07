@@ -166,6 +166,79 @@ export interface ReadingUpdateInput {
   subscribed: boolean;
 }
 
+export interface ReaderSignupConsent {
+  ageConfirmed: true;
+  /**
+     * @minLength 1
+     * @maxLength 32
+     */
+  privacyNoticeVersion: string;
+}
+
+export interface ReaderProfileSyncInput {
+  consent?: ReaderSignupConsent;
+}
+
+export interface RegisteredReader {
+  email: string;
+  name?: string;
+  registeredAt: number;
+  lastActive: number;
+  readingStreak: number;
+  booksRead: number;
+}
+
+export interface ReaderProfileSyncResult {
+  success: boolean;
+  user: RegisteredReader;
+}
+
+/**
+ * @nullable
+ */
+export type AccountExportSubscriber = { [key: string]: unknown } | null;
+
+export type AccountExportEmailDeliveriesItem = { [key: string]: unknown };
+
+export type AccountIdentityRole = typeof AccountIdentityRole[keyof typeof AccountIdentityRole];
+
+
+export const AccountIdentityRole = {
+  reader: 'reader',
+  admin: 'admin',
+} as const;
+
+export interface AccountIdentity {
+  id: string;
+  email: string;
+  name: string;
+  role: AccountIdentityRole;
+}
+
+export interface AccountExport {
+  exportedAt: string;
+  identity: AccountIdentity;
+  profile: RegisteredReader | null;
+  /** @nullable */
+  subscriber: AccountExportSubscriber;
+  emailDeliveries: AccountExportEmailDeliveriesItem[];
+}
+
+export type AccountDeletionInputConfirm = typeof AccountDeletionInputConfirm[keyof typeof AccountDeletionInputConfirm];
+
+
+export const AccountDeletionInputConfirm = {
+  DELETE: 'DELETE',
+} as const;
+
+export interface AccountDeletionInput {
+  confirm: AccountDeletionInputConfirm;
+}
+
+export interface AccountDeletionResult {
+  deleted: true;
+}
+
 export interface ReadingUpdatePreference {
   subscribed: boolean;
   /** @nullable */
@@ -333,21 +406,6 @@ export interface PublishingReadiness {
   canPublish: boolean;
   summary: string;
   checks: PublishingReadinessCheck[];
-}
-
-export type AccountIdentityRole = typeof AccountIdentityRole[keyof typeof AccountIdentityRole];
-
-
-export const AccountIdentityRole = {
-  reader: 'reader',
-  admin: 'admin',
-} as const;
-
-export interface AccountIdentity {
-  id: string;
-  email: string;
-  name: string;
-  role: AccountIdentityRole;
 }
 
 export type MembershipResultTier = typeof MembershipResultTier[keyof typeof MembershipResultTier];

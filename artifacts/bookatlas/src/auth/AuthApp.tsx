@@ -7,6 +7,10 @@ import { AccountProvider, useAccount } from './AuthContext';
 import { ReadingUpdatePreferences } from '../components/ReadingUpdatePreferences';
 import { readerReturnUrl, safeReaderReturnPath, clerkRouterPath } from './navigation';
 import { AdminEntry } from './AdminWorkspace';
+import { AccountPrivacy } from '../components/AccountPrivacy';
+import { PrivacyNotice } from '../components/PrivacyNotice';
+import { readSignupConsent, saveSignupConsent } from './signupConsent';
+import { useState } from 'react';
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || publishableKeyFromHost(
   window.location.hostname,
@@ -59,7 +63,7 @@ function SessionBar({ authUnavailable = false }: { authUnavailable?: boolean }) 
     <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 text-xs text-indigo-950">
       <span>{account ? `Signed in as ${account.email}${account.role === 'admin' ? ' · Administrator' : ''}` : 'Your next chapter starts here. Browse freely, or sign in to build your bookshelf.'}</span>
       <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-        {account ? <>{account.role === 'admin' && <Link href="/admin" className="font-bold underline underline-offset-4">Admin workspace</Link>}<ReadingUpdatePreferences /><button onClick={signOut} className="min-h-11 font-bold underline underline-offset-4">Sign out</button></> :
+        {account ? <>{account.role === 'admin' && <Link href="/admin" className="font-bold underline underline-offset-4">Admin workspace</Link>}<ReadingUpdatePreferences /><AccountPrivacy /><button onClick={signOut} className="min-h-11 font-bold underline underline-offset-4">Sign out</button></> :
           <><Link href="/sign-in" className="inline-flex min-h-12 items-center font-bold">Sign in</Link><Link href="/sign-up" className="inline-flex min-h-12 items-center rounded-lg bg-indigo-700 px-3 font-bold text-white">Create account</Link></>}
       </div>
     </div>
@@ -94,7 +98,25 @@ function Store({ portal = false, resumeCheckout = false }: { portal?: boolean; r
   return <><SessionBar authUnavailable={authUnavailable} /><App key={account?.id || 'guest'} initialTab={portal ? 'library' : 'store'} initialLibraryTab={libraryTab} resumeCheckout={resumeCheckout || currentPath === '/checkout'} pendingReaderService={pendingReaderService} /></>;
 }
 
+/** Age and privacy-notice confirmation shown before the sign-up form; recorded on the first profile sync. */
+function SignupConsentStep({ onAccept }: { onAccept: () => void }) {
+  const [checked, setChecked] = useState(false);
+  return <form
+    onSubmit={(e) => { e.preventDefault(); if (checked) { saveSignupConsent(); onAccept(); } }}
+    className="mx-auto w-[440px] max-w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8"
+  >
+    <h2 className="font-serif text-xl font-bold text-slate-950">Before you create your account</h2>
+    <p className="mt-2 text-sm leading-relaxed text-slate-600">Bookatlas accounts are for readers aged 16 or older. Marketing emails stay off unless you opt in later.</p>
+    <label className="mt-5 flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
+      <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} required className="mt-0.5 h-5 w-5 shrink-0 accent-indigo-700" />
+      <span>I am 16 or older and I have read the <a href={`${basePath}/privacy`} target="_blank" rel="noreferrer" className="font-semibold text-indigo-700 underline">Privacy Notice</a>.</span>
+    </label>
+    <button type="submit" disabled={!checked} className="mt-5 min-h-12 w-full rounded-xl bg-indigo-700 px-5 font-bold text-white disabled:opacity-50">Continue to sign up</button>
+  </form>;
+}
+
 function AuthPage({ signup = false }: { signup?: boolean }) {
+  const [consented, setConsented] = useState(() => !!readSignupConsent());
   const returnTo = safeReaderReturnPath(
     new URLSearchParams(window.location.search).get('returnTo'),
     window.location.origin,
@@ -119,7 +141,7 @@ function AuthPage({ signup = false }: { signup?: boolean }) {
       <h1 className="mt-7 font-serif text-3xl font-bold">{signup ? 'A bookshelf of your own.' : 'Continue with Bookatlas'}</h1>
       <p className="mt-3 text-sm leading-relaxed text-indigo-100">{feature && descriptions[feature] ? descriptions[feature] : signup ? 'Create your Bookatlas account to save your wishlist, build your library, and pick up where you left off.' : 'Sign in to continue. You can still browse the bookstore without an account.'}</p>
     </div>
-    {signup ? <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in${preservedIntent}`} forceRedirectUrl={destination} /> :
+    {signup && !consented ? <SignupConsentStep onAccept={() => setConsented(true)} /> : signup ? <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in${preservedIntent}`} forceRedirectUrl={destination} /> :
       <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up${preservedIntent}`} forceRedirectUrl={destination} />}
   </main>;
 }
@@ -145,6 +167,7 @@ function ProviderWithRoutes() {
       <Switch>
         <Route path="/sign-in/*?"><AuthPage /></Route>
         <Route path="/sign-up/*?"><AuthPage signup /></Route>
+        <Route path="/privacy"><PrivacyNotice /></Route>
         <Route path="/user-portal"><Store portal resumeCheckout={new URLSearchParams(window.location.search).get('resume') === 'checkout'} /></Route>
         <Route path="/checkout"><Store resumeCheckout /></Route>
         <Route path="/admin"><Store /></Route>
