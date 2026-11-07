@@ -15,6 +15,13 @@ import {
   Bookmark
 } from 'lucide-react';
 import { Book } from '../types';
+import {
+  calculateAudioDurationSeconds,
+  formatAudioTime,
+  skipAudioForward,
+  skipAudioBackward,
+  AUDIO_PLAYBACK_SPEEDS,
+} from '../utils/audioPlayer';
 
 interface AudiobookPlayerDockProps {
   book: Book;
@@ -34,7 +41,7 @@ export const AudiobookPlayerDock: React.FC<AudiobookPlayerDockProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [sleepTimer, setSleepTimer] = useState<number | null>(null);
 
-  const duration = (book.audioDurationMinutes || 480) * 60; // in seconds
+  const duration = calculateAudioDurationSeconds(book.audioDurationMinutes);
 
   useEffect(() => {
     let interval: any;
@@ -46,20 +53,11 @@ export const AudiobookPlayerDock: React.FC<AudiobookPlayerDockProps> = ({
     return () => clearInterval(interval);
   }, [isPlaying, speed, duration]);
 
-  const formatTime = (secs: number) => {
-    const hrs = Math.floor(secs / 3600);
-    const mins = Math.floor((secs % 3600) / 60);
-    const s = Math.floor(secs % 60);
-    if (hrs > 0) {
-      return `${hrs}:${mins < 10 ? '0' : ''}${mins}:${s < 10 ? '0' : ''}${s}`;
-    }
-    return `${mins}:${s < 10 ? '0' : ''}${s}`;
-  };
+  const formatTime = formatAudioTime;
+  const skipForward = () => setCurrentTime((t) => skipAudioForward(t, duration));
+  const skipBackward = () => setCurrentTime((t) => skipAudioBackward(t));
 
-  const skipForward = () => setCurrentTime((t) => Math.min(duration, t + 15));
-  const skipBackward = () => setCurrentTime((t) => Math.max(0, t - 15));
-
-  const speeds = [0.75, 1.0, 1.25, 1.5, 2.0];
+  const speeds: readonly number[] = AUDIO_PLAYBACK_SPEEDS;
 
   return (
     <div className="fixed bottom-0 inset-x-0 z-40 bg-stone-950/95 backdrop-blur-md text-white border-t border-white/10 shadow-2xl transition-all duration-300">

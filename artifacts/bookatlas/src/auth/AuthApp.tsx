@@ -1,4 +1,4 @@
-import { ClerkProvider, SignIn, SignUp, useUser } from '@clerk/react';
+import { ClerkProvider, SignIn, SignUp, useClerk, useUser } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import { Router as WouterRouter, Switch, Route, Redirect, Link, useLocation } from 'wouter';
@@ -50,8 +50,11 @@ const appearance = {
   },
 };
 
-function SessionBar() {
+function SessionBar({ authUnavailable = false }: { authUnavailable?: boolean }) {
   const { account, signOut } = useAccount();
+  if (authUnavailable) return <div role="status" className="border-b border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs text-amber-950 sm:px-4">
+    Sign-in is temporarily unavailable. You can keep browsing the bookstore as a guest.
+  </div>;
   return <div className="border-b border-indigo-100 bg-indigo-50 px-3 py-2 sm:px-4">
     <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 text-xs text-indigo-950">
       <span>{account ? `Signed in as ${account.email}${account.role === 'admin' ? ' · Administrator' : ''}` : 'Your next chapter starts here. Browse freely, or sign in to build your bookshelf.'}</span>
@@ -66,7 +69,9 @@ function SessionBar() {
 function Store({ portal = false, resumeCheckout = false }: { portal?: boolean; resumeCheckout?: boolean }) {
   const { isLoaded, isSignedIn } = useUser();
   const { account, loading, error, refresh, signOut } = useAccount();
-  if (!isLoaded || (isSignedIn && loading)) return <div className="flex min-h-screen items-center justify-center text-indigo-950" role="status">Loading your Bookatlas account…</div>;
+  // A failed auth provider must not block the public storefront; fall through as a guest.
+  const authUnavailable = useClerk().status === 'error';
+  if (!authUnavailable && (!isLoaded || (isSignedIn && loading))) return <div className="flex min-h-screen items-center justify-center text-indigo-950" role="status">Loading your Bookatlas account…</div>;
   if (portal && !isSignedIn) return <Redirect to="/" />;
   if (isSignedIn && (!account || error)) return <main className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center gap-5 p-6 text-center">
     <img src={`${basePath}/logo.svg`} alt="Bookatlas" className="h-12" />
@@ -86,7 +91,7 @@ function Store({ portal = false, resumeCheckout = false }: { portal?: boolean; r
   const libraryTab = portal && new URLSearchParams(window.location.search).get('view') === 'wishlist' ? 'wishlist' as const : 'reading' as const;
   const pendingReaderService = portal && new URLSearchParams(window.location.search).get('view') === 'ai'
     ? new URLSearchParams(window.location.search).get('service') || 'studio' : undefined;
-  return <><SessionBar /><App key={account?.id || 'guest'} initialTab={portal ? 'library' : 'store'} initialLibraryTab={libraryTab} resumeCheckout={resumeCheckout || currentPath === '/checkout'} pendingReaderService={pendingReaderService} /></>;
+  return <><SessionBar authUnavailable={authUnavailable} /><App key={account?.id || 'guest'} initialTab={portal ? 'library' : 'store'} initialLibraryTab={libraryTab} resumeCheckout={resumeCheckout || currentPath === '/checkout'} pendingReaderService={pendingReaderService} /></>;
 }
 
 function AuthPage({ signup = false }: { signup?: boolean }) {

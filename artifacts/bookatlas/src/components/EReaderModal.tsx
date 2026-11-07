@@ -35,50 +35,11 @@ import {
 import { StudioNarrationPanel } from './voice/StudioNarrationPanel';
 import { Book, ReaderSettings, ReaderTheme, ReaderFont, Highlight } from '../types';
 
-const READER_DISPLAY_PREFERENCES_KEY = 'bookatlas:reader-display:v1';
-const DEFAULT_READER_SETTINGS: ReaderSettings = {
-  fontSize: 18,
-  lineHeight: 1.7,
-  fontFamily: 'literata',
-  theme: 'sepia',
-  marginWidth: 'normal',
-};
-
-function readSavedReaderSettings(): ReaderSettings {
-  try {
-    const stored: unknown = JSON.parse(localStorage.getItem(READER_DISPLAY_PREFERENCES_KEY) || 'null');
-    if (!stored || typeof stored !== 'object' || Array.isArray(stored)) {
-      return { ...DEFAULT_READER_SETTINGS };
-    }
-
-    const values = stored as Record<string, unknown>;
-    const fontSize = values.fontSize;
-    const lineHeight = values.lineHeight;
-    const fontFamilies: ReaderFont[] = ['literata', 'sans', 'mono'];
-    const themes: ReaderTheme[] = ['day', 'sepia', 'night', 'mint', 'black'];
-    const margins: ReaderSettings['marginWidth'][] = ['narrow', 'normal', 'wide'];
-
-    return {
-      fontSize: typeof fontSize === 'number' && Number.isFinite(fontSize) && fontSize >= 14 && fontSize <= 26
-        ? fontSize
-        : DEFAULT_READER_SETTINGS.fontSize,
-      lineHeight: typeof lineHeight === 'number' && Number.isFinite(lineHeight) && lineHeight >= 1.4 && lineHeight <= 2.2
-        ? lineHeight
-        : DEFAULT_READER_SETTINGS.lineHeight,
-      fontFamily: fontFamilies.includes(values.fontFamily as ReaderFont)
-        ? values.fontFamily as ReaderFont
-        : DEFAULT_READER_SETTINGS.fontFamily,
-      theme: themes.includes(values.theme as ReaderTheme)
-        ? values.theme as ReaderTheme
-        : DEFAULT_READER_SETTINGS.theme,
-      marginWidth: margins.includes(values.marginWidth as ReaderSettings['marginWidth'])
-        ? values.marginWidth as ReaderSettings['marginWidth']
-        : DEFAULT_READER_SETTINGS.marginWidth,
-    };
-  } catch {
-    return { ...DEFAULT_READER_SETTINGS };
-  }
-}
+import {
+  READER_DISPLAY_PREFERENCES_KEY,
+  DEFAULT_READER_SETTINGS,
+  readSavedReaderSettings,
+} from '../utils/readerSettings';
 
 interface EReaderModalProps {
   book: Book;

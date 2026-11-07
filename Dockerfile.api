@@ -1,0 +1,43 @@
+# Multi-stage Dockerfile for Bookatlas Express API Server
+FROM node:24-alpine AS builder
+
+WORKDIR /app
+RUN npm install -g pnpm@11.25.0
+
+# Copy workspace configuration, the preinstall guard and every workspace manifest
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY scripts/package.json scripts/check-package-manager.mjs ./scripts/
+COPY artifacts/api-server/package.json ./artifacts/api-server/
+COPY artifacts/bookatlas/package.json ./artifacts/bookatlas/
+COPY artifacts/mockup-sandbox/package.json ./artifacts/mockup-sandbox/
+COPY lib/bookatlas-catalog/package.json ./lib/bookatlas-catalog/
+COPY lib/api-client-react/package.json ./lib/api-client-react/
+COPY lib/api-zod/package.json ./lib/api-zod/
+COPY lib/api-spec/package.json ./lib/api-spec/
+COPY lib/db/package.json ./lib/db/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source files
+COPY tsconfig.base.json tsconfig.json ./
+COPY lib/ ./lib/
+COPY artifacts/api-server/ ./artifacts/api-server/
+
+# Build backend, then collect it with production node_modules for externalized packages
+RUN pnpm --filter "@workspace/api-server" run build
+RUN pnpm --filter "@workspace/api-server" deploy --prod --legacy /out \
+ && rm -rf /out/dist && cp -r artifacts/api-server/dist /out/dist
+
+# Stage 2: Minimal Production Runtime
+FROM node:24-alpine AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3001
+
+COPY --from=builder --chown=node:node /out ./
+USER node
+
+EXPOSE 3001
+CMD ["node", "--enable-source-maps", "./dist/index.mjs"]

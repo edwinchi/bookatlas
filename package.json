@@ -9,7 +9,9 @@
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "dev:local": "node --env-file-if-exists=.env.local scripts/dev-local.mjs",
     "test:catalog": "node --experimental-strip-types --test scripts/src/catalog-search.test.mjs",
-    "test:unit": "node scripts/run-unit-tests.mjs"
+    "test:unit": "node scripts/run-unit-tests.mjs",
+    "test:port": "node --import tsx --test scripts/src/bookatlas-port.test.mjs",
+    "test:e2e": "node scripts/run-e2e-tests.mjs"
   },
   "private": true,
   "dependencies": {

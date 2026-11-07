@@ -12,6 +12,12 @@ import {
   Headphones,
 } from 'lucide-react';
 import { CartItem } from '../types';
+import {
+  calculateCartSubtotal,
+  calculateCartSuperPoints,
+  applyPromoDiscount,
+  DEMO_CHECKOUT_NOTICE,
+} from '../utils/cart';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -41,19 +47,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
   if (!isOpen) return null;
 
-  const rawSubtotal = cart.reduce((acc, item) => acc + item.book.price, 0);
-  const discountAmount = (rawSubtotal * discountPercent) / 100;
-  const total = Math.max(0, rawSubtotal - discountAmount);
-  const totalSuperPoints = cart.reduce((acc, item) => acc + item.book.superPointsEarned, 0);
+  const rawSubtotal = calculateCartSubtotal(cart);
+  const discountAmount = Number(((rawSubtotal * discountPercent) / 100).toFixed(2));
+  const total = Math.max(0, Number((rawSubtotal - discountAmount).toFixed(2)));
+  const totalSuperPoints = calculateCartSuperPoints(cart);
 
   const applyPromo = (e: React.FormEvent) => {
     e.preventDefault();
-    if (promoCode.trim().toUpperCase() === 'BOOKATLAS20' || promoCode.trim().toUpperCase() === 'READMORE') {
-      setDiscountPercent(20);
+    const result = applyPromoDiscount(rawSubtotal, promoCode);
+    if (result.valid) {
+      setDiscountPercent(result.discountPercent);
       setPromoApplied(true);
       setPromoError('');
     } else {
-      setPromoError('Invalid promo code. Try "BOOKATLAS20" for 20% off.');
+      setPromoError(result.error || 'Invalid promo code. Try "BOOKATLAS20" for 20% off.');
     }
   };
 
@@ -63,7 +70,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     setIsCheckingOut(true);
     setTimeout(() => {
       setIsCheckingOut(false);
-      setDemoResult('Demo complete. No payment was processed, no order was placed, and no book was added to your library.');
+      setDemoResult(DEMO_CHECKOUT_NOTICE);
     }, 700);
   };
 

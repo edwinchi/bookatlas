@@ -20,6 +20,7 @@ import { VeoVideoAnimatorModal } from './components/VeoVideoAnimatorModal';
 import { GoogleSearchGroundingModal } from './components/GoogleSearchGroundingModal';
 import { ExportDocsModal } from './components/ExportDocsModal';
 import { AIStudioHub } from './components/AIStudioHub';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import { useAccount, useAccountList } from './auth/AuthContext';
 import { UnsubscribePageModal } from './components/UnsubscribePageModal';
 import { AIAccessGateModal } from './components/AIAccessGateModal';
@@ -497,7 +498,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
 
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-8 pb-24 lg:pb-8">
         
         {/* VIEW 1: SINGLE MANAGER OPERATIONS STUDIO (SECURED ADMIN ZONE) */}
         {activeTab === 'manager' ? (
@@ -1127,6 +1128,15 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
         initialEmail={unsubTargetEmail || registeredUser?.email}
         token={unsubTargetToken}
         language={language}
+      />
+
+      {/* Mobile-First Sticky Bottom Navigation Bar (Thumb Reachable) */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        cartCount={cart.length}
+        onOpenCart={() => setIsCartOpen(true)}
+        onOpenAIHub={() => setIsAIHubOpen(true)}
       />
     </div>
   );

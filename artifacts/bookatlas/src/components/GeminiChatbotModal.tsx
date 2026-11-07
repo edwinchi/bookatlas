@@ -27,7 +27,7 @@ interface GeminiChatbotModalProps {
   onReadSample: (book: Book) => void;
 }
 
-const PERSONAS: ChatPersona[] = [
+export const PERSONAS: ChatPersona[] = [
   {
     id: 'scholar',
     name: 'Dr. Lysander Voss',

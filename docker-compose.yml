@@ -1,0 +1,42 @@
+# Local container stack for BookAtlas. Run with:
+#   docker compose --env-file .env.local up --build
+# The API runs on in-memory seed data; Supabase settings are deliberately cleared.
+services:
+  # Express API Server Container
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: bookatlas-api
+    restart: unless-stopped
+    env_file:
+      - path: .env.local
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      APP_URL: http://localhost:5173
+      SUPABASE_URL: ""
+      SUPABASE_SERVICE_ROLE_KEY: ""
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # React / Vite Static Web Frontend Container with Nginx Proxy
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        VITE_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:-}
+    container_name: bookatlas-web
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      api:
+        condition: service_healthy

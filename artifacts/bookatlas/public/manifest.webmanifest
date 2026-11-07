@@ -1,0 +1,26 @@
+{
+  "name": "Bookatlas — AI Knowledge Atlas & eBook Store",
+  "short_name": "Bookatlas",
+  "description": "Discover millions of eBooks and Audiobooks, read instantly in your browser, and explore with AI companions.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#4338ca",
+  "icons": [
+    {
+      "src": "./logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
+
