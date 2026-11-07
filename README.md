@@ -19,6 +19,14 @@ Use the VS Code **BookAtlas: debug browser** launch configuration after starting
 
 Without Supabase settings, the API uses seed data and server changes are lost on restart. Checkout remains simulated. AI services require their own provider credentials.
 
+## Run with Docker
+
+`docker compose --env-file .env.local up -d --build` builds the API and web images and serves the app on http://localhost:5173 (nginx proxies `/api` to the API on port 3001). The containers use in-memory seed data, never your Supabase project. http://localhost:5173/__reset clears the browser's site data for this origin.
+
+With the stack running: `pnpm test:security` (headers, CSRF, rate limits), `pnpm test:browser` (Playwright storefront checks) and `pnpm test:perf` (p95 at 50 requests/second). Set `BASE_URL` to test another deployment.
+
+Accounts, privacy and operations: [docs/runbooks/accounts-and-auth.md](docs/runbooks/accounts-and-auth.md) and [docs/privacy/data-inventory-and-retention.md](docs/privacy/data-inventory-and-retention.md).
+
 ## Login and logout configuration
 
 Frontend and API must use keys from the same Clerk instance. Outside the local launcher, configure `VITE_CLERK_PUBLISHABLE_KEY` at frontend build time and `CLERK_PUBLISHABLE_KEY` plus `CLERK_SECRET_KEY` on the API. Explicit keys take precedence over hostname-derived defaults. Rebuild the frontend after changing `VITE_` configuration.

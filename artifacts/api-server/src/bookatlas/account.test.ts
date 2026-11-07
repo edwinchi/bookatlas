@@ -4,6 +4,7 @@ import type { AddressInfo } from 'node:net';
 import express from 'express';
 import { randomBytes } from 'node:crypto';
 import type { Identity } from '../auth/policy';
+import { DeleteOwnAccountResponse, ExportOwnAccountResponse, SyncReaderProfileResponse } from '@workspace/api-zod';
 import { maskEmail } from './account';
 
 // In-memory mode only: these tests must never write to a configured Supabase project.
@@ -43,6 +44,7 @@ test('registration creates the reader profile without subscribing them to market
   const body = await json(response);
   assert.equal(body.user.email, 'new.reader@example.test');
   assert.equal('totalRegistered' in body, false, 'platform-wide counts are not disclosed to readers');
+  assert.ok(SyncReaderProfileResponse.safeParse(body).success, 'register response matches the OpenAPI contract');
   assert.equal(consents.length, 0);
 
   const exported = await json(await send('GET', '/api/account/export'));
@@ -72,6 +74,7 @@ test('export returns the reader\'s own records and never the unsubscribe capabil
   assert.match(response.headers.get('content-disposition') ?? '', /attachment/);
   assert.equal(response.headers.get('cache-control'), 'private, no-store');
   const body = await json(response);
+  assert.ok(ExportOwnAccountResponse.safeParse(body).success, 'export matches the OpenAPI contract');
   assert.equal(body.identity.id, 'user_sophie');
   assert.equal(body.subscriber.email, 'sophie.deboer@rotterdam.nl');
   assert.equal('unsubscribeToken' in body.subscriber, false);
@@ -92,7 +95,9 @@ test('deletion erases profile and subscriber data, then the sign-in account', as
   await send('POST', '/api/users/register');
   const response = await send('DELETE', '/api/account', { confirm: 'DELETE' });
   assert.equal(response.status, 200);
-  assert.deepEqual(await json(response), { deleted: true });
+  const deletion = await json(response);
+  assert.deepEqual(deletion, { deleted: true });
+  assert.ok(DeleteOwnAccountResponse.safeParse(deletion).success, 'deletion matches the OpenAPI contract');
   assert.deepEqual(deletedIdentities, ['user_sophie']);
 
   const exported = await json(await send('GET', '/api/account/export'));

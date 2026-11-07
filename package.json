@@ -13,7 +13,8 @@
     "test:port": "node --import tsx --test scripts/src/bookatlas-port.test.mjs",
     "test:e2e": "node scripts/run-e2e-tests.mjs",
     "test:security": "node --test tests/security/http.test.mjs",
-    "test:perf": "node scripts/perf-check.mjs"
+    "test:perf": "node scripts/perf-check.mjs",
+    "test:browser": "node --test --test-concurrency=1 tests/browser/storefront.test.mjs"
   },
   "private": true,
   "dependencies": {

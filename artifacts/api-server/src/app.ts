@@ -46,14 +46,20 @@ app.use(
     { prefix: "/api/gemini", limit: 30 },
   ]),
 );
-app.use(
-  clerkMiddleware((req) => ({
-    publishableKey: process.env.CLERK_PUBLISHABLE_KEY || publishableKeyFromHost(
-      getClerkProxyHost(req) ?? "",
-      process.env.CLERK_PUBLISHABLE_KEY,
-    ),
-  })),
-);
+// Without a secret key Clerk throws on every request, taking the public catalog down with it.
+// Skip it instead: public routes keep working and account routes fail closed with 503.
+if (process.env.CLERK_SECRET_KEY?.trim()) {
+  app.use(
+    clerkMiddleware((req) => ({
+      publishableKey: process.env.CLERK_PUBLISHABLE_KEY || publishableKeyFromHost(
+        getClerkProxyHost(req) ?? "",
+        process.env.CLERK_PUBLISHABLE_KEY,
+      ),
+    })),
+  );
+} else {
+  logger.error({ event: "auth.provider_unconfigured" }, "CLERK_SECRET_KEY is not set: sign-in and account routes are unavailable");
+}
 app.use("/api", bookatlasAccess);
 app.use("/api", router);
 app.use(await createApp());

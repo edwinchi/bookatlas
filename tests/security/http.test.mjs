@@ -25,11 +25,20 @@ test('API responses are hardened and do not advertise the framework', async () =
   assert.match(res.headers.get('content-security-policy') ?? '', /default-src 'none'/);
 });
 
+// 401 when the identity provider is configured; 503 (fail closed) on deployments without its secret key.
+const denied = [401, 503];
+
 test('account data endpoints require a verified sign-in', async () => {
-  assert.equal((await get('/api/account/export')).status, 401);
-  assert.equal((await get('/api/account', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: '{"confirm":"DELETE"}' })).status, 401);
-  assert.equal((await get('/api/users/register', { method: 'POST' })).status, 401);
-  assert.equal((await get('/api/not-a-route', { method: 'POST' })).status, 401, 'unknown routes fail closed');
+  for (const [path, init] of [
+    ['/api/account/export'],
+    ['/api/account', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: '{"confirm":"DELETE"}' }],
+    ['/api/users/register', { method: 'POST' }],
+    ['/api/not-a-route', { method: 'POST' }],
+  ]) {
+    const res = await get(path, init);
+    assert.ok(denied.includes(res.status), `${path} answered ${res.status}`);
+    assert.doesNotMatch(await res.text(), /@/, `${path} must not return personal data`);
+  }
 });
 
 test('cross-site and cookie-only mutations are rejected before authentication', async () => {
@@ -37,7 +46,7 @@ test('cross-site and cookie-only mutations are rejected before authentication', 
   assert.equal((await post({ Origin: 'https://evil.example' })).status, 403);
   assert.equal((await post({ Cookie: '__session=forged' })).status, 403, 'session cookie without Origin');
   assert.equal((await post({ Cookie: '__session=forged', 'Sec-Fetch-Site': 'cross-site' })).status, 403);
-  assert.equal((await post({ Cookie: '__session=forged', 'Sec-Fetch-Site': 'same-origin' })).status, 401, 'same-origin proceeds to authentication');
+  assert.ok(denied.includes((await post({ Cookie: '__session=forged', 'Sec-Fetch-Site': 'same-origin' })).status), 'same-origin proceeds to authentication');
 });
 
 test('abusive request rates are throttled with Retry-After', async () => {

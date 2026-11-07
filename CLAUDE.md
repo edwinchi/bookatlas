@@ -19,5 +19,8 @@ Follow the governance documents in `docs/governance/`:
 
 ## Commands
 
-- `pnpm run typecheck`, `pnpm test:unit`, `pnpm test:e2e`, `pnpm test:catalog`
+- `pnpm run typecheck`, `pnpm test:unit`, `pnpm test:e2e`, `pnpm test:catalog`, `pnpm audit --prod`
+- Against a running stack (`BASE_URL`, default http://localhost:5173): `pnpm test:security`, `pnpm test:browser`, `pnpm test:perf`
+- After changing `lib/api-spec/openapi.yaml`: `pnpm --filter ./lib/api-spec run codegen`
+- Preview deploy: `npx vercel deploy --yes -e SESSION_SECRET=<random>`. Production deploy is Level 3. See `docs/runbooks/accounts-and-auth.md`
 - Local stack: `docker compose --env-file .env.local up -d --build`, then open http://localhost:5173. The API runs on in-memory seed data. http://localhost:5173/__reset clears the browser's site data.

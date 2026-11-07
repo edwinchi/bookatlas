@@ -10,7 +10,7 @@ import { AdminEntry } from './AdminWorkspace';
 import { AccountPrivacy } from '../components/AccountPrivacy';
 import { PrivacyNotice } from '../components/PrivacyNotice';
 import { readSignupConsent, saveSignupConsent } from './signupConsent';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || publishableKeyFromHost(
   window.location.hostname,
@@ -54,6 +54,8 @@ const appearance = {
   },
 };
 
+const AUTH_LOAD_TIMEOUT_MS = 6000;
+
 function SessionBar({ authUnavailable = false }: { authUnavailable?: boolean }) {
   const { account, signOut } = useAccount();
   if (authUnavailable) return <div role="status" className="border-b border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs text-amber-950 sm:px-4">
@@ -73,8 +75,16 @@ function SessionBar({ authUnavailable = false }: { authUnavailable?: boolean }) 
 function Store({ portal = false, resumeCheckout = false }: { portal?: boolean; resumeCheckout?: boolean }) {
   const { isLoaded, isSignedIn } = useUser();
   const { account, loading, error, refresh, signOut } = useAccount();
-  // A failed auth provider must not block the public storefront; fall through as a guest.
-  const authUnavailable = useClerk().status === 'error';
+  // A failed or unreachable auth provider must not block the public storefront; fall through as a guest.
+  // Clerk retries an unreachable script for about 15 seconds before reporting an error.
+  const clerkStatus = useClerk().status;
+  const [authSlow, setAuthSlow] = useState(false);
+  useEffect(() => {
+    if (isLoaded) return;
+    const timer = setTimeout(() => setAuthSlow(true), AUTH_LOAD_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [isLoaded]);
+  const authUnavailable = clerkStatus === 'error' || (authSlow && !isLoaded);
   if (!authUnavailable && (!isLoaded || (isSignedIn && loading))) return <div className="flex min-h-screen items-center justify-center text-indigo-950" role="status">Loading your Bookatlas account…</div>;
   if (portal && !isSignedIn) return <Redirect to="/" />;
   if (isSignedIn && (!account || error)) return <main className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center gap-5 p-6 text-center">
