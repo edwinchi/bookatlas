@@ -18,19 +18,19 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 | Phase | Section | Status |
 |---|---|---|
 | 0 | Codebase baseline and CTO challenges | ✅ Complete (2026-11-08) |
-| 1 | Discovery: A Business foundation | ⏳ Waiting for answers |
-| 1 | Discovery: B Revenue model | ⏳ Waiting for answers |
+| 1 | Discovery: A Business foundation | ⏳ Tagline and problem accepted. **Open:** domain, mission, vision, customer ranking |
+| 1 | Discovery: B Revenue model | ⏳ Agent proposal below (R1–R6). **Owner must confirm or change prices** |
 | 1 | Discovery: C MVP scope | ✅ Complete: **Option C**, publishing, marketplace and AI |
-| 1 | Discovery: D Products | ⏳ Waiting for answers |
+| 1 | Discovery: D Products | ✅ Complete: paperback, eBook, one journal format, workbooks; rest future |
 | 1 | Discovery: E Countries | ✅ Complete: print to **NL and the EU** at launch; digital worldwide |
-| 1 | Discovery: F Printing model | ⏳ Model decided: **third-party print API**. Agent owes the provider comparison; owner picks |
-| 1 | Discovery: G Marketplace | ⏳ Waiting for answers |
-| 1 | Discovery: H Author portal | ⏳ Waiting for answers |
-| 1 | Discovery: I AI features | ⏳ Waiting for answers |
-| 1 | Discovery: J Payments | ⏳ Waiting for answers |
-| 1 | Discovery: K Files | ⏳ Waiting for answers |
-| 1 | Discovery: L Branding | ⏳ Waiting for answers (logo, colours, type known) |
-| 1 | Discovery: M Compliance | ⏳ Waiting for answers |
+| 1 | Discovery: F Printing model | ⏳ API model decided; comparison done (below). **Owner:** open Lulu and Peecho accounts for quotes, then pick |
+| 1 | Discovery: G Marketplace | ✅ Complete: author profiles and storefront pages, verified-purchase reviews and ratings, wishlists, reader accounts |
+| 1 | Discovery: H Author portal | ✅ Complete: dashboard, sales and royalty reports, basic analytics, AI assistant; affiliates future |
+| 1 | Discovery: I AI features | ✅ Complete: five MVP helpers, then cover generator, formatter, proofreader (last); content editor future |
+| 1 | Discovery: J Payments | ✅ Complete: Stripe (cards, iDEAL, Apple Pay, Google Pay, Klarna), Stripe Connect payouts, Stripe Tax; PayPal future. **Blocker:** Stripe account for the company |
+| 1 | Discovery: K Files | ✅ Complete: print-ready PDF and EPUB with validation and previews; DOCX conversion future |
+| 1 | Discovery: L Branding | ✅ Complete: author-first and premium; existing logo, navy `#0B3A9E`, Plus Jakarta Sans, Literata |
+| 1 | Discovery: M Compliance | ✅ Complete: GDPR, EU OSS VAT, DSA notice and takedown, WCAG 2.2 AA (EAA), cookie consent only if tracking is added. **Blockers:** VAT number; counsel for author terms |
 | 2 | Product requirements document | ⬜ Not started (needs phase 1) |
 | 3 | MVP landing page copy | ⬜ Not started |
 | 4 | Technical architecture | ⬜ Not started. Build path approved: **extend BookAtlas** |
@@ -86,7 +86,38 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 | P1 | Build path | **Extend BookAtlas** (no stack rewrite; R2 and Meilisearch can be swapped in later) | 2026-11-08 |
 | P2 | MVP scope | **C**: publishing, marketplace and AI. Heavier AI (cover generator, interior formatter, proofreader) is in scope. **Risk:** these are the largest items. They get scheduled last in the 90 days and can slip to day 91+ without blocking revenue | 2026-11-08 |
 | P3 | Printing | **Third-party print API.** Provider chosen after the agent's comparison (Gelato, Peecho, Lulu Print API, Bookvault) | 2026-11-08 |
+| P5 | All other recommendations (D, G–M, tagline, problem statement) | **Accepted** ("yes") | 2026-11-08 |
 | P4 | Launch markets | **NL and the EU** for print (EU OSS VAT); UK and US in month 4; digital worldwide | 2026-11-08 |
+
+## Print provider comparison (2026-11-08, desk research)
+
+Prices come from public pages and third-party reviews. They are **indicative only**: exact quotes need an account with each provider.
+
+| | Lulu Print API | Peecho (Prodigi group) | Gelato | Bookvault |
+|---|---|---|---|---|
+| Book focus | Trade books: paperback, hardcover, coil, B&W and colour interiors | Photo-quality books (HP Indigo, colour); softcover A5 and A4, 20–300 pages, PUR binding | Photo books, children's books, notebooks and calendars; no trade paperback found | Trade books, offset-quality print on demand |
+| EU print site | France (also UK, US, CA, AU, IN) | Network in 30+ countries; Western Europe delivery in 2–7 working days | 250+ partners in 32 countries | UK and US. EU orders cross a customs border since Brexit |
+| API cost | No subscription or setup fee; per job: print, shipping, fulfilment fee (about $1.75 reported), tax | "Free Peecho API"; pay per printed product | Free base plan; per product | Monthly plans (£24.95 / £89.95 reported) plus title setup fees |
+| Indicative unit cost | About $5.54 for 200 pp, 6×9 in, B&W, US paperback | Softcover not shown; hardcover from €5.20 | n/a for trade books | About $4.01 for 200 pp, 6×9 in (US) |
+| Developer fit | Public sandbox and documented print-job API | REST orders, pricing and status; sub-account per creator; some features "early access" | White-label REST API | API for titles, orders and sales |
+| Fit for this brief | **Best match** for novels, workbooks and journals in the EU | Good EU-local option for **colour** books (photo, colouring, children's) | Later: calendars and planners | Not for an EU-first launch |
+
+**Recommendation:** build a provider-neutral print adapter (one interface: quote, submit, status, cancel). Start with **Lulu Print API** for B&W and trade formats, and evaluate **Peecho** for colour books. Note: Lulu also sells directly to authors. Using its print API is an ordinary supplier relationship and copies nothing, but it is a dependency on a competitor, so the adapter keeps switching cheap. Opening provider accounts is a credentialed external integration (**Level 3**): the owner opens them.
+
+Sources: [Lulu API fees](https://help.api.lulu.com/en/support/solutions/articles/64000254631-are-there-fees-to-use-lulu-s-print-api-), [Lulu pricing breakdown](https://podvector.ai/articles/print-on-demand/costs-and-suppliers/lulu-print-on-demand-pricing), [Lulu print sites](https://assets.lulu.com/media/guides/en/lulu-scaling-your-business-with-print-api-guide.pdf), [Peecho softcover](https://www.peecho.com/products/books/softcover), [Peecho print API](https://www.peecho.com/solutions/print-api), [Gelato photo books](https://www.gelato.com/products/photo-books), [Gelato Europe](https://www.gelato.com/print-on-demand/europe), [Bookvault fees](https://bookvault.app/special-edition-book-printing/), [Bookvault costs](https://selfpublishingdirectory.com/print-on-demand/bookvault).
+
+## Revenue proposal (Section B, awaiting owner confirmation)
+
+| # | Stream | Proposed price | Cost to us | Target margin |
+|---|---|---|---|---|
+| R1 | Print sales commission | Author sets the retail price; we keep **15%** of (retail − print − shipping − fees) | Payment fees about 1.5–3% | About 12% of the author's margin |
+| R2 | Digital (eBook) commission | **20%** of the net eBook price | Payment fees, file hosting | About 15% |
+| R3 | Author Pro subscription | **€9.99/month**: commission falls to 5%, unlimited AI helpers, priority previews | AI API cost (cap per account) | ≥ 70% |
+| R4 | Book formatting service | **€149** per title | Freelancer about €60–80 | About 50% |
+| R5 | Cover design service | **€199** per cover | Freelancer about €80–100 | About 50% |
+| R6 | ISBN | Future: Dutch ISBNs come from the national agency; author-supplied at launch | n/a | n/a |
+
+**Check against the €1,000 goal.** 100 paperback orders at about €18 earn roughly €150–250 in commission (R1). The rest has to come from about 25 Pro subscribers (about €250 a month) and a handful of services (R4 and R5). The plan therefore puts the Pro plan and the services on the launch page, not just the commission.
 
 ## Phase 1 questionnaire
 
