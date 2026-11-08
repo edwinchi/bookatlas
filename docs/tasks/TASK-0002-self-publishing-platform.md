@@ -20,10 +20,10 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 | 0 | Codebase baseline and CTO challenges | ✅ Complete (2026-11-08) |
 | 1 | Discovery: A Business foundation | ⏳ Waiting for answers |
 | 1 | Discovery: B Revenue model | ⏳ Waiting for answers |
-| 1 | Discovery: C MVP scope | ⏳ Waiting for answers |
+| 1 | Discovery: C MVP scope | ✅ Complete: **Option C**, publishing, marketplace and AI |
 | 1 | Discovery: D Products | ⏳ Waiting for answers |
-| 1 | Discovery: E Countries | ⏳ Waiting for answers |
-| 1 | Discovery: F Printing model | ⏳ Waiting for answers |
+| 1 | Discovery: E Countries | ✅ Complete: print to **NL and the EU** at launch; digital worldwide |
+| 1 | Discovery: F Printing model | ⏳ Model decided: **third-party print API**. Agent owes the provider comparison; owner picks |
 | 1 | Discovery: G Marketplace | ⏳ Waiting for answers |
 | 1 | Discovery: H Author portal | ⏳ Waiting for answers |
 | 1 | Discovery: I AI features | ⏳ Waiting for answers |
@@ -33,7 +33,7 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 | 1 | Discovery: M Compliance | ⏳ Waiting for answers |
 | 2 | Product requirements document | ⬜ Not started (needs phase 1) |
 | 3 | MVP landing page copy | ⬜ Not started |
-| 4 | Technical architecture | ⬜ Not started (Level 2 approval) |
+| 4 | Technical architecture | ⬜ Not started. Build path approved: **extend BookAtlas** |
 | 5 | Database design (ERD, schema, migrations, indexes) | ⬜ Not started (Level 2 approval) |
 | 6 | API design (OpenAPI) | ⬜ Not started |
 | 7 | Security | ⬜ Not started |
@@ -79,6 +79,15 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 
 ---
 
+## Decisions
+
+| # | Decision | Answer | Date |
+|---|---|---|---|
+| P1 | Build path | **Extend BookAtlas** (no stack rewrite; R2 and Meilisearch can be swapped in later) | 2026-11-08 |
+| P2 | MVP scope | **C**: publishing, marketplace and AI. Heavier AI (cover generator, interior formatter, proofreader) is in scope. **Risk:** these are the largest items. They get scheduled last in the 90 days and can slip to day 91+ without blocking revenue | 2026-11-08 |
+| P3 | Printing | **Third-party print API.** Provider chosen after the agent's comparison (Gelato, Peecho, Lulu Print API, Bookvault) | 2026-11-08 |
+| P4 | Launch markets | **NL and the EU** for print (EU OSS VAT); UK and US in month 4; digital worldwide | 2026-11-08 |
+
 ## Phase 1 questionnaire
 
 Fill in or confirm. **Known** means taken from the codebase or earlier decisions. **Rec.** means a recommendation awaiting confirmation. **?** means the owner must decide.
@@ -114,8 +123,8 @@ For each stream you choose: price, cost, target margin.
 ### C. MVP scope
 
 - **A** Publishing platform only
-- **B** Publishing and marketplace (**Rec.**: BookAtlas already has the marketplace half)
-- **C** Publishing, marketplace and AI
+- **B** Publishing and marketplace
+- **C** Publishing, marketplace and AI ✅ **Chosen (P2)**
 - **D** Full ecosystem
 
 ### D. Products (Required / Future)
@@ -135,11 +144,11 @@ For each stream you choose: price, cost, target margin.
 
 ### E. Launch countries
 
-USA, Canada, UK, Netherlands, Germany, France, Australia, others? **Rec.:** physical books to NL and the EU at launch; UK and US in month 4. Digital products worldwide.
+✅ **Decided (P4):** physical books to NL and the EU at launch; UK and US in month 4. Digital products worldwide.
 
 ### F. Printing model
 
-**A** manual, **B** third-party API (**Rec.**), or **C** own facilities. Preferred provider: **?** (see challenge 3).
+✅ **B, third-party API (P3).** Preferred provider: pending the agent's comparison (see challenge 3).
 
 ### G. Marketplace (Yes/No)
 
@@ -158,7 +167,7 @@ Dashboard, revenue reports, royalty reports, sales reports: **Rec. yes** (one sa
 
 ### I. AI features
 
-MVP: description generator, metadata generator, category suggestions, price suggestions, Launch Readiness Score (**Rec.: all five**). Future: cover generator, content editor, interior formatter, proofreader.
+MVP: description generator, metadata generator, category suggestions, price suggestions, Launch Readiness Score (**Rec.: all five**). With scope C (P2), cover generator, interior formatter and proofreader also move into the 90 days, scheduled last. Content editor: **?**
 
 ### J. Payments
 
