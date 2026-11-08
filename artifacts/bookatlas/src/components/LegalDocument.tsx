@@ -3,7 +3,8 @@ import { Link } from 'wouter';
 
 /** Operator details shown on the Privacy Notice and Legal Notice. */
 export const OPERATOR = {
-  name: 'Atlantean Globals Services B.V.',
+  name: 'Atlantean Globals Services',
+  kvk: '89423496',
   locality: '8031 DJ Zwolle',
   country: 'the Netherlands',
   email: 'getintouch@apps-pilot.nl',
@@ -14,6 +15,7 @@ export function OperatorAddress() {
     <strong>{OPERATOR.name}</strong><br />
     {OPERATOR.locality}<br />
     {OPERATOR.country.replace(/^the /, 'The ')}<br />
+    Chamber of Commerce (KvK) {OPERATOR.kvk}<br />
     <a href={`mailto:${OPERATOR.email}`} className="font-semibold text-indigo-700 underline underline-offset-4">{OPERATOR.email}</a>
   </address>;
 }

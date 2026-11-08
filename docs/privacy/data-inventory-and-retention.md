@@ -1,8 +1,8 @@
 # Data inventory and retention
 
-Owner: Atlantean Globals Services B.V. (controller). Last reviewed: 2026-11-08 (TASK-0001, D11). Contact: 8031 DJ Zwolle, the Netherlands, getintouch@apps-pilot.nl. The reader-facing summary is the Privacy Notice at `/privacy` ([PrivacyNotice.tsx](../../artifacts/bookatlas/src/components/PrivacyNotice.tsx)); keep the two consistent and bump `PRIVACY_NOTICE_VERSION` in both [account.ts](../../artifacts/api-server/src/bookatlas/account.ts) and [signupConsent.ts](../../artifacts/bookatlas/src/auth/signupConsent.ts) when the notice changes (a unit test checks they match).
+Owner: Atlantean Globals Services, KvK 89423496 (controller). Last reviewed: 2026-11-08 (TASK-0001, D11). Contact: 8031 DJ Zwolle, the Netherlands, getintouch@apps-pilot.nl. The reader-facing summary is the Privacy Notice at `/privacy` ([PrivacyNotice.tsx](../../artifacts/bookatlas/src/components/PrivacyNotice.tsx)); keep the two consistent and bump `PRIVACY_NOTICE_VERSION` in both [account.ts](../../artifacts/api-server/src/bookatlas/account.ts) and [signupConsent.ts](../../artifacts/bookatlas/src/auth/signupConsent.ts) when the notice changes (a unit test checks they match).
 
-> **Status:** the engineering inventory is complete and the notice names the controller's contact details (version 2026-11-08). Still open: legal review, the full street address, and the Chamber of Commerce (KvK) and VAT numbers on the Legal Notice at `/legal` ([LegalNotice.tsx](../../artifacts/bookatlas/src/components/LegalNotice.tsx)). Operator details live in one place: [LegalDocument.tsx](../../artifacts/bookatlas/src/components/LegalDocument.tsx).
+> **Status:** the engineering inventory is complete and the notice names the controller's contact details (version 2026-11-08). Still open: legal review, the full street address and, if VAT-registered, the VAT number on the Legal Notice at `/legal` ([LegalNotice.tsx](../../artifacts/bookatlas/src/components/LegalNotice.tsx)). Operator details live in one place: [LegalDocument.tsx](../../artifacts/bookatlas/src/components/LegalDocument.tsx).
 
 ## Personal data held
 
@@ -40,6 +40,6 @@ Administrators cannot delete their own account through self-service, so the plat
 
 - Entries in hosting logs written before 2026-11-08 may contain full reader emails. They expire with the provider's log retention.
 - Database backups follow Supabase's backup retention; erased rows persist in backups until those expire.
-- The address is postcode and city only (8031 DJ Zwolle). A legal notice for a Dutch business should give the full street address, KvK number and VAT number.
+- The address is postcode and city only (8031 DJ Zwolle). A legal notice for a Dutch business should give the full street address and, if VAT-registered, the VAT number. KvK 89423496 is published.
 - International transfers (Clerk, Vercel, OpenRouter, Resend in the US) are described as relying on the Data Privacy Framework or standard contractual clauses; confirm against each processor's DPA.
 - Google Fonts is loaded from Google's servers; self-hosting would remove that transfer.

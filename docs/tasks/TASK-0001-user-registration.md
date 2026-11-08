@@ -171,7 +171,7 @@ Events, alert rules and the uptime probe are defined in the [runbook](../runbook
 | Create a Clerk development instance and put its keys in `.env.local`; add production keys to Vercel | You | F9: requires your Clerk account |
 | Apply the D9 Clerk dashboard checklist (runbook) and run the signed-in end-to-end tests | Agent, after keys | Needs dashboard access |
 | Production deployment | You | Approved; run `npx vercel --prod --yes`, then `BASE_URL=https://bookatlas-station9x.vercel.app pnpm test:security` |
-| Legal review of the Privacy Notice and Legal Notice; supply the full street address, KvK and VAT numbers | You or counsel | Contact details added 2026-11-08 (8031 DJ Zwolle, getintouch@apps-pilot.nl); registration numbers can't be invented |
+| Legal review of the Privacy Notice and Legal Notice; supply the full street address and VAT number | You or counsel | Contact details and KvK 89423496 added 2026-11-08; legal form corrected from "B.V." to the registered name. Other in-app copy still says "B.V."/Amsterdam (admin reports, AI persona, PDF exports) |
 | Enforce the full CSP after observing signed-in flows; add the production Clerk domain | Agent | Runbook §CSP |
 | Self-host Google Fonts (F11) | Agent | Small follow-up |
 | Uptime probe and log alerts in the hosting dashboard | Operator | Requires dashboard access |
