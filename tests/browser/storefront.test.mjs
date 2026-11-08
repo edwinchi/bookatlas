@@ -74,6 +74,15 @@ test('the privacy notice is linked from the footer and explains rights and reten
   assert.ok(await page.getByRole('heading', { name: 'Privacy Notice', level: 1 }).isVisible());
   assert.ok(await page.getByRole('heading', { name: 'Your rights' }).isVisible());
   assert.ok(await page.getByRole('heading', { name: 'How long we keep it' }).isVisible());
+  assert.ok(await page.locator('a[href="mailto:getintouch@apps-pilot.nl"]').first().isVisible());
+});
+
+test('the legal notice is linked from the footer and names the operator', async () => {
+  const page = await open('/');
+  await page.locator('footer a', { hasText: 'Legal Notice' }).click();
+  await page.waitForURL('**/legal');
+  assert.ok(await page.getByRole('heading', { name: 'Legal Notice', level: 1 }).isVisible());
+  assert.match(await page.locator('address').innerText(), /Atlantean Globals Services B\.V\.[\s\S]*8031 DJ Zwolle/);
 });
 
 test('sign-up requires the age and privacy confirmation before the form', async () => {

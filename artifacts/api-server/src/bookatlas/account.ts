@@ -3,7 +3,7 @@ import { DeleteOwnAccountBody } from '@workspace/api-zod';
 import { logger } from '../lib/logger.js';
 
 /** Version of the privacy notice readers accept at sign-up; bump when the notice changes. */
-export const PRIVACY_NOTICE_VERSION = '2026-11-07';
+export const PRIVACY_NOTICE_VERSION = '2026-11-08';
 
 /** Keeps logs useful for support without storing full reader addresses (GDPR data minimisation). */
 export function maskEmail(email: string): string {

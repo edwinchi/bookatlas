@@ -44,7 +44,7 @@ BookAtlas already has registration, built on **Clerk** as the identity provider.
 | Password reset | Clerk | Unchanged. Unverified (D9) |
 | Password policy enforced | Unknown | **Blocked:** Clerk dashboard (D9) |
 | User can log in | Met | Met. Can't be tested end-to-end until the Clerk keys are fixed |
-| GDPR compliant | Not met | **Met in code:** consent separated, export and erasure, PII masked in logs, age gate, privacy notice, retention documented. Legal review of the notice is still pending (§12) |
+| GDPR compliant | Not met | **Met in code:** consent separated, export and erasure, PII masked in logs, age gate, privacy notice, retention documented. Contact details published 2026-11-08; legal review is still pending (§12) |
 | OWASP compliant | Partial | **Met for the reviewed scope:** rate limiting, headers, CSRF, no vulnerable dependencies (`pnpm audit` clean) |
 | 99.9% uptime | Not measurable | Health endpoint, structured events and alert rules documented in the runbook. The external probe is an operator setup step (§12) |
 
@@ -77,7 +77,7 @@ BookAtlas already has registration, built on **Clerk** as the identity provider.
 | D8 | Vulnerable dependencies | **Done** | zod 3.25.76 → 4.6.7 (no patched 3.x exists), `body-parser` 2.4.0, `qs` 6.17.1. Orval regenerated for Zod 4. `pnpm audit --prod`: no known vulnerabilities |
 | D9 | Clerk dashboard settings | **Blocked** | Needs valid keys and dashboard access. Checklist in the runbook |
 | D10 | Age gate, privacy acceptance, GPC | **Done** | Sign-up confirmation step; recorded in Clerk `privateMetadata.bookatlasSignupConsent` (no schema change). No trackers exist, so Global Privacy Control needs no extra handling (stated in the notice) |
-| D11 | Retention policy | **Done** (legal review pending) | [data-inventory-and-retention.md](../privacy/data-inventory-and-retention.md), plus the `/privacy` notice |
+| D11 | Retention policy | **Done** (legal review pending) | [data-inventory-and-retention.md](../privacy/data-inventory-and-retention.md), the `/privacy` notice (v2026-11-08, with contact details) and the `/legal` notice |
 
 Also delivered, outside the original design but required by findings during the work:
 
@@ -171,7 +171,7 @@ Events, alert rules and the uptime probe are defined in the [runbook](../runbook
 | Create a Clerk development instance and put its keys in `.env.local`; add production keys to Vercel | You | F9: requires your Clerk account |
 | Apply the D9 Clerk dashboard checklist (runbook) and run the signed-in end-to-end tests | Agent, after keys | Needs dashboard access |
 | Production deployment | You (sign-off), then agent | Level 3 |
-| Legal review of the privacy notice; add a contact address for data requests | You or counsel | A contact address can't be invented |
+| Legal review of the Privacy Notice and Legal Notice; supply the full street address, KvK and VAT numbers | You or counsel | Contact details added 2026-11-08 (8031 DJ Zwolle, getintouch@apps-pilot.nl); registration numbers can't be invented |
 | Enforce the full CSP after observing signed-in flows; add the production Clerk domain | Agent | Runbook §CSP |
 | Self-host Google Fonts (F11) | Agent | Small follow-up |
 | Uptime probe and log alerts in the hosting dashboard | Operator | Requires dashboard access |

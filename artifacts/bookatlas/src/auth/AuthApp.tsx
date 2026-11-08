@@ -8,6 +8,7 @@ import { ReadingUpdatePreferences } from '../components/ReadingUpdatePreferences
 import { readerReturnUrl, safeReaderReturnPath, clerkRouterPath } from './navigation';
 import { AdminEntry } from './AdminWorkspace';
 import { AccountPrivacy } from '../components/AccountPrivacy';
+import { LegalNotice } from '../components/LegalNotice';
 import { PrivacyNotice } from '../components/PrivacyNotice';
 import { readSignupConsent, saveSignupConsent } from './signupConsent';
 import { useEffect, useState } from 'react';
@@ -178,6 +179,7 @@ function ProviderWithRoutes() {
         <Route path="/sign-in/*?"><AuthPage /></Route>
         <Route path="/sign-up/*?"><AuthPage signup /></Route>
         <Route path="/privacy"><PrivacyNotice /></Route>
+        <Route path="/legal"><LegalNotice /></Route>
         <Route path="/user-portal"><Store portal resumeCheckout={new URLSearchParams(window.location.search).get('resume') === 'checkout'} /></Route>
         <Route path="/checkout"><Store resumeCheckout /></Route>
         <Route path="/admin"><Store /></Route>

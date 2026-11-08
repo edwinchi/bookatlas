@@ -966,6 +966,9 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
             <a href={`${import.meta.env.BASE_URL}privacy`} className="text-slate-400 hover:text-slate-200 underline">
               Privacy Notice
             </a>
+            <a href={`${import.meta.env.BASE_URL}legal`} className="text-slate-400 hover:text-slate-200 underline">
+              Legal Notice
+            </a>
             <button onClick={() => setIsArchitectureGuideOpen(true)} className="hover:text-white underline cursor-pointer">
               Technical Architecture & EPUB Specs
             </button>
