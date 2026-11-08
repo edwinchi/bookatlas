@@ -19,16 +19,16 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 |---|---|---|
 | 0 | Codebase baseline and CTO challenges | ✅ Complete (2026-11-08) |
 | 1 | Discovery: A Business foundation | ⏳ Tagline and problem accepted. **Open:** domain, mission, vision, customer ranking |
-| 1 | Discovery: B Revenue model | ⏳ Agent proposal below (R1–R6). **Owner must confirm or change prices** |
+| 1 | Discovery: B Revenue model | ⏳ Proposal revised for P6 (R1–R7). **Owner must confirm prices** |
 | 1 | Discovery: C MVP scope | ✅ Complete: **Option C**, publishing, marketplace and AI |
-| 1 | Discovery: D Products | ✅ Complete: paperback, eBook, one journal format, workbooks; rest future |
-| 1 | Discovery: E Countries | ✅ Complete: print to **NL and the EU** at launch; digital worldwide |
-| 1 | Discovery: F Printing model | ⏳ API model decided; comparison done (below). **Owner:** open Lulu and Peecho accounts for quotes, then pick |
+| 1 | Discovery: D Products | ✅ Complete (revised by P6): **eBooks sold on Bookatlas**; paperbacks, hardcovers, journals and workbooks **prepared for print** on Amazon KDP, Lulu and others |
+| 1 | Discovery: E Countries | ⏳ Re-opened by P6: no shipping; decide **where eBooks are sold** (each non-EU country can mean a tax registration) |
+| 1 | Discovery: F Printing model | ✅ Complete (P6): **no print fulfilment**. Paperback buyers are sent to the book's Amazon or Lulu listing; we sell the print-preparation service |
 | 1 | Discovery: G Marketplace | ✅ Complete: author profiles and storefront pages, verified-purchase reviews and ratings, wishlists, reader accounts |
 | 1 | Discovery: H Author portal | ✅ Complete: dashboard, sales and royalty reports, basic analytics, AI assistant; affiliates future |
-| 1 | Discovery: I AI features | ✅ Complete: five MVP helpers, then cover generator, formatter, proofreader (last); content editor future |
+| 1 | Discovery: I AI features | ✅ Complete: five MVP helpers; **interior formatter and cover generator move up** (they power the print-preparation service); proofreader last; content editor future |
 | 1 | Discovery: J Payments | ✅ Complete: Stripe (cards, iDEAL, Apple Pay, Google Pay, Klarna), Stripe Connect payouts, Stripe Tax; PayPal future. **Blocker:** Stripe account for the company |
-| 1 | Discovery: K Files | ✅ Complete: print-ready PDF and EPUB with validation and previews; DOCX conversion future |
+| 1 | Discovery: K Files | ✅ Complete (revised by P6): EPUB for sale; **print-ready packages for KDP and Lulu** (interior PDF, full cover with spine, metadata sheet) are a core deliverable |
 | 1 | Discovery: L Branding | ✅ Complete: author-first and premium; existing logo, navy `#0B3A9E`, Plus Jakarta Sans, Literata |
 | 1 | Discovery: M Compliance | ✅ Complete: GDPR, EU OSS VAT, DSA notice and takedown, WCAG 2.2 AA (EAA), cookie consent only if tracking is added. **Blockers:** VAT number; counsel for author terms |
 | 2 | Product requirements document | ⬜ Not started (needs phase 1) |
@@ -87,9 +87,12 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 | P2 | MVP scope | **C**: publishing, marketplace and AI. Heavier AI (cover generator, interior formatter, proofreader) is in scope. **Risk:** these are the largest items. They get scheduled last in the 90 days and can slip to day 91+ without blocking revenue | 2026-11-08 |
 | P3 | Printing | **Third-party print API.** Provider chosen after the agent's comparison (Gelato, Peecho, Lulu Print API, Bookvault) | 2026-11-08 |
 | P5 | All other recommendations (D, G–M, tagline, problem statement) | **Accepted** ("yes") | 2026-11-08 |
+| P6 | Print model | **Supersedes P3 and the print half of P4.** Bookatlas does not print or ship. Paperbacks are published by the author on Amazon KDP, Lulu or another printer, and our book pages link to those listings. We sell eBooks on Bookatlas and a service that prepares books for KDP and Lulu print | 2026-11-08 |
 | P4 | Launch markets | **NL and the EU** for print (EU OSS VAT); UK and US in month 4; digital worldwide | 2026-11-08 |
 
 ## Print provider comparison (2026-11-08, desk research)
+
+> **Superseded by P6.** Kept as reference: the KDP and Lulu print specifications (trim, bleed, spine width) drive the print-preparation service, and the Lulu Print API could later automate author proof copies.
 
 Prices come from public pages and third-party reviews. They are **indicative only**: exact quotes need an account with each provider.
 
@@ -106,18 +109,26 @@ Prices come from public pages and third-party reviews. They are **indicative onl
 
 Sources: [Lulu API fees](https://help.api.lulu.com/en/support/solutions/articles/64000254631-are-there-fees-to-use-lulu-s-print-api-), [Lulu pricing breakdown](https://podvector.ai/articles/print-on-demand/costs-and-suppliers/lulu-print-on-demand-pricing), [Lulu print sites](https://assets.lulu.com/media/guides/en/lulu-scaling-your-business-with-print-api-guide.pdf), [Peecho softcover](https://www.peecho.com/products/books/softcover), [Peecho print API](https://www.peecho.com/solutions/print-api), [Gelato photo books](https://www.gelato.com/products/photo-books), [Gelato Europe](https://www.gelato.com/print-on-demand/europe), [Bookvault fees](https://bookvault.app/special-edition-book-printing/), [Bookvault costs](https://selfpublishingdirectory.com/print-on-demand/bookvault).
 
-## Revenue proposal (Section B, awaiting owner confirmation)
+## Revenue proposal (Section B, revised for P6, awaiting owner confirmation)
 
 | # | Stream | Proposed price | Cost to us | Target margin |
 |---|---|---|---|---|
-| R1 | Print sales commission | Author sets the retail price; we keep **15%** of (retail − print − shipping − fees) | Payment fees about 1.5–3% | About 12% of the author's margin |
-| R2 | Digital (eBook) commission | **20%** of the net eBook price | Payment fees, file hosting | About 15% |
-| R3 | Author Pro subscription | **€9.99/month**: commission falls to 5%, unlimited AI helpers, priority previews | AI API cost (cap per account) | ≥ 70% |
-| R4 | Book formatting service | **€149** per title | Freelancer about €60–80 | About 50% |
-| R5 | Cover design service | **€199** per cover | Freelancer about €80–100 | About 50% |
-| R6 | ISBN | Future: Dutch ISBNs come from the national agency; author-supplied at launch | n/a | n/a |
+| R1 | eBook sales commission | **20%** of the net eBook price (after VAT and payment fees); the author receives 80% | Payment fees about 1.5–3%, file hosting | About 15% |
+| R2 | **Print-ready package**: KDP and Lulu interior PDF, full cover with spine, metadata sheet, upload checklist | **€99** per title, with AI formatting and a human check | AI cost plus about 30 minutes of review | About 60% |
+| R3 | Premium print package: R2 plus a designed cover and two revision rounds | **€249** per title | Freelancer designer about €100 | About 50% |
+| R4 | Author Pro subscription | **€9.99/month**: eBook commission falls to 10%, unlimited AI helpers, a print-package refresh per edition | AI API cost (capped per account) | ≥ 70% |
+| R5 | Affiliate commission on paperback links | Amazon Associates and other programmes, where the author agrees | None | 100% of a small amount; needs disclosure |
+| R6 | ISBN | Future: author-supplied at launch (KDP can also assign its own ISBN) | n/a | n/a |
+| R7 | Premium support | Future | | |
 
-**Check against the €1,000 goal.** 100 paperback orders at about €18 earn roughly €150–250 in commission (R1). The rest has to come from about 25 Pro subscribers (about €250 a month) and a handful of services (R4 and R5). The plan therefore puts the Pro plan and the services on the launch page, not just the commission.
+**Check against the €1,000 goal.** 100 eBook orders at about €8 earn about €130 in commission (R1). The goal is met by about 7 print packages (R2/R3) plus about 25 Pro subscribers (about €250 a month). The service is the main revenue line, so it leads the landing page.
+
+**P6 consequences**
+- No shipping, print VAT, print returns or print royalties. Amazon and Lulu pay authors directly for print sales.
+- Bookatlas pays royalties only on eBook sales (Stripe Connect).
+- Amazon, Kindle and Lulu are trademarks. We name them only to describe compatibility ("prepared for Amazon KDP and Lulu"), never their logos or styling.
+- We never hold authors' KDP or Lulu passwords. Authors publish from their own accounts; we supply files and a checklist.
+- eBooks fall under the European Accessibility Act. EPUBs we sell or produce must meet EPUB Accessibility 1.1 (WCAG 2.x AA).
 
 ## Phase 1 questionnaire
 

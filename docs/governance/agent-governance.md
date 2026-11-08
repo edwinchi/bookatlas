@@ -136,4 +136,4 @@ The YAML defined its first task inline. Tasks are now kept as individual files:
 | ID | Title | Approval | Status |
 |---|---|---|---|
 | [TASK-0001](../tasks/TASK-0001-user-registration.md) | User Registration System | Level 2 (approved) | Deployed to production 2026-11-08; Clerk items blocked on keys |
-| [TASK-0002](../tasks/TASK-0002-self-publishing-platform.md) | Self-publishing and print-on-demand platform (90-day MVP) | Level 2 (payments go-live Level 3) | Phase 1 discovery: 10 of 13 sections complete; A, B, F wait on the owner |
+| [TASK-0002](../tasks/TASK-0002-self-publishing-platform.md) | Self-publishing and print-on-demand platform (90-day MVP) | Level 2 (payments go-live Level 3) | Phase 1 discovery: 10 of 13 sections complete; A, B, E wait on the owner. Print model changed to redirect + preparation service (P6) |
