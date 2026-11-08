@@ -7,6 +7,7 @@
 | Priority | High |
 | Approval level | **2** (architecture, schema, auth/permissions, payments). Payments go-live and production deploys are **3** |
 | Status | **Phase 1: discovery.** Waiting for the owner's answers. No architecture or code until they are in |
+| Deployments | 2026-11-08 production `bookatlas-4m64yaszq` (owner sign-off): owner logo across the app (`32c8a42` and follow-up). Verified: logo, icons and service worker v5 live; security tests 5/5 |
 | Last updated | 2026-11-08 |
 
 Governance: [agent-governance.md](../governance/agent-governance.md). Builds on [TASK-0001](TASK-0001-user-registration.md) (accounts, consent, data rights, abuse controls).
