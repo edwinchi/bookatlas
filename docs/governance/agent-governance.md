@@ -135,4 +135,4 @@ The YAML defined its first task inline. Tasks are now kept as individual files:
 
 | ID | Title | Approval | Status |
 |---|---|---|---|
-| [TASK-0001](../tasks/TASK-0001-user-registration.md) | User Registration System | Level 2 (approved) | Implemented and verified; production deploy awaits Level 3 sign-off; Clerk items blocked on keys |
+| [TASK-0001](../tasks/TASK-0001-user-registration.md) | User Registration System | Level 2 (approved) | Deployed to production 2026-11-08; Clerk items blocked on keys |

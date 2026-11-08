@@ -7,7 +7,7 @@
 | Priority | High |
 | Approval level | **2: human approval required** (authentication and schema changes). Approved 2026-11-07 (A1–A6, "yes on all") |
 | Status | **Implemented and verified** on Docker and on a Vercel preview. Two items blocked on credentials (§12) |
-| Ready for deployment | **Preview: yes. Production: Level 3 sign-off given 2026-11-08; the owner runs `npx vercel --prod --yes`** (the agent's permission policy blocks production deploys). Without valid Clerk keys, production runs guest-only: the store works and sign-in shows as unavailable |
+| Ready for deployment | **Deployed to production 2026-11-08** (`bookatlas-i8haeazop`, aliases bookatlas-station9x / bookatlas-gamma) after Level 3 sign-off. Production runs guest-only until Clerk keys are added. Without valid Clerk keys, production runs guest-only: the store works and sign-in shows as unavailable |
 | Blockers | Valid Clerk keys and dashboard access (F9 → D9, signed-in end-to-end tests) |
 | Last updated | 2026-11-08 |
 
@@ -155,7 +155,7 @@ Events, alert rules and the uptime probe are defined in the [runbook](../runbook
 | A5 | Clerk security settings, retention policy | 3 | Approved; Clerk part blocked (F9) |
 | A6 | Rate limiting, headers, log masking, dependencies | 0 and 1 | Approved |
 | — | Restore the Vercel pipeline | 1 | Approved |
-| — | **Production deployment** | **3** | **Approved 2026-11-08** by the owner ("deploy"). Run by the owner |
+| — | **Production deployment** | **3** | **Approved 2026-11-08** by the owner; deployed the same day. Security 5/5 and browser 8/9 (known CSP report, F9) on production |
 
 ## 11. Lessons learned
 
@@ -170,7 +170,6 @@ Events, alert rules and the uptime probe are defined in the [runbook](../runbook
 |---|---|---|
 | Create a Clerk development instance and put its keys in `.env.local`; add production keys to Vercel | You | F9: requires your Clerk account |
 | Apply the D9 Clerk dashboard checklist (runbook) and run the signed-in end-to-end tests | Agent, after keys | Needs dashboard access |
-| Production deployment | You | Approved; run `npx vercel --prod --yes`, then `BASE_URL=https://bookatlas-station9x.vercel.app pnpm test:security` |
 | Legal review of the Privacy Notice and Legal Notice; supply the full street address and VAT number | You or counsel | Contact details and KvK 89423496 added 2026-11-08; legal form corrected from "B.V." to the registered name. Other in-app copy still says "B.V."/Amsterdam (admin reports, AI persona, PDF exports) |
 | Enforce the full CSP after observing signed-in flows; add the production Clerk domain | Agent | Runbook §CSP |
 | Self-host Google Fonts (F11) | Agent | Small follow-up |
