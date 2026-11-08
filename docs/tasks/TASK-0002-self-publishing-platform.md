@@ -19,10 +19,10 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 |---|---|---|
 | 0 | Codebase baseline and CTO challenges | ✅ Complete (2026-11-08) |
 | 1 | Discovery: A Business foundation | ⏳ Tagline and problem accepted. **Open:** domain, mission, vision, customer ranking |
-| 1 | Discovery: B Revenue model | ⏳ Proposal revised for P6 (R1–R7). **Owner must confirm prices** |
+| 1 | Discovery: B Revenue model | ✅ Complete: R1–R5 accepted (20% eBook commission, €99 and €249 print packages, €9.99 Pro, affiliate links); R6–R7 future |
 | 1 | Discovery: C MVP scope | ✅ Complete: **Option C**, publishing, marketplace and AI |
 | 1 | Discovery: D Products | ✅ Complete (revised by P6): **eBooks sold on Bookatlas**; paperbacks, hardcovers, journals and workbooks **prepared for print** on Amazon KDP, Lulu and others |
-| 1 | Discovery: E Countries | ⏳ Re-opened by P6: no shipping; decide **where eBooks are sold** (each non-EU country can mean a tax registration) |
+| 1 | Discovery: E Countries | ✅ Complete: **eBooks sold worldwide** (P9); tax obligations listed under M |
 | 1 | Discovery: F Printing model | ✅ Complete (P6): **no print fulfilment**. Paperback buyers are sent to the book's Amazon or Lulu listing; we sell the print-preparation service |
 | 1 | Discovery: G Marketplace | ✅ Complete: author profiles and storefront pages, verified-purchase reviews and ratings, wishlists, reader accounts |
 | 1 | Discovery: H Author portal | ✅ Complete: dashboard, sales and royalty reports, basic analytics, AI assistant; affiliates future |
@@ -30,7 +30,7 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 | 1 | Discovery: J Payments | ✅ Complete: Stripe (cards, iDEAL, Apple Pay, Google Pay, Klarna), Stripe Connect payouts, Stripe Tax; PayPal future. **Blocker:** Stripe account for the company |
 | 1 | Discovery: K Files | ✅ Complete (revised by P6): EPUB for sale; **print-ready packages for KDP and Lulu** (interior PDF, full cover with spine, metadata sheet) are a core deliverable |
 | 1 | Discovery: L Branding | ✅ Complete: author-first and premium; existing logo, navy `#0B3A9E`, Plus Jakarta Sans, Literata |
-| 1 | Discovery: M Compliance | ✅ Complete: GDPR, EU OSS VAT, DSA notice and takedown, WCAG 2.2 AA (EAA), cookie consent only if tracking is added. **Blockers:** VAT number; counsel for author terms |
+| 1 | Discovery: M Compliance | ✅ Complete: GDPR, VAT/GST for worldwide digital sales (P9), DSA notice and takedown, WCAG 2.2 AA and EPUB Accessibility (EAA), affiliate disclosure, cookie consent only if tracking is added. **Blockers:** VAT number; counsel for author terms |
 | 2 | Product requirements document | ⬜ Not started (needs phase 1) |
 | 3 | MVP landing page copy | ⬜ Not started |
 | 4 | Technical architecture | ⬜ Not started. Build path approved: **extend BookAtlas** |
@@ -88,6 +88,10 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 | P3 | Printing | **Third-party print API.** Provider chosen after the agent's comparison (Gelato, Peecho, Lulu Print API, Bookvault) | 2026-11-08 |
 | P5 | All other recommendations (D, G–M, tagline, problem statement) | **Accepted** ("yes") | 2026-11-08 |
 | P6 | Print model | **Supersedes P3 and the print half of P4.** Bookatlas does not print or ship. Paperbacks are published by the author on Amazon KDP, Lulu or another printer, and our book pages link to those listings. We sell eBooks on Bookatlas and a service that prepares books for KDP and Lulu print | 2026-11-08 |
+| P7 | Print publishing account | **Author's own** KDP or Lulu account. We supply files and a checklist, never hold their credentials or print royalties | 2026-11-08 |
+| P8 | Paperback links | **Affiliate links with disclosure** (Amazon Associates and similar, where available) | 2026-11-08 |
+| P9 | eBook markets | **Worldwide** from launch | 2026-11-08 |
+| P10 | Prices | **Accepted as proposed** (R1–R5) | 2026-11-08 |
 | P4 | Launch markets | **NL and the EU** for print (EU OSS VAT); UK and US in month 4; digital worldwide | 2026-11-08 |
 
 ## Print provider comparison (2026-11-08, desk research)
@@ -228,7 +232,8 @@ Accept DOCX, PDF and EPUB. Rec.: print interiors **PDF only** at MVP, validated 
 | Item | Rec. |
 |---|---|
 | GDPR | Yes. Extend TASK-0001: author data, payout and KYC data via Stripe |
-| VAT | Yes. EU OSS via Stripe Tax; needs the company VAT number |
+| VAT / GST (P9) | Worldwide digital sales. EU: OSS return (one registration covers all 27). UK: VAT registration from the first sale to UK consumers. Other countries (e.g. Norway, Switzerland, Australia, Canada, US states) once their thresholds are reached. Stripe Tax calculates and monitors thresholds; registering and filing remain ours (or a filing partner's). Needs the company VAT number and an accountant |
+| Affiliate disclosure (P8) | Required wherever affiliate links appear, and in the Legal Notice |
 | Cookie consent | Needed only if analytics or marketing cookies are added. Today none are used |
 | DMCA / EU DSA notice and action | Yes: copyright takedown form, repeat-infringer policy. As an EU hosting service we fall under the Digital Services Act |
 | Accessibility | Yes: WCAG 2.2 AA. The European Accessibility Act applies to e-commerce and e-books since June 2025 |
