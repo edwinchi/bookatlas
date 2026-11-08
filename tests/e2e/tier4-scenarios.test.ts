@@ -411,7 +411,7 @@ test('SCENARIO-6: Offline Storefront & PWA Cart Simulation: manifest validation,
 
   // Step 2: Service Worker Cache Partitioning & Rules
   const swCode = readFileSync('artifacts/bookatlas/public/sw.js', 'utf8');
-  assert.match(swCode, /const CACHE_VERSION = 'bookatlas-v2';/);
+  assert.match(swCode, /const CACHE_VERSION = 'bookatlas-v\d+';/);
   assert.match(swCode, /const STATIC_CACHE = `static-\${CACHE_VERSION}`;/);
   assert.match(swCode, /const DATA_CACHE = `data-\${CACHE_VERSION}`;/);
   assert.match(swCode, /if \(request\.method !== 'GET'\) \{\s*return;\s*\}/);

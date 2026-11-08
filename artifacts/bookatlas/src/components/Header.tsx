@@ -288,18 +288,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => { setActiveTab('store'); setSelectedGenre('All Genres'); setSearchQuery(''); }}
               className="flex min-w-0 items-center gap-1.5 sm:gap-2.5 text-left group focus-visible:outline-2 focus-visible:outline-indigo-600 cursor-pointer"
             >
-              <div className="h-8 w-8 shrink-0 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900 text-amber-400 flex items-center justify-center font-serif font-black text-xl shadow-md group-hover:scale-105 transition-transform border border-blue-800/40">
-                <Compass className="w-5 h-5 text-amber-300" />
-              </div>
-              <div className="leading-tight">
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px] tracking-widest uppercase font-bold text-slate-400">ATLANTEAN</span>
-                  <span className="text-[9px] px-1 py-0.2 rounded-xs bg-slate-100 text-slate-600 font-semibold">NL</span>
-                </div>
-                <div className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-950 flex items-center font-serif">
-                  bookatlas<span className="text-amber-600 font-sans">.</span>
-                </div>
-              </div>
+              <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="Bookatlas" width={868} height={100} className="h-5 w-auto shrink-0 sm:h-6 lg:h-7 transition-opacity group-hover:opacity-85" />
             </button>
 
             {/* Categories selector button */}

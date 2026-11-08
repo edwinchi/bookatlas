@@ -897,12 +897,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
         <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900 flex items-center justify-center border border-blue-800/60 shadow-xs">
-                <Compass className="w-4 h-4 text-amber-300" />
-              </div>
-              <span className="text-lg font-extrabold font-serif text-white tracking-tight">bookatlas<span className="text-amber-500 font-sans">.</span></span>
-            </div>
+            <img src={`${import.meta.env.BASE_URL}logo-light.svg`} alt="Bookatlas" width={868} height={100} loading="lazy" className="h-6 w-auto" />
             <p className="text-slate-400 leading-relaxed text-[11px]">
               The premier eBook Store and in-browser eReader by Atlantean Globals Services, registered in the Netherlands. Discover millions of curated eBooks, Audiobooks, and AI reading companions.
             </p>
