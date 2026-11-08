@@ -119,7 +119,7 @@ export const UnsubscribePageModal: React.FC<UnsubscribePageModalProps> = ({
                 {isNl ? 'E-mail Voorkeuren & Uitschrijven' : 'Email Preferences & 1-Click Opt-Out'}
               </h3>
               <p className="text-[11px] text-slate-400 font-sans">
-                Bookatlas Publishing Group &bull; Keizersgracht 421, Amsterdam
+                Bookatlas Publishing Group &bull; 8031 DJ Zwolle
               </p>
             </div>
           </div>

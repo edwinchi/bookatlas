@@ -114,13 +114,13 @@ export const SubscriberManagerHub: React.FC<SubscriberManagerHubProps> = ({
   const [campaignSubjectA, setCampaignSubjectA] = useState('✨ Discover New Philosophical Masterpieces on Bookatlas');
   const [campaignSubjectB, setCampaignSubjectB] = useState('👑 Exclusive Literary Access: 25% Off New Curated Editions');
   const [campaignPreviewA, setCampaignPreviewA] = useState('Instant eReader delivery + exclusive 25% subscriber privilege.');
-  const [campaignPreviewB, setCampaignPreviewB] = useState('Explore our latest Amsterdam archive publication with audio narration.');
-  const [campaignSenderName, setCampaignSenderName] = useState('Bookatlas Publishing Group (Amsterdam)');
+  const [campaignPreviewB, setCampaignPreviewB] = useState('Explore our latest Zwolle archive publication with audio narration.');
+  const [campaignSenderName, setCampaignSenderName] = useState('Bookatlas Publishing Group (Zwolle)');
   const [selectedBookId, setSelectedBookId] = useState<string>(books[0]?.id || '');
   const [campaignContent, setCampaignContent] = useState(
 `Dear {{subscriber_name}},
 
-We are delighted to bring you our latest curated release from the Bookatlas Amsterdam archive. Crafted for inquiring minds who cherish authentic philosophy, indigenous epistemologies, and speculative literature.
+We are delighted to bring you our latest curated release from the Bookatlas Zwolle archive. Crafted for inquiring minds who cherish authentic philosophy, indigenous epistemologies, and speculative literature.
 
 This edition features complete in-browser DRM-free reading, custom typography presets (Literata, Sepia, Night mode), and full studio audiobook narration.
 
@@ -1098,7 +1098,7 @@ The Bookatlas Editorial Board`
                 )}
 
                 <div className="border-t border-slate-100 pt-3 text-[10px] text-slate-400 text-center space-y-1">
-                  <div>Bookatlas Publishing Group • Keizersgracht 421, Amsterdam</div>
+                  <div>Bookatlas Publishing Group • 8031 DJ Zwolle</div>
                   <div className="text-indigo-600 font-bold">1-Click Instant Unsubscribe</div>
                 </div>
               </div>

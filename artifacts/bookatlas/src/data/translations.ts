@@ -92,7 +92,7 @@ export interface TranslationStrings {
 export const TRANSLATIONS: Record<'en' | 'nl', TranslationStrings> = {
   en: {
     appName: 'Bookatlas eBook Store & Reader',
-    appSubtitle: 'Atlantean Globals Services (Amsterdam, Netherlands)',
+    appSubtitle: 'Atlantean Globals Services (Zwolle, Netherlands)',
     store: 'Store',
     library: 'My Bookshelf',
     deals: 'Flash Deals',
@@ -174,7 +174,7 @@ export const TRANSLATIONS: Record<'en' | 'nl', TranslationStrings> = {
   },
   nl: {
     appName: 'Bookatlas e-Boekenwinkel & eReader',
-    appSubtitle: 'Atlantean Globals Services (Amsterdam, Nederland)',
+    appSubtitle: 'Atlantean Globals Services (Zwolle, Nederland)',
     store: 'Winkel',
     library: 'Mijn Boekenplank',
     deals: 'Dagdeals',

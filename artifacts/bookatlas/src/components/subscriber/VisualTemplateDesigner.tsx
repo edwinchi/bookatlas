@@ -73,14 +73,14 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
     bannerHeadline: '✨ Discover This Week’s Masterpiece',
     preheader: 'Instant eReader delivery + exclusive subscriber privilege.',
     greetingStyle: 'Dear {{subscriber_name}},',
-    introText: 'We are delighted to bring you our latest curated release from the Bookatlas Amsterdam archive. Crafted for inquiring minds who cherish authentic philosophy, indigenous epistemologies, and speculative literature.',
+    introText: 'We are delighted to bring you our latest curated release from the Bookatlas Zwolle archive. Crafted for inquiring minds who cherish authentic philosophy, indigenous epistemologies, and speculative literature.',
     featuredBookId: books[0]?.id || '',
     discountBadgeText: 'Exclusive Subscriber Privilege',
     discountCode: '{{user_discount_code}}',
     highlightStats: true,
     ctaText: 'Open in Bookatlas eReader',
     ctaLink: 'https://bookatlas.app/reader/{{book_recommendation_id}}',
-    footerNote: 'You received this literary dispatch because you are subscribed to Bookatlas Amsterdam. You can update your reading preferences or unsubscribe anytime with 1-click.'
+    footerNote: 'You received this literary dispatch because you are subscribed to Bookatlas Zwolle. You can update your reading preferences or unsubscribe anytime with 1-click.'
   });
 
   const featuredBook = books.find(b => b.id === templateConfig.featuredBookId) || books[0] || {
@@ -102,7 +102,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
         id: 'tpl_new_release',
         name: 'New Release Spotlight',
         themeColor: '#4f46e5',
-        bannerHeadline: '✨ New Release From Amsterdam Archives',
+        bannerHeadline: '✨ New Release From the Zwolle Archives',
         preheader: 'Experience our newest manuscript in DRM-free eReader & studio narration.',
         greetingStyle: 'Dear {{subscriber_name}},',
         introText: 'We have just published a seminal new title in our collection. As a valued {{tier_badge}}, you receive complimentary early sample chapters and full high-definition audio narration.',
@@ -112,7 +112,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
         highlightStats: true,
         ctaText: 'Read in eReader Now',
         ctaLink: 'https://bookatlas.app/reader',
-        footerNote: 'Bookatlas Publishing Group • Keizersgracht 421, Amsterdam • The Netherlands'
+        footerNote: 'Bookatlas Publishing Group • 8031 DJ Zwolle • The Netherlands'
       });
     } else if (preset === 'vip_discount') {
       setTemplateConfig({
@@ -129,7 +129,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
         highlightStats: true,
         ctaText: 'Claim 40% VIP Perk in Store',
         ctaLink: 'https://bookatlas.app/store',
-        footerNote: 'VIP Patron Priority Access • Direct from Atlantean Globals Services B.V.'
+        footerNote: 'VIP Patron Priority Access • Direct from Atlantean Globals Services'
       });
     } else if (preset === 'weekly_digest') {
       setTemplateConfig({
@@ -146,7 +146,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
         highlightStats: true,
         ctaText: 'Explore Sunday Curated List',
         ctaLink: 'https://bookatlas.app/curated',
-        footerNote: 'Curated with care by the Bookatlas Editorial Board, Amsterdam.'
+        footerNote: 'Curated with care by the Bookatlas Editorial Board, Zwolle.'
       });
     } else if (preset === 'reading_streak') {
       setTemplateConfig({
@@ -556,7 +556,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
               {/* Email Client Header Bar */}
               <div className="bg-slate-50 border-b border-slate-200 p-3.5 text-xs space-y-1">
                 <div className="flex items-center justify-between text-[11px] text-slate-500">
-                  <span>From: <strong className="text-slate-800">Bookatlas Publishing (Amsterdam)</strong> &lt;dispatch@bookatlas.app&gt;</span>
+                  <span>From: <strong className="text-slate-800">Bookatlas Publishing (Zwolle)</strong> &lt;dispatch@bookatlas.app&gt;</span>
                   <span className="font-mono text-[10px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md font-bold">Preview Render</span>
                 </div>
                 <div className="text-slate-800 font-bold text-sm">
@@ -575,7 +575,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
                   style={{ backgroundColor: templateConfig.themeColor }}
                 >
                   <div className="text-[11px] uppercase tracking-widest font-bold opacity-85">
-                    Bookatlas Amsterdam Literary Archive
+                    Bookatlas Zwolle Literary Archive
                   </div>
                   <h1 className="text-xl sm:text-2xl font-serif font-bold text-white tracking-tight">
                     {interpolatePlaceholders(templateConfig.bannerHeadline)}

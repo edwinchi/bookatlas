@@ -40,7 +40,7 @@ export async function downloadWordDocument(books: Book[]) {
           new Paragraph({
             children: [
               new TextRun({ text: `Publisher & Legal Entity: `, bold: true }),
-              new TextRun(`Atlantean Globals Services B.V. (Amsterdam, The Netherlands)\n`),
+              new TextRun(`Atlantean Globals Services (Zwolle, The Netherlands)\n`),
               new TextRun({ text: `Document Version: `, bold: true }),
               new TextRun(`v3.8.0 Enterprise Release | `),
               new TextRun({ text: `Date: `, bold: true }),
@@ -60,7 +60,7 @@ export async function downloadWordDocument(books: Book[]) {
           new Paragraph({
             children: [
               new TextRun({
-                text: 'Bookatlas is an ultra-fast, modern digital bookstore, full-featured in-browser EPUB3 eReader, and autonomous single-manager publishing studio engineered by Atlantean Globals Services B.V., registered and headquartered in Amsterdam, Netherlands. The platform delivers an unmatched digital reading and listening experience, pairing curated European and international literature with autonomous AI agents powered by the Google Gemini ecosystem.',
+                text: 'Bookatlas is an ultra-fast, modern digital bookstore, full-featured in-browser EPUB3 eReader, and autonomous single-manager publishing studio engineered by Atlantean Globals Services, registered and headquartered in Zwolle, Netherlands. The platform delivers an unmatched digital reading and listening experience, pairing curated European and international literature with autonomous AI agents powered by the Google Gemini ecosystem.',
               }),
             ],
             spacing: { after: 200 },
@@ -68,7 +68,7 @@ export async function downloadWordDocument(books: Book[]) {
           new Paragraph({
             children: [
               new TextRun({ text: '• Headquarters: ', bold: true }),
-              new TextRun('Keizersgracht Historic Publishing District, Amsterdam, Netherlands\n'),
+              new TextRun('8031 DJ Zwolle, Netherlands\n'),
               new TextRun({ text: '• Core Offering: ', bold: true }),
               new TextRun('Over 1.5M digital eBooks, Studio Audiobooks, and Bookatlas Plus unlimited reading subscription at €9.99/month\n'),
               new TextRun({ text: '• Single Manager Autopilot: ', bold: true }),
@@ -204,7 +204,7 @@ export async function downloadWordDocument(books: Book[]) {
           new Paragraph({
             children: [
               new TextRun({
-                text: '© 2026 Atlantean Globals Services B.V. Registered under the laws of the Netherlands. All intellectual property, EPUB3 processing routines, AI orchestration pipelines, and digital bookstore assets are strictly protected. For inquiries, contact legal@atlanteanglobals.nl.',
+                text: '© 2026 Atlantean Globals Services Registered in the Netherlands, KvK 89423496. All intellectual property, EPUB3 processing routines, AI orchestration pipelines, and digital bookstore assets are strictly protected. For inquiries, contact getintouch@apps-pilot.nl.',
               }),
             ],
             spacing: { after: 200 },
@@ -258,7 +258,7 @@ export async function downloadPDFDocument(books: Book[]) {
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text('Platform Technical Specifications & Autonomous Architecture', 15, 22);
-  doc.text(`Atlantean Globals Services B.V. (Netherlands) | ${currentDate}`, 15, 27);
+  doc.text(`Atlantean Globals Services (Netherlands) | ${currentDate}`, 15, 27);
 
   y = 42;
   doc.setTextColor(30, 30, 30);
@@ -271,7 +271,7 @@ export async function downloadPDFDocument(books: Book[]) {
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9.5);
-  const summaryText = `Bookatlas is an enterprise-grade digital bookstore, in-browser EPUB3 eReader, and autonomous single-manager publishing studio engineered by Atlantean Globals Services B.V. in Amsterdam, Netherlands. It integrates over 1.5M digital titles, audiobooks, and Bookatlas Plus unlimited subscriptions with cutting-edge Gemini AI models.`;
+  const summaryText = `Bookatlas is an enterprise-grade digital bookstore, in-browser EPUB3 eReader, and autonomous single-manager publishing studio engineered by Atlantean Globals Services in Zwolle, Netherlands. It integrates over 1.5M digital titles, audiobooks, and Bookatlas Plus unlimited subscriptions with cutting-edge Gemini AI models.`;
   const splitSummary = doc.splitTextToSize(summaryText, pageWidth - 30);
   doc.text(splitSummary, 15, y);
   y += splitSummary.length * 5 + 4;
@@ -398,7 +398,7 @@ export async function downloadPDFDocument(books: Book[]) {
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  const legalText = `All digital operations comply with Dutch Consumer Rights legislation, the European Union General Data Protection Regulation (GDPR / EU 2016/679), and international W3C EPUB3 standard specifications. All payments and DRM operations are secured via Atlantean Globals Services B.V. (Keizersgracht, Amsterdam, The Netherlands).`;
+  const legalText = `All digital operations comply with Dutch Consumer Rights legislation, the European Union General Data Protection Regulation (GDPR / EU 2016/679), and international W3C EPUB3 standard specifications. All payments and DRM operations are secured via Atlantean Globals Services (Zwolle, The Netherlands).`;
   const splitLegal = doc.splitTextToSize(legalText, pageWidth - 30);
   doc.text(splitLegal, 15, y);
   y += splitLegal.length * 4.5 + 8;
@@ -408,7 +408,7 @@ export async function downloadPDFDocument(books: Book[]) {
   doc.line(15, 275, pageWidth - 15, 275);
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
-  doc.text('© 2026 Atlantean Globals Services B.V. (Amsterdam, Netherlands) | Confidential Technical Report', 15, 282);
+  doc.text('© 2026 Atlantean Globals Services (Zwolle, Netherlands) | Confidential Technical Report', 15, 282);
 
   doc.save(`Bookatlas_Complete_Platform_Architecture_and_Specifications_${new Date().toISOString().slice(0, 10)}.pdf`);
 }

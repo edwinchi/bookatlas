@@ -78,7 +78,7 @@ export function ExportDocsModal({ isOpen, onClose, books }: ExportDocsModalProps
                   Complete Project Documentation & Architecture Export
                 </h2>
                 <span className="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-400/30 flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3" /> Certified Dutch B.V.
+                  <ShieldCheck className="w-3 h-3" /> KvK 89423496
                 </span>
               </div>
               <p className="text-xs text-slate-400">
@@ -137,7 +137,7 @@ export function ExportDocsModal({ isOpen, onClose, books }: ExportDocsModalProps
           <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
             <div className="border-b border-slate-200 pb-6 text-center space-y-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold border border-indigo-200">
-                <Building2 className="w-3.5 h-3.5" /> Atlantean Globals Services B.V. (Netherlands)
+                <Building2 className="w-3.5 h-3.5" /> Atlantean Globals Services (Netherlands)
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
                 Bookatlas™ Enterprise Architecture & AI Operations Report
@@ -154,7 +154,7 @@ export function ExportDocsModal({ isOpen, onClose, books }: ExportDocsModalProps
                 1. Executive Summary & Corporate Ownership
               </h3>
               <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
-                Bookatlas is the world-class digital eBook Store, audiobook distributor, and browser-native EPUB3 reading engine operated by <strong>Atlantean Globals Services B.V.</strong>, registered in the Netherlands (Amsterdam Keizersgracht publishing corridor). The application empowers readers with over 1.5 million titles, Bookatlas Plus subscription reading (€9.99/mo), and fully autonomous AI agents that run on a high-throughput single-port full-stack architecture.
+                Bookatlas is the world-class digital eBook Store, audiobook distributor, and browser-native EPUB3 reading engine operated by <strong>Atlantean Globals Services</strong>, registered in Zwolle, the Netherlands (KvK 89423496). The application empowers readers with over 1.5 million titles, Bookatlas Plus subscription reading (€9.99/mo), and fully autonomous AI agents that run on a high-throughput single-port full-stack architecture.
               </p>
             </div>
 
@@ -260,7 +260,7 @@ export function ExportDocsModal({ isOpen, onClose, books }: ExportDocsModalProps
 
             {/* Footer Sign-Off */}
             <div className="pt-4 border-t border-slate-200 text-center text-xs text-slate-500">
-              © 2026 Atlantean Globals Services B.V. • Amsterdam, Netherlands • Certified Technical Report
+              © 2026 Atlantean Globals Services • Zwolle, Netherlands • Certified Technical Report
             </div>
 
           </div>

@@ -879,7 +879,7 @@ test('F15-5: platform documentation export schema defines compliance and archite
   const exportDoc = {
     platformName: 'Bookatlas Enterprise Digital Bookstore',
     company: {
-      name: 'Atlantean Globals Services B.V.',
+      name: 'Atlantean Globals Services',
       compliance: 'GDPR / DRM / EPUB3 / ISO-27001 Certified Standards',
     },
     technologyStack: {

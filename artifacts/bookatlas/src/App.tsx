@@ -695,7 +695,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                 {/* Carousel 3: Atlantean Curated Picks & Trending in the Netherlands */}
                 <HorizontalProductCarousel
                   title="Trending in the Netherlands & Europe"
-                  subtitle="Curated by Atlantean Globals Services editorial team in Amsterdam"
+                  subtitle="Curated by Atlantean Globals Services editorial team in Zwolle"
                   badge="Curator Choice"
                   icon={<Award className="w-5 h-5 text-amber-500" />}
                   books={amsterdamPicks}

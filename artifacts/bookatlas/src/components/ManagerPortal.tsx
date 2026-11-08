@@ -177,7 +177,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
         id: 'audit-init-2',
         timestamp: 'Earlier today',
         action: 'System Boot & Encrypted Vault',
-        details: 'Atlantean Globals Services B.V. master key verified',
+        details: 'Atlantean Globals Services master key verified',
         status: 'authorized'
       }
     ];
@@ -510,7 +510,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
         primaryGenre: editingBook.primaryGenre || 'Fiction & Literature',
         pageCount: Number(editingBook.pageCount) || 300,
         publishDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-        publisher: editingBook.publisher || 'Atlantean Publishing House (Amsterdam)',
+        publisher: editingBook.publisher || 'Atlantean Publishing House (Zwolle)',
         isbn: `978-9-023-${Math.floor(10000 + Math.random() * 90000)}`,
         language: 'English',
         synopsis: editingBook.synopsis || 'An original narrative published on Bookatlas.',
@@ -597,7 +597,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
               Bookatlas Master Operations Studio
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl">
-              Centralized single-manager backend by <span className="text-indigo-300 font-semibold">Atlantean Globals Services B.V. (Netherlands)</span>. Automate catalog generation for every category, dynamic pricing, and marketing broadcasts with Gemini 3.7.
+              Centralized single-manager backend by <span className="text-indigo-300 font-semibold">Atlantean Globals Services (Netherlands)</span>. Automate catalog generation for every category, dynamic pricing, and marketing broadcasts with Gemini 3.7.
             </p>
           </div>
 
@@ -2054,7 +2054,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                     Encrypted Admin Clearance
                   </span>
                   <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                    B.V. Master Key Active
+                    Master Key Active
                   </span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-serif font-bold text-white">
@@ -2097,13 +2097,13 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                     <span className="text-slate-500 flex items-center gap-1.5">
                       <Building2 className="w-3.5 h-3.5 text-slate-400" /> Organization
                     </span>
-                    <span className="font-semibold text-slate-800">Atlantean Globals Services B.V.</span>
+                    <span className="font-semibold text-slate-800">Atlantean Globals Services</span>
                   </div>
                   <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
                     <span className="text-slate-500 flex items-center gap-1.5">
                       <Fingerprint className="w-3.5 h-3.5 text-slate-400" /> Jurisdiction
                     </span>
-                    <span className="font-semibold text-slate-800">Amsterdam, Netherlands</span>
+                    <span className="font-semibold text-slate-800">Zwolle, Netherlands</span>
                   </div>
                   <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
                     <span className="text-slate-500 flex items-center gap-1.5">

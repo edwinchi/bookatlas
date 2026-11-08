@@ -50,7 +50,7 @@ export const PromotionalFeatureBanner: React.FC<FeaturedPromotionProps> = ({
           <div className="flex flex-wrap items-center gap-2">
             <span className="bg-indigo-500/30 text-indigo-300 text-xs font-bold px-3 py-1 rounded-full border border-indigo-400/30 flex items-center gap-1.5">
               <Award className="w-3.5 h-3.5 text-amber-400" />
-              Atlantean Globals Curated Selection • Amsterdam
+              Atlantean Globals Curated Selection • Zwolle
             </span>
             <div className="flex items-center text-amber-400 text-xs">
               <Star className="w-3.5 h-3.5 fill-amber-400" />

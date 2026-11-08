@@ -269,7 +269,7 @@ subscriberCampaigns.push({
   title: 'Autumn Literary Salon: Golden Age Masterpieces',
   subject: '✨ Exclusive: The Star-Cartographer of Amsterdam is Now Live',
   previewText: 'Instant eReader delivery + 40% VIP Patron Perk unlocked.',
-  senderName: 'Bookatlas Editorial (Amsterdam)',
+  senderName: 'Bookatlas Editorial (Zwolle)',
   content: 'Dear {{subscriber_name}},\n\nWe are delighted to bring you our latest archival publication: {{book_recommendation_title}} by {{book_recommendation_author}}.\n\nAs a valued {{tier_badge}}, your private perk code is {{user_discount_code}}.\n\nKeep your reading streak going! Current milestone: {{reading_stats_streak}} days.\n\nHappy reading,\nThe Bookatlas Curators',
   bookTitle: 'The Star-Cartographer of Amsterdam',
   bookAuthor: 'Hendrik van der Meer',
@@ -1298,7 +1298,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
         title, 
         subject, 
         previewText, 
-        senderName = 'Bookatlas Publishing Group (Amsterdam)', 
+        senderName = 'Bookatlas Publishing Group (Zwolle)', 
         content, 
         bookTitle, 
         bookCoverUrl,
@@ -1810,7 +1810,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
   app.post('/api/subscribers/ai-compose', async (req, res) => {
     const { topic, bookTitle, tone = 'compelling, warm, and intellectual', discountCode = 'BOOKATLAS25', targetGenre, targetTier = 'all' } = req.body;
     try {
-      const prompt = `You are the Master Marketing Director and Literary Publicist for Bookatlas Digital Bookstore in Amsterdam.
+      const prompt = `You are the Master Marketing Director and Literary Publicist for Bookatlas Digital Bookstore in Zwolle.
 Write a high-converting, elegant email campaign for our audience of book lovers, philosophy scholars, and global readers.
 Context:
 - Book / Topic: "${bookTitle || topic || 'Curated Weekly Masterpieces & New Releases'}"
@@ -2036,7 +2036,7 @@ Return a valid JSON object matching this schema:
         id: bookId,
         coverImage: randomCover,
         publishDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-        publisher: 'Atlantean Publishing Group (Amsterdam)',
+        publisher: 'Atlantean Publishing Group (Zwolle)',
         isbn: `978-9-0${Math.floor(1000000 + Math.random() * 9000000)}`,
         superPointsEarned: Math.round((synthesizedData.book.price || 14.99) * 10),
         reviews: [
@@ -2460,7 +2460,7 @@ Return ONLY valid JSON matching this schema:
     return {
       bookTitle: book.title,
       emailNewsletterSubject: `✨ Unveiling "${book.title}" — The Masterpiece You Cannot Miss This Weekend`,
-      emailBody: `Dear Bookatlas Readers,\n\nWe are delighted to bring you "${book.title}" by ${book.author}.\n\n"${book.synopsis}"\n\nNow available with instant eReader delivery and Studio Audio preview on Bookatlas Plus.\n\nHappy Reading,\nThe Bookatlas Editorial Team (Amsterdam)`,
+      emailBody: `Dear Bookatlas Readers,\n\nWe are delighted to bring you "${book.title}" by ${book.author}.\n\n"${book.synopsis}"\n\nNow available with instant eReader delivery and Studio Audio preview on Bookatlas Plus.\n\nHappy Reading,\nThe Bookatlas Editorial Team (Zwolle)`,
       socialMediaThread: [
         `🧵 1/4 If you love ${book.primaryGenre}, you need to read "${book.title}" by ${book.author} immediately. Here is why: 👇`,
         `2/4 🌌 The atmosphere is unmatched: "${book.synopsis?.slice(0, 140)}..."`,
@@ -3084,7 +3084,7 @@ Return a valid JSON object:
         text: m.content || '',
       }));
 
-      const defaultSystem = `You are the Bookatlas AI Literary Companion, created by Atlantean Globals Services B.V. (Netherlands).
+      const defaultSystem = `You are the Bookatlas AI Literary Companion, created by Atlantean Globals Services (Netherlands).
 You are deeply knowledgeable in world literature, European classics, speculative fiction, thriller mysteries, publishing trends, and creative writing.
 Be articulate, insightful, engaging, and provide rich recommendations, historical context, and thoughtful analysis.`;
 
@@ -3203,7 +3203,7 @@ Provide clear headings and concise bullet points.`;
     try {
       const { userUtterance, conversationHistory, voicePersona } = req.body;
 
-      const systemPrompt = `You are "Zephyr", the real-time Voice Companion for Bookatlas (Atlantean Globals Services B.V., Netherlands).
+      const systemPrompt = `You are "Zephyr", the real-time Voice Companion for Bookatlas (Atlantean Globals Services, Netherlands).
 You are speaking out loud to a reader through an interactive voice stream.
 Rules for voice responses:
 1. Speak in a warm, charismatic, concise, and natural conversational cadence.
@@ -3364,9 +3364,9 @@ Rules for voice responses:
       success: true,
       platformName: 'Bookatlas Enterprise Digital Bookstore & In-Browser eReader',
       company: {
-        name: 'Atlantean Globals Services B.V.',
+        name: 'Atlantean Globals Services',
         registrationCountry: 'The Netherlands',
-        headquarters: 'Amsterdam, North Holland, Netherlands',
+        headquarters: 'Zwolle, Overijssel, Netherlands',
         operationalScope: 'Pan-European & Global Digital Content Distribution',
         compliance: 'GDPR / DRM / EPUB3 / ISO-27001 Certified Standards',
       },

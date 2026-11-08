@@ -84,7 +84,7 @@ export function AIStudioHub({
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Atlantean Globals Services B.V. (Amsterdam, Netherlands)
+                Atlantean Globals Services (Zwolle, Netherlands)
               </p>
             </div>
           </div>

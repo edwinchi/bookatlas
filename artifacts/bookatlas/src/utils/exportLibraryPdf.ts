@@ -59,8 +59,8 @@ export async function exportUserLibraryPDF(stats: LibraryExportStats, language: 
   doc.setTextColor(203, 213, 225); // Slate 300
   doc.text(
     language === 'nl'
-      ? 'Atlantean Globals Services B.V. (Amsterdam, Nederland) | Gecertificeerd eReader Dossier'
-      : 'Atlantean Globals Services B.V. (Amsterdam, Netherlands) | Certified eReader Dossier',
+      ? 'Atlantean Globals Services (Zwolle, Nederland) | Gecertificeerd eReader Dossier'
+      : 'Atlantean Globals Services (Zwolle, Netherlands) | Certified eReader Dossier',
     14,
     21
   );
@@ -262,8 +262,8 @@ export async function exportUserLibraryPDF(stats: LibraryExportStats, language: 
   doc.setTextColor(148, 163, 184);
   doc.text(
     language === 'nl'
-      ? '© 2026 Atlantean Globals Services B.V. (Amsterdam, Nederland) | W3C EPUB3 & DRM Geverifieerd'
-      : '© 2026 Atlantean Globals Services B.V. (Amsterdam, Netherlands) | W3C EPUB3 & DRM Verified',
+      ? '© 2026 Atlantean Globals Services (Zwolle, Nederland) | W3C EPUB3 & DRM Geverifieerd'
+      : '© 2026 Atlantean Globals Services (Zwolle, Netherlands) | W3C EPUB3 & DRM Verified',
     14,
     pageHeight - 10
   );
