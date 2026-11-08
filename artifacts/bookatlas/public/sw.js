@@ -1,5 +1,5 @@
 // Bookatlas Offline-First Service Worker
-const CACHE_VERSION = 'bookatlas-v3';
+const CACHE_VERSION = 'bookatlas-v4';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DATA_CACHE = `data-${CACHE_VERSION}`;
 

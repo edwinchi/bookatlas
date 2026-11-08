@@ -22,14 +22,14 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 | 1 | Discovery: B Revenue model | ✅ Complete: R1–R5 accepted (20% eBook commission, €99 and €249 print packages, €9.99 Pro, affiliate links); R6–R7 future |
 | 1 | Discovery: C MVP scope | ✅ Complete: **Option C**, publishing, marketplace and AI |
 | 1 | Discovery: D Products | ✅ Complete (revised by P6): **eBooks sold on Bookatlas**; paperbacks, hardcovers, journals and workbooks **prepared for print** on Amazon KDP, Lulu and others |
-| 1 | Discovery: E Countries | ✅ Complete: **eBooks sold worldwide** (P9); tax obligations listed under M |
+| 1 | Discovery: E Countries | ✅ Complete: **eBooks sold worldwide** (P9), **including all 54 African countries** (P11); tax obligations listed under M |
 | 1 | Discovery: F Printing model | ✅ Complete (P6): **no print fulfilment**. Paperback buyers are sent to the book's Amazon or Lulu listing; we sell the print-preparation service |
 | 1 | Discovery: G Marketplace | ✅ Complete: author profiles and storefront pages, verified-purchase reviews and ratings, wishlists, reader accounts |
 | 1 | Discovery: H Author portal | ✅ Complete: dashboard, sales and royalty reports, basic analytics, AI assistant; affiliates future |
 | 1 | Discovery: I AI features | ✅ Complete: five MVP helpers; **interior formatter and cover generator move up** (they power the print-preparation service); proofreader last; content editor future |
 | 1 | Discovery: J Payments | ✅ Complete: Stripe (cards, iDEAL, Apple Pay, Google Pay, Klarna), Stripe Connect payouts, Stripe Tax; PayPal future. **Blocker:** Stripe account for the company |
 | 1 | Discovery: K Files | ✅ Complete (revised by P6): EPUB for sale; **print-ready packages for KDP and Lulu** (interior PDF, full cover with spine, metadata sheet) are a core deliverable |
-| 1 | Discovery: L Branding | ✅ Complete: author-first and premium; existing logo, navy `#0B3A9E`, Plus Jakarta Sans, Literata |
+| 1 | Discovery: L Branding | ✅ Complete: author-first and premium; logo in the site palette, indigo `#4F46E5`, Plus Jakarta Sans, Literata |
 | 1 | Discovery: M Compliance | ✅ Complete: GDPR, VAT/GST for worldwide digital sales (P9), DSA notice and takedown, WCAG 2.2 AA and EPUB Accessibility (EAA), affiliate disclosure, cookie consent only if tracking is added. **Blockers:** VAT number; counsel for author terms |
 | 2 | Product requirements document | ⬜ Not started (needs phase 1) |
 | 3 | MVP landing page copy | ⬜ Not started |
@@ -57,7 +57,7 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 | Money out | None | No royalty ledger or author payouts |
 | Data | Supabase Postgres (`bookatlas_*` tables) via the REST client; `lib/db` Drizzle scaffold unused | Needs a relational commerce schema with migrations |
 | Ops | Vercel, Docker, CSP, rate limits, monitoring events, governance | Reusable as is |
-| Brand | New logo (B-book and Eye of Horus, navy `#0B3A9E`), Plus Jakarta Sans, Literata and Source Serif | Reusable as is |
+| Brand | New logo (B-book and Eye of Horus, indigo `#4F46E5` to match the site), Plus Jakarta Sans, Literata and Source Serif | Reusable as is |
 | Company | Atlantean Globals Services, KvK 89423496, 8031 DJ Zwolle, NL | Street address and VAT number still missing (needed for invoices) |
 
 ## CTO challenges to the brief
@@ -92,6 +92,7 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 | P8 | Paperback links | **Affiliate links with disclosure** (Amazon Associates and similar, where available) | 2026-11-08 |
 | P9 | eBook markets | **Worldwide** from launch | 2026-11-08 |
 | P10 | Prices | **Accepted as proposed** (R1–R5) | 2026-11-08 |
+| P11 | Africa | **Worldwide includes all of Africa** (all 54 countries) for eBooks from launch. Card payments via Stripe at launch; local methods (M-Pesa, mobile money, local cards) via Paystack recommended next (Level 2 payment change, needs owner approval and a Paystack account). African VAT on foreign digital services handled as listed under M | 2026-11-08 |
 | P4 | Launch markets | **NL and the EU** for print (EU OSS VAT); UK and US in month 4; digital worldwide | 2026-11-08 |
 
 ## Print provider comparison (2026-11-08, desk research)
@@ -190,7 +191,13 @@ For each stream you choose: price, cost, target margin.
 
 ### E. Launch countries
 
-✅ **Decided (P4):** physical books to NL and the EU at launch; UK and US in month 4. Digital products worldwide.
+✅ **Decided (P4, P6, P9, P11):** no physical shipping (P6). eBooks and print-preparation services are sold **worldwide** from launch, **including all 54 African countries**.
+
+Africa notes (P11):
+- **Payments:** international Visa and Mastercard work through Stripe from day one. Many African buyers pay by mobile money (M-Pesa, MTN MoMo) or local cards in NGN, GHS, KES or ZAR. **Rec.:** add Paystack (owned by Stripe; Nigeria, Ghana, Kenya, South Africa, Côte d'Ivoire, Rwanda, Egypt) after launch for those methods. Payments are Level 2, so this waits for approval and a Paystack account.
+- **Pricing:** **Rec.:** show local-currency prices and allow authors to set regional (purchasing-power) prices for African markets.
+- **Tax:** a growing number of African countries charge VAT on foreign digital services; see M.
+- **Sanctions:** checkout screens buyers against EU and UN sanctions lists (Stripe does this); a few countries carry targeted EU sanctions, which does not block ordinary eBook sales to individuals.
 
 ### F. Printing model
 
@@ -217,7 +224,7 @@ MVP: description generator, metadata generator, category suggestions, price sugg
 
 ### J. Payments
 
-Stripe (Rec. required), PayPal (Rec. future), Apple Pay and Google Pay (via Stripe), Klarna (via Stripe, optional), **iDEAL (Rec. required, NL)**. Do you already have a Stripe account for Atlantean Globals Services?
+Stripe (Rec. required), PayPal (Rec. future), Apple Pay and Google Pay (via Stripe), Klarna (via Stripe, optional), **iDEAL (Rec. required, NL)**, **Paystack for African mobile money and local cards (Rec. after launch, P11)**. Do you already have a Stripe account for Atlantean Globals Services?
 
 ### K. Files
 
@@ -225,14 +232,14 @@ Accept DOCX, PDF and EPUB. Rec.: print interiors **PDF only** at MVP, validated 
 
 ### L. Branding
 
-**Known:** new BookAtlas logo, navy `#0B3A9E`, Plus Jakarta Sans for UI, Literata and Source Serif for reading. Brand personality (corporate, premium, author-first, creative, minimalist): **?** (Rec.: author-first and premium).
+**Known:** new BookAtlas logo in the site palette (indigo `#4F46E5` ink, slate `#334155` eye; indigo `#818CF8` on dark backgrounds), Plus Jakarta Sans for UI, Literata and Source Serif for reading. Brand personality (corporate, premium, author-first, creative, minimalist): **?** (Rec.: author-first and premium).
 
 ### M. Compliance
 
 | Item | Rec. |
 |---|---|
 | GDPR | Yes. Extend TASK-0001: author data, payout and KYC data via Stripe |
-| VAT / GST (P9) | Worldwide digital sales. EU: OSS return (one registration covers all 27). UK: VAT registration from the first sale to UK consumers. Other countries (e.g. Norway, Switzerland, Australia, Canada, US states) once their thresholds are reached. Stripe Tax calculates and monitors thresholds; registering and filing remain ours (or a filing partner's). Needs the company VAT number and an accountant |
+| VAT / GST (P9) | Worldwide digital sales. EU: OSS return (one registration covers all 27). UK: VAT registration from the first sale to UK consumers. Other countries (e.g. Norway, Switzerland, Australia, Canada, US states) once their thresholds are reached. **Africa (P11):** many countries tax foreign digital services, for example South Africa 15% (registration above ZAR 1 million a year), Kenya 16% (no threshold), Nigeria 7.5%, Ghana (rules changed in 2026), and new regimes in 2026 in Rwanda, Malawi, Mozambique, Botswana and DR Congo. Rates and thresholds change often, so the accountant confirms each before we register. Stripe Tax covers some African countries; the rest need manual tracking. Stripe Tax calculates and monitors thresholds; registering and filing remain ours (or a filing partner's). Needs the company VAT number and an accountant |
 | Affiliate disclosure (P8) | Required wherever affiliate links appear, and in the Legal Notice |
 | Cookie consent | Needed only if analytics or marketing cookies are added. Today none are used |
 | DMCA / EU DSA notice and action | Yes: copyright takedown form, repeat-infringer policy. As an EU hosting service we fall under the Digital Services Act |
