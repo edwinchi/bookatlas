@@ -288,7 +288,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => { setActiveTab('store'); setSelectedGenre('All Genres'); setSearchQuery(''); }}
               className="flex min-w-0 items-center gap-1.5 sm:gap-2.5 text-left group focus-visible:outline-2 focus-visible:outline-indigo-600 cursor-pointer"
             >
-              <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="Bookatlas" width={868} height={100} className="h-5 w-auto shrink-0 sm:h-6 lg:h-7 transition-opacity group-hover:opacity-85" />
+              <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="Bookatlas" width={319} height={96} className="h-9 w-auto shrink-0 sm:h-10 lg:h-12 transition-opacity group-hover:opacity-85" />
             </button>
 
             {/* Categories selector button */}

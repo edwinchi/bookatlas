@@ -29,7 +29,7 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 | 1 | Discovery: I AI features | ✅ Complete: five MVP helpers; **interior formatter and cover generator move up** (they power the print-preparation service); proofreader last; content editor future |
 | 1 | Discovery: J Payments | ✅ Complete: Stripe (cards, iDEAL, Apple Pay, Google Pay, Klarna), Stripe Connect payouts, Stripe Tax; PayPal future. **Blocker:** Stripe account for the company |
 | 1 | Discovery: K Files | ✅ Complete (revised by P6): EPUB for sale; **print-ready packages for KDP and Lulu** (interior PDF, full cover with spine, metadata sheet) are a core deliverable |
-| 1 | Discovery: L Branding | ✅ Complete: author-first and premium; logo in the site palette, indigo `#4F46E5`, Plus Jakarta Sans, Literata |
+| 1 | Discovery: L Branding | ✅ Complete: author-first and premium; owner logo (navy and gold, `artifacts/bookatlas/brand/bookatlas-logo.png`), Plus Jakarta Sans, Literata |
 | 1 | Discovery: M Compliance | ✅ Complete: GDPR, VAT/GST for worldwide digital sales (P9), DSA notice and takedown, WCAG 2.2 AA and EPUB Accessibility (EAA), affiliate disclosure, cookie consent only if tracking is added. **Blockers:** VAT number; counsel for author terms |
 | 2 | Product requirements document | ⬜ Not started (needs phase 1) |
 | 3 | MVP landing page copy | ⬜ Not started |
@@ -57,7 +57,7 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 | Money out | None | No royalty ledger or author payouts |
 | Data | Supabase Postgres (`bookatlas_*` tables) via the REST client; `lib/db` Drizzle scaffold unused | Needs a relational commerce schema with migrations |
 | Ops | Vercel, Docker, CSP, rate limits, monitoring events, governance | Reusable as is |
-| Brand | New logo (B-book and Eye of Horus, indigo `#4F46E5` to match the site), Plus Jakarta Sans, Literata and Source Serif | Reusable as is |
+| Brand | New logo (navy and gold B with the Eye of Horus; master `artifacts/bookatlas/brand/bookatlas-logo.png`), Plus Jakarta Sans, Literata and Source Serif | Reusable as is |
 | Company | Atlantean Globals Services, KvK 89423496, 8031 DJ Zwolle, NL | Street address and VAT number still missing (needed for invoices) |
 
 ## CTO challenges to the brief
@@ -232,7 +232,7 @@ Accept DOCX, PDF and EPUB. Rec.: print interiors **PDF only** at MVP, validated 
 
 ### L. Branding
 
-**Known:** new BookAtlas logo in the site palette (indigo `#4F46E5` ink, slate `#334155` eye; indigo `#818CF8` on dark backgrounds), Plus Jakarta Sans for UI, Literata and Source Serif for reading. Brand personality (corporate, premium, author-first, creative, minimalist): **?** (Rec.: author-first and premium).
+**Known:** owner BookAtlas logo (navy and gold B with the Eye of Horus, star in the A; master `artifacts/bookatlas/brand/bookatlas-logo.png`, web copies `logo-96.webp` and `logo-192.webp`), Plus Jakarta Sans for UI, Literata and Source Serif for reading. Brand personality (corporate, premium, author-first, creative, minimalist): **?** (Rec.: author-first and premium).
 
 ### M. Compliance
 

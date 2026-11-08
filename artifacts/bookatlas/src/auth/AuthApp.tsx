@@ -29,7 +29,7 @@ const appearance = {
   options: {
     logoPlacement: 'inside' as const,
     logoLinkUrl: basePath || '/',
-    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+    logoImageUrl: `${window.location.origin}${basePath}/logo-192.webp`,
   },
   variables: {
     colorPrimary: '#4338ca', colorForeground: '#0f172a', colorMutedForeground: '#475569',
@@ -89,7 +89,7 @@ function Store({ portal = false, resumeCheckout = false }: { portal?: boolean; r
   if (!authUnavailable && (!isLoaded || (isSignedIn && loading))) return <div className="flex min-h-screen items-center justify-center text-indigo-950" role="status">Loading your Bookatlas account…</div>;
   if (portal && !isSignedIn) return <Redirect to="/" />;
   if (isSignedIn && (!account || error)) return <main className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center gap-5 p-6 text-center">
-    <img src={`${basePath}/logo.svg`} alt="Bookatlas" className="h-8 w-auto max-w-full" />
+    <img src={`${basePath}/logo-192.webp`} alt="Bookatlas" width={638} height={192} className="h-12 w-auto max-w-full" />
     <h1 className="text-2xl font-bold">We couldn’t verify your account</h1>
     <p className="text-slate-600">{error || 'Please finish verifying your email address, then try again.'}</p>
     <button onClick={refresh} className="rounded-xl bg-indigo-700 px-5 py-3 font-bold text-white">Try again</button>

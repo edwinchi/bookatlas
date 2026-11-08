@@ -1,14 +1,14 @@
 // Bookatlas Offline-First Service Worker
-const CACHE_VERSION = 'bookatlas-v4';
+const CACHE_VERSION = 'bookatlas-v5';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DATA_CACHE = `data-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './favicon.svg',
-  './logo.svg',
-  './icon.svg',
+  './favicon-32.png',
+  './logo-96.webp',
+  './logo-192.webp',
   './manifest.webmanifest'
 ];
 
