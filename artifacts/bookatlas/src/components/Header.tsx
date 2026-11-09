@@ -160,12 +160,21 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
+  // Logo: back to the front page of the store
+  const goToStoreHome = () => { setActiveTab('store'); setSelectedGenre('All Genres'); setSearchQuery(''); };
+
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-stone-200 shadow-xs">
       {/* Site menu row, following the Platform Blueprint sitemap: reading first, publishing one click away */}
       <div className="hidden lg:block border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between gap-4">
-          <nav aria-label="Site" className="-ml-3 flex items-center gap-0.5">
+        <div className="max-w-7xl mx-auto px-6 flex items-center gap-4 xl:gap-6">
+          <button
+            onClick={goToStoreHome}
+            className="shrink-0 py-2 group focus-visible:outline-2 focus-visible:outline-indigo-600 cursor-pointer"
+          >
+            <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="Bookatlas" width={319} height={96} className="h-10 w-auto transition-opacity group-hover:opacity-85 xl:h-11" />
+          </button>
+          <nav aria-label="Site" className="flex items-center gap-0.5">
             <HeaderNavMenu label="Store" groups={[
               { items: [
                 { label: 'All eBooks', description: 'Browse the whole catalogue', icon: BookOpen, onSelect: () => onNavigateSection('bookstore') },
@@ -223,8 +232,7 @@ export const Header: React.FC<HeaderProps> = ({
             ]} />
           </nav>
 
-          <div className="flex shrink-0 items-center gap-2 py-1.5 text-xs">
-            <a href={contactHref('Start my book')} className="rounded-full bg-amber-400 px-3.5 py-1.5 text-xs font-bold text-slate-950 transition-colors hover:bg-amber-300">Start a book</a>
+          <div className="ml-auto flex shrink-0 items-center gap-2 py-1.5 text-xs">
             {isAdminAuthenticated && (
               <HeaderNavMenu label="Admin" align="right" width="w-72" groups={[{ heading: adminEmail, items: [
                 { label: activeTab === 'manager' ? 'Exit Manager Studio' : 'Manager Studio', icon: Bot, onSelect: handleManagerTabClick },
@@ -261,13 +269,13 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3.5">
         <div className="flex items-center justify-between gap-2 sm:gap-4">
           
-          {/* Logo & Brand */}
+          {/* Logo & Brand (on large screens the logo sits in the site menu row) */}
           <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-            <button 
-              onClick={() => { setActiveTab('store'); setSelectedGenre('All Genres'); setSearchQuery(''); }}
-              className="flex min-w-0 items-center gap-1.5 sm:gap-2.5 text-left group focus-visible:outline-2 focus-visible:outline-indigo-600 cursor-pointer"
+            <button
+              onClick={goToStoreHome}
+              className="flex min-w-0 items-center gap-1.5 sm:gap-2.5 text-left group focus-visible:outline-2 focus-visible:outline-indigo-600 cursor-pointer lg:hidden"
             >
-              <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="Bookatlas" width={319} height={96} className="h-9 w-auto shrink-0 sm:h-10 lg:h-12 transition-opacity group-hover:opacity-85" />
+              <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="Bookatlas" width={319} height={96} className="h-9 w-auto shrink-0 sm:h-10 transition-opacity group-hover:opacity-85" />
             </button>
 
             {/* Categories selector button */}
@@ -391,6 +399,8 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               )}
             </div>
+
+            <a href={contactHref('Start my book')} className="hidden lg:inline-flex shrink-0 whitespace-nowrap rounded-full bg-amber-400 px-3.5 py-1.5 text-xs font-bold text-slate-950 transition-colors hover:bg-amber-300">Start a book</a>
           </div>
 
           {/* Search bar */}
