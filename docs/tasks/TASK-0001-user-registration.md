@@ -7,8 +7,8 @@
 | Priority | High |
 | Approval level | **2: human approval required** (authentication and schema changes). Approved 2026-11-07 (A1–A6, "yes on all") |
 | Status | **Implemented and verified** on Docker and on a Vercel preview. Two items blocked on credentials (§12) |
-| Ready for deployment | **Deployed to production 2026-11-08** (`bookatlas-i8haeazop`, aliases bookatlas-station9x / bookatlas-gamma) after Level 3 sign-off. Production runs guest-only until Clerk keys are added. Without valid Clerk keys, production runs guest-only: the store works and sign-in shows as unavailable |
-| Blockers | Clerk keys on Vercel (Level 3) and the D9 dashboard checklist. Local signed-in journey passes (2026-11-09) |
+| Ready for deployment | **Deployed to production 2026-11-08** (`bookatlas-i8haeazop`, aliases bookatlas-station9x / bookatlas-gamma) after Level 3 sign-off. Clerk development keys added to Vercel Production and redeployed 2026-11-09 (`bookatlas-ceosswyea`, owner sign-off): sign-in works on production, with Clerk's "Development mode" label until a production instance on an owned domain exists |
+| Blockers | The D9 dashboard checklist, and a Clerk production instance (needs an owned domain). Signed-in journey passes locally and on production (2026-11-09) |
 | Last updated | 2026-11-09 |
 
 Governance: [agent-governance.md](../governance/agent-governance.md). Lifecycle: understand → analyze → design → threat model → security review → **approval (granted)** → implement → test → validate → document → *deploy (awaiting sign-off)*.
@@ -43,7 +43,7 @@ BookAtlas already has registration, built on **Clerk** as the identity provider.
 | Email verification | Enforced on the server | Unchanged. Clerk instance setting unverified (D9) |
 | Password reset | Clerk | Unchanged. Unverified (D9) |
 | Password policy enforced | Unknown | **Blocked:** Clerk dashboard (D9) |
-| User can log in | Met | Met. Can't be tested end-to-end until the Clerk keys are fixed |
+| User can log in | Met | Met. Signed-in journey passes end-to-end (`test:account`, 2026-11-09) |
 | GDPR compliant | Not met | **Met in code:** consent separated, export and erasure, PII masked in logs, age gate, privacy notice, retention documented. Contact details published 2026-11-08; legal review is still pending (§12) |
 | OWASP compliant | Partial | **Met for the reviewed scope:** rate limiting, headers, CSRF, no vulnerable dependencies (`pnpm audit` clean) |
 | 99.9% uptime | Not measurable | Health endpoint, structured events and alert rules documented in the runbook. The external probe is an operator setup step (§12) |
@@ -52,9 +52,9 @@ BookAtlas already has registration, built on **Clerk** as the identity provider.
 
 | ID | Story | Acceptance criteria | Status | Evidence |
 |---|---|---|---|---|
-| US-1 | Create an account with email | Verification required; unverified gets 401 | Met (Clerk + server gate) | `policy.test.ts`; signed-in end-to-end test blocked (F9) |
+| US-1 | Create an account with email | Verification required; unverified gets 401 | Met (Clerk + server gate) | `policy.test.ts`; `account.test.mjs` |
 | US-2 | Choose marketing email | Opt-in unchecked by default; registration creates no subscription; consent time and source recorded | **Done** | `account.test.ts` "registration creates the reader profile without subscribing…" |
-| US-3 | Log in; session survives reload | `/api/auth/me` after reload | Existing; signed-in end-to-end test blocked (F9) | — |
+| US-3 | Log in; session survives reload | `/api/auth/me` after reload | Existing; covered by `account.test.mjs` | — |
 | US-4 | Reset password without enumeration | Same response either way | Blocked (D9 dashboard setting) | — |
 | US-5 | Weak or breached passwords rejected | Minimum length and breached-password check | Blocked (D9) | — |
 | US-6 | Export and delete my data | JSON export; deletion within 30 days | **Done:** deletion is immediate | `account.test.ts` export and deletion tests; `test:security` |
@@ -112,7 +112,7 @@ Also delivered, outside the original design but required by findings during the 
 | F6 | Low | `totalRegistered` disclosed | **Fixed** (D7) |
 | F7 | Low | Origin check skipped without the header | **Fixed** (D6) |
 | F8 | Low | Reader emails in logs | **Fixed** (D7). Entries logged before this change remain until rotated |
-| F9 | Info | Clerk keys invalid | **Fixed locally 2026-11-09:** development instance `hardy-oyster-3653` keys in `.env.local`, validated against Clerk. Vercel still has no Clerk keys (Level 3: credentialed integration) |
+| F9 | Info | Clerk keys invalid | **Fixed locally 2026-11-09:** development instance `hardy-oyster-3653` keys in `.env.local`, validated against Clerk. **Fixed on production 2026-11-09:** `VITE_CLERK_PUBLISHABLE_KEY`, `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` (sensitive) set in Vercel Production after owner sign-off; `test:account` 7/7 on `bookatlas-ceosswyea` |
 | F10 | Info | Vercel production builds failing | **Fixed:** the preview builds and serves |
 | F11 | Info (new) | Pages load Google Fonts, which sends visitor IPs to Google | **Disclosed** in the notice; self-hosting the fonts recommended (§12) |
 | F13 | Medium (new) | Docker nginx forwarded `Host` without the port, so the API's origin check rejected every signed-in change locally (`auth.csrf_blocked` on `POST /api/users/register`) | **Fixed 2026-11-09:** `proxy_set_header Host $http_host`. Vercel was not affected |
@@ -133,7 +133,7 @@ Also delivered, outside the original design but required by findings during the 
 | Performance | `pnpm test:perf` | Pass: p95 ≤ 115 ms at 50 requests/s (Docker). Preview, warm, at 20 requests/s: p95 ≤ 295 ms including a ~280 ms network round trip |
 | Dependencies | `pnpm audit --prod` | No known vulnerabilities |
 | Build | `pnpm run build` | Pass |
-| Signed-in end-to-end (sign up, verify, log in, reset, delete) | — | **Blocked** on valid Clerk keys (F9) |
+| Signed-in end-to-end (sign up, verify, log in, export, delete) | `pnpm test:account` | **7/7** in Docker and on production `bookatlas-ceosswyea` (2026-11-09). Password reset is not yet covered |
 
 **2026-11-09: everything in Docker.** `docker compose --env-file .env.local --profile test run --rm --build tests` runs every stage inside a Playwright container that shares the web container's network (`scripts/test-all.mjs`): typecheck, unit 93/93, e2e 182/182, catalog 3/3, security 5/5, browser 12/12 (new: the app shell and catalog load from the service worker cache with the network off), click-through sweep 48/48, performance p95 ≤ 45 ms at 50 requests/s. Fixed for a clean install: the e2e helper resolved `express` from a stray root copy; it now loads it from the API package. The signed-in journey is written (`pnpm test:account`: sign up with the age gate and Clerk test code, bookshelf, data export, sign out, sign in, delete, CSP clean) and failed at its first step until F9 was resolved: Clerk answered `host_invalid` for the publishable key and `clerk_key_invalid` for the secret key in `.env.local`.
 
@@ -146,7 +146,7 @@ Events, alert rules and the uptime probe are defined in the [runbook](../runbook
 ## 9. Deployment and rollback
 
 - **Pipeline:** `vercel.json` (monorepo build, `api/index.mjs` function, headers). Verified with preview `bookatlas-1q6hcurb0-station9x.vercel.app`.
-- **Production prerequisites:** a signing secret is set (`UNSUBSCRIBE_TOKEN_SECRET` exists in Production). Without Clerk keys, production runs guest-only.
+- **Production prerequisites:** a signing secret is set (`UNSUBSCRIBE_TOKEN_SECRET` exists in Production). Clerk development keys are set in Production (2026-11-09).
 - **Strategy:** Vercel immutable deployments. No database migration is required.
 - **Rollback:** promote the previous deployment in the Vercel dashboard (or `vercel promote <url>`).
 
@@ -174,9 +174,9 @@ Events, alert rules and the uptime probe are defined in the [runbook](../runbook
 
 | Item | Owner | Why it is open |
 |---|---|---|
-| Create a Clerk development instance and put its keys in `.env.local`; add production keys to Vercel | You | F9: requires your Clerk account |
+| Create a Clerk production instance on an owned domain and swap its keys into Vercel | You | Development keys are live on production for now |
 | Apply the D9 Clerk dashboard checklist (runbook) | You, or agent with dashboard access | `pnpm test:account` passes locally (2026-11-09) |
-| Roll the development secret key (it was pasted into a chat) and update `.env.local` | You | Hygiene; development instance only |
+| Roll the development secret key (it was pasted into a chat), then update `.env.local` and `CLERK_SECRET_KEY` in Vercel Production, and redeploy | You | Hygiene; the key is now also live on production |
 | Legal review of the Privacy Notice and Legal Notice; supply the full street address and VAT number | You or counsel | Contact details and KvK 89423496 added 2026-11-08; legal form corrected from "B.V." to the registered name. Other in-app copy still says "B.V."/Amsterdam (admin reports, AI persona, PDF exports) |
 | Enforce the full CSP after observing signed-in flows; add the production Clerk domain | Agent | Runbook §CSP |
 | Self-host Google Fonts (F11) | Agent | Small follow-up |
