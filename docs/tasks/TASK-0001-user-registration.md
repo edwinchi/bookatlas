@@ -8,7 +8,7 @@
 | Approval level | **2: human approval required** (authentication and schema changes). Approved 2026-11-07 (A1–A6, "yes on all") |
 | Status | **Implemented and verified** on Docker and on a Vercel preview. Two items blocked on credentials (§12) |
 | Ready for deployment | **Deployed to production 2026-11-08** (`bookatlas-i8haeazop`, aliases bookatlas-station9x / bookatlas-gamma) after Level 3 sign-off. Clerk development keys added to Vercel Production and redeployed 2026-11-09 (`bookatlas-ceosswyea`, owner sign-off): sign-in works on production, with Clerk's "Development mode" label until a production instance on an owned domain exists |
-| Blockers | The D9 dashboard checklist, and a Clerk production instance (needs an owned domain). Signed-in journey passes locally and on production (2026-11-09) |
+| Blockers | The D9 dashboard checklist, and a Clerk production instance on `booksatlas.app`. Signed-in journey passes locally and on production (2026-11-09) |
 | Last updated | 2026-11-09 |
 
 Governance: [agent-governance.md](../governance/agent-governance.md). Lifecycle: understand → analyze → design → threat model → security review → **approval (granted)** → implement → test → validate → document → *deploy (awaiting sign-off)*.
@@ -174,7 +174,7 @@ Events, alert rules and the uptime probe are defined in the [runbook](../runbook
 
 | Item | Owner | Why it is open |
 |---|---|---|
-| Create a Clerk production instance on an owned domain and swap its keys into Vercel | You | Development keys are live on production for now |
+| Create a Clerk production instance for `booksatlas.app` (Vercel DNS) and swap its keys into Vercel | You | Domain bought and attached 2026-11-09; development keys are live on production for now |
 | Apply the D9 Clerk dashboard checklist (runbook) | You, or agent with dashboard access | `pnpm test:account` passes locally (2026-11-09) |
 | Roll the development secret key (it was pasted into a chat), then update `.env.local` and `CLERK_SECRET_KEY` in Vercel Production, and redeploy | You | Hygiene; the key is now also live on production |
 | Legal review of the Privacy Notice and Legal Notice; supply the full street address and VAT number | You or counsel | Contact details and KvK 89423496 added 2026-11-08; legal form corrected from "B.V." to the registered name. Other in-app copy still says "B.V."/Amsterdam (admin reports, AI persona, PDF exports) |
