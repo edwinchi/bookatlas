@@ -96,6 +96,26 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 | P11 | Africa | **Worldwide includes all of Africa** (all 54 countries) for eBooks from launch. Card payments via Stripe at launch; local methods (M-Pesa, mobile money, local cards) via Paystack recommended next (Level 2 payment change, needs owner approval and a Paystack account). African VAT on foreign digital services handled as listed under M | 2026-11-08 |
 | P4 | Launch markets | **NL and the EU** for print (EU OSS VAT); UK and US in month 4; digital worldwide | 2026-11-08 |
 
+## Platform Blueprint (owner document, 2026-11-09)
+
+The owner supplied [BookAtlas Platform Blueprint](../planning/bookatlas-platform-blueprint.md) (sitemap, journeys, feature matrix, Prisma schema, OpenAPI, security plan, 90-day plan, costs, revenue model).
+
+**Applied now:** the header menu row follows its sitemap (Phase 4): Store, Publish, Author hub, Resources, About. Reading comes first and publishing is one click away. Author hub items that do not exist yet are shown as "Soon" and are not clickable; print formats and the developer API stay out of the navigation.
+
+**Conflicts with recorded decisions (owner to choose; nothing changed yet):**
+
+| Topic | Blueprint | Recorded decision | Approval level |
+|---|---|---|---|
+| Application stack | Next.js modular monolith, Prisma, Postgres | P1: extend the current Vite + Express + Supabase app | 2 (architecture) |
+| Print | Sell print through a partner API after launch | P6: no print fulfilment; prepare files for the author's own KDP or Lulu account | 2 |
+| Launch market | Netherlands and EU, in EUR | P9 and P11: worldwide, including all of Africa | 2 |
+| Front page | Reader-first: store leads, publishing one click away | Owner request 2026-11-09: publishing landing leads, store follows | 0 (UI) |
+| Covers | AI cover designer held for legal review | R3 premium package includes a designed cover (designer-made, not AI) | none if human-made |
+| Revenue | 80% author share for founding authors (12 months), EUR 0.15 author fee | R1 20% commission (author keeps 80%), R4 Author Pro keeps 90%, R2/R3 packages | 2 (payments) |
+| Audiobook publishing | Launch product | Not in the MVP scope yet | 0 |
+
+**Consistent with current work:** Stripe Connect and Stripe Tax, PayPal deferred, NestJS deferred, EAA and WCAG 2.2 AA, DSA notice and action, GDPR export and deletion, the security controls list, and the feature phases D30 to D90.
+
 ## Print provider comparison (2026-11-08, desk research)
 
 > **Superseded by P6.** Kept as reference: the KDP and Lulu print specifications (trim, bleed, spine width) drive the print-preparation service, and the Lulu Print API could later automate author proof copies.

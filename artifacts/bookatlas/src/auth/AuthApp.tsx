@@ -57,17 +57,20 @@ const appearance = {
 
 const AUTH_LOAD_TIMEOUT_MS = 6000;
 
+// Utility row above the site header: account status on the left, account links on the right.
+const utilityLink = 'inline-flex min-h-9 items-center font-medium text-slate-600 hover:text-slate-950';
+
 function SessionBar({ authUnavailable = false }: { authUnavailable?: boolean }) {
   const { account, signOut } = useAccount();
-  if (authUnavailable) return <div role="status" className="border-b border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs text-amber-950 sm:px-4">
-    Sign-in is temporarily unavailable. You can keep browsing the bookstore as a guest.
-  </div>;
-  return <div className="border-b border-indigo-100 bg-indigo-50 px-3 py-2 sm:px-4">
-    <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 text-xs text-indigo-950">
-      <span>{account ? `Signed in as ${account.email}${account.role === 'admin' ? ' · Administrator' : ''}` : 'Your next chapter starts here. Browse freely, or sign in to build your bookshelf.'}</span>
-      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-        {account ? <>{account.role === 'admin' && <Link href="/admin" className="font-bold underline underline-offset-4">Admin workspace</Link>}<ReadingUpdatePreferences /><AccountPrivacy /><button onClick={signOut} className="min-h-11 font-bold underline underline-offset-4">Sign out</button></> :
-          <><Link href="/sign-in" className="inline-flex min-h-12 items-center font-bold">Sign in</Link><Link href="/sign-up" className="inline-flex min-h-12 items-center rounded-lg bg-indigo-700 px-3 font-bold text-white">Create account</Link></>}
+  return <div className="border-b border-slate-200 bg-slate-100 px-4 sm:px-6">
+    <div className="mx-auto flex min-h-9 max-w-7xl flex-wrap items-center justify-between gap-x-5 gap-y-1 py-1 text-xs text-slate-600 sm:py-0">
+      {authUnavailable
+        ? <span role="status" className="inline-flex items-center gap-2 text-slate-700"><span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />Sign-in is temporarily unavailable. You can keep browsing the bookstore as a guest.</span>
+        : <span>{account ? `Signed in as ${account.email}${account.role === 'admin' ? ' · Administrator' : ''}` : 'Your next chapter starts here.'}</span>}
+      <div className="ml-auto flex flex-wrap items-center gap-x-5 gap-y-1">
+        {authUnavailable ? <a href="mailto:getintouch@apps-pilot.nl?subject=Help%20with%20BookAtlas" className={utilityLink}>Help</a>
+          : account ? <><Link href="/user-portal" className={utilityLink}>My Bookshelf</Link>{account.role === 'admin' && <Link href="/admin" className={utilityLink}>Admin workspace</Link>}<ReadingUpdatePreferences /><AccountPrivacy /><button onClick={signOut} className={`${utilityLink} cursor-pointer`}>Sign out</button></>
+          : <><Link href="/sign-in" className={utilityLink}>Sign in</Link><Link href="/sign-up" className={utilityLink}>Create account</Link></>}
       </div>
     </div>
   </div>;

@@ -109,6 +109,24 @@ test('the publishing landing leads the front page and its estimator responds', a
   await page.waitForFunction(() => Math.abs(document.getElementById('bookstore').getBoundingClientRect().top) < 200, null, { timeout: 5_000 });
 });
 
+test('the site menu row opens on hover and click, and its links reach the landing sections', async () => {
+  const page = await open('/');
+  const site = page.getByRole('navigation', { name: 'Site' });
+  const publish = site.getByRole('button', { name: 'Publish', exact: true });
+  // A mouse click lands after the hover has already opened the menu; it must stay open.
+  await publish.click();
+  assert.equal(await publish.getAttribute('aria-expanded'), 'true');
+  await site.getByRole('button', { name: /^Pricing and royalties/ }).click();
+  await page.waitForFunction(() => Math.abs(document.getElementById('earnings').getBoundingClientRect().top) < 260, null, { timeout: 5_000 });
+  await page.keyboard.press('Escape');
+  const hub = site.getByRole('button', { name: 'Author hub', exact: true });
+  await hub.focus();
+  await page.keyboard.press('ArrowDown');
+  await page.waitForFunction(() => document.activeElement?.textContent?.includes('Join early access'));
+  await page.keyboard.press('Escape');
+  assert.equal(await hub.getAttribute('aria-expanded'), 'false');
+});
+
 test('the offline service worker registers', async () => {
   const page = await open('/');
   await page.reload({ waitUntil: 'networkidle' });

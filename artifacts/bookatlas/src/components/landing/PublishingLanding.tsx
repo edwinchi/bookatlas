@@ -15,11 +15,11 @@ interface PublishingLandingProps {
   books: Book[];
   onOpenBook: (book: Book) => void;
   onBrowseStore: () => void;
+  onNavigateSection: (id: string) => void;
 }
 
 // Publishing services are in early access: every call to action opens an email to the team.
 const contact = (subject: string) => `mailto:${OPERATOR.email}?subject=${encodeURIComponent(subject)}`;
-const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 const base = import.meta.env.BASE_URL;
 
 const AUDIENCES = [
@@ -111,7 +111,7 @@ const SectionHeading: React.FC<{ eyebrow: string; title: string; intro?: string;
 
 const primaryButton = 'inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-bold transition-[background-color,box-shadow,translate] duration-200 hover:-translate-y-0.5 cursor-pointer';
 
-export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onOpenBook, onBrowseStore }) => {
+export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onOpenBook, onBrowseStore, onNavigateSection }) => {
   const hero = useRef<HTMLElement>(null);
   const frame = useRef(0);
   const sample = books.find((b) => b.coverImage);
@@ -182,7 +182,7 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
       </section>
 
       {/* Audiences */}
-      <section aria-labelledby="landing-audiences" className="bg-[#f8f9fa] px-4 py-20 sm:px-6">
+      <section id="solutions" aria-labelledby="landing-audiences" className="scroll-mt-36 lg:scroll-mt-44 bg-[#f8f9fa] px-4 py-20 sm:px-6">
         <SectionHeading id="landing-audiences" eyebrow="Who it's for" title="Made for people with something to say" />
         <div className="mx-auto mt-12 grid max-w-6xl gap-6 md:grid-cols-3">
           {AUDIENCES.map(({ icon: Icon, title, body }, i) => (
@@ -201,7 +201,7 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
       </section>
 
       {/* Services and prices */}
-      <section aria-labelledby="landing-services" className="bg-white px-4 py-20 sm:px-6">
+      <section id="pricing" aria-labelledby="landing-services" className="scroll-mt-36 lg:scroll-mt-44 bg-white px-4 py-20 sm:px-6">
         <SectionHeading
           id="landing-services"
           eyebrow="Services"
@@ -226,7 +226,7 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
                   <p className={`mt-3 flex-1 text-sm leading-relaxed ${featured ? 'text-slate-300' : 'text-slate-600'}`}>{body}</p>
                   <div className="mt-6">
                     {target
-                      ? <button type="button" onClick={() => scrollTo(target)} className={cls}><Calculator className="h-4 w-4" /> {cta}</button>
+                      ? <button type="button" onClick={() => onNavigateSection(target)} className={cls}><Calculator className="h-4 w-4" /> {cta}</button>
                       : <a href={href} className={cls}>{cta}</a>}
                   </div>
                 </article>
@@ -237,7 +237,7 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
       </section>
 
       {/* One page for every edition */}
-      <section aria-labelledby="landing-book-page" className="bg-white px-4 pb-20 sm:px-6">
+      <section id="book-pages" aria-labelledby="landing-book-page" className="scroll-mt-36 lg:scroll-mt-44 bg-white px-4 pb-20 sm:px-6">
         <Reveal className="mx-auto max-w-6xl">
           <div className="relative grid items-center gap-10 overflow-hidden rounded-[2rem] bg-gradient-to-br from-indigo-700 via-indigo-800 to-slate-950 p-8 text-white sm:p-12 lg:grid-cols-2">
             <AtlasStar className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 text-white/5" />
@@ -283,19 +283,19 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
       </section>
 
       {/* How it works */}
-      <section aria-labelledby="landing-how" className="bg-[#f8f9fa] px-4 py-20 sm:px-6">
+      <section id="how-it-works" aria-labelledby="landing-how" className="scroll-mt-36 lg:scroll-mt-44 bg-[#f8f9fa] px-4 py-20 sm:px-6">
         <SectionHeading id="landing-how" eyebrow="How it works" title="From finished draft to finished book" intro="Four steps from your final manuscript to a book readers can hold or download." />
         <div className="mx-auto mt-14 max-w-6xl"><HowItWorks /></div>
       </section>
 
       {/* Earnings */}
-      <section id="earnings" aria-labelledby="landing-earnings" className="scroll-mt-24 bg-white px-4 py-20 sm:px-6">
+      <section id="earnings" aria-labelledby="landing-earnings" className="scroll-mt-36 lg:scroll-mt-44 bg-white px-4 py-20 sm:px-6">
         <SectionHeading id="landing-earnings" eyebrow="Earnings" title="What could your eBook earn?" intro="Move the sliders to compare Standard and Author Pro for your price and sales." />
         <Reveal className="mx-auto mt-12 max-w-5xl"><EarningsEstimator /></Reveal>
       </section>
 
       {/* Commitments */}
-      <section aria-labelledby="landing-commitments" className="bg-white px-4 pb-20 sm:px-6">
+      <section id="promise" aria-labelledby="landing-commitments" className="scroll-mt-36 lg:scroll-mt-44 bg-white px-4 pb-20 sm:px-6">
         <SectionHeading id="landing-commitments" eyebrow="Our promise" title="What you can count on" />
         <div className="mx-auto mt-12 grid max-w-6xl gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
           {COMMITMENTS.map(({ icon: Icon, title, body }, i) => (
@@ -311,7 +311,7 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
       </section>
 
       {/* Trust */}
-      <section aria-labelledby="landing-trust" className="bg-[#f8f9fa] px-4 py-20 sm:px-6">
+      <section id="about" aria-labelledby="landing-trust" className="scroll-mt-36 lg:scroll-mt-44 bg-[#f8f9fa] px-4 py-20 sm:px-6">
         <SectionHeading id="landing-trust" eyebrow="Trust" title="Privacy and accessibility, built in" />
         <div className="mx-auto mt-12 grid max-w-5xl gap-6 md:grid-cols-2">
           <Reveal>

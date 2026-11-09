@@ -17,16 +17,32 @@ import {
   ShieldCheck,
   Zap,
   Bot,
-  FileCheck,
   FileText,
   Lock,
   Unlock,
   KeyRound,
   ShieldAlert,
-  UserCheck
+  UserCheck,
+  PenTool,
+  GraduationCap,
+  Library,
+  Ruler,
+  Globe2,
+  Crown,
+  ListOrdered,
+  Calculator,
+  Link2,
+  Scale,
+  Building2,
+  BadgeCheck,
+  Mail
 } from 'lucide-react';
+import { HeaderNavMenu } from './HeaderNavMenu';
+import { OPERATOR } from './LegalDocument';
 
 import { GENRES, AFRICAN_LITERATURE_GENRES, CONSCIOUSNESS_COMMUNITY_GENRES, GENERAL_GENRES } from '../data/booksData';
+
+const contactHref = (subject: string) => `mailto:${OPERATOR.email}?subject=${encodeURIComponent(subject)}`;
 
 interface HeaderProps {
   activeTab: 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager';
@@ -56,6 +72,8 @@ interface HeaderProps {
   onOpenAdminAuth: (featureName: string, callback?: () => void) => void;
   onAdminLogout: () => void;
   registeredUser?: { email: string; name?: string } | null;
+  /** Shows the front page and scrolls to one of its sections (landing section ids or 'bookstore'). */
+  onNavigateSection: (id: string) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -85,7 +103,8 @@ export const Header: React.FC<HeaderProps> = ({
   adminEmail,
   onOpenAdminAuth,
   onAdminLogout,
-  registeredUser
+  registeredUser,
+  onNavigateSection
 }) => {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -143,140 +162,100 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-stone-200 shadow-xs">
-      {/* Top micro announcement bar */}
-      <div className="hidden bg-[#0f172a] text-slate-200 text-xs py-1.5 px-4 sm:block">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center space-x-3">
-            <span className="flex items-center gap-1.5 font-medium text-white">
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Bookatlas eBook Store & Reader
-            </span>
-            <span className="hidden sm:inline text-slate-500">|</span>
-            <span className="hidden md:inline text-slate-300">
-              Atlantean Globals Services (Netherlands)
-            </span>
-            <span className="hidden lg:inline text-slate-500">|</span>
-            <span className="hidden lg:inline text-slate-400">
-              Web, iOS, Android & Bookatlas eReaders
-            </span>
-          </div>
+      {/* Site menu row, following the Platform Blueprint sitemap: reading first, publishing one click away */}
+      <div className="hidden lg:block border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between gap-4">
+          <nav aria-label="Site" className="-ml-3 flex items-center gap-0.5">
+            <HeaderNavMenu label="Store" groups={[
+              { items: [
+                { label: 'All eBooks', description: 'Browse the whole catalogue', icon: BookOpen, onSelect: () => onNavigateSection('bookstore') },
+                { label: 'Audiobooks', description: 'Listen in your browser', icon: Headphones, onSelect: () => setActiveTab('audiobooks') },
+                { label: 'Deals under €4.99', description: 'Discounted and free eBooks', icon: Tag, onSelect: () => setActiveTab('deals') },
+                { label: 'Bookatlas Plus', description: 'Unlimited reading and listening', icon: Compass, onSelect: () => setActiveTab('bookatlasplus') },
+              ] },
+              { heading: 'Reading tools', items: [
+                { label: 'AI Book Matchmaker', description: 'Find your next book by mood', icon: Sparkles, onSelect: onOpenAIMatchmaker },
+                { label: 'AI Studio', description: 'AI tools for your reading', icon: Bot, onSelect: onOpenAIHub },
+                { label: 'Live Voice companion', description: 'Talk about books out loud', icon: Headphones, onSelect: onOpenVoice },
+              ] },
+            ]} />
+            <HeaderNavMenu label="Publish" groups={[
+              { items: [
+                { label: 'Create and self-publish', description: 'From manuscript to bookshelf in four steps', icon: PenTool, onSelect: () => onNavigateSection('how-it-works') },
+                { label: 'eBook publishing', description: 'Sell worldwide and keep 80%', icon: Globe2, onSelect: () => onNavigateSection('pricing') },
+                { label: 'Print-ready files', description: 'For Amazon KDP and Lulu, from €99', icon: Ruler, onSelect: () => onNavigateSection('pricing') },
+                { label: 'Pricing and royalties', description: 'Compare Standard and Author Pro', icon: Calculator, onSelect: () => onNavigateSection('earnings') },
+                { label: 'Start a book', description: 'Tell us about your book', icon: Mail, href: contactHref('Start my book') },
+              ] },
+              { items: [
+                { label: 'Audiobook publishing', icon: Headphones, badge: 'Soon' },
+              ] },
+            ]} />
+            <HeaderNavMenu label="Author hub" groups={[
+              { heading: 'Opening to early-access authors', items: [
+                { label: 'Books and drafts', icon: Library, badge: 'Soon' },
+                { label: 'Sales and CSV export', icon: FileText, badge: 'Soon' },
+                { label: 'Royalty statements', icon: Crown, badge: 'Soon' },
+                { label: 'Public author page', icon: Link2, badge: 'Soon' },
+                { label: 'Payout setup', icon: ShieldCheck, badge: 'Soon' },
+              ] },
+              { items: [
+                { label: 'Join early access', description: OPERATOR.email, icon: Mail, href: contactHref('Author hub early access') },
+              ] },
+            ]} />
+            <HeaderNavMenu label="Resources" groups={[{ items: [
+              { label: 'Publishing guide', description: 'How BookAtlas works, step by step', icon: ListOrdered, onSelect: () => onNavigateSection('how-it-works') },
+              { label: 'Who it is for', description: 'Authors, educators and publishers', icon: GraduationCap, onSelect: () => onNavigateSection('solutions') },
+              { label: 'Book pages', description: 'One link for every edition', icon: Link2, onSelect: () => onNavigateSection('book-pages') },
+              { label: 'EPUB and technical specs', description: 'Formats, reader and platform details', icon: FileText, onSelect: onOpenArchitectureGuide },
+              { label: 'Help', description: 'Email the BookAtlas team', icon: HelpCircle, href: contactHref('Help with BookAtlas') },
+            ] }]} />
+            <HeaderNavMenu label="About" groups={[
+              { items: [
+                { label: 'About BookAtlas', description: `${OPERATOR.name}, Zwolle, the Netherlands`, icon: Building2, onSelect: () => onNavigateSection('about') },
+                { label: 'Our promise', description: 'What authors can count on', icon: BadgeCheck, onSelect: () => onNavigateSection('promise') },
+                { label: 'Contact us', description: OPERATOR.email, icon: Mail, href: contactHref('Question for BookAtlas') },
+              ] },
+              { items: [
+                { label: 'Privacy notice', icon: ShieldCheck, href: `${import.meta.env.BASE_URL}privacy` },
+                { label: 'Legal notice', icon: Scale, href: `${import.meta.env.BASE_URL}legal` },
+              ] },
+            ]} />
+          </nav>
 
-          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 text-slate-300">
-            {/* Admin Session Indicator & Quick Lock */}
-            {isAdminAuthenticated ? (
-              <div className="flex items-center gap-1.5 bg-emerald-950/90 border border-emerald-600/60 px-2.5 py-0.5 rounded text-[11px] text-emerald-300">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span className="font-bold hidden xl:inline">Admin:</span>
-                <span className="font-mono text-[10px] truncate max-w-[110px] sm:max-w-[150px] text-emerald-100">{adminEmail}</span>
-                <button
-                  onClick={onAdminLogout}
-                  className="ml-1 text-slate-300 hover:text-white hover:bg-emerald-900/80 px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors cursor-pointer flex items-center gap-1"
-                  title="Lock Administrator Session"
-                >
-                  <Lock className="w-3 h-3 text-amber-400" />
-                  <span>Lock</span>
-                </button>
-              </div>
-            ) : null}
-
-            {/* AI Studio Hub in Topbar */}
-            <button
-              onClick={onOpenAIHub}
-              className="flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-xs transition-all cursor-pointer"
-              title="Open Gemini AI Studio Hub"
-            >
-              <Sparkles className="w-3 h-3 text-amber-300" />
-              <span>AI Studio</span>
-            </button>
-
-            {/* Live Voice Quick Launch */}
-            <button
-              onClick={onOpenVoice}
-              className="hidden md:flex items-center gap-1 text-xs text-violet-300 hover:text-violet-200 font-semibold transition-colors cursor-pointer"
-              title="Real-Time Voice Companion"
-            >
-              <Headphones className="w-3.5 h-3.5" />
-              <span>Live Voice</span>
-            </button>
-
-            {/* Download Official Docs (.docx & .pdf) - Admin Protected */}
-            {isAdminAuthenticated && <button
-              onClick={handleDocsClick}
-              className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-blue-900/80 hover:bg-blue-800 text-blue-200 border border-blue-700/50 transition-all cursor-pointer"
-              title={isAdminAuthenticated ? "Download Platform Specifications in Word (.docx) & PDF (.pdf)" : "Admin Only: Download Platform Specifications"}
-            >
-              {isAdminAuthenticated ? (
-                <FileCheck className="w-3.5 h-3.5 text-blue-300" />
-              ) : (
-                <Lock className="w-3 h-3 text-amber-400" />
-              )}
-              <span className="hidden sm:inline">Specs Export</span>
-              <span className="sm:hidden">Docs</span>
-            </button>}
-
-            {/* Manager Switch in Topbar - Admin Protected */}
-            {isAdminAuthenticated && <button
-              onClick={handleManagerTabClick}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
-                activeTab === 'manager'
-                  ? 'bg-amber-400 text-slate-950 shadow-xs'
-                  : isAdminAuthenticated
-                  ? 'bg-indigo-900/80 text-indigo-100 hover:bg-indigo-800 border border-indigo-700/50'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
-              }`}
-              title={isAdminAuthenticated ? "Access Manager Control Center" : "Admin Only: Manager Studio"}
-            >
-              {isAdminAuthenticated ? (
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
-              ) : (
-                <Lock className="w-3 h-3 text-amber-400" />
-              )}
-              <span>{activeTab === 'manager' ? 'Exit Manager' : 'Manager Studio'}</span>
-              {!isAdminAuthenticated && (
-                <span className="text-[9px] bg-slate-900 text-amber-300 px-1 py-0.2 rounded-xs">Admin</span>
-              )}
-            </button>}
-
-            {isAdminAuthenticated && <button
-              onClick={onOpenArchitectureGuide}
-              className="hidden sm:flex items-center gap-1 text-xs text-amber-300 hover:text-amber-200 font-semibold transition-colors cursor-pointer"
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-              <span>Blueprint</span>
-            </button>}
-            {/* Language Switcher (Dutch / English) */}
-            {setLanguage && (
-              <div className="flex items-center gap-1 bg-slate-800/80 px-2 py-0.5 rounded-lg border border-slate-700">
-                <Globe className="w-3.5 h-3.5 text-amber-400" />
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value as 'en' | 'nl')}
-                  className="bg-transparent text-[11px] font-bold text-slate-200 focus:outline-none cursor-pointer"
-                >
-                  <option value="en" className="bg-slate-900 text-white">🇬🇧 English</option>
-                  <option value="nl" className="bg-slate-900 text-white">🇳🇱 Nederlands</option>
-                </select>
-              </div>
+          <div className="flex shrink-0 items-center gap-2 py-1.5 text-xs">
+            <a href={contactHref('Start my book')} className="rounded-full bg-amber-400 px-3.5 py-1.5 text-xs font-bold text-slate-950 transition-colors hover:bg-amber-300">Start a book</a>
+            {isAdminAuthenticated && (
+              <HeaderNavMenu label="Admin" align="right" width="w-72" groups={[{ heading: adminEmail, items: [
+                { label: activeTab === 'manager' ? 'Exit Manager Studio' : 'Manager Studio', icon: Bot, onSelect: handleManagerTabClick },
+                { label: 'Specs export', description: 'Word and PDF platform specifications', icon: FileText, onSelect: handleDocsClick },
+                { label: 'Platform blueprint', icon: HelpCircle, onSelect: onOpenArchitectureGuide },
+                { label: 'Lock administrator session', icon: Lock, onSelect: onAdminLogout },
+              ] }]} />
             )}
-
-            {/* Currency Selector */}
-            <div className="flex items-center gap-1 text-slate-300 hover:text-white">
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="bg-transparent text-xs text-slate-200 focus:outline-hidden cursor-pointer"
-              >
-                <option value="EUR" className="bg-slate-800 text-white">EUR (€) Netherlands</option>
-                <option value="USD" className="bg-slate-800 text-white">USD ($) Global</option>
-                <option value="GBP" className="bg-slate-800 text-white">GBP (£) UK</option>
-                <option value="CAD" className="bg-slate-800 text-white">CAD ($) Canada</option>
-                <option value="JPY" className="bg-slate-800 text-white">JPY (¥) Japan</option>
+            {setLanguage && (
+              <label className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-700 hover:border-slate-300">
+                <Globe className="h-3.5 w-3.5 text-indigo-600" aria-hidden />
+                <span className="sr-only">Language</span>
+                <select value={language} onChange={(e) => setLanguage(e.target.value as 'en' | 'nl')} className="bg-transparent text-xs font-semibold focus:outline-hidden cursor-pointer">
+                  <option value="en">English</option>
+                  <option value="nl">Nederlands</option>
+                </select>
+              </label>
+            )}
+            <label className="flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-700 hover:border-slate-300">
+              <span className="sr-only">Currency</span>
+              <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="bg-transparent text-xs font-semibold focus:outline-hidden cursor-pointer">
+                <option value="EUR">EUR (€) Netherlands</option>
+                <option value="USD">USD ($) Global</option>
+                <option value="GBP">GBP (£) UK</option>
+                <option value="CAD">CAD ($) Canada</option>
+                <option value="JPY">JPY (¥) Japan</option>
               </select>
-            </div>
+            </label>
           </div>
         </div>
       </div>
-
 
       {/* Main navigation row */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3.5">
@@ -714,6 +693,34 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Bot className="w-4 h-4 text-purple-600" /> AI reading tools
           </button>
+          <button
+            onClick={() => { onOpenVoice(); setMobileMenuOpen(false); }}
+            className="min-h-12 w-full text-left py-2 font-medium text-violet-700 flex items-center gap-2"
+          >
+            <Headphones className="w-4 h-4" /> Live Voice companion
+          </button>
+          <div className="border-t border-slate-100 pt-2">
+            <p className="px-1 pb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">Publish with BookAtlas</p>
+            {([
+              ['Who it’s for', 'solutions', PenTool],
+              ['Services and pricing', 'pricing', Ruler],
+              ['How it works', 'how-it-works', ListOrdered],
+              ['Earnings calculator', 'earnings', Calculator],
+              ['About BookAtlas', 'about', Building2],
+              ['Bookstore', 'bookstore', BookOpen],
+            ] as const).map(([label, id, Icon]) => (
+              <button
+                key={id}
+                onClick={() => { onNavigateSection(id); setMobileMenuOpen(false); }}
+                className="min-h-12 w-full text-left py-2 font-medium text-slate-800 flex items-center gap-2"
+              >
+                <Icon className="w-4 h-4 text-indigo-600" /> {label}
+              </button>
+            ))}
+            <a href={contactHref('Start my book')} className="flex min-h-12 w-full items-center gap-2 rounded-lg bg-amber-400 px-3 font-bold text-slate-950">
+              <Mail className="w-4 h-4" /> Start my book
+            </a>
+          </div>
           {isAdminAuthenticated && <button
             onClick={() => { handleDocsClick(); setMobileMenuOpen(false); }}
             className="w-full text-left py-2 font-bold text-blue-700 flex items-center gap-2 bg-blue-50 px-3 rounded-lg"
