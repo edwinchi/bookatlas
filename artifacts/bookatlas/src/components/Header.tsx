@@ -265,7 +265,8 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Main navigation row */}
+      {/* Main navigation row: a navy band on large screens; white on phones, where it also carries the logo */}
+      <div className="lg:bg-linear-to-r lg:from-slate-950 lg:via-indigo-950 lg:to-slate-950 lg:shadow-[inset_0_-1px_0_rgba(255,255,255,0.06)]">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3.5">
         <div className="flex items-center justify-between gap-2 sm:gap-4">
           
@@ -284,9 +285,9 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
                 aria-expanded={categoryDropdownOpen}
                 aria-controls="bookstore-categories"
-                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 rounded-md hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200 cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-100 hover:text-white rounded-md hover:bg-white/10 transition-colors border border-transparent hover:border-white/15 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
               >
-                <Layers className="w-4 h-4 text-slate-500" />
+                <Layers className="w-4 h-4 text-indigo-300" />
                 <span className="max-w-36 truncate">{selectedGenre === 'All Genres' ? 'Categories' : selectedGenre}</span>
                 <span className="text-xs text-slate-400">▾</span>
               </button>
@@ -400,7 +401,7 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </div>
 
-            <a href={contactHref('Start my book')} className="hidden lg:inline-flex shrink-0 whitespace-nowrap rounded-full bg-amber-400 px-3.5 py-1.5 text-xs font-bold text-slate-950 transition-colors hover:bg-amber-300">Start a book</a>
+            <a href={contactHref('Start my book')} className="hidden lg:inline-flex shrink-0 whitespace-nowrap rounded-full bg-amber-400 px-3.5 py-1.5 text-xs font-bold text-slate-950 shadow-sm shadow-amber-500/20 transition-colors hover:bg-amber-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300">Start a book</a>
           </div>
 
           {/* Search bar */}
@@ -412,7 +413,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onChange={(e) => handleSearchChange(e.target.value)}
                 aria-label="Search the book catalog"
                 placeholder="Search title, author, ISBN, genre, or tags…"
-                className="w-full pl-10 pr-10 py-2 bg-slate-100 focus:bg-white border border-slate-200 rounded-full text-sm text-slate-900 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+                className="w-full pl-10 pr-10 py-2 bg-slate-100 focus:bg-white border border-slate-200 rounded-full text-sm text-slate-900 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all lg:bg-white lg:border-white/10 lg:focus:ring-amber-300/50 lg:focus:border-amber-300"
               />
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               {searchQuery && (
@@ -446,10 +447,10 @@ export const Header: React.FC<HeaderProps> = ({
             {/* AI Book Matchmaker button */}
             <button
               onClick={onOpenAIMatchmaker}
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-indigo-200 text-indigo-900 text-xs sm:text-sm font-semibold hover:border-indigo-400 hover:shadow-xs transition-all cursor-pointer"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-white text-xs sm:text-sm font-semibold hover:bg-white/15 hover:border-white/40 transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
               title="AI Book Recommender & Gemini Mood Matcher"
             >
-              <Sparkles className="w-4 h-4 text-indigo-600 animate-pulse" />
+              <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
               <span className="hidden md:inline">Gemini AI Matchmaker</span>
               <span className="md:hidden">AI Match</span>
             </button>
@@ -457,10 +458,10 @@ export const Header: React.FC<HeaderProps> = ({
             {/* My Bookshelf tab */}
             <button
               onClick={() => setActiveTab('library')}
-              className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 ${
                 activeTab === 'library'
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950'
+                  ? 'bg-white/15 text-white ring-1 ring-white/25'
+                  : 'text-slate-100 hover:bg-white/10 hover:text-white'
               }`}
             >
               <BookOpen className="w-4 h-4" />
@@ -470,7 +471,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Wishlist */}
             <button
               onClick={onOpenWishlist}
-              className="relative hidden lg:flex min-h-12 min-w-12 items-center justify-center p-2 text-slate-700 hover:text-slate-950 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              className="relative hidden lg:flex min-h-12 min-w-12 items-center justify-center p-2 text-slate-100 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
               title="Saved Wishlist"
               aria-label={`Open wishlist${wishlistCount ? `, ${wishlistCount} saved` : ''}`}
             >
@@ -485,10 +486,10 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Cart Button */}
             <button
               onClick={onOpenCart}
-              className="relative flex min-h-12 min-w-12 items-center justify-center gap-2 px-3 py-1.5 bg-[#0f172a] hover:bg-slate-800 text-white rounded-lg text-sm font-semibold shadow-xs transition-colors cursor-pointer"
+              className="relative flex min-h-12 min-w-12 items-center justify-center gap-2 px-3 py-1.5 bg-[#0f172a] hover:bg-slate-800 text-white rounded-lg text-sm font-semibold shadow-xs transition-colors cursor-pointer lg:bg-white lg:text-slate-950 lg:hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
               aria-label={`Open shopping cart${cartCount ? `, ${cartCount} items` : ''}`}
             >
-              <ShoppingBag className="w-4 h-4 text-amber-400" />
+              <ShoppingBag className="w-4 h-4 text-amber-400 lg:text-indigo-700" />
               <span className="hidden sm:inline">Cart</span>
               {cartCount > 0 && (
                 <span className="bg-amber-400 text-slate-950 text-xs font-bold px-1.5 py-0.2 rounded-full">
@@ -524,6 +525,7 @@ export const Header: React.FC<HeaderProps> = ({
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           </div>
         </div>
+      </div>
       </div>
 
       {/* Sub Navigation Bar (eBooks, Audiobooks, Bookatlas Plus, Deals, Manager) */}
