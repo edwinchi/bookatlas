@@ -1,7 +1,6 @@
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { createRequire } from 'node:module';
-import express from 'express';
 
 // Initialize required signing secret in test process environment before any server import
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'bookatlas-synthetic-test-signing-secret-32chars';
@@ -13,6 +12,8 @@ delete process.env.GEMINI_API_KEY;
 
 const apiRequire = createRequire(new URL('../../artifacts/api-server/package.json', import.meta.url));
 export const { PDFDocument } = apiRequire('pdf-lib');
+// Express too: a clean pnpm install gives the workspace root no copy of its own.
+const express = apiRequire('express');
 
 export interface TestServerInstance {
   app: any;

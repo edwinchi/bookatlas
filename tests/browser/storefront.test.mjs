@@ -134,6 +134,20 @@ test('the offline service worker registers', async () => {
   assert.ok(registered);
 });
 
+test('the app shell and catalog load from the service worker cache when offline', async () => {
+  const page = await open('/');
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  // A controlled reload lets the worker cache the hashed scripts, styles and catalog responses.
+  await page.reload({ waitUntil: 'networkidle' });
+  assert.ok(await page.evaluate(() => !!navigator.serviceWorker.controller), 'the page is controlled by the worker');
+  await page.context().setOffline(true);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.getByRole('heading', { level: 1, name: /ready for every shelf/i }).waitFor({ timeout: 10_000 });
+  // The cached catalog renders offline.
+  await page.getByRole('button', { name: /add to cart/i }).first().waitFor({ timeout: 10_000 });
+  await page.context().setOffline(false);
+});
+
 test('no Content Security Policy violations or page errors occurred', () => {
   assert.deepEqual([...new Set(cspViolations)], []);
   assert.deepEqual(pageErrors, []);

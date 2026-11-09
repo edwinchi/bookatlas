@@ -14,7 +14,10 @@
     "test:e2e": "node scripts/run-e2e-tests.mjs",
     "test:security": "node --test tests/security/http.test.mjs",
     "test:perf": "node scripts/perf-check.mjs",
-    "test:browser": "node --test --test-concurrency=1 tests/browser/storefront.test.mjs"
+    "test:browser": "node --test --test-concurrency=1 tests/browser/storefront.test.mjs",
+    "test:sweep": "node tests/browser/site-sweep.mjs",
+    "test:all": "node scripts/test-all.mjs",
+    "test:account": "node --test --test-concurrency=1 tests/browser/account.test.mjs"
   },
   "private": true,
   "dependencies": {

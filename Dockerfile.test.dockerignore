@@ -1,0 +1,18 @@
+# Build context for Dockerfile.test: like .dockerignore, but keeps tests.
+node_modules
+**/node_modules
+.git
+.github
+.vercel
+dist
+**/dist
+# Stale build info would make `tsc --build` skip the lib builds that dist exclusion removed.
+**/*.tsbuildinfo
+.gemini
+generated-artifacts
+*.log
+.env
+.env.*
+!.env.example
+.agents
+docs

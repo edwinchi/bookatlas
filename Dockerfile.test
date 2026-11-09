@@ -1,0 +1,27 @@
+# Test runner for BookAtlas: every offline check, then the checks against the running stack.
+#   docker compose --env-file .env.local --profile test run --rm tests
+# The image ships Chromium matching @playwright/test 1.64.1.
+FROM mcr.microsoft.com/playwright:v1.64.1-noble
+
+WORKDIR /app
+RUN npm install -g pnpm@11.25.0
+
+# Copy workspace configuration, the preinstall guard and every workspace manifest
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY scripts/package.json scripts/check-package-manager.mjs ./scripts/
+COPY artifacts/api-server/package.json ./artifacts/api-server/
+COPY artifacts/bookatlas/package.json ./artifacts/bookatlas/
+COPY artifacts/mockup-sandbox/package.json ./artifacts/mockup-sandbox/
+COPY lib/bookatlas-catalog/package.json ./lib/bookatlas-catalog/
+COPY lib/api-client-react/package.json ./lib/api-client-react/
+COPY lib/api-zod/package.json ./lib/api-zod/
+COPY lib/api-spec/package.json ./lib/api-spec/
+COPY lib/db/package.json ./lib/db/
+
+RUN pnpm install --frozen-lockfile
+
+# Sources and tests (secrets are excluded by Dockerfile.test.dockerignore)
+COPY . .
+
+ENV CI=1
+CMD ["node", "scripts/test-all.mjs"]

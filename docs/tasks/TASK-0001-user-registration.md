@@ -133,6 +133,8 @@ Also delivered, outside the original design but required by findings during the 
 | Build | `pnpm run build` | Pass |
 | Signed-in end-to-end (sign up, verify, log in, reset, delete) | — | **Blocked** on valid Clerk keys (F9) |
 
+**2026-11-09: everything in Docker.** `docker compose --env-file .env.local --profile test run --rm --build tests` runs every stage inside a Playwright container that shares the web container's network (`scripts/test-all.mjs`): typecheck, unit 93/93, e2e 182/182, catalog 3/3, security 5/5, browser 12/12 (new: the app shell and catalog load from the service worker cache with the network off), click-through sweep 48/48, performance p95 ≤ 45 ms at 50 requests/s. Fixed for a clean install: the e2e helper resolved `express` from a stray root copy; it now loads it from the API package. The signed-in journey is written (`pnpm test:account`: sign up with the age gate and Clerk test code, bookshelf, data export, sign out, sign in, delete, CSP clean) and fails at its first step until F9 is resolved: Clerk answers `host_invalid` for the publishable key and `clerk_key_invalid` for the secret key in `.env.local`.
+
 ## 8. Monitoring
 
 Events, alert rules and the uptime probe are defined in the [runbook](../runbooks/accounts-and-auth.md#monitoring). Creating the external uptime monitor and the log-based alerts in the hosting dashboard is an operator step (§12).
@@ -169,7 +171,7 @@ Events, alert rules and the uptime probe are defined in the [runbook](../runbook
 | Item | Owner | Why it is open |
 |---|---|---|
 | Create a Clerk development instance and put its keys in `.env.local`; add production keys to Vercel | You | F9: requires your Clerk account |
-| Apply the D9 Clerk dashboard checklist (runbook) and run the signed-in end-to-end tests | Agent, after keys | Needs dashboard access |
+| Apply the D9 Clerk dashboard checklist (runbook) and run `pnpm test:account` (written 2026-11-09) | Agent, after keys | Needs dashboard access |
 | Legal review of the Privacy Notice and Legal Notice; supply the full street address and VAT number | You or counsel | Contact details and KvK 89423496 added 2026-11-08; legal form corrected from "B.V." to the registered name. Other in-app copy still says "B.V."/Amsterdam (admin reports, AI persona, PDF exports) |
 | Enforce the full CSP after observing signed-in flows; add the production Clerk domain | Agent | Runbook §CSP |
 | Self-host Google Fonts (F11) | Agent | Small follow-up |
