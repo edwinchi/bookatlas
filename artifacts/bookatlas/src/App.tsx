@@ -24,6 +24,7 @@ import { MobileBottomNav } from './components/MobileBottomNav';
 import { useAccount, useAccountList } from './auth/AuthContext';
 import { UnsubscribePageModal } from './components/UnsubscribePageModal';
 import { AIAccessGateModal } from './components/AIAccessGateModal';
+import { PublishingLanding } from './components/landing/PublishingLanding';
 import { safeReaderReturnPath } from './auth/navigation';
 import { TRANSLATIONS } from './data/translations';
 import { INITIAL_BOOKS } from './data/booksData';
@@ -462,6 +463,8 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
     }
   };
 
+  const isFrontPage = activeTab === 'store' && !filters.searchQuery && filters.genre === 'All Genres';
+
   return (
     <div className="min-h-screen bg-[#f8f9fa] text-[#1c1d1f] flex flex-col antialiased">
       
@@ -496,6 +499,15 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
         registeredUser={registeredUser}
       />
 
+
+      {/* Publishing landing on the unfiltered front page; the bookstore follows below */}
+      {isFrontPage && (
+        <PublishingLanding
+          books={books}
+          onOpenBook={(b) => setSelectedBookForDetail(b)}
+          onBrowseStore={() => document.getElementById('bookstore')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        />
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-8 pb-24 lg:pb-8">
@@ -581,8 +593,16 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
         ) : (
           /* Store View (eBooks, Audiobooks, Bookatlas Plus, Deals) */
           <>
+            {isFrontPage && (
+              <div id="bookstore" className="scroll-mt-24 pt-6 text-center space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-indigo-600">Bookstore</p>
+                <h2 className="text-3xl sm:text-4xl font-serif font-bold text-slate-900">The BookAtlas bookstore</h2>
+                <p className="text-sm text-slate-600">eBooks and audiobooks you can read and listen to right in your browser.</p>
+              </div>
+            )}
+
             {/* Editorial Hero Carousel (shown on general store view) */}
-            {activeTab === 'store' && !filters.searchQuery && filters.genre === 'All Genres' && (
+            {isFrontPage && (
               <HeroCarousel
                 books={books}
                 onOpenBookDetail={(b) => setSelectedBookForDetail(b)}

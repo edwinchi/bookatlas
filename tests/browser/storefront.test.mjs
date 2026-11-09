@@ -96,6 +96,19 @@ test('sign-up requires the age and privacy confirmation before the form', async 
   assert.equal(await proceed.isVisible(), false);
 });
 
+test('the publishing landing leads the front page and its estimator responds', async () => {
+  const page = await open('/');
+  assert.ok(await page.getByRole('heading', { level: 1, name: /ready for every shelf/i }).isVisible());
+  assert.equal(await page.getByRole('link', { name: /prepare my book/i }).getAttribute('href'), 'mailto:getintouch@apps-pilot.nl?subject=Prepare%20my%20book%20(early%20access)');
+  const copies = page.getByLabel('Copies sold a month');
+  await copies.scrollIntoViewIfNeeded();
+  await copies.fill('5');
+  assert.match(await page.locator('#earnings').innerText(), /Best for you/i);
+  assert.match(await page.getByText(/Author Pro pays more from \d+ copies/).innerText(), /from 13 copies/);
+  await page.getByRole('button', { name: 'Browse the bookstore' }).click();
+  await page.waitForFunction(() => Math.abs(document.getElementById('bookstore').getBoundingClientRect().top) < 200, null, { timeout: 5_000 });
+});
+
 test('the offline service worker registers', async () => {
   const page = await open('/');
   await page.reload({ waitUntil: 'networkidle' });

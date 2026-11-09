@@ -33,7 +33,7 @@ Each section is marked ✅ when complete. ⏳ means in progress, ⬜ not started
 | 1 | Discovery: L Branding | ✅ Complete: author-first and premium; owner logo (navy and gold, `artifacts/bookatlas/brand/bookatlas-logo.png`), Plus Jakarta Sans, Literata |
 | 1 | Discovery: M Compliance | ✅ Complete: GDPR, VAT/GST for worldwide digital sales (P9), DSA notice and takedown, WCAG 2.2 AA and EPUB Accessibility (EAA), affiliate disclosure, cookie consent only if tracking is added. **Blockers:** VAT number; counsel for author terms |
 | 2 | Product requirements document | ⬜ Not started (needs phase 1) |
-| 3 | MVP landing page copy | ⬜ Not started |
+| 3 | MVP landing page copy | ⏳ First version built (owner request, 2026-11-09): publishing landing leads the front page, bookstore follows. Structure inspired by owner-supplied screenshots of a print-on-demand site; all copy, illustrations and styling are original and use the BookAtlas palette. Calls to action open an email to getintouch@apps-pilot.nl (early access) until accounts and payments exist. No third-party logos, testimonials or certifications are shown. **Owner review of copy pending** |
 | 4 | Technical architecture | ⬜ Not started. Build path approved: **extend BookAtlas** |
 | 5 | Database design (ERD, schema, migrations, indexes) | ⬜ Not started (Level 2 approval) |
 | 6 | API design (OpenAPI) | ⬜ Not started |

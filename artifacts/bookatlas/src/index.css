@@ -8,6 +8,11 @@
   --font-sans: 'Plus Jakarta Sans', sans-serif;
   --font-serif: 'Literata', 'Source Serif 4', Georgia, serif;
   --color-focus: #4f46e5;
+  --animate-marquee: marquee 80s linear infinite;
+
+  @keyframes marquee {
+    to { transform: translateX(-50%); }
+  }
 }
 
 @layer base {
