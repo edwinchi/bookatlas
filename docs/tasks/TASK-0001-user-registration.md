@@ -8,8 +8,8 @@
 | Approval level | **2: human approval required** (authentication and schema changes). Approved 2026-11-07 (A1–A6, "yes on all") |
 | Status | **Implemented and verified** on Docker and on a Vercel preview. Two items blocked on credentials (§12) |
 | Ready for deployment | **Deployed to production 2026-11-08** (`bookatlas-i8haeazop`, aliases bookatlas-station9x / bookatlas-gamma) after Level 3 sign-off. Production runs guest-only until Clerk keys are added. Without valid Clerk keys, production runs guest-only: the store works and sign-in shows as unavailable |
-| Blockers | Valid Clerk keys and dashboard access (F9 → D9, signed-in end-to-end tests) |
-| Last updated | 2026-11-08 |
+| Blockers | Clerk keys on Vercel (Level 3) and the D9 dashboard checklist. Local signed-in journey passes (2026-11-09) |
+| Last updated | 2026-11-09 |
 
 Governance: [agent-governance.md](../governance/agent-governance.md). Lifecycle: understand → analyze → design → threat model → security review → **approval (granted)** → implement → test → validate → document → *deploy (awaiting sign-off)*.
 
@@ -112,9 +112,11 @@ Also delivered, outside the original design but required by findings during the 
 | F6 | Low | `totalRegistered` disclosed | **Fixed** (D7) |
 | F7 | Low | Origin check skipped without the header | **Fixed** (D6) |
 | F8 | Low | Reader emails in logs | **Fixed** (D7). Entries logged before this change remain until rotated |
-| F9 | Info | Clerk keys invalid | **Open: needs you.** Vercel has no Clerk keys in any environment either |
+| F9 | Info | Clerk keys invalid | **Fixed locally 2026-11-09:** development instance `hardy-oyster-3653` keys in `.env.local`, validated against Clerk. Vercel still has no Clerk keys (Level 3: credentialed integration) |
 | F10 | Info | Vercel production builds failing | **Fixed:** the preview builds and serves |
 | F11 | Info (new) | Pages load Google Fonts, which sends visitor IPs to Google | **Disclosed** in the notice; self-hosting the fonts recommended (§12) |
+| F13 | Medium (new) | Docker nginx forwarded `Host` without the port, so the API's origin check rejected every signed-in change locally (`auth.csrf_blocked` on `POST /api/users/register`) | **Fixed 2026-11-09:** `proxy_set_header Host $http_host`. Vercel was not affected |
+| F14 | Info (new) | Clerk bot protection loads from `*.protect.clerk.com` and probes it on non-standard ports; the CSP allowlist lacked it | **Fixed 2026-11-09** in both CSP files (`https://*.protect.clerk.com:*`) |
 | F12 | Info (new) | API capacity under Docker Desktop on Windows is about 100–150 requests/s per process (Express + Clerk middleware, ~3–7 ms CPU per request) | Documented. Production on Vercel scales across instances; cold starts take about 1 s |
 
 ## 7. Test results (2026-11-08)
@@ -133,7 +135,9 @@ Also delivered, outside the original design but required by findings during the 
 | Build | `pnpm run build` | Pass |
 | Signed-in end-to-end (sign up, verify, log in, reset, delete) | — | **Blocked** on valid Clerk keys (F9) |
 
-**2026-11-09: everything in Docker.** `docker compose --env-file .env.local --profile test run --rm --build tests` runs every stage inside a Playwright container that shares the web container's network (`scripts/test-all.mjs`): typecheck, unit 93/93, e2e 182/182, catalog 3/3, security 5/5, browser 12/12 (new: the app shell and catalog load from the service worker cache with the network off), click-through sweep 48/48, performance p95 ≤ 45 ms at 50 requests/s. Fixed for a clean install: the e2e helper resolved `express` from a stray root copy; it now loads it from the API package. The signed-in journey is written (`pnpm test:account`: sign up with the age gate and Clerk test code, bookshelf, data export, sign out, sign in, delete, CSP clean) and fails at its first step until F9 is resolved: Clerk answers `host_invalid` for the publishable key and `clerk_key_invalid` for the secret key in `.env.local`.
+**2026-11-09: everything in Docker.** `docker compose --env-file .env.local --profile test run --rm --build tests` runs every stage inside a Playwright container that shares the web container's network (`scripts/test-all.mjs`): typecheck, unit 93/93, e2e 182/182, catalog 3/3, security 5/5, browser 12/12 (new: the app shell and catalog load from the service worker cache with the network off), click-through sweep 48/48, performance p95 ≤ 45 ms at 50 requests/s. Fixed for a clean install: the e2e helper resolved `express` from a stray root copy; it now loads it from the API package. The signed-in journey is written (`pnpm test:account`: sign up with the age gate and Clerk test code, bookshelf, data export, sign out, sign in, delete, CSP clean) and failed at its first step until F9 was resolved: Clerk answered `host_invalid` for the publishable key and `clerk_key_invalid` for the secret key in `.env.local`.
+
+**2026-11-09, with a real Clerk development instance:** the signed-in journey passes **7/7** (sign up with age gate and test code, bookshelf, data export, sign out and back in, delete, no CSP reports from the app's own page). It uses a Clerk testing token (`@clerk/testing`, dev dependency) to pass bot protection. API logs show `auth.consent_recorded`, `auth.register created:true`, `account.export` and `account.deleted` with masked emails. It found F13 and F14.
 
 ## 8. Monitoring
 
@@ -171,7 +175,8 @@ Events, alert rules and the uptime probe are defined in the [runbook](../runbook
 | Item | Owner | Why it is open |
 |---|---|---|
 | Create a Clerk development instance and put its keys in `.env.local`; add production keys to Vercel | You | F9: requires your Clerk account |
-| Apply the D9 Clerk dashboard checklist (runbook) and run `pnpm test:account` (written 2026-11-09) | Agent, after keys | Needs dashboard access |
+| Apply the D9 Clerk dashboard checklist (runbook) | You, or agent with dashboard access | `pnpm test:account` passes locally (2026-11-09) |
+| Roll the development secret key (it was pasted into a chat) and update `.env.local` | You | Hygiene; development instance only |
 | Legal review of the Privacy Notice and Legal Notice; supply the full street address and VAT number | You or counsel | Contact details and KvK 89423496 added 2026-11-08; legal form corrected from "B.V." to the registered name. Other in-app copy still says "B.V."/Amsterdam (admin reports, AI persona, PDF exports) |
 | Enforce the full CSP after observing signed-in flows; add the production Clerk domain | Agent | Runbook §CSP |
 | Self-host Google Fonts (F11) | Agent | Small follow-up |

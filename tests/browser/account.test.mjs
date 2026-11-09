@@ -1,13 +1,15 @@
 // Signed-in reader journey against a running stack with a Clerk development instance:
 // sign up, bookshelf, data export, sign out, sign in, delete account. Run with `pnpm test:account`;
 // BASE_URL overrides the default http://localhost:5173.
-// Uses Clerk test mode: a "+clerk_test" email is never mailed and accepts the code 424242.
+// Uses Clerk test mode: a "+clerk_test" email is never mailed and accepts the code 424242, and a
+// testing token (from CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY) lets the browser past bot protection.
 // The account is created fresh and erased through the app's own "Delete my account" control.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { chromium } from '@playwright/test';
+import { clerkSetup, setupClerkTestingToken } from '@clerk/testing/playwright';
 
 const base = (process.env.BASE_URL || 'http://localhost:5173').replace(/\/+$/, '');
 const email = `bookatlas-e2e-${Date.now()}+clerk_test@example.com`;
@@ -17,11 +19,13 @@ let browser;
 let page;
 const cspViolations = [];
 const pageErrors = [];
+let setupError = '';
 
 const status = () => page.getByRole('status').first();
-const waitForStatus = (pattern) => page.waitForFunction(
+// Generous timeouts: the testing-token route re-sends every Clerk request from Node, which adds seconds.
+const waitForStatus = (pattern, timeout = 30_000) => page.waitForFunction(
   (source) => new RegExp(source).test(document.querySelector('[role="status"]')?.textContent ?? ''),
-  pattern.source, { timeout: 20_000 },
+  pattern.source, { timeout },
 );
 
 // Each step depends on the one before it, so the journey stops at the first failure.
@@ -42,18 +46,27 @@ async function enterCodeIfAsked() {
 }
 
 before(async () => {
+  try { await clerkSetup({ dotenv: false }); } catch (err) { setupError = err.message; }
   browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
+  if (!setupError) await setupClerkTestingToken({ context });
   page = await context.newPage();
-  page.on('console', (msg) => { if (/Content.Security.Policy/i.test(msg.text())) cspViolations.push(msg.text()); });
+  // Only BookAtlas's own policy counts: the bot-protection challenge frame reports against Cloudflare's policy.
+  await page.exposeFunction('reportCspViolation', (v) => cspViolations.push(v));
+  await page.addInitScript(() => {
+    if (window !== window.top) return;
+    document.addEventListener('securitypolicyviolation', (e) => window.reportCspViolation(`${e.effectiveDirective} ${e.blockedURI}`));
+  });
   page.on('pageerror', (err) => pageErrors.push(err.message));
 });
 after(async () => { await browser?.close(); });
 
 step('sign-in is available (valid Clerk keys)', async () => {
+  assert.equal(setupError, '', 'Clerk testing token: set CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY');
   await page.goto(base + '/', { waitUntil: 'networkidle' });
-  await page.waitForFunction(() => !document.body.innerText.includes('Loading your Bookatlas account'), null, { timeout: 10_000 });
-  assert.doesNotMatch(await status().innerText(), /temporarily unavailable/, 'Clerk did not load: check CLERK_PUBLISHABLE_KEY');
+  // The store shows guest mode after 6 s and switches to the signed-out bar once Clerk arrives.
+  await waitForStatus(/next chapter starts here/, 45_000)
+    .catch(() => assert.fail('Clerk did not load: check CLERK_PUBLISHABLE_KEY'));
 });
 
 step('a new reader can sign up after the age and privacy confirmation', async () => {

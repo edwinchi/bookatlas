@@ -17,13 +17,14 @@
     "test:browser": "node --test --test-concurrency=1 tests/browser/storefront.test.mjs",
     "test:sweep": "node tests/browser/site-sweep.mjs",
     "test:all": "node scripts/test-all.mjs",
-    "test:account": "node --test --test-concurrency=1 tests/browser/account.test.mjs"
+    "test:account": "node --env-file-if-exists=.env.local --test --test-concurrency=1 tests/browser/account.test.mjs"
   },
   "private": true,
   "dependencies": {
     "@replit/connectors-sdk": "^0.4.3"
   },
   "devDependencies": {
+    "@clerk/testing": "^2.2.55",
     "@playwright/test": "^1.64.1",
     "prettier": "^3.9.6",
     "typescript": "~5.9.3"

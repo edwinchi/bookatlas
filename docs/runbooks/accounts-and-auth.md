@@ -13,7 +13,7 @@ For operators of BookAtlas. Background: [TASK-0001](../tasks/TASK-0001-user-regi
 
 Local stack: `docker compose --env-file .env.local up -d --build`, then http://localhost:5173. The compose file blanks the Supabase settings so local tests never write to the real project.
 
-Tests in Docker, before every deploy: `docker compose --env-file .env.local --profile test run --rm --build tests`. The test container shares the web container's network, so it reaches the app at http://localhost:5173 (same origin as your browser) and runs every stage in `scripts/test-all.mjs`; `-e TEST_STAGES=browser,account` runs a subset. `pnpm test:account` signs up a throwaway `+clerk_test` reader (Clerk test code 424242), exercises bookshelf, export, sign-out and sign-in, then deletes the account through the app. It needs valid Clerk development keys.
+Tests in Docker, before every deploy: `docker compose --env-file .env.local --profile test run --rm --build tests`. The test container shares the web container's network, so it reaches the app at http://localhost:5173 (same origin as your browser) and runs every stage in `scripts/test-all.mjs`; `-e TEST_STAGES=browser,account` runs a subset. `pnpm test:account` signs up a throwaway `+clerk_test` reader (Clerk test code 424242), exercises bookshelf, export, sign-out and sign-in, then deletes the account through the app. It needs valid Clerk development keys: it fetches a Clerk testing token (`@clerk/testing`) with them so the automated browser passes bot protection, and compose hands both keys to the test container.
 
 ## Monitoring
 
@@ -45,7 +45,7 @@ Defined in [app.ts](../../artifacts/api-server/src/app.ts), per client IP per mi
 ## Content Security Policy rollout
 
 1. Today: `frame-ancestors`, `object-src`, `base-uri` and `form-action` are enforced; the full allowlist is `Content-Security-Policy-Report-Only` in [security-headers.conf](../../docker/security-headers.conf) and [vercel.json](../../vercel.json).
-2. With valid Clerk keys, add the instance's Frontend API host (production: `clerk.<your-domain>`) to `script-src` and `connect-src` in both files.
+2. With valid Clerk keys, add the instance's Frontend API host (production: `clerk.<your-domain>`) to `script-src` and `connect-src` in both files. Bot protection also needs `https://*.protect.clerk.com:*` (it probes non-standard ports); added 2026-11-09.
 3. Run `pnpm test:browser` and a manual sign-up, sign-in and sign-out. The last browser test fails on any CSP report.
 4. With zero reports, rename the header to `Content-Security-Policy` in both files. Roll back by renaming it back.
 

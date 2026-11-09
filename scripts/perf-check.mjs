@@ -28,8 +28,11 @@ async function measure(path) {
   return { path, requests: latencies.length, failures, p50: pct(0.5), p95: pct(0.95), p99: pct(0.99) };
 }
 
+const paths = ['/api/healthz', '/api/books', '/api/categories', '/'];
+// Unmeasured warm-up, so the first endpoint does not absorb JIT and connection start-up.
+for (const path of paths) await Promise.all(Array.from({ length: 25 }, () => fetch(base + path).then(res => res.arrayBuffer()).catch(() => {})));
 const results = [];
-for (const path of ['/api/healthz', '/api/books', '/api/categories', '/']) results.push(await measure(path));
+for (const path of paths) results.push(await measure(path));
 console.table(results);
 const over = results.filter(r => Number(r.p95) > budgetMs || r.failures > 0);
 if (over.length) {

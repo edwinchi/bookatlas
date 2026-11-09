@@ -66,7 +66,7 @@ function SessionBar({ authUnavailable = false }: { authUnavailable?: boolean }) 
     <div className="mx-auto flex min-h-9 max-w-7xl flex-wrap items-center justify-between gap-x-5 gap-y-1 py-1 text-xs text-slate-600 sm:py-0">
       {authUnavailable
         ? <span role="status" className="inline-flex items-center gap-2 text-slate-700"><span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />Sign-in is temporarily unavailable. You can keep browsing the bookstore as a guest.</span>
-        : <span>{account ? `Signed in as ${account.email}${account.role === 'admin' ? ' · Administrator' : ''}` : 'Your next chapter starts here.'}</span>}
+        : <span role="status">{account ? `Signed in as ${account.email}${account.role === 'admin' ? ' · Administrator' : ''}` : 'Your next chapter starts here.'}</span>}
       <div className="ml-auto flex flex-wrap items-center gap-x-5 gap-y-1">
         {authUnavailable ? <a href="mailto:getintouch@apps-pilot.nl?subject=Help%20with%20BookAtlas" className={utilityLink}>Help</a>
           : account ? <><Link href="/user-portal" className={utilityLink}>My Bookshelf</Link>{account.role === 'admin' && <Link href="/admin" className={utilityLink}>Admin workspace</Link>}<ReadingUpdatePreferences /><AccountPrivacy /><button onClick={signOut} className={`${utilityLink} cursor-pointer`}>Sign out</button></>
