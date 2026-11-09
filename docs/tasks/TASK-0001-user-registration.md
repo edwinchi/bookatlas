@@ -176,7 +176,7 @@ Events, alert rules and the uptime probe are defined in the [runbook](../runbook
 |---|---|---|
 | Create a Clerk production instance for `booksatlas.app` (Vercel DNS) and swap its keys into Vercel | You | Domain bought and attached 2026-11-09; development keys are live on production for now |
 | Apply the D9 Clerk dashboard checklist (runbook) | You, or agent with dashboard access | `pnpm test:account` passes locally (2026-11-09) |
-| Roll the development secret key (it was pasted into a chat), then update `.env.local` and `CLERK_SECRET_KEY` in Vercel Production, and redeploy | You | Hygiene; the key is now also live on production |
+| ~~Roll the development secret key~~ | Owner | **Decision 2026-11-09: keep the current keys.** Accepted risk: the development secret key was pasted into a chat. Rolling stays available in the Clerk dashboard (update `.env.local` and Vercel, then redeploy) |
 | Legal review of the Privacy Notice and Legal Notice; supply the full street address and VAT number | You or counsel | Contact details and KvK 89423496 added 2026-11-08; legal form corrected from "B.V." to the registered name. Other in-app copy still says "B.V."/Amsterdam (admin reports, AI persona, PDF exports) |
 | Enforce the full CSP after observing signed-in flows; add the production Clerk domain | Agent | Runbook §CSP |
 | Self-host Google Fonts (F11) | Agent | Small follow-up |
