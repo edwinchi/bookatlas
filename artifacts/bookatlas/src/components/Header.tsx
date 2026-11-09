@@ -38,6 +38,7 @@ import {
   Mail
 } from 'lucide-react';
 import { HeaderNavMenu } from './HeaderNavMenu';
+import { AtlasStar } from './landing/AtlasStar';
 import { OPERATOR } from './LegalDocument';
 
 import { GENRES, AFRICAN_LITERATURE_GENRES, CONSCIOUSNESS_COMMUNITY_GENRES, GENERAL_GENRES } from '../data/booksData';
@@ -266,7 +267,9 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Main navigation row: a navy band on large screens; white on phones, where it also carries the logo */}
-      <div className="lg:bg-linear-to-r lg:from-slate-950 lg:via-indigo-950 lg:to-slate-950 lg:shadow-[inset_0_-1px_0_rgba(255,255,255,0.06)]">
+      <div className="relative lg:bg-[radial-gradient(ellipse_60%_120%_at_85%_0%,rgba(99,102,241,0.12),transparent),linear-gradient(to_bottom,#232272,#1c1b5a)] lg:shadow-[inset_0_-1px_0_rgba(255,255,255,0.06)]">
+        <AtlasStar className="pointer-events-none absolute left-[58%] top-1.5 hidden h-1.5 w-1.5 text-amber-100/60 lg:block" />
+        <AtlasStar className="pointer-events-none absolute bottom-2 left-[77%] hidden h-2 w-2 text-amber-100/70 lg:block" />
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3.5">
         <div className="flex items-center justify-between gap-2 sm:gap-4">
           
