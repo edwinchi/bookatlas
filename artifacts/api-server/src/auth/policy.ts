@@ -11,6 +11,17 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (normalized === '/api/reader-unsubscribe' && ['GET', 'POST'].includes(method)) return 'self-service';
   if (method === 'GET' && /^\/api\/reader\/books\/[^/]+\/(?:publication|assets\/[^/]+)$/.test(normalized)) return 'reader';
   if (method === 'GET' && publicGets.has(normalized)) return 'public';
+  // eBook submissions (TASK-0003): authors are signed-in readers; publish and reject stay admin.
+  if (method === 'GET' && /^\/api\/catalog\/covers\/[^/]+$/.test(normalized)) return 'public';
+  if (method === 'GET' && /^\/api\/reader\/catalog\/[^/]+\/(?:content|images\/[^/]+)$/.test(normalized)) return 'reader';
+  if (normalized === '/api/ebook-submissions' && ['GET', 'POST'].includes(method)) return 'reader';
+  if (/^\/api\/ebook-submissions\/[^/]+$/.test(normalized) && method === 'GET') return 'reader';
+  if (/^\/api\/ebook-submissions\/[^/]+\/upload\/\d+$/.test(normalized) && method === 'PUT') return 'reader';
+  if (/^\/api\/ebook-submissions\/[^/]+\/(?:prepare)$/.test(normalized) && method === 'POST') return 'reader';
+  if (/^\/api\/ebook-submissions\/[^/]+\/intake$/.test(normalized) && method === 'PUT') return 'reader';
+  if (/^\/api\/ebook-submissions\/[^/]+\/files\/(?:epub|cover)(?:\/parts\/\d+)?$/.test(normalized) && method === 'GET') return 'reader';
+  // The EPUBCheck worker authenticates with its bearer token inside the route.
+  if (/^\/api\/internal\/ebook-checks\/(?:claim|[^/]+\/(?:parts\/\d+|result))$/.test(normalized)) return 'self-service';
   if ((method === 'GET' && normalized.endsWith('/unsubscribe-info')) ||
       (method === 'POST' && normalized.endsWith('/unsubscribe'))) {
     if (selfService.has(normalized)) return 'self-service';

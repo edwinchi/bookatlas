@@ -155,13 +155,17 @@ export const BookCard: React.FC<BookCardProps> = ({
           </p>
 
           {/* Rating */}
-          <div className="flex items-center gap-1 text-xs mt-1.5">
-            <div className="flex items-center text-amber-500">
-              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-              <span className="font-bold ml-1 text-slate-900 text-[11px]">{book.rating}</span>
+          {book.reviewCount > 0 ? (
+            <div className="flex items-center gap-1 text-xs mt-1.5">
+              <div className="flex items-center text-amber-500">
+                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                <span className="font-bold ml-1 text-slate-900 text-[11px]">{book.rating}</span>
+              </div>
+              <span className="text-slate-400 text-[10px]">({book.reviewCount})</span>
             </div>
-            <span className="text-slate-400 text-[10px]">({book.reviewCount})</span>
-          </div>
+          ) : (
+            <p className="mt-1.5 text-[11px] font-semibold text-emerald-700">New · no ratings yet</p>
+          )}
         </div>
 
         {/* Price & Action */}

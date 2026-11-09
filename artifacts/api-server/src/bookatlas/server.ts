@@ -12,6 +12,7 @@ import { generateWithOpenRouter, isOpenRouterConfigured, type AiMessage } from '
 import { logger } from '../lib/logger';
 import { mountPublishingReadiness } from './publishing/routes.js';
 import { mountPublishingJobs } from './publishing/jobRoutes.js';
+import { mountEbookPrep } from './ebookPrep/routes.js';
 import { mountWorkforce } from './workforce/routes.js';
 import { mountReaderTts } from './publishing/readerTts.js';
 import { clerkClient } from '@clerk/express';
@@ -448,6 +449,20 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
     if (existing >= 0) liveCatalog[existing] = book;
     else liveCatalog.unshift(book);
     if (!customCategories.includes(book.primaryGenre)) customCategories.push(book.primaryGenre);
+  });
+  mountEbookPrep(app, (book, categories) => {
+    const existing = liveCatalog.findIndex((item: { id: string }) => item.id === book.id);
+    if (existing >= 0) liveCatalog[existing] = book;
+    else liveCatalog.unshift(book);
+    void db.upsertBookInDb(book);
+    for (const name of categories) {
+      if (!GENRES.includes(name) && !customCategories.includes(name)) {
+        customCategories.push(name);
+        void db.addCategoryToDb(name);
+        addLog('inventory_sync', `New Category Added: "${name}"`, `Created for "${book.title}".`, 'eBook Preparation');
+      }
+    }
+    addLog('inventory_sync', `Published New Title: "${book.title}"`, `Prepared eBook added to ${categories.join(', ')}.`, 'eBook Preparation');
   });
   mountWorkforce(app);
 

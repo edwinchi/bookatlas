@@ -8,6 +8,8 @@ export const BOOKATLAS_TABLES = Object.freeze({
   publishing_jobs: 'bookatlas_publishing_jobs',
   publishing_messages: 'bookatlas_publishing_messages',
   publishing_test_books: 'bookatlas_publishing_test_books',
+  ebook_submissions: 'bookatlas_ebook_submissions',
+  prep_feedback: 'bookatlas_prep_feedback',
 } as const);
 
 export type BookatlasTable = keyof typeof BOOKATLAS_TABLES;

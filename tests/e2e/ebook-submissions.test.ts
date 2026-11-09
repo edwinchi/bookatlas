@@ -1,0 +1,105 @@
+import test, { after } from 'node:test';
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+
+process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'bookatlas-synthetic-test-signing-secret-32chars';
+process.env.UNSUBSCRIBE_TOKEN_SECRET = process.env.UNSUBSCRIBE_TOKEN_SECRET || process.env.SESSION_SECRET;
+const WORKER = 'synthetic-ebook-worker-token-for-tests-0123456789';
+process.env.EBOOK_WORKER_TOKEN = WORKER;
+
+import { getSharedTestServer, closeSharedTestServer } from './helpers.ts';
+import { epub2 } from '../../artifacts/api-server/src/bookatlas/ebookPrep/testFixtures.ts';
+
+after(async () => {
+  delete process.env.EBOOK_WORKER_TOKEN;
+  await closeSharedTestServer();
+});
+
+const intake = {
+  title: 'The Test Codex', author: 'Ada Writer', language: 'English', description: 'A guide to calm and alignment. '.repeat(8),
+  categories: ['Spiritual Healing & Alignment', 'Mind Mastery & Quantum Awakening'], keywords: ['healing', 'alignment'],
+  copyrightHolder: 'Test Press', copyrightYear: 2026, ebookIsbn: '978-1-326-15795-1', price: 0,
+  rightsConfirmed: true, aiContent: 'assisted', wantsPrint: false,
+};
+const json = (body: unknown, role = 'reader') => ({
+  method: 'POST', headers: { 'content-type': 'application/json', 'x-test-role': role }, body: JSON.stringify(body),
+});
+const as = (role: string) => ({ headers: { 'x-test-role': role } });
+
+test('an author submission is prepared, checked, published and readable', async () => {
+  const { fetch } = await getSharedTestServer();
+  const file = epub2(5);
+
+  const missing = await fetch('/api/ebook-submissions', json({ intake: { ...intake, description: 'short' }, fileName: 'book.epub', size: file.byteLength }));
+  assert.equal(missing.status, 422);
+  assert.ok((await missing.json()).fields.description);
+
+  const created = await fetch('/api/ebook-submissions', json({ intake, fileName: 'book.epub', size: file.byteLength }));
+  assert.equal(created.status, 201);
+  const submission = await created.json();
+  assert.equal(submission.status, 'uploading');
+  for (let part = 0; part < submission.upload.parts; part += 1) {
+    const bytes = file.subarray(part * submission.partBytes, (part + 1) * submission.partBytes);
+    const put = await fetch(`/api/ebook-submissions/${submission.id}/upload/${part}`, {
+      method: 'PUT', headers: { 'content-type': 'application/octet-stream', 'x-test-role': 'reader' }, body: bytes,
+    });
+    assert.equal(put.status, 204);
+  }
+
+  const prepared = await (await fetch(`/api/ebook-submissions/${submission.id}/prepare`, json({}))).json();
+  assert.equal(prepared.status, 'checking', JSON.stringify(prepared.report?.findings));
+  assert.equal(prepared.report.summary.errors, 0);
+  assert.ok(prepared.report.rounds[0].changes.some((c: { rule: string }) => c.rule === 'cover-front-only'));
+
+  // The EPUBCheck worker: token required, then claim, download, report.
+  assert.equal((await fetch('/api/internal/ebook-checks/claim', { method: 'POST' })).status, 401);
+  const claim = await fetch('/api/internal/ebook-checks/claim', { method: 'POST', headers: { authorization: `Bearer ${WORKER}` } });
+  assert.equal(claim.status, 200);
+  const job = await claim.json();
+  assert.equal(job.id, submission.id);
+  const parts: Uint8Array[] = [];
+  for (let part = 0; part < job.parts; part += 1) {
+    parts.push(new Uint8Array(await (await fetch(`/api/internal/ebook-checks/${job.id}/parts/${part}`, { headers: { authorization: `Bearer ${WORKER}` } })).arrayBuffer()));
+  }
+  const checked = Buffer.concat(parts);
+  assert.equal(createHash('sha256').update(checked).digest('hex'), job.sha256);
+  const result = await fetch(`/api/internal/ebook-checks/${job.id}/result`, {
+    method: 'POST', headers: { authorization: `Bearer ${WORKER}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ sha256: job.sha256, messages: [] }),
+  });
+  assert.deepEqual(await result.json(), { status: 'ready' });
+
+  const manifest = await (await fetch(`/api/ebook-submissions/${submission.id}/files/epub`, as('reader'))).json();
+  assert.equal(manifest.sha256, job.sha256);
+
+  const published = await (await fetch(`/api/ebook-submissions/${submission.id}/publish`, json({}, 'admin'))).json();
+  assert.equal(published.status, 'published');
+  const bookId = published.bookId;
+  assert.match(bookId, /^atlas-ebook-[0-9a-f]{8}$/);
+
+  const catalog = await (await fetch('/api/books?genre=Spiritual%20Healing%20%26%20Alignment')).json();
+  const book = catalog.books.find((b: { id: string }) => b.id === bookId);
+  assert.ok(book, 'listed in its new category');
+  assert.equal(book.hasReaderContent, true);
+  assert.equal(book.sampleChapters.length, 1);
+  assert.ok(!book.sampleChapters[0].figures, 'the public sample carries no reader-only images');
+  const categories = await (await fetch('/api/categories')).json();
+  assert.ok(categories.allCategories.includes('Spiritual Healing & Alignment'));
+
+  const content = await (await fetch(`/api/reader/catalog/${bookId}/content`, as('reader'))).json();
+  const chapter = content.chapters.find((c: { title: string }) => c.title === 'Chapter 1: Welcome');
+  assert.ok(chapter.content.includes('3. Matthew 7:13'));
+  const cover = await fetch(`/api/catalog/covers/${bookId}.jpg`);
+  assert.equal(cover.headers.get('content-type'), 'image/jpeg');
+});
+
+test('store feedback is matched to rules and makes them blocking', async () => {
+  const { fetch } = await getSharedTestServer();
+  const lulu = await (await fetch('/api/ebook-prep/feedback', json({ store: 'Lulu', message: 'Copyright year mismatch ~ Copyright year entered in the metadata does not match copyright year in the interior file.' }, 'admin'))).json();
+  assert.deepEqual(lulu.matched_rules, ['copyright-year']);
+  const unknown = await (await fetch('/api/ebook-prep/feedback', json({ store: 'Kobo', message: 'Interior bleed is inconsistent across spreads.' }, 'admin'))).json();
+  assert.deepEqual(unknown.matched_rules, []);
+  const overview = await (await fetch('/api/ebook-prep/feedback', as('admin'))).json();
+  assert.equal(overview.rules.find((r: { id: string }) => r.id === 'copyright-year').blocking, true);
+  assert.ok(overview.needsNewRule.some((f: { store: string }) => f.store === 'Kobo'));
+});

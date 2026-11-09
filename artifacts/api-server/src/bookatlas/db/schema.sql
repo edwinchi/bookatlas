@@ -119,6 +119,33 @@ create table if not exists public.bookatlas_publishing_test_books (
   updated_at timestamptz not null default now()
 );
 
+-- eBook submissions (TASK-0003). Files live in the private Storage bucket `bookatlas-ebooks`;
+-- rows hold intake answers, the preparation report and object keys, never file bytes.
+create table if not exists public.bookatlas_ebook_submissions (
+  id uuid primary key,
+  owner_id text not null,
+  status text not null default 'uploading'
+    check (status in ('uploading','preparing','checking','ready','needs_author','published','rejected')),
+  data jsonb not null default '{}',
+  book_id text,
+  lease_until timestamptz,
+  purge_after timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists bookatlas_ebook_submissions_owner_idx on public.bookatlas_ebook_submissions (owner_id, created_at desc);
+create index if not exists bookatlas_ebook_submissions_queue_idx on public.bookatlas_ebook_submissions (status, lease_until);
+
+-- Store rejection messages, matched to preparation rules so future books are checked for them.
+create table if not exists public.bookatlas_prep_feedback (
+  id uuid primary key,
+  submission_id uuid references public.bookatlas_ebook_submissions(id),
+  store text not null,
+  message text not null,
+  matched_rules text[] not null default '{}',
+  created_at timestamptz not null default now()
+);
+
 -- Only the backend service role may access application tables directly.
 -- Public catalog requests still go through Bookatlas's explicit public API.
 alter table public.bookatlas_books enable row level security;
@@ -129,12 +156,16 @@ alter table public.bookatlas_campaigns enable row level security;
 alter table public.bookatlas_publishing_jobs enable row level security;
 alter table public.bookatlas_publishing_messages enable row level security;
 alter table public.bookatlas_publishing_test_books enable row level security;
+alter table public.bookatlas_ebook_submissions enable row level security;
+alter table public.bookatlas_prep_feedback enable row level security;
 revoke all on table public.bookatlas_books, public.bookatlas_categories,
   public.bookatlas_registered_users, public.bookatlas_subscribers, public.bookatlas_campaigns,
   public.bookatlas_publishing_jobs, public.bookatlas_publishing_messages,
-  public.bookatlas_publishing_test_books from anon, authenticated;
+  public.bookatlas_publishing_test_books, public.bookatlas_ebook_submissions,
+  public.bookatlas_prep_feedback from anon, authenticated;
 grant select, insert, update, delete on table public.bookatlas_books, public.bookatlas_categories,
   public.bookatlas_registered_users, public.bookatlas_subscribers, public.bookatlas_campaigns,
   public.bookatlas_publishing_jobs, public.bookatlas_publishing_messages,
-  public.bookatlas_publishing_test_books to service_role;
+  public.bookatlas_publishing_test_books, public.bookatlas_ebook_submissions,
+  public.bookatlas_prep_feedback to service_role;
 commit;

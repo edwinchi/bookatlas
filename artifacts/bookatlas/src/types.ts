@@ -4,6 +4,10 @@ export interface Chapter {
   title: string;
   subtitle?: string;
   content: string[];
+  /** Indexes into `content` that are section headings rather than paragraphs. */
+  headings?: number[];
+  /** Images shown before `content[at]`; `src` is an image name served by the reader API. */
+  figures?: { at: number; src: string; alt: string }[];
 }
 
 export interface Highlight {
@@ -31,6 +35,8 @@ export interface BookReview {
 export interface Book {
   id: string;
   publicationId?: string;
+  /** The full prepared eBook is readable by signed-in readers (TASK-0003). */
+  hasReaderContent?: boolean;
   title: string;
   subtitle?: string;
   author: string;

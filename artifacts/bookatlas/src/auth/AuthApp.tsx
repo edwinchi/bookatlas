@@ -109,7 +109,7 @@ function Store({ portal = false, resumeCheckout = false }: { portal?: boolean; r
   const libraryTab = portal && new URLSearchParams(window.location.search).get('view') === 'wishlist' ? 'wishlist' as const : 'reading' as const;
   const pendingReaderService = portal && new URLSearchParams(window.location.search).get('view') === 'ai'
     ? new URLSearchParams(window.location.search).get('service') || 'studio' : undefined;
-  return <><SessionBar authUnavailable={authUnavailable} /><App key={account?.id || 'guest'} initialTab={portal ? 'library' : 'store'} initialLibraryTab={libraryTab} resumeCheckout={resumeCheckout || currentPath === '/checkout'} pendingReaderService={pendingReaderService} /></>;
+  return <><SessionBar authUnavailable={authUnavailable} /><App key={account?.id || 'guest'} initialTab={portal ? (new URLSearchParams(window.location.search).get('view') === 'publish' ? 'publish' : 'library') : 'store'} initialLibraryTab={libraryTab} resumeCheckout={resumeCheckout || currentPath === '/checkout'} pendingReaderService={pendingReaderService} /></>;
 }
 
 /** Age and privacy-notice confirmation shown before the sign-up form; recorded on the first profile sync. */

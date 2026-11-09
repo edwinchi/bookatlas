@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Book } from '../types';
 import { ReaderPublicationAccess } from './publishing/ReaderPublicationAccess';
+import { useAccount } from '../auth/AuthContext';
 
 interface BookDetailModalProps {
   book: Book | null;
@@ -54,6 +55,12 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
 }) => {
   const publicationId = (book as Book & { publicationId?: string }).publicationId;
   const isGenerated = !!publicationId;
+  // Prepared eBooks (TASK-0003): free full text for signed-in readers, and no ratings until real readers leave them.
+  const prepared = !!book.hasReaderContent;
+  const unrated = isGenerated || (prepared && book.reviewCount === 0);
+  const readsFree = prepared && book.price === 0;
+  const { account, requireSignIn } = useAccount();
+  const openFullBook = () => { if (account) onReadSample(book); else requireSignIn('reading the full book'); };
 
   const [activeTab, setActiveTab] = useState<'overview' | 'ai_summary' | 'reviews' | 'author'>('overview');
   const [selectedFormat, setSelectedFormat] = useState<'ebook' | 'audiobook'>('ebook');
@@ -179,7 +186,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                   className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-950 text-white font-semibold text-sm rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
                 >
                   <BookOpen className="w-4 h-4 text-amber-400" />
-                  <span>Read Free Instant Sample</span>
+                  <span>{prepared && account ? 'Open the Book' : 'Read Free Instant Sample'}</span>
                 </button>
 
                 {book.audioDurationMinutes && (
@@ -209,11 +216,14 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                       <Sparkles className="w-3 h-3 text-amber-500" /> Bookatlas Plus Eligible
                     </span>
                   )}
+                  {prepared && book.isNewRelease && (
+                    <span className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wide">New release</span>
+                  )}
                   {isGenerated ? (
                     <span className="text-xs text-violet-800 bg-violet-50 border border-violet-200 font-bold px-2 py-0.5 rounded-md">AI-assisted short edition</span>
-                  ) : (
+                  ) : book.isbn ? (
                     <span className="text-xs text-slate-500 font-medium">ISBN: {book.isbn}</span>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* Title & Subtitle */}
@@ -243,8 +253,8 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                 </div>
 
                 {/* Star rating summary */}
-                {isGenerated ? (
-                  <p className="mt-3 text-xs text-slate-500">Generated from an uploaded source and reviewed by a Bookatlas editor. No reader ratings yet.</p>
+                {unrated ? (
+                  <p className="mt-3 text-xs text-slate-500">{isGenerated ? 'Generated from an uploaded source and reviewed by a Bookatlas editor. No reader ratings yet.' : 'New on Bookatlas. No reader ratings yet.'}</p>
                 ) : (
                 <div className="flex items-center gap-2 mt-3">
                   <div className="flex items-center text-amber-400">
@@ -274,7 +284,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className={`grid gap-2 ${prepared && !book.audioDurationMinutes ? 'grid-cols-1' : 'grid-cols-2'}`}>
                   <button
                     onClick={() => setSelectedFormat('ebook')}
                     className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
@@ -291,10 +301,10 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                         {book.price === 0 ? 'Free' : `${currencySymbol}${book.price.toFixed(2)}`}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-1">{isGenerated ? 'EPUB, reader sign-in required' : <>EPUB & PDF • {book.pageCount} pages</>}</p>
+                    <p className="text-[11px] text-slate-500 mt-1">{isGenerated ? 'EPUB, reader sign-in required' : prepared ? <>EPUB • about {book.pageCount} pages{readsFree ? ' • free with a Bookatlas account' : ''}</> : <>EPUB & PDF • {book.pageCount} pages</>}</p>
                   </button>
 
-                  <button
+                  {!(prepared && !book.audioDurationMinutes) && <button
                     onClick={() => setSelectedFormat('audiobook')}
                     className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                       selectedFormat === 'audiobook'
@@ -313,18 +323,18 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                     <p className="text-[11px] text-slate-500 mt-1">
                       {isGenerated ? 'Chapter narration, reader sign-in required' : book.audioDurationMinutes ? `${Math.round(book.audioDurationMinutes / 60)} hrs unabridged` : 'Full audio track'}
                     </p>
-                  </button>
+                  </button>}
                 </div>
 
                 {/* Buy / Cart Action Row */}
                 <div className="pt-2 flex items-center gap-3">
                   <button
-                    onClick={() => onAddToCart(book)}
+                    onClick={() => (readsFree ? openFullBook() : onAddToCart(book))}
                     className="flex-1 py-3 px-5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 shadow-md transition-colors cursor-pointer"
                   >
                     <ShoppingBag className="w-4 h-4 text-amber-300" />
                     <span>
-                      Buy Now for {selectedFormat === 'ebook' ? (book.price === 0 ? 'Free' : `${currencySymbol}${book.price.toFixed(2)}`) : `${currencySymbol}${(book.price + 4.99).toFixed(2)}`}
+                      {readsFree ? (account ? 'Read the Full Book Free' : 'Sign In to Read Free') : <>Buy Now for {selectedFormat === 'ebook' ? (book.price === 0 ? 'Free' : `${currencySymbol}${book.price.toFixed(2)}`) : `${currencySymbol}${(book.price + 4.99).toFixed(2)}`}</>}
                     </span>
                   </button>
 
@@ -607,7 +617,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
             {activeTab === 'reviews' && (
               <div className="space-y-4">
                 {/* 5-Star Breakdown */}
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                {!unrated && <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="text-center sm:text-left">
                     <div className="text-3xl font-black text-slate-900">{book.rating}</div>
                     <div className="flex justify-center sm:justify-start text-amber-400 my-1">
@@ -635,14 +645,14 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                       </div>
                     ))}
                   </div>
-                </div>
+                </div>}
 
                 {/* Individual Reviews */}
                 <div className="space-y-3">
-                  {isGenerated && book.reviews.length === 0 && (
+                  {unrated && book.reviews.length === 0 && (
                     <p className="text-xs text-slate-500 p-4 rounded-xl border border-dashed border-slate-200 text-center">No reader reviews yet.</p>
                   )}
-                  {(book.reviews.length > 0 || isGenerated ? book.reviews : [
+                  {(book.reviews.length > 0 || unrated ? book.reviews : [
                     {
                       id: 'def1',
                       authorName: 'Hannah Vance',

@@ -8,8 +8,8 @@ import {
 } from 'lucide-react';
 
 interface MobileBottomNavProps {
-  activeTab: 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager';
-  setActiveTab: (tab: 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager') => void;
+  activeTab: 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager' | 'publish';
+  setActiveTab: (tab: 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager' | 'publish') => void;
   cartCount: number;
   onOpenCart: () => void;
   onOpenAIHub: () => void;

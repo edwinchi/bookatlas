@@ -41,6 +41,22 @@ services:
       api:
         condition: service_healthy
 
+  # EPUBCheck worker (TASK-0003). Needs EBOOK_WORKER_TOKEN (32+ characters) in .env.local;
+  # without it the API skips EPUBCheck and the worker exits.
+  epubcheck:
+    build:
+      context: .
+      dockerfile: artifacts/epubcheck-worker/Dockerfile
+    container_name: bookatlas-epubcheck
+    restart: on-failure:3
+    environment:
+      API_URL: http://api:3001
+      EBOOK_WORKER_TOKEN: ${EBOOK_WORKER_TOKEN:-}
+      POLL_SECONDS: 5
+    depends_on:
+      api:
+        condition: service_healthy
+
   # Test runner (profile "test"): shares the web container's network, so the app is http://localhost:5173,
   # the same origin as on the host (a secure context for the service worker, and same-origin for the API).
   #   docker compose --env-file .env.local --profile test run --rm --build tests

@@ -35,7 +35,8 @@ import {
   Scale,
   Building2,
   BadgeCheck,
-  Mail
+  Mail,
+  Upload
 } from 'lucide-react';
 import { HeaderNavMenu } from './HeaderNavMenu';
 import { AtlasStar } from './landing/AtlasStar';
@@ -46,8 +47,8 @@ import { GENRES, AFRICAN_LITERATURE_GENRES, CONSCIOUSNESS_COMMUNITY_GENRES, GENE
 const contactHref = (subject: string) => `mailto:${OPERATOR.email}?subject=${encodeURIComponent(subject)}`;
 
 interface HeaderProps {
-  activeTab: 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager';
-  setActiveTab: (tab: 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager') => void;
+  activeTab: 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager' | 'publish';
+  setActiveTab: (tab: 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager' | 'publish') => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   selectedGenre: string;
@@ -195,6 +196,7 @@ export const Header: React.FC<HeaderProps> = ({
                 { label: 'eBook publishing', description: 'Sell worldwide and keep 80%', icon: Globe2, onSelect: () => onNavigateSection('pricing') },
                 { label: 'Print-ready files', description: 'For Amazon KDP and Lulu, from €99', icon: Ruler, onSelect: () => onNavigateSection('pricing') },
                 { label: 'Pricing and royalties', description: 'Compare Standard and Author Pro', icon: Calculator, onSelect: () => onNavigateSection('earnings') },
+                { label: 'Upload your eBook', description: 'EPUB checked and made store-ready', icon: Upload, onSelect: () => onNavigateSection('publish') },
                 { label: 'Start a book', description: 'Tell us about your book', icon: Mail, href: contactHref('Start my book') },
               ] },
               { items: [

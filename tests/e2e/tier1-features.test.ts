@@ -908,10 +908,10 @@ test('F16-2: bookatlasTable throws error on unmapped or malicious table requests
   assert.throws(() => bookatlasTable('__proto__'), /Unknown/);
 });
 
-test('F16-3: setup SQL schema contains exactly 8 tables with Row Level Security enabled', () => {
+test('F16-3: setup SQL schema contains exactly 10 tables with Row Level Security enabled', () => {
   const sql = readFileSync('artifacts/api-server/src/bookatlas/db/schema.sql', 'utf8').replace(/--[^\n]*/g, '');
   const rlsStatements = [...sql.matchAll(/alter table public\.(\w+) enable row level security/gi)];
-  assert.equal(rlsStatements.length, 8);
+  assert.equal(rlsStatements.length, 10);
   assert.ok(rlsStatements.every(match => match[1].startsWith('bookatlas_')));
 });
 

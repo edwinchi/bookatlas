@@ -33,7 +33,10 @@ import {
   Sparkle
 } from 'lucide-react';
 import { StudioNarrationPanel } from './voice/StudioNarrationPanel';
-import { Book, ReaderSettings, ReaderTheme, ReaderFont, Highlight } from '../types';
+import { Book, Chapter, ReaderSettings, ReaderTheme, ReaderFont, Highlight } from '../types';
+import { useAccount } from '../auth/AuthContext';
+import { useEbookApi } from './ebook/ebookApi';
+import { ReaderFigure } from './ebook/ReaderFigure';
 
 import {
   READER_DISPLAY_PREFERENCES_KEY,
@@ -66,6 +69,24 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 }) => {
   const [currentChapterIndex, setCurrentChapterIndex] = useState(initialChapterIndex);
   const [currentParagraphIndex, setCurrentParagraphIndex] = useState(initialParagraphIndex);
+
+  // Prepared eBooks (TASK-0003): signed-in readers get the full book, visitors the free sample.
+  const { account, requireSignIn } = useAccount();
+  const ebookApi = useEbookApi();
+  const [fullChapters, setFullChapters] = useState<Chapter[] | null>(null);
+  const [fullError, setFullError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!book.hasReaderContent || !account) return;
+    let cancelled = false;
+    ebookApi.readerContent(book.id)
+      .then((r) => {
+        if (cancelled) return;
+        setFullChapters(r.chapters);
+        setCurrentChapterIndex((i) => Math.min(i, Math.max(0, r.chapters.length - 1)));
+      })
+      .catch(() => { if (!cancelled) setFullError('The full book could not be loaded, so the free sample is shown. Please retry later.'); });
+    return () => { cancelled = true; };
+  }, [book.id, book.hasReaderContent, account?.id]);
   const [showToc, setShowToc] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAICopilot, setShowAICopilot] = useState(false);
@@ -132,8 +153,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   };
   const symbol = getCurrencySymbol(currency);
 
-  const chapters = book.sampleChapters && book.sampleChapters.length > 0 
-    ? book.sampleChapters 
+  const chapters: Chapter[] = fullChapters ?? (book.sampleChapters && book.sampleChapters.length > 0
+    ? book.sampleChapters
     : [
         {
           title: 'Chapter 1',
@@ -142,7 +163,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             'This is a preview edition provided by Bookatlas eBook Store (Atlantean Globals Services). To read the complete work, purchase the full eBook or start a Bookatlas Plus trial.'
           ]
         }
-      ];
+      ]);
 
   const currentChapter = chapters[currentChapterIndex] || chapters[0];
 
@@ -690,7 +711,19 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
               lineHeight: settings.lineHeight,
             }}
           >
+            {fullError && <p role="status" className="text-xs opacity-70">{fullError}</p>}
             {currentChapter.content.map((paragraph, pIdx) => {
+              const figures = (currentChapter.figures ?? []).filter((f) => f.at === pIdx).map((f) => (
+                <ReaderFigure key={`fig-${f.src}`} bookId={book.id} src={f.src} alt={f.alt} />
+              ));
+              if (currentChapter.headings?.includes(pIdx)) {
+                return (
+                  <React.Fragment key={pIdx}>
+                    {figures}
+                    <h3 className="pt-4 font-serif text-[1.15em] font-bold leading-snug">{paragraph}</h3>
+                  </React.Fragment>
+                );
+              }
               const highlight = isParagraphHighlighted(pIdx);
               let highlightBg = '';
               if (highlight) {
@@ -701,8 +734,9 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
               }
 
               return (
+                <React.Fragment key={pIdx}>
+                {figures}
                 <p
-                  key={pIdx}
                   onClick={() => handleParagraphClick(pIdx, paragraph)}
                   className={`relative transition-all cursor-text ${
                     activeHighlightMode ? 'hover:bg-amber-100/30 cursor-pointer p-1 rounded-sm' : ''
@@ -715,11 +749,26 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                   )}
                   {pIdx === 0 ? paragraph.slice(1) : paragraph}
                 </p>
+                </React.Fragment>
               );
             })}
+            {(currentChapter.figures ?? []).filter((f) => f.at >= currentChapter.content.length).map((f) => (
+              <ReaderFigure key={`fig-${f.src}`} bookId={book.id} src={f.src} alt={f.alt} />
+            ))}
           </div>
 
+          {book.hasReaderContent && !account && (
+            <div className="mt-14 p-6 rounded-2xl border border-current/20 bg-current/5 text-center space-y-3">
+              <h4 className="font-bold text-base">Read the whole of {book.title} free</h4>
+              <p className="text-xs sm:text-sm opacity-80 max-w-md mx-auto">Sign in with a free BookAtlas account to continue past this sample.</p>
+              <button onClick={() => requireSignIn('reading the full book')} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-colors cursor-pointer">
+                Sign in to keep reading
+              </button>
+            </div>
+          )}
+
           {/* End of Preview Banner */}
+          {!book.hasReaderContent && (
           <div className="mt-14 p-6 rounded-2xl border border-current/20 bg-current/5 text-center space-y-3">
             <h4 className="font-bold text-base">Enjoying this excerpt of {book.title}?</h4>
             <p className="text-xs sm:text-sm opacity-80 max-w-md mx-auto">
@@ -747,6 +796,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
               )}
             </div>
           </div>
+          )}
         </div>
 
         {/* Right Page Turn Button / Margin Click */}

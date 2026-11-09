@@ -25,6 +25,7 @@ import { useAccount, useAccountList } from './auth/AuthContext';
 import { UnsubscribePageModal } from './components/UnsubscribePageModal';
 import { AIAccessGateModal } from './components/AIAccessGateModal';
 import { PublishingLanding } from './components/landing/PublishingLanding';
+import { EbookPublishing } from './components/ebook/EbookPublishing';
 import { safeReaderReturnPath } from './auth/navigation';
 import { TRANSLATIONS } from './data/translations';
 import { INITIAL_BOOKS } from './data/booksData';
@@ -72,7 +73,7 @@ function readStorePreferences(): StorePreferences {
   }
 }
 
-type ReaderTab = 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager';
+type ReaderTab = 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager' | 'publish';
 function readGuestCart(): CartItem[] {
   try {
     const stored: unknown = JSON.parse(sessionStorage.getItem(GUEST_CART_KEY) || '[]');
@@ -100,6 +101,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
   const setActiveTab = (tab: typeof activeTab) => {
     if (tab === 'library' && !requireSignIn('library', '/user-portal')) return;
     if (tab === 'manager' && !requireAdmin()) return;
+    if (tab === 'publish' && !requireSignIn('eBook publishing', '/user-portal?view=publish')) return;
     setActiveTabState(tab);
   };
   const [currency, setCurrency] = useState<string>(() => readStorePreferences().currency);
@@ -467,6 +469,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
 
   // Header and landing links: show the unfiltered front page, then scroll once it has rendered.
   const goToSection = (id: string) => {
+    if (id === 'publish') { setActiveTab('publish'); window.scrollTo({ top: 0 }); return; }
     setActiveTab('store');
     setFilters((f) => ({ ...f, genre: 'All Genres', searchQuery: '' }));
     requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -578,6 +581,8 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
               </div>
             </div>
           )
+        ) : activeTab === 'publish' ? (
+          <EbookPublishing />
         ) : activeTab === 'library' ? (
 
           /* User's Bookshelf View */
