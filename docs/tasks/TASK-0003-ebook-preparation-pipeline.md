@@ -6,9 +6,9 @@
 | Source brief | Owner, 2026-11-09: "prepare the steps you used above and apply that to any books that the customer will upload as epub … request all that is needed … for a hardcopy or print version as well … carry out a recursive self improvement … publish this epub to booksatlas … in the right category, if category missing create it" |
 | Priority | High |
 | Approval level | **2** (schema, storage, retention, permissions), approved 2026-11-09. Production deploy and the production data write for the first book are **3** |
-| Status | ⏳ Deployed; waiting for production tables and the first publication |
+| Status | ⏳ Deployed; tables created; waiting for the first publication |
 | Builds on | [TASK-0002](TASK-0002-self-publishing-platform.md) (Discovery K: EPUB for sale, print-ready packages for KDP and Lulu) |
-| Last updated | 2026-11-09 |
+| Last updated | 2026-11-10 |
 
 ## Owner decisions (2026-11-09)
 
@@ -82,9 +82,10 @@ The source of truth is `lib/bookatlas-catalog/src/publishing/requirements.ts`. T
 | EPUBCheck worker (`artifacts/epubcheck-worker/`, compose service `epubcheck`) | ✅ Built; **not hosted** yet. Without `EBOOK_WORKER_TOKEN`, submissions go to admin review unchecked |
 | Intake page ("Upload your eBook"), report, admin queue, store-feedback panel | ✅ |
 | Reader: full content, headings and images for signed-in readers; book page without invented ratings | ✅ |
-| Production tables `bookatlas_ebook_submissions`, `bookatlas_prep_feedback` | ⛔ Owner runs the SQL in the Supabase SQL editor (no database connection string is configured) |
+| Production tables `bookatlas_ebook_submissions`, `bookatlas_prep_feedback` | ✅ 2026-11-10 created by the owner in the Supabase SQL editor; verified through the REST API (bucket `bookatlas-ebooks` private) |
+| Owner admin role | ✅ 2026-11-10 (owner approval, Level 2 permissions): production has no `BOOKATLAS_OWNER_EMAIL`, so the owner's Clerk account had the reader role and could not publish. Set `publicMetadata.role = admin` on that account through the Clerk API. Rollback: remove the role in the Clerk dashboard |
 | Production deploy | ✅ 2026-11-09 `bookatlas-h4c2hkxhw` (`68fb31f`, owner sign-off "publish to live site") on booksatlas.app. Verified: security 5/5, browser 12/12, sweep 48/48 with no page errors, account journey 7/7; new routes answer 401 without sign-in, worker claim 401 without token |
-| Publish *The Awakened Codex* (owner sign-off 2026-11-09, "go, deploy all") | ⏳ Waiting for the two production tables; then the owner uploads it on "Upload your eBook" and publishes |
+| Publish *The Awakened Codex* (owner sign-off 2026-11-09, "go, deploy all") | ⏳ The owner uploads it on "Upload your eBook" and publishes |
 
 ## Verification (2026-11-09)
 
