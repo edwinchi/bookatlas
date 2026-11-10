@@ -6,8 +6,8 @@
  * own cover template; authors download it with the final page count.
  */
 
-export type RequirementScope = 'ebook' | 'print';
-export type RequirementGroup = 'Details' | 'Rights' | 'Cover' | 'File' | 'Interior';
+export type RequirementScope = 'ebook' | 'print' | 'amazon';
+export type RequirementGroup = 'Account' | 'Details' | 'Rights' | 'Cover' | 'File' | 'Interior' | 'Publishing';
 
 export interface Requirement {
   id: string;
@@ -89,6 +89,24 @@ export const PRINT_REQUIREMENTS: Requirement[] = [
 
 export const BLEED_IN = 0.125;
 export const BARCODE_BOX_IN = { width: 2, height: 1.2 } as const;
+
+/** Publishing the print edition on Amazon KDP (kdp.amazon.com) yourself, step by step. */
+export const AMAZON_PRINT_REQUIREMENTS: Requirement[] = [
+  { id: 'kdp-account', scope: 'amazon', group: 'Account', label: 'KDP account', detail: 'Sign in at kdp.amazon.com with an Amazon account, complete the tax interview and add the bank account for royalties.' },
+  { id: 'kdp-formats', scope: 'amazon', group: 'Details', label: 'Paperback and hardcover', detail: 'Each is its own KDP edition with its own ISBN. Hardcovers take 75–550 pages.' },
+  { id: 'kdp-trim', scope: 'amazon', group: 'Details', label: 'Trim size', detail: 'Choose it in KDP before uploading; the interior PDF and the cover must use the same size. 6 × 9 in is the most common.' },
+  { id: 'kdp-ink', scope: 'amazon', group: 'Details', label: 'Ink and paper', detail: 'Black ink on cream (up to 776 pages) or white paper (up to 828), or standard or premium colour on white.' },
+  { id: 'kdp-isbn', scope: 'amazon', group: 'Rights', label: 'ISBN', detail: 'Use the free KDP ISBN (imprint "Independently published") or your own. A free ISBN from Lulu or another service cannot be used on KDP.' },
+  { id: 'kdp-interior', scope: 'amazon', group: 'Interior', label: 'Interior PDF', detail: 'One PDF at the trim size, every font embedded, images at 300 DPI. Add 0.125 in bleed on the top, bottom and outside edge only if images reach the edge.' },
+  { id: 'kdp-margins', scope: 'amazon', group: 'Interior', label: 'Margins', detail: 'Inside margin by page count: 0.375 in up to 150 pages, 0.5 in to 300, 0.625 in to 500, 0.75 in to 700, 0.875 in above. Outside margins at least 0.25 in, 0.375 in with bleed.' },
+  { id: 'kdp-cover', scope: 'amazon', group: 'Cover', label: 'Cover PDF', detail: 'One PDF with back, spine and front and 0.125 in bleed on every side. Size it with the calculator below or with the KDP cover template for your trim, paper and page count.' },
+  { id: 'kdp-spine', scope: 'amazon', group: 'Cover', label: 'Spine text', detail: 'Only for books over 79 pages; keep it 0.0625 in clear of each spine edge.' },
+  { id: 'kdp-barcode', scope: 'amazon', group: 'Cover', label: 'Barcode', detail: 'KDP prints the ISBN barcode for free. Keep 2 × 1.2 in clear on the back, lower right.' },
+  { id: 'kdp-previewer', scope: 'amazon', group: 'Publishing', label: 'Print Previewer', detail: 'After uploading, KDP\'s previewer flags text outside the margins and low-resolution images. Fix everything it shows.' },
+  { id: 'kdp-proof', scope: 'amazon', group: 'Publishing', label: 'Proof copy', detail: 'Order a printed proof from KDP to check colours, margins and the spine before you publish.' },
+  { id: 'kdp-pricing', scope: 'amazon', group: 'Publishing', label: 'Price and royalties', detail: '60% of the list price minus the printing cost on Amazon marketplaces, 40% through Expanded Distribution. KDP shows the minimum price for your page count.' },
+  { id: 'kdp-review', scope: 'amazon', group: 'Publishing', label: 'Review', detail: 'KDP reviews a new print book, usually within 72 hours, then it goes on sale on Amazon.' },
+];
 
 export const TRIM_SIZES = [
   { id: '5x8', label: '5 × 8 in (127 × 203 mm)', width: 5, height: 8 },

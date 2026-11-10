@@ -51,7 +51,12 @@ export const BookCard: React.FC<BookCardProps> = ({
               {book.price === 0 ? 'FREE' : `-${discountPercent}%`}
             </span>
           )}
-          {book.isBestseller && !discountPercent && (
+          {book.isSample && (
+            <span className="bg-white/90 text-slate-800 text-[10px] font-bold px-2 py-0.5 rounded-sm shadow-xs uppercase tracking-wide">
+              Sample title
+            </span>
+          )}
+          {book.isBestseller && !discountPercent && !book.isSample && (
             <span className="bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-sm shadow-xs uppercase tracking-wide">
               Bestseller
             </span>
@@ -173,9 +178,9 @@ export const BookCard: React.FC<BookCardProps> = ({
           <div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-base font-extrabold text-slate-950">
-                {book.price === 0 ? 'Free' : `${currencySymbol}${book.price.toFixed(2)}`}
+                {book.isSample ? <span className="text-xs font-semibold text-slate-500">Not for sale</span> : book.price === 0 ? 'Free' : `${currencySymbol}${book.price.toFixed(2)}`}
               </span>
-              {book.originalPrice > book.price && (
+              {book.originalPrice > book.price && !book.isSample && (
                 <span className="text-xs text-slate-400 line-through">
                   {currencySymbol}{book.originalPrice.toFixed(2)}
                 </span>

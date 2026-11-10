@@ -37,6 +37,8 @@ export interface Book {
   publicationId?: string;
   /** The full prepared eBook is readable by signed-in readers (TASK-0003). */
   hasReaderContent?: boolean;
+  /** A demo title kept on the storefront as an example; it has no book file and is not for sale. */
+  isSample?: boolean;
   title: string;
   subtitle?: string;
   author: string;

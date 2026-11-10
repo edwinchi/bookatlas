@@ -220,6 +220,9 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                       <Sparkles className="w-3 h-3 text-amber-500" /> Bookatlas Plus Eligible
                     </span>
                   )}
+                  {book.isSample && (
+                    <span className="bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wide">Sample title · not for sale</span>
+                  )}
                   {prepared && book.isNewRelease && (
                     <span className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wide">New release</span>
                   )}

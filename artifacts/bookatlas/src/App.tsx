@@ -357,6 +357,10 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
 
   // Cart & Wishlist Actions
   const handleAddToCart = (book: Book, format: 'ebook' | 'audiobook' = 'ebook') => {
+    if (book.isSample) {
+      setCheckoutNotice({ tone: 'info', text: `"${book.title}" is a sample title to show what BookAtlas offers. It is not for sale.` });
+      return;
+    }
     setCart((prev) => {
       const existing = prev.find((item) => item.book.id === book.id && item.format === format);
       if (existing) return prev;

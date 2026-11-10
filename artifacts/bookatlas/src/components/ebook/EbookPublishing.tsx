@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { BookUp, CheckCircle2, ClipboardList, Loader2, Plus, Sparkles } from 'lucide-react';
-import { EBOOK_REQUIREMENTS, PRINT_REQUIREMENTS, type PaperId, type Requirement, type TrimSizeId } from '@workspace/bookatlas-catalog/publishing';
+import { EBOOK_REQUIREMENTS, PRINT_REQUIREMENTS, AMAZON_PRINT_REQUIREMENTS, type PaperId, type Requirement, type TrimSizeId } from '@workspace/bookatlas-catalog/publishing';
 import { useAccount } from '../../auth/AuthContext';
 import { EbookApiError, saveBlob, useEbookApi, type FeedbackOverview, type Submission } from './ebookApi';
 import { SubmissionForm } from './SubmissionForm';
@@ -80,7 +80,7 @@ export const EbookPublishing: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [problem, setProblem] = useState<{ message: string; fields?: Record<string, string> } | null>(null);
-  const [scope, setScope] = useState<'ebook' | 'print'>('ebook');
+  const [scope, setScope] = useState<'ebook' | 'print' | 'amazon'>('ebook');
   const [calc, setCalc] = useState<{ trimSize: TrimSizeId; paper: PaperId; pageCount: number }>({ trimSize: '6x9', paper: 'cream', pageCount: 300 });
 
   const load = useCallback(() => {
@@ -168,15 +168,16 @@ export const EbookPublishing: React.FC = () => {
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="flex items-center gap-2 font-serif text-lg font-bold text-slate-900"><ClipboardList className="h-5 w-5 text-indigo-600" aria-hidden />What a complete book needs</h2>
             <div role="tablist" className="mt-3 inline-flex rounded-full bg-slate-100 p-1 text-xs font-semibold">
-              {(['ebook', 'print'] as const).map((s) => (
+              {(['ebook', 'print', 'amazon'] as const).map((s) => (
                 <button key={s} role="tab" aria-selected={scope === s} type="button" onClick={() => setScope(s)}
-                  className={`rounded-full px-3 py-1 ${scope === s ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}>{s === 'ebook' ? 'eBook' : 'Print'}</button>
+                  className={`rounded-full px-3 py-1 ${scope === s ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}>{s === 'ebook' ? 'eBook' : s === 'print' ? 'Print' : 'Amazon print'}</button>
               ))}
             </div>
-            <div className="mt-4"><Checklist items={scope === 'ebook' ? EBOOK_REQUIREMENTS : PRINT_REQUIREMENTS} /></div>
+            {scope === 'amazon' && <p className="mt-3 text-xs text-slate-600">To sell the print edition on Amazon, publish it yourself on Amazon KDP. These are the steps and KDP's file rules.</p>}
+            <div className="mt-4"><Checklist items={scope === 'ebook' ? EBOOK_REQUIREMENTS : scope === 'print' ? PRINT_REQUIREMENTS : AMAZON_PRINT_REQUIREMENTS} /></div>
             <p className="mt-4 flex items-start gap-2 text-xs text-slate-500"><CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />“Checked for you” items are verified, and fixed where possible, after upload.</p>
           </section>
-          {scope === 'print' && (
+          {scope !== 'ebook' && (
             <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="font-serif text-lg font-bold text-slate-900">Print cover calculator</h2>
               <div className="mt-3"><PrintCalculator {...calc} onChange={setCalc} /></div>
