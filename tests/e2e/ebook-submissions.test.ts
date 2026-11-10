@@ -102,6 +102,17 @@ test('an author submission is prepared, checked, published and readable', async 
   assert.deepEqual(saved.printLinks, { amazon: 'https://www.amazon.nl/dp/B0TEST1234', lulu: 'https://www.lulu.com/shop/test-codex/paperback' });
   const page = await (await fetch(`/api/catalog/books/${bookId}`)).json();
   assert.deepEqual(page.book.printLinks, saved.printLinks);
+
+  // The price of a published book changes at once.
+  const price = (value: unknown) => fetch(`/api/ebook-submissions/${submission.id}/price`, { method: 'PUT', headers: { 'content-type': 'application/json', 'x-test-role': 'reader' }, body: JSON.stringify({ price: value }) });
+  assert.equal((await price(-1)).status, 422);
+  assert.equal((await price('lots')).status, 422);
+  const repriced = await (await price(7.499)).json();
+  assert.equal(repriced.intake.price, 7.5);
+  const live = (await (await fetch(`/api/catalog/books/${bookId}`)).json()).book;
+  assert.equal(live.price, 7.5);
+  assert.deepEqual(live.printLinks, saved.printLinks, 'other details stay');
+  assert.equal((await (await fetch(`/api/reader/catalog/${bookId}/content`, as('unauthenticated'))).json()).access, 'preview');
 });
 
 test('the author fixes a small cover by uploading a larger one, enlarging it, or going back', async () => {

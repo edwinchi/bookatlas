@@ -18,6 +18,34 @@ const mb = (n: number) => `${(n / 1024 / 1024).toFixed(1)} MB`;
 const COVER_RULES = ['cover-size', 'cover-front-only'];
 const button = 'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold disabled:opacity-50';
 
+/** The live price of a published book; changes apply to the store and checkout at once. */
+const PriceEditor: React.FC<{ price: number; onSave: (price: number) => Promise<void> }> = ({ price, onSave }) => {
+  const [value, setValue] = useState(price.toFixed(2));
+  const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const next = Number(value.replace(',', '.'));
+  const valid = Number.isFinite(next) && next >= 0 && next <= 999;
+  const changed = valid && Math.round(next * 100) !== Math.round(price * 100);
+  return (
+    <form className="mt-4 flex flex-wrap items-end gap-2 rounded-xl border border-slate-200 bg-slate-50/60 p-3" onSubmit={async (e) => {
+      e.preventDefault(); if (!changed) return; setState('saving');
+      try { await onSave(Math.round(next * 100) / 100); setState('saved'); } catch { setState('idle'); }
+    }}>
+      <label className="text-xs font-semibold text-slate-700">
+        Price (EUR, VAT included)
+        <span className="mt-1 flex items-center rounded-lg border border-slate-300 bg-white focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/20">
+          <span className="pl-2.5 text-slate-500">€</span>
+          <input inputMode="decimal" aria-label="Price in euros" value={value} onChange={(e) => { setValue(e.target.value); setState('idle'); }}
+            className="w-24 rounded-lg px-1.5 py-1.5 text-sm tabular-nums focus:outline-hidden" />
+        </span>
+      </label>
+      <button type="submit" disabled={!changed || state === 'saving'} className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50">
+        {state === 'saving' && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}{state === 'saved' && !changed ? 'Price updated' : 'Change price'}
+      </button>
+      <p className="basis-full text-[11px] text-slate-500">{!valid ? 'Enter a price between 0 and 999.' : next === 0 ? 'At €0 every signed-in reader can read the whole book.' : 'Applies at once in the store, on the book page and at checkout.'}</p>
+    </form>
+  );
+};
+
 /** Amazon and Lulu pages of the printed book; shown on the BookAtlas book page, also after publishing. */
 const PrintLinks: React.FC<{ links: { amazon?: string; lulu?: string }; onSave: (links: { amazon?: string; lulu?: string }) => Promise<void> }> = ({ links, onSave }) => {
   const [amazon, setAmazon] = useState(links.amazon ?? '');
@@ -85,9 +113,10 @@ export const SubmissionCard: React.FC<{
   onEdit: () => void;
   onCover: (fix: { upload: File } | 'enlarge' | 'original') => Promise<void>;
   onPrintLinks: (links: { amazon?: string; lulu?: string }) => Promise<void>;
+  onPrice: (price: number) => Promise<void>;
   onPublish: () => Promise<void>;
   onReject: (reason: string) => Promise<void>;
-}> = ({ submission: s, isAdmin, onDownload, onEdit, onCover, onPrintLinks, onPublish, onReject }) => {
+}> = ({ submission: s, isAdmin, onDownload, onEdit, onCover, onPrintLinks, onPrice, onPublish, onReject }) => {
   const [busy, setBusy] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const status = STATUS[s.status];
@@ -163,6 +192,7 @@ export const SubmissionCard: React.FC<{
         </div>
       )}
 
+      {s.status === 'published' && <PriceEditor key={s.intake.price} price={Number(s.intake.price) || 0} onSave={onPrice} />}
       {['ready', 'checking', 'needs_author', 'published'].includes(s.status) && (
         <PrintLinks key={`${s.printLinks?.amazon ?? ''}|${s.printLinks?.lulu ?? ''}`} links={s.printLinks ?? {}} onSave={onPrintLinks} />
       )}

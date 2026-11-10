@@ -21,7 +21,7 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (/^\/api\/ebook-submissions\/[^/]+$/.test(normalized) && method === 'GET') return 'reader';
   if (/^\/api\/ebook-submissions\/[^/]+\/upload\/\d+$/.test(normalized) && method === 'PUT') return 'reader';
   if (/^\/api\/ebook-submissions\/[^/]+\/(?:prepare|reupload|new-version)$/.test(normalized) && method === 'POST') return 'reader';
-  if (/^\/api\/ebook-submissions\/[^/]+\/(?:intake|print-links)$/.test(normalized) && method === 'PUT') return 'reader';
+  if (/^\/api\/ebook-submissions\/[^/]+\/(?:intake|print-links|price)$/.test(normalized) && method === 'PUT') return 'reader';
   if (/^\/api\/ebook-submissions\/[^/]+\/cover$/.test(normalized) && ['PUT', 'DELETE'].includes(method)) return 'reader';
   if (/^\/api\/ebook-submissions\/[^/]+\/cover\/enlarge$/.test(normalized) && method === 'POST') return 'reader';
   if (/^\/api\/ebook-submissions\/[^/]+\/files\/(?:epub|cover)(?:\/parts\/\d+)?$/.test(normalized) && method === 'GET') return 'reader';

@@ -158,6 +158,7 @@ export const EbookPublishing: React.FC = () => {
                     onDownload={async (file) => saveBlob(await api.download(s.id, file), file === 'epub' ? (s.upload?.fileName ?? 'book.epub').replace(/\.epub$/i, '-prepared.epub') : `${s.intake.title}-cover.jpg`)}
                     onEdit={() => setMode({ kind: 'edit', submission: s })}
                     onPrintLinks={async (links) => handle(() => api.setPrintLinks(s.id, links))}
+                    onPrice={async (price) => handle(() => api.setPrice(s.id, price))}
                     onCover={async (fix) => handle(() => fix === 'enlarge' ? api.enlargeCover(s.id)
                       : fix === 'original' ? api.originalCover(s.id) : api.replaceCover(s.id, fix.upload))}
                     onPublish={async () => handle(() => api.publish(s.id))}

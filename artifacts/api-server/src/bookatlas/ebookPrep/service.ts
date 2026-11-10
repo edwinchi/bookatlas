@@ -181,6 +181,24 @@ export async function setCoverFix(who: Identity, id: string, fix: { upload: Uint
   return prepareSubmission(who, id);
 }
 
+/**
+ * The author or an admin changes the price of a published book. It applies at once: the store,
+ * the book page and checkout all read the catalogue price.
+ */
+export async function setPrice(
+  who: Identity, id: string, input: unknown,
+  catalog: { get(id: string): Promise<Book | null>; save(book: Book): Promise<void> },
+) {
+  const row = owned(await loadSubmission(id), who);
+  if (row.status !== 'published' || !row.book_id) throw new PrepError('Before publishing, change the price with "Edit details".', 409);
+  const price = Math.round(Number(input) * 100) / 100;
+  if (!Number.isFinite(price) || price < 0 || price > 999) throw new PrepError('Enter a price between 0 and 999.', 422);
+  const book = await catalog.get(row.book_id);
+  if (!book) throw new PrepError('The published book could not be found.', 404);
+  await catalog.save({ ...book, price, originalPrice: price, isDeal: false, superPointsEarned: Math.round(price * 10) });
+  return saveSubmission(row, { data: { intake: { ...row.data.intake, price } } });
+}
+
 /** Amazon and Lulu links to the printed book; allowed before and after publishing. */
 export async function setPrintLinks(
   who: Identity, id: string, input: { amazon?: string; lulu?: string },

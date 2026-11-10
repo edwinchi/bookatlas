@@ -93,6 +93,7 @@ export function useEbookApi() {
       const image = await coverForUpload(file);
       return (await request(`/api/ebook-submissions/${id}/cover`, { method: 'PUT', headers: { 'Content-Type': image.type }, body: image })).json() as Promise<Submission>;
     },
+    setPrice: (id: string, price: number) => json<Submission>(`/api/ebook-submissions/${id}/price`, 'PUT', { price }),
     setPrintLinks: (id: string, links: { amazon?: string; lulu?: string }) => json<Submission>(`/api/ebook-submissions/${id}/print-links`, 'PUT', links),
     enlargeCover: (id: string) => json<Submission>(`/api/ebook-submissions/${id}/cover/enlarge`, 'POST', {}),
     originalCover: (id: string) => json<Submission>(`/api/ebook-submissions/${id}/cover`, 'DELETE'),
