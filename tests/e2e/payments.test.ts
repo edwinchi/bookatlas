@@ -107,6 +107,12 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
   assert.equal(forged.status, 400);
   assert.equal(await access(), 'preview');
 
+  assert.equal(params.metadata.app, 'bookatlas', 'BookAtlas checkouts are tagged');
+  // Another site on the same Stripe account: its paid session reaches this webhook and is ignored.
+  const foreign = signedEvent('checkout.session.completed', { ...sessions.get(id)!, status: 'complete', payment_status: 'paid', metadata: { bookIds: bookId } });
+  assert.equal((await fetch('/api/stripe/webhook', { method: 'POST', headers: { 'content-type': 'application/json', 'stripe-signature': foreign.header }, body: foreign.payload })).status, 200);
+  assert.equal(await access(), 'preview', 'an untagged session unlocks nothing');
+
   Object.assign(sessions.get(id)!, { status: 'complete', payment_status: 'paid' });
   for (let delivery = 0; delivery < 2; delivery += 1) {
     const event = signedEvent('checkout.session.completed', sessions.get(id)!);

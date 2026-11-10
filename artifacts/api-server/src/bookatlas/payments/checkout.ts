@@ -20,6 +20,8 @@ const taxEnabled = () => process.env.STRIPE_TAX?.trim() === 'on';
 /** iDEAL charges in euros only; Adaptive Pricing in Stripe shows other buyers their own currency. */
 const CURRENCY = 'eur';
 const MAX_BOOKS = 20;
+/** The Stripe account also serves other sites; their events reach this webhook too and are ignored. */
+const APP_TAG = 'bookatlas';
 
 function stripe(): StripeClient {
   if (client) return client;
@@ -65,8 +67,8 @@ export async function createCheckout(who: Identity, requested: unknown, findBook
     })),
     automatic_tax: { enabled: taxEnabled() },
     allow_promotion_codes: true,
-    metadata: { userId: who.id, bookIds: ids.join(',') },
-    payment_intent_data: { metadata: { userId: who.id, bookIds: ids.join(',') } },
+    metadata: { app: APP_TAG, userId: who.id, bookIds: ids.join(',') },
+    payment_intent_data: { metadata: { app: APP_TAG, userId: who.id, bookIds: ids.join(',') } },
     success_url: `${appUrl}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl}/?checkout=cancelled`,
   });
@@ -76,6 +78,7 @@ export async function createCheckout(who: Identity, requested: unknown, findBook
 
 /** Store every book of a paid session. Called by the webhook and by the success page; both are idempotent. */
 async function fulfil(session: Stripe.Checkout.Session) {
+  if (session.metadata?.app !== APP_TAG) return false;
   if (session.payment_status !== 'paid' || !session.client_reference_id) return false;
   const items = await stripe().checkout.sessions.listLineItems(session.id, { limit: 100, expand: ['data.price.product'] });
   const paymentIntent = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id ?? null;
