@@ -77,9 +77,11 @@ test('an author submission is prepared, checked, published and readable', async 
   const bookId = published.bookId;
   assert.match(bookId, /^atlas-ebook-[0-9a-f]{8}$/);
 
-  const catalog = await (await fetch('/api/books?genre=Spiritual%20Healing%20%26%20Alignment')).json();
-  const book = catalog.books.find((b: { id: string }) => b.id === bookId);
-  assert.ok(book, 'listed in its new category');
+  const catalog = await (await fetch('/api/catalog/search?genre=Spiritual%20Healing%20%26%20Alignment')).json();
+  const card = catalog.books.find((b: { id: string }) => b.id === bookId);
+  assert.ok(card, 'listed in its new category');
+  assert.equal(card.sampleChapters, undefined, 'lists carry cards, not whole books');
+  const { book } = await (await fetch(`/api/catalog/books/${bookId}`)).json();
   assert.equal(book.hasReaderContent, true);
   assert.equal(book.sampleChapters.at(-1).title, 'Chapter 1: Welcome', 'the sample runs up to the first full chapter');
   assert.ok(book.sampleChapters.every((c: { figures?: unknown }) => !c.figures), 'the catalog sample is text; the reader loads images');

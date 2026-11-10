@@ -20,7 +20,7 @@ function guarded(handler: (req: Request, res: Response) => Promise<void>) {
  * Stripe Checkout (TASK-0004). Mount before the app-wide JSON parser: the webhook signature is
  * checked against the raw request body.
  */
-export function mountPayments(app: Express, findBook: (id: string) => Book | undefined, appUrl: string) {
+export function mountPayments(app: Express, findBook: (id: string) => Promise<Book | null | undefined>, appUrl: string) {
   app.post('/api/stripe/webhook', express.raw({ type: 'application/json', limit: '1mb' }), guarded(async (req, res) => {
     if (!Buffer.isBuffer(req.body)) throw new PaymentError('Expected a Stripe event.', 415);
     res.json(await handleWebhook(req.body, req.get('stripe-signature')));

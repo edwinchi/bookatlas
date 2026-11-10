@@ -29,6 +29,62 @@ create table if not exists public.bookatlas_books (
 );
 create index if not exists bookatlas_books_primary_genre_idx on public.bookatlas_books (primary_genre);
 
+-- Catalogue at scale (TASK-0005): indexed columns, full-text search and precomputed category
+-- counts so 1.5M+ titles answer in milliseconds. `data` keeps the whole record, `card` the list view.
+alter table public.bookatlas_books
+  add column if not exists card jsonb,
+  add column if not exists subtitle text,
+  add column if not exists genres text[] not null default '{}',
+  add column if not exists format text,
+  add column if not exists language text,
+  add column if not exists original_price numeric,
+  add column if not exists rating numeric not null default 0,
+  add column if not exists review_count integer not null default 0,
+  add column if not exists is_deal boolean not null default false,
+  add column if not exists is_bestseller boolean not null default false,
+  add column if not exists is_new_release boolean not null default false,
+  add column if not exists is_editor_pick boolean not null default false,
+  add column if not exists is_plus boolean not null default false,
+  add column if not exists is_sample boolean not null default false,
+  add column if not exists has_audio boolean not null default false,
+  add column if not exists has_reader_content boolean not null default false,
+  add column if not exists published_at date,
+  add column if not exists popularity real not null default 0,
+  add column if not exists search_text text not null default '',
+  add column if not exists search tsvector generated always as (to_tsvector('simple', search_text)) stored;
+create index if not exists bookatlas_books_search_idx on public.bookatlas_books using gin (search);
+create index if not exists bookatlas_books_genres_idx on public.bookatlas_books using gin (genres);
+create index if not exists bookatlas_books_featured_idx on public.bookatlas_books (is_editor_pick desc, popularity desc, id);
+create index if not exists bookatlas_books_bestseller_idx on public.bookatlas_books (is_bestseller desc, popularity desc, id);
+create index if not exists bookatlas_books_popularity_idx on public.bookatlas_books (popularity desc, id);
+create index if not exists bookatlas_books_rating_idx on public.bookatlas_books (rating desc, popularity desc, id);
+create index if not exists bookatlas_books_price_idx on public.bookatlas_books (price, popularity desc, id);
+create index if not exists bookatlas_books_newest_idx on public.bookatlas_books (published_at desc nulls last, popularity desc, id);
+create index if not exists bookatlas_books_format_idx on public.bookatlas_books (format, popularity desc);
+create index if not exists bookatlas_books_language_idx on public.bookatlas_books (language, popularity desc);
+create index if not exists bookatlas_books_plus_idx on public.bookatlas_books (popularity desc) where is_plus;
+create index if not exists bookatlas_books_audio_idx on public.bookatlas_books (popularity desc) where has_audio;
+
+-- Category, language and format counts, refreshed after catalogue writes (at most once a minute).
+create materialized view if not exists public.bookatlas_catalog_facets as
+  select 'category'::text as kind, g as name, count(*)::bigint as n from public.bookatlas_books, unnest(genres) as g group by g
+  union all select 'language', language, count(*) from public.bookatlas_books where language is not null group by language
+  union all select 'format', format, count(*) from public.bookatlas_books where format is not null group by format
+  union all select 'total', 'all', count(*) from public.bookatlas_books;
+create unique index if not exists bookatlas_catalog_facets_key on public.bookatlas_catalog_facets (kind, name);
+create or replace function public.bookatlas_catalog_facets() returns table (kind text, name text, n bigint)
+  language sql stable security definer set search_path = public
+  as $$ select kind, name, n from public.bookatlas_catalog_facets $$;
+create or replace function public.bookatlas_refresh_catalog_facets() returns void
+  language sql security definer set search_path = public
+  as $$ refresh materialized view concurrently public.bookatlas_catalog_facets $$;
+revoke all on public.bookatlas_catalog_facets from anon, authenticated;
+revoke all on function public.bookatlas_catalog_facets() from public, anon, authenticated;
+revoke all on function public.bookatlas_refresh_catalog_facets() from public, anon, authenticated;
+grant select on public.bookatlas_catalog_facets to service_role;
+grant execute on function public.bookatlas_catalog_facets() to service_role;
+grant execute on function public.bookatlas_refresh_catalog_facets() to service_role;
+
 create table if not exists public.bookatlas_categories (
   name text primary key,
   created_at timestamptz not null default now()

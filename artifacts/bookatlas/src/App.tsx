@@ -1,4 +1,4 @@
-import { filterCatalog } from './catalog';
+import { fetchFullBook, needsFullRecord, useCatalogFacets, useCatalogSearch, useShelves } from './hooks/useCatalog';
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Header } from './components/Header';
 import { HeroCarousel } from './components/HeroCarousel';
@@ -90,6 +90,25 @@ function cartFingerprint(cart: CartItem[]) {
 const normalizeCartReturn = (returnTo: string) =>
   safeReaderReturnPath(returnTo, window.location.origin, import.meta.env.BASE_URL);
 
+/** Loads the next page when the reader scrolls near the end of the grid; the button is the fallback. */
+function LoadMoreSentinel({ loading, onLoadMore }: { loading: boolean; onLoadMore: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) onLoadMore(); }, { rootMargin: '800px 0px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [onLoadMore]);
+  return (
+    <div ref={ref} className="flex justify-center pt-2">
+      <button type="button" onClick={onLoadMore} disabled={loading} className="px-5 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 cursor-pointer">
+        {loading ? 'Loading…' : 'Show more titles'}
+      </button>
+    </div>
+  );
+}
+
 export default function App({ initialTab = 'store', initialLibraryTab = 'reading', resumeCheckout = false, pendingReaderService }: {
   initialTab?: ReaderTab;
   initialLibraryTab?: 'reading' | 'wishlist';
@@ -165,30 +184,24 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
     } catch (e) {}
   }, []);
 
-  // Load books from backend API if available
+  // The top of the catalogue for the landing page, hero, matchmaker and admin studio: one small,
+  // edge-cached page. Lists and shelves query the API themselves (TASK-0005).
   useEffect(() => {
     const controller = new AbortController();
-    const refresh = () => {
-      fetch('/api/books', { signal: controller.signal })
-        .then((res) => {
-          if (!res.ok) throw new Error('Catalog is temporarily unavailable.');
-          return res.json();
-        })
-        .then((data) => {
-          if (!controller.signal.aborted && data.success && Array.isArray(data.books)) setBooks(data.books);
-        })
-        .catch((err) => {
-          if (!controller.signal.aborted) console.warn('Catalog refresh failed:', err);
-        });
-    };
-    refresh();
-    const timer = window.setInterval(refresh, 30_000);
-    window.addEventListener('focus', refresh);
-    return () => {
-      controller.abort();
-      window.clearInterval(timer);
-      window.removeEventListener('focus', refresh);
-    };
+    fetch('/api/catalog/search?limit=100', { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error('Catalog is temporarily unavailable.');
+        return res.json();
+      })
+      .then((data) => {
+        if (!controller.signal.aborted && Array.isArray(data.books)) {
+          setBooks(data.books.map((card: Partial<Book>) => ({ sampleChapters: [], reviews: [], editorialReview: '', authorBio: '', ...card }) as Book));
+        }
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) console.warn('Catalog refresh failed:', err);
+      });
+    return () => controller.abort();
   }, []);
 
   // Manager Book CRUD handlers
@@ -258,7 +271,14 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
   const [library, setLibrary] = useAccountList<UserLibraryItem>('library');
 
   // Active Modals & Views
-  const [selectedBookForDetail, setSelectedBookForDetail] = useState<Book | null>(null);
+  const [selectedBookForDetail, setDetailBook] = useState<Book | null>(null);
+  // Lists hold cards; the book page shows the card at once and swaps in the whole record.
+  const setSelectedBookForDetail = useCallback((book: Book | null) => {
+    setDetailBook(book);
+    if (book && needsFullRecord(book)) {
+      fetchFullBook(book.id).then((full) => { if (full) setDetailBook((current) => (current?.id === full.id ? full : current)); }).catch(() => undefined);
+    }
+  }, []);
   const [activeReadingBook, setActiveReadingBook] = useState<{ book: Book; chapterIndex: number; paragraphIndex: number } | null>(null);
   const [activeAudiobook, setActiveAudiobook] = useState<Book | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -304,56 +324,33 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
   };
 
 
-  const filteredBooks = useMemo(() => filterCatalog(books, filters, activeTab), [books, filters, activeTab]);
+  // The grid is one paged query; the tabs narrow it the way the old in-browser filter did.
+  const catalogPage = useCatalogSearch({
+    q: filters.searchQuery,
+    genre: filters.genre,
+    format: activeTab === 'audiobooks' ? 'audiobook' : filters.format,
+    price: activeTab === 'deals' && filters.priceCategory === 'all' ? 'deals' : filters.priceCategory,
+    minRating: filters.minRating || undefined,
+    language: filters.language && filters.language !== 'all' ? filters.language : undefined,
+    plusOnly: activeTab === 'bookatlasplus' || filters.bookatlasPlusOnly || undefined,
+    sort: filters.sortBy,
+  });
+  const filteredBooks = catalogPage.books;
+  const facets = useCatalogFacets();
 
-  // Derived Book Subsets for Netflix-Style Horizontal Carousels
-  const africanLitPicks = useMemo(() => {
-    return books.filter(b => 
-      b.primaryGenre === 'African Literature & Classics' || 
-      b.primaryGenre === 'Afrofuturism & Speculative Fiction' ||
-      b.primaryGenre === 'Pan-African History & Civilizations' ||
-      b.primaryGenre === 'African Diaspora & Black Studies' ||
-      b.primaryGenre === 'African Philosophy & Indigenous Traditions' ||
-      b.primaryGenre === 'Contemporary African Voices & Fiction' ||
-      b.genres?.some(g => g.includes('African') || g.includes('Afrofuturism') || g.includes('Diaspora'))
-    );
-  }, [books]);
-
-  const consciousnessPicks = useMemo(() => {
-    return books.filter(b => 
-      b.primaryGenre === 'Consciousness & Ancient Wisdom' || 
-      b.primaryGenre === 'Kemetic Science & Sacred Geometry' ||
-      b.primaryGenre === 'Metaphysics & Higher Dimensions' ||
-      b.primaryGenre === 'Indigenous Spiritual Technologies' ||
-      b.primaryGenre === 'Mind Mastery & Quantum Awakening' ||
-      b.primaryGenre === 'Holistic Energy, Chakras & Kundalini' ||
-      b.genres?.some(g => g.includes('Consciousness') || g.includes('Kemetic') || g.includes('Metaphysics') || g.includes('Spiritual') || g.includes('Mind Mastery'))
-    );
-  }, [books]);
-
-  const amsterdamPicks = useMemo(() => {
-    return books.filter(b => b.primaryGenre === 'Dutch & European Classics' || b.primaryGenre === 'Historical Fiction' || b.id.includes('amsterdam') || b.tags?.includes('Amsterdam') || b.isEditorPick);
-  }, [books]);
-
-  const plusPicks = useMemo(() => {
-    return books.filter(b => b.isBookatlasPlus);
-  }, [books]);
-
-  const sciFiPicks = useMemo(() => {
-    return books.filter(b => b.primaryGenre === 'Sci-Fi & Fantasy' || b.genres?.includes('Sci-Fi & Fantasy') || b.genres?.includes('Science Fiction'));
-  }, [books]);
-
-  const audioPicks = useMemo(() => {
-    return books.filter(b => b.format === 'audiobook' || b.format === 'bundle' || b.audioDurationMinutes);
-  }, [books]);
-
-  const thrillerPicks = useMemo(() => {
-    return books.filter(b => b.primaryGenre === 'Mystery & Suspense' || b.primaryGenre === 'Thriller & Crime' || b.genres?.includes('Mystery & Suspense') || b.genres?.includes('Thriller & Suspense'));
-  }, [books]);
-
+  // Home-page shelves: each a small query answered by the API.
+  const shelves = useShelves(['hero', 'african', 'consciousness', 'amsterdam', 'plus', 'scifi', 'audio', 'thriller']);
+  const africanLitPicks = shelves.african ?? [];
+  const consciousnessPicks = shelves.consciousness ?? [];
+  const amsterdamPicks = shelves.amsterdam ?? [];
+  const plusPicks = shelves.plus ?? [];
+  const sciFiPicks = shelves.scifi ?? [];
+  const audioPicks = shelves.audio ?? [];
+  const thrillerPicks = shelves.thriller ?? [];
   const featuredSpotlight = useMemo(() => {
-    return books.find(b => b.isBestseller && b.isEditorPick) || books[0];
-  }, [books]);
+    const hero = shelves.hero ?? [];
+    return hero.find(b => b.isBestseller) || hero[0] || books[0];
+  }, [shelves.hero, books]);
 
   // Cart & Wishlist Actions
   const handleAddToCart = (book: Book, format: 'ebook' | 'audiobook' = 'ebook') => {
@@ -390,7 +387,8 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
     setActiveTab('library');
   };
 
-  const handleReadSample = (book: Book) => {
+  const handleReadSample = async (card: Book) => {
+    const book = needsFullRecord(card) ? (await fetchFullBook(card.id).catch(() => null)) ?? card : card;
     const existingLib = library.find((i) => i.book.id === book.id);
     setActiveReadingBook({
       book,
@@ -909,8 +907,8 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                 <FilterSidebar
                   filters={filters}
                   setFilters={setFilters}
-                  totalResults={filteredBooks.length}
-                  languages={[...new Set(books.map(book => book.language).filter(Boolean))].sort()}
+                  totalResults={catalogPage.total}
+                  languages={(facets?.languages ?? []).map((l) => l.name).sort()}
                 />
               </div>
 
@@ -924,7 +922,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                       {filters.genre !== 'All Genres' ? filters.genre : activeTab === 'audiobooks' ? 'Audiobook Collection' : activeTab === 'deals' ? 'Special Offers' : 'Complete Bookstore Catalog'}
                     </h2>
                     <p role="status" aria-live="polite" className="text-xs text-slate-500">
-                      Showing {filteredBooks.length} titles
+                      {catalogPage.loading && !filteredBooks.length ? 'Searching…' : `Showing ${filteredBooks.length.toLocaleString()} of ${catalogPage.total.toLocaleString()} titles`}
                     </p>
                   </div>
 
@@ -949,7 +947,13 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                 </div>
 
                 {/* Books Grid */}
-                {filteredBooks.length === 0 ? (
+                {catalogPage.error && !filteredBooks.length ? (
+                  <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{catalogPage.error}</p>
+                ) : catalogPage.loading && !filteredBooks.length ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6" aria-hidden>
+                    {Array.from({ length: 8 }, (_, i) => <div key={i} className="aspect-[3/5] rounded-xl bg-slate-200/70 animate-pulse" />)}
+                  </div>
+                ) : filteredBooks.length === 0 ? (
                   <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
                     <BookOpen className="w-10 h-10 text-slate-400 mx-auto" />
                     <h3 className="text-base font-bold text-slate-900">No books found matching your filters</h3>
@@ -974,10 +978,11 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                     </button>
                   </div>
                 ) : (
+                  <>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6">
                     {filteredBooks.map((book) => (
+                      <div key={book.id} className="[content-visibility:auto] [contain-intrinsic-size:auto_420px]">
                       <BookCard
-                        key={book.id}
                         book={book}
                         onOpenDetail={(b) => setSelectedBookForDetail(b)}
                         onReadSample={handleReadSample}
@@ -987,8 +992,13 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                         isWishlisted={wishlist.some((w) => w.id === book.id)}
                         currencySymbol={currencySymbol}
                       />
+                      </div>
                     ))}
                   </div>
+                  {catalogPage.hasMore && (
+                    <LoadMoreSentinel loading={catalogPage.loading} onLoadMore={catalogPage.loadMore} />
+                  )}
+                  </>
                 )}
 
               </div>

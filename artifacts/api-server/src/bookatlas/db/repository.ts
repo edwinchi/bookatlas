@@ -3,6 +3,7 @@ import { bookatlasDb as supabase } from './supabaseClient.js';
 import { logger } from '../../lib/logger';
 import type { Book } from '@workspace/bookatlas-catalog/types';
 import type { ServerSubscriber, ServerCampaign } from '../server.js';
+import { bookRow } from '../catalog/store.js';
 
 // Every function here is safe to call fire-and-forget (`void repo.fn(...)`):
 // each one swallows its own errors and logs them, so a Supabase outage or
@@ -32,7 +33,8 @@ type RegisteredUser = {
 export async function hydrateBooksFromDb(): Promise<Book[] | null> {
   if (!supabase) return null;
   try {
-    const { data, error } = await supabase.from('books').select('data').order('updated_at', { ascending: false });
+    // The admin studio keeps the most recent titles in memory; the storefront queries the catalogue (TASK-0005).
+    const { data, error } = await supabase.from('books').select('data').order('updated_at', { ascending: false }).limit(1000);
     if (error) throw error;
     if (!data || data.length === 0) return null;
     return data.map((row: any) => row.data as Book);
@@ -61,7 +63,7 @@ export async function upsertBookInDb(book: Book): Promise<void> {
   try {
     const { error } = await supabase
       .from('books')
-      .upsert({ id: book.id, title: book.title, author: book.author, primary_genre: book.primaryGenre, price: book.price, data: book, updated_at: new Date().toISOString() });
+      .upsert(bookRow(book));
     if (error) throw error;
   } catch (err) {
     logger.error({ err }, '[db] upsertBookInDb failed');

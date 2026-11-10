@@ -7,6 +7,7 @@
     ".": "./src/data/booksData.ts",
     "./types": "./src/types.ts",
     "./voices": "./src/voices.ts",
-    "./publishing": "./src/publishing/requirements.ts"
+    "./publishing": "./src/publishing/requirements.ts",
+    "./query": "./src/catalogQuery.ts"
   }
 }

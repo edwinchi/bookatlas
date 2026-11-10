@@ -16,7 +16,7 @@ test('every allowed persistence table is Bookatlas-prefixed', () => {
 test('setup SQL changes only prefixed tables and inserts no demo records', () => {
   const sql = readFileSync('artifacts/api-server/src/bookatlas/db/schema.sql', 'utf8').replace(/--[^\n]*/g, '');
   const changed = [...sql.matchAll(/(?:create table if not exists|alter table)\s+([\w.]+)/gi)];
-  assert.equal(changed.length, 26);
+  assert.equal(changed.length, 27);
   assert.ok(changed.every(match => match[1].startsWith('public.bookatlas_')));
   assert.doesNotMatch(sql, /\b(?:drop|truncate)\b|\binsert\s+into\b/i);
   assert.match(sql, /^begin;/m);
@@ -28,7 +28,9 @@ test('setup SQL changes only prefixed tables and inserts no demo records', () =>
   const privilegeSection = sql.slice(sql.indexOf('revoke all'));
   const privilegeTables = [...privilegeSection.matchAll(/public\.(\w+)/g)].map(m => m[1]);
   assert.ok(privilegeTables.length >= 16);
-  assert.ok(privilegeTables.every(table => Object.values(BOOKATLAS_TABLES).includes(table)));
+  // Besides the tables: the catalogue's category-count view and its two functions (TASK-0005).
+  const catalogObjects = ['bookatlas_catalog_facets', 'bookatlas_refresh_catalog_facets'];
+  assert.ok(privilegeTables.every(table => Object.values(BOOKATLAS_TABLES).includes(table) || catalogObjects.includes(table)));
 });
 
 test('legacy repository uses only the scoped database surface', () => {

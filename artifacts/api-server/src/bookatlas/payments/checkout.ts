@@ -29,12 +29,12 @@ function stripe(): StripeClient {
 }
 
 /** Only real BookAtlas eBooks with a prepared file are sold; the demo catalogue is not. */
-const sellable = (book: Book | undefined): book is Book => !!book?.hasReaderContent && book.price > 0;
+const sellable = (book: Book | null | undefined): book is Book => !!book?.hasReaderContent && book.price > 0;
 
-export async function createCheckout(who: Identity, requested: unknown, findBook: (id: string) => Book | undefined, appUrl: string) {
+export async function createCheckout(who: Identity, requested: unknown, findBook: (id: string) => Promise<Book | null | undefined>, appUrl: string) {
   const ids = [...new Set(Array.isArray(requested) ? requested.map(String) : [])];
   if (!ids.length || ids.length > MAX_BOOKS) throw new PaymentError(`Choose between 1 and ${MAX_BOOKS} books.`);
-  const books = ids.map((id) => findBook(id));
+  const books = await Promise.all(ids.map((id) => findBook(id)));
   const unsellable = books.findIndex((b) => !sellable(b));
   if (unsellable >= 0) {
     const title = books[unsellable]?.title;

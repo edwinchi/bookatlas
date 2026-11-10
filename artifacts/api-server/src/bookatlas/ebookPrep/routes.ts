@@ -67,7 +67,7 @@ function sendBytes(res: Response, bytes: Uint8Array, contentType: string, cache 
   res.type(contentType).send(Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength));
 }
 
-export function mountEbookPrep(app: Express, onPublished: (book: Book, categories: string[]) => void, priceOf: (bookId: string) => number | undefined) {
+export function mountEbookPrep(app: Express, onPublished: (book: Book, categories: string[]) => void, priceOf: (bookId: string) => Promise<number | undefined>) {
   const raw = express.raw({ type: 'application/octet-stream', limit: PART_BYTES });
   const image = express.raw({ type: ['image/jpeg', 'image/png'], limit: PART_BYTES });
 
@@ -170,11 +170,11 @@ export function mountEbookPrep(app: Express, onPublished: (book: Book, categorie
   app.get('/api/reader/catalog/:bookId/content', guarded(async (req, res) => {
     const id = String(req.params.bookId);
     res.setHeader('Cache-Control', 'private, no-store');
-    res.json(await readableContent(id, req.bookatlasIdentity, priceOf(id)));
+    res.json(await readableContent(id, req.bookatlasIdentity, await priceOf(id)));
   }));
   app.get('/api/reader/catalog/:bookId/images/:name', guarded(async (req, res) => {
     const id = String(req.params.bookId);
-    const image = await bookImage(id, String(req.params.name), req.bookatlasIdentity, priceOf(id));
+    const image = await bookImage(id, String(req.params.name), req.bookatlasIdentity, await priceOf(id));
     sendBytes(res, image.bytes, image.contentType, 'private, max-age=3600');
   }));
   app.get('/api/catalog/covers/:file', guarded(async (req, res) => {

@@ -14,6 +14,9 @@ import { mountPublishingReadiness } from './publishing/routes.js';
 import { mountPublishingJobs } from './publishing/jobRoutes.js';
 import { mountEbookPrep } from './ebookPrep/routes.js';
 import { mountPayments } from './payments/routes.js';
+import { mountCatalog } from './catalog/routes.js';
+import { parseCatalogQuery } from '@workspace/bookatlas-catalog/query';
+import { memoryCatalog, postgresCatalog } from './catalog/store.js';
 import { mountWorkforce } from './workforce/routes.js';
 import { mountReaderTts } from './publishing/readerTts.js';
 import { clerkClient } from '@clerk/express';
@@ -442,8 +445,11 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
     }
   }
 
+  // Storefront reads go to the catalogue store: Postgres in production, this process's memory locally.
+  const catalog = bookatlasDb ? postgresCatalog(bookatlasDb) : memoryCatalog(() => liveCatalog);
+  mountCatalog(app, catalog);
   // Before the JSON parser: the Stripe webhook is verified against its raw body.
-  mountPayments(app, (bookId) => liveCatalog.find((item: { id: string }) => item.id === bookId), APP_URL);
+  mountPayments(app, (bookId) => catalog.get(bookId), APP_URL);
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
   mountPublishingReadiness(app);
@@ -466,7 +472,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
       }
     }
     addLog('inventory_sync', `Published New Title: "${book.title}"`, `Prepared eBook added to ${categories.join(', ')}.`, 'eBook Preparation');
-  }, (bookId) => liveCatalog.find((item: { id: string; price: number }) => item.id === bookId)?.price);
+  }, async (bookId) => (await catalog.get(bookId))?.price);
   mountWorkforce(app);
 
   app.get('/api/auth/me', (req, res) => {
@@ -588,48 +594,22 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
   });
 
   // 1. Get Live Books Catalog
+  // Legacy list (admin studio, older clients): one page from the catalogue store, at most 100 books.
+  // The storefront uses /api/catalog/search.
   app.get('/api/books', async (req, res) => {
-    if (bookatlasDb) {
-      const persisted = await bookatlasDb.from('books').select('data');
-      if (persisted.error) {
-        res.status(503).json({ success: false, error: 'The live catalog could not be loaded.' });
-        return;
-      }
-      if (persisted.data.length) liveCatalog = persisted.data.map((row: { data: unknown }) => row.data);
+    const { genre, format, deal, search } = req.query;
+    const params = new URLSearchParams();
+    if (typeof genre === 'string') params.set('genre', genre);
+    if (format === 'ebook' || format === 'audiobook') params.set('format', format);
+    if (deal === 'true') params.set('price', 'deals');
+    if (typeof search === 'string') params.set('q', search);
+    params.set('limit', String(Math.min(Number(req.query.limit) || 100, 100)));
+    try {
+      const page = await catalog.search(parseCatalogQuery(params));
+      res.json({ success: true, total: page.total, books: page.books, customCategories });
+    } catch {
+      res.status(503).json({ success: false, error: 'The live catalog could not be loaded.' });
     }
-    const { genre, format, deal, search, sort } = req.query;
-    let results = [...liveCatalog];
-
-    if (genre && genre !== 'All Genres') {
-      results = results.filter(
-        (b) => b.primaryGenre === genre || (b.genres && b.genres.includes(genre as string))
-      );
-    }
-
-    if (format && format !== 'all') {
-      results = results.filter((b) => b.format === format);
-    }
-
-    if (deal === 'true') {
-      results = results.filter((b) => b.isDeal || b.price <= 4.99);
-    }
-
-    if (search) {
-      const q = (search as string).toLowerCase();
-      results = results.filter(
-        (b) =>
-          b.title.toLowerCase().includes(q) ||
-          b.author.toLowerCase().includes(q) ||
-          (b.tags && b.tags.some((t: string) => t.toLowerCase().includes(q)))
-      );
-    }
-
-    res.json({
-      success: true,
-      total: results.length,
-      books: results,
-      customCategories
-    });
   });
 
   // ==========================================

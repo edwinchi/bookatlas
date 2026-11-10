@@ -15,9 +15,15 @@ export const supabase: SupabaseClient | null = isDbConfigured
   : null;
 
 const persistenceClient = supabase;
+/** Database functions the app may call (catalogue category counts, TASK-0005). */
+const BOOKATLAS_FUNCTIONS = new Set(['bookatlas_catalog_facets', 'bookatlas_refresh_catalog_facets']);
 /** Scoped repository surface; raw shared-project table names are not accepted. */
 export const bookatlasDb = persistenceClient ? {
   from: (table: BookatlasTable) => persistenceClient.from(bookatlasTable(table)),
+  rpc: (fn: string) => {
+    if (!BOOKATLAS_FUNCTIONS.has(fn)) throw new Error('Unknown Bookatlas function');
+    return persistenceClient.rpc(fn);
+  },
 } : null;
 
 if (isDbConfigured) {
