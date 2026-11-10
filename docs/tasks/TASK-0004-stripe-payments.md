@@ -6,7 +6,7 @@
 | Source brief | Owner, 2026-11-10: "let us setup stripe so ideal can work as well and others globally" |
 | Priority | High |
 | Approval level | **2** (payments, schema, permissions), approved 2026-11-10. Live keys and the production deploy are **3** |
-| Status | ✅ Live payments on since 2026-11-10 (`bookatlas-nml4uta11`). Waiting for iDEAL activation, Stripe Tax registrations and a first real purchase |
+| Status | ✅ Live payments on since 2026-11-10 (`bookatlas-nml4uta11`). Waiting for Stripe Tax registrations and a first real purchase |
 | Builds on | [TASK-0002](TASK-0002-self-publishing-platform.md) Discovery J, [TASK-0003](TASK-0003-ebook-preparation-pipeline.md) D5 (buyers only, preview for everyone) |
 | Last updated | 2026-11-10 |
 
@@ -51,7 +51,7 @@
 | Cart, return from Stripe, owned books | ✅ |
 | Tests | ✅ `tests/e2e/payments.test.ts`: server-side price in EUR VAT-inclusive, demo titles refused, forged webhook refused, retried webhook stored once, whole book after payment, other accounts cannot read the checkout, already-owned refused, refund locks the book. `pnpm test:unit` 106/106, `pnpm test:e2e` 187/187, typecheck clean, `pnpm audit --prod` clean |
 | Owner: secret key | ✅ 2026-11-10 the owner supplied the **live** key; stored in Vercel Production as a sensitive variable (`STRIPE_SECRET_KEY`). Read-only check: account NL, EUR, charges and payouts enabled, Atlantean Globals Services |
-| Owner: payment methods | ⏳ Cards, Apple Pay, Google Pay, Link, Bancontact, Klarna, EPS and others are available; **iDEAL is not enabled** yet |
+| Owner: payment methods | ✅ 2026-11-10 the owner turned on iDEAL and Google Pay in the Default configuration (`pmc_1U4TRfRV4gYJjN7FzUMxFdb2`, shared with the account's other sites). On and available: cards, iDEAL, Bancontact, EPS, Klarna, Apple Pay, Google Pay, Link, Revolut Pay, Amazon Pay, Samsung Pay, Satispay, BLIK, MB Way, Multibanco, MobilePay and others; Alipay and Przelewy24 pending Stripe approval. Checkout shows each buyer the ones that work for euros in their country |
 | Owner: Stripe Tax registrations | ⏳ Stripe Tax is active but has **no registrations**; `STRIPE_TAX` stays unset until NL VAT and EU OSS are added |
 | Shared Stripe account | ✅ The account also serves other sites (four webhook endpoints). BookAtlas sessions carry `metadata.app = bookatlas`; the webhook ignores untagged sessions (tested) |
 | Owner: run the `bookatlas_purchases` SQL in Supabase | ✅ 2026-11-10 (second run) |
