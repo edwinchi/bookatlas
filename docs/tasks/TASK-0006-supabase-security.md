@@ -37,6 +37,8 @@ The Supabase project is **shared with other apps**. Their browsers hold the proj
 
 `pnpm test:supabase` (`tests/security/supabase.test.mjs`) repeats all of this against the real project.
 
+Deployed with the export, image and OpenAPI changes as `bookatlas-a1cabg0yo` (`ad69150`): live security 5/5, browser 13/13, `pnpm test:supabase` 2 passed, 1 waiting for the anon key.
+
 ## Findings and follow-ups
 
 - **Anon-key proof missing.** Add the project's publishable (anon) key to `.env.local` as `SUPABASE_ANON_KEY` and run `pnpm test:supabase`. If a table answers 200 with `[]`, its grant still exists; revoke it.
