@@ -39,6 +39,8 @@ export interface Book {
   hasReaderContent?: boolean;
   /** A demo title kept on the storefront as an example; it has no book file and is not for sale. */
   isSample?: boolean;
+  /** Where to buy the printed book (TASK-0003): checked Amazon and Lulu product pages. */
+  printLinks?: { amazon?: string; lulu?: string };
   title: string;
   subtitle?: string;
   author: string;

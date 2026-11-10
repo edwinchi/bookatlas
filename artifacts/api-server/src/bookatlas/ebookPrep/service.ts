@@ -1,5 +1,5 @@
 import type { Book } from '@workspace/bookatlas-catalog/types';
-import { normaliseIsbn, validateIntake, type SubmissionIntake } from '@workspace/bookatlas-catalog/publishing';
+import { normaliseIsbn, normalisePrintLink, validateIntake, type SubmissionIntake } from '@workspace/bookatlas-catalog/publishing';
 import type { Identity } from '../../auth/policy.js';
 import { MAX_UPLOAD_BYTES, PrepError } from './archive.js';
 import { matchStoreMessage, prepareEpub, type PrepReport } from './engine.js';
@@ -38,6 +38,7 @@ export function view(row: Submission, who: Identity) {
     upload: d.upload ? { fileName: d.upload.fileName, size: d.upload.size, parts: d.upload.parts, purged: !!d.upload.purged } : null,
     prepared: d.prepared ? { size: d.prepared.size, parts: d.prepared.parts, sha256: d.prepared.sha256 } : null,
     cover: d.cover ? { size: d.cover.size, parts: d.cover.parts } : null,
+    printLinks: d.printLinks ?? {},
     coverFix: d.coverFix ? (d.coverFix.kind === 'upload' ? { kind: 'upload', width: d.coverFix.width, height: d.coverFix.height } : { kind: 'enlarge' }) : null,
     epubcheck: d.epubcheck ?? null, bookId: row.book_id, rejectReason: d.rejectReason ?? null,
     ownerEmail: who.role === 'admin' ? d.ownerEmail : undefined,
@@ -164,6 +165,32 @@ export async function setCoverFix(who: Identity, id: string, fix: { upload: Uint
   return prepareSubmission(who, id);
 }
 
+/** Amazon and Lulu links to the printed book; allowed before and after publishing. */
+export async function setPrintLinks(
+  who: Identity, id: string, input: { amazon?: string; lulu?: string },
+  catalog: { get(id: string): Promise<Book | null>; save(book: Book): Promise<void> },
+) {
+  const row = owned(await loadSubmission(id), who);
+  if (row.status === 'rejected') throw new PrepError('This submission was not accepted.', 409);
+  let links: { amazon?: string; lulu?: string };
+  try {
+    const amazon = normalisePrintLink('amazon', input.amazon);
+    const lulu = normalisePrintLink('lulu', input.lulu);
+    links = { ...(amazon ? { amazon } : {}), ...(lulu ? { lulu } : {}) };
+  } catch (error) {
+    throw new PrepError((error as Error).message, 422);
+  }
+  const saved = await saveSubmission(row, { data: { printLinks: links } });
+  if (row.status === 'published' && row.book_id) {
+    const book = await catalog.get(row.book_id);
+    if (book) {
+      const { printLinks: _old, ...rest } = book;
+      await catalog.save(Object.keys(links).length ? { ...rest, printLinks: links } : rest);
+    }
+  }
+  return saved;
+}
+
 export async function submissionFile(who: Identity, id: string, file: 'epub' | 'cover', part?: number) {
   const row = owned(await loadSubmission(id), who);
   const stored = file === 'epub' ? row.data.prepared : row.data.cover;
@@ -254,6 +281,7 @@ export async function publishSubmission(id: string, onPublished: (book: Book, ca
     language: intake.language, synopsis: intake.description.trim(), editorialReview: '',
     sampleChapters: sampleChapters(content.chapters), superPointsEarned: Math.round(price * 10),
     tags: intake.keywords, reviews: [], readingTimeHours: Math.max(1, Math.round(words / 250 / 60)),
+    ...(row.data.printLinks && Object.keys(row.data.printLinks).length ? { printLinks: row.data.printLinks } : {}),
   };
   onPublished(book, intake.categories);
   return saveSubmission(row, {

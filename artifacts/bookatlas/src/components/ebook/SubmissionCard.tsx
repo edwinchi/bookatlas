@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle2, Download, ImageUp, Info, Loader2, Maximize2, Pencil, RotateCcw, Send, XCircle } from 'lucide-react';
+import { AlertCircle, AlertTriangle, BookCopy, CheckCircle2, Download, ImageUp, Info, Loader2, Maximize2, Pencil, RotateCcw, Send, XCircle } from 'lucide-react';
 import type { Finding, Submission, SubmissionStatus } from './ebookApi';
 
 const STATUS: Record<SubmissionStatus, { label: string; tone: string; detail: string }> = {
@@ -17,6 +17,31 @@ const TONE = { error: 'text-rose-700', warning: 'text-amber-700', info: 'text-sl
 const mb = (n: number) => `${(n / 1024 / 1024).toFixed(1)} MB`;
 const COVER_RULES = ['cover-size', 'cover-front-only'];
 const button = 'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold disabled:opacity-50';
+
+/** Amazon and Lulu pages of the printed book; shown on the BookAtlas book page, also after publishing. */
+const PrintLinks: React.FC<{ links: { amazon?: string; lulu?: string }; onSave: (links: { amazon?: string; lulu?: string }) => Promise<void> }> = ({ links, onSave }) => {
+  const [amazon, setAmazon] = useState(links.amazon ?? '');
+  const [lulu, setLulu] = useState(links.lulu ?? '');
+  const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const changed = amazon.trim() !== (links.amazon ?? '') || lulu.trim() !== (links.lulu ?? '');
+  const field = 'w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs focus:border-indigo-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20';
+  return (
+    <section className="mt-4 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+      <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600"><BookCopy className="h-3.5 w-3.5" aria-hidden />Printed book</h4>
+      <p className="mt-1 text-xs text-slate-600">Selling the paperback or hardcover on Amazon or Lulu? Add the book's page and readers see "Also in print" on BookAtlas.</p>
+      <form className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto]" onSubmit={async (e) => {
+        e.preventDefault(); setState('saving');
+        try { await onSave({ amazon: amazon.trim(), lulu: lulu.trim() }); setState('saved'); } catch { setState('idle'); }
+      }}>
+        <input className={field} type="url" inputMode="url" placeholder="https://www.amazon.com/dp/…" aria-label="Amazon page of the printed book" value={amazon} onChange={(e) => { setAmazon(e.target.value); setState('idle'); }} />
+        <input className={field} type="url" inputMode="url" placeholder="https://www.lulu.com/shop/…" aria-label="Lulu page of the printed book" value={lulu} onChange={(e) => { setLulu(e.target.value); setState('idle'); }} />
+        <button type="submit" disabled={!changed || state === 'saving'} className="inline-flex items-center justify-center gap-1.5 rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50">
+          {state === 'saving' && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}{state === 'saved' && !changed ? 'Saved' : 'Save links'}
+        </button>
+      </form>
+    </section>
+  );
+};
 
 /** How to fix a cover finding, with the fixes the author can apply here. */
 const CoverFix: React.FC<{
@@ -59,9 +84,10 @@ export const SubmissionCard: React.FC<{
   onDownload: (file: 'epub' | 'cover') => Promise<void>;
   onEdit: () => void;
   onCover: (fix: { upload: File } | 'enlarge' | 'original') => Promise<void>;
+  onPrintLinks: (links: { amazon?: string; lulu?: string }) => Promise<void>;
   onPublish: () => Promise<void>;
   onReject: (reason: string) => Promise<void>;
-}> = ({ submission: s, isAdmin, onDownload, onEdit, onCover, onPublish, onReject }) => {
+}> = ({ submission: s, isAdmin, onDownload, onEdit, onCover, onPrintLinks, onPublish, onReject }) => {
   const [busy, setBusy] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const status = STATUS[s.status];
@@ -132,6 +158,10 @@ export const SubmissionCard: React.FC<{
             )}
           </section>
         </div>
+      )}
+
+      {['ready', 'checking', 'needs_author', 'published'].includes(s.status) && (
+        <PrintLinks key={`${s.printLinks?.amazon ?? ''}|${s.printLinks?.lulu ?? ''}`} links={s.printLinks ?? {}} onSave={onPrintLinks} />
       )}
 
       <footer className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">

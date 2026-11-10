@@ -20,6 +20,7 @@ export interface Submission {
   prepared: { size: number; parts: number } | null;
   cover: { size: number; parts: number } | null;
   coverFix: { kind: 'upload'; width: number; height: number } | { kind: 'enlarge' } | null;
+  printLinks: { amazon?: string; lulu?: string };
   epubcheck: { round: number; ran: boolean; messages: unknown[]; checkedAt: string } | null;
   bookId: string | null;
   rejectReason: string | null;
@@ -86,6 +87,7 @@ export function useEbookApi() {
       const image = await coverForUpload(file);
       return (await request(`/api/ebook-submissions/${id}/cover`, { method: 'PUT', headers: { 'Content-Type': image.type }, body: image })).json() as Promise<Submission>;
     },
+    setPrintLinks: (id: string, links: { amazon?: string; lulu?: string }) => json<Submission>(`/api/ebook-submissions/${id}/print-links`, 'PUT', links),
     enlargeCover: (id: string) => json<Submission>(`/api/ebook-submissions/${id}/cover/enlarge`, 'POST', {}),
     originalCover: (id: string) => json<Submission>(`/api/ebook-submissions/${id}/cover`, 'DELETE'),
     updateIntake: (id: string, intake: SubmissionIntake) => json<Submission>(`/api/ebook-submissions/${id}/intake`, 'PUT', { intake }),

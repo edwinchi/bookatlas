@@ -138,6 +138,9 @@ export const BookCard: React.FC<BookCardProps> = ({
               )}
             </span>
 
+            {(book.printLinks?.amazon || book.printLinks?.lulu) && (
+              <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">In print</span>
+            )}
             {(book.isBookatlasPlus) && (
               <span className="flex items-center gap-0.5 text-indigo-700 font-bold bg-indigo-50 px-1.5 py-0.5 rounded-md text-[10px]">
                 <Sparkles className="w-2.5 h-2.5 text-amber-500" /> Plus

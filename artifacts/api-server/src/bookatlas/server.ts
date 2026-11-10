@@ -472,7 +472,15 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
       }
     }
     addLog('inventory_sync', `Published New Title: "${book.title}"`, `Prepared eBook added to ${categories.join(', ')}.`, 'eBook Preparation');
-  }, async (bookId) => (await catalog.get(bookId))?.price);
+  }, {
+    get: (bookId) => catalog.get(bookId),
+    // A published book changed (hardcopy links): the live catalogue and the database.
+    save: async (book) => {
+      const existing = liveCatalog.findIndex((item: { id: string }) => item.id === book.id);
+      if (existing >= 0) liveCatalog[existing] = book;
+      await db.upsertBookInDb(book);
+    },
+  });
   mountWorkforce(app);
 
   app.get('/api/auth/me', (req, res) => {

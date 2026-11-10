@@ -199,6 +199,27 @@ export function normaliseIsbn(value: string) {
   return value.replace(/^urn:isbn:/i, '').replace(/[\s-]/g, '').toUpperCase();
 }
 
+/** Amazon storefronts and short links an author may point to for the printed book. */
+const AMAZON_HOSTS = /^(?:www\.|smile\.)?amazon\.(?:com|ca|com\.mx|com\.br|co\.uk|de|fr|it|es|nl|se|pl|com\.be|com\.tr|ae|sa|eg|in|co\.jp|sg|com\.au)$|^amzn\.(?:to|eu)$|^a\.co$/;
+const LULU_HOSTS = /^(?:www\.)?lulu\.com$/;
+
+/**
+ * A hardcopy link as stored: https, on an Amazon or Lulu host, without tracking fragments.
+ * Returns null for an empty value and throws for anything else.
+ */
+export function normalisePrintLink(store: 'amazon' | 'lulu', value: string | undefined): string | null {
+  const text = value?.trim();
+  if (!text) return null;
+  let url: URL;
+  try { url = new URL(text); } catch { throw new Error(`Enter the full ${store === 'amazon' ? 'Amazon' : 'Lulu'} address, starting with https://`); }
+  const hostOk = (store === 'amazon' ? AMAZON_HOSTS : LULU_HOSTS).test(url.hostname.toLowerCase());
+  if (url.protocol !== 'https:' || !hostOk || url.username || url.password || text.length > 500) {
+    throw new Error(store === 'amazon' ? 'Use the book\'s page on an Amazon store (for example amazon.com or amazon.nl).' : 'Use the book\'s page on lulu.com.');
+  }
+  url.hash = '';
+  return url.toString();
+}
+
 export function isValidIsbn(value: string) {
   const isbn = normaliseIsbn(value);
   if (/^\d{13}$/.test(isbn)) {

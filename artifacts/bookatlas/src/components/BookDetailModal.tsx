@@ -17,7 +17,8 @@ import {
   ThumbsUp,
   BrainCircuit,
   Wand2,
-  BookmarkCheck
+  BookmarkCheck,
+  ExternalLink,
 } from 'lucide-react';
 import { Book } from '../types';
 import { ReaderPublicationAccess } from './publishing/ReaderPublicationAccess';
@@ -332,6 +333,25 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                     </p>
                   </button>}
                 </div>
+
+                {/* The printed book, sold by Amazon or Lulu */}
+                {(book.printLinks?.amazon || book.printLinks?.lulu) && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Also in print</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {book.printLinks.amazon && (
+                        <a href={book.printLinks.amazon} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 shadow-2xs transition hover:border-amber-400 hover:bg-amber-50">
+                          Paperback on Amazon <ExternalLink className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+                        </a>
+                      )}
+                      {book.printLinks.lulu && (
+                        <a href={book.printLinks.lulu} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 shadow-2xs transition hover:border-indigo-400 hover:bg-indigo-50">
+                          Print edition on Lulu <ExternalLink className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Buy / Cart Action Row */}
                 <div className="pt-2 flex items-center gap-3">

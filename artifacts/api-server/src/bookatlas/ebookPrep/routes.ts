@@ -7,7 +7,7 @@ import { PART_BYTES } from './store.js';
 import type { EpubcheckMessage } from './rules.js';
 import {
   bookCover, bookImage, checkPart, claimCheck, feedbackOverview, getFor, listFor, prepareSubmission,
-  publishSubmission, readableContent, recordCheck, recordFeedback, rejectSubmission, restartUpload, setCoverFix, startSubmission, submissionFile, updateIntake,
+  publishSubmission, readableContent, recordCheck, recordFeedback, rejectSubmission, restartUpload, setCoverFix, setPrintLinks, startSubmission, submissionFile, updateIntake,
   uploadPart, view, workerConfigured,
 } from './service.js';
 import { logger } from '../../lib/logger.js';
@@ -67,7 +67,10 @@ function sendBytes(res: Response, bytes: Uint8Array, contentType: string, cache 
   res.type(contentType).send(Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength));
 }
 
-export function mountEbookPrep(app: Express, onPublished: (book: Book, categories: string[]) => void, priceOf: (bookId: string) => Promise<number | undefined>) {
+export interface CatalogAccess { get(id: string): Promise<Book | null>; save(book: Book): Promise<void> }
+
+export function mountEbookPrep(app: Express, onPublished: (book: Book, categories: string[]) => void, catalog: CatalogAccess) {
+  const priceOf = async (bookId: string) => (await catalog.get(bookId))?.price;
   const raw = express.raw({ type: 'application/octet-stream', limit: PART_BYTES });
   const image = express.raw({ type: ['image/jpeg', 'image/png'], limit: PART_BYTES });
 
@@ -107,6 +110,11 @@ export function mountEbookPrep(app: Express, onPublished: (book: Book, categorie
   }));
   app.delete('/api/ebook-submissions/:id/cover', guarded(async (req, res) => {
     res.json(view(await setCoverFix(req.bookatlasIdentity!, submissionId(req), 'original'), req.bookatlasIdentity!));
+  }));
+  app.put('/api/ebook-submissions/:id/print-links', guarded(async (req, res) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const text = (v: unknown) => (typeof v === 'string' ? v : undefined);
+    res.json(view(await setPrintLinks(req.bookatlasIdentity!, submissionId(req), { amazon: text(body.amazon), lulu: text(body.lulu) }, catalog), req.bookatlasIdentity!));
   }));
   app.get('/api/ebook-submissions/:id/files/:file', guarded(async (req, res) => {
     const file = req.params.file === 'cover' ? 'cover' : req.params.file === 'epub' ? 'epub' : null;

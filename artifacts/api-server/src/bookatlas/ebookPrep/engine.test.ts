@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
-import { printCoverSpec, validateIntake, type SubmissionIntake } from '@workspace/bookatlas-catalog/publishing';
+import { normalisePrintLink, printCoverSpec, validateIntake, type SubmissionIntake } from '@workspace/bookatlas-catalog/publishing';
 import { prepareEpub, matchStoreMessage } from './engine.js';
 import { previewChapters, readerContent, sampleChapters } from './content.js';
 import { unpackEpub } from './archive.js';
@@ -118,6 +118,16 @@ test('the free preview runs up to and including the introduction', () => {
   assert.deepEqual(sampleChapters(book).map((c) => c.title), ['The Awakened Codex', 'Introduction']);
 });
 
+test('hardcopy links only point to Amazon and Lulu over https', () => {
+  assert.equal(normalisePrintLink('amazon', 'https://amazon.com/dp/B01#x'), 'https://amazon.com/dp/B01');
+  assert.equal(normalisePrintLink('amazon', 'https://amzn.eu/d/abc'), 'https://amzn.eu/d/abc');
+  assert.equal(normalisePrintLink('lulu', ' '), null);
+  for (const bad of ['https://amazon.com.evil.io/dp/1', 'https://evil.io/?u=amazon.com', 'javascript:alert(1)', 'http://amazon.com/dp/1', 'https://user:pw@amazon.com/dp/1']) {
+    assert.throws(() => normalisePrintLink('amazon', bad), undefined, bad);
+  }
+  assert.throws(() => normalisePrintLink('lulu', 'https://lulu.com.evil.io/x'));
+});
+
 test('unsafe archive paths are rejected', () => {
   const evil = zipSync({ mimetype: strToU8('application/epub+zip'), '../escape.txt': strToU8('x') });
   assert.throws(() => unpackEpub(evil), /unsafe file path/);
@@ -153,4 +163,5 @@ test('access policy for submission, reader and worker routes', () => {
   assert.equal(accessFor('DELETE', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/cover'), 'reader');
   assert.equal(accessFor('POST', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/cover/enlarge'), 'reader');
   assert.equal(accessFor('POST', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/reupload'), 'reader');
+  assert.equal(accessFor('PUT', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/print-links'), 'reader');
 });

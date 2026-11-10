@@ -93,6 +93,15 @@ test('an author submission is prepared, checked, published and readable', async 
   assert.ok(chapter.content.includes('3. Matthew 7:13'));
   const cover = await fetch(`/api/catalog/covers/${bookId}.jpg`);
   assert.equal(cover.headers.get('content-type'), 'image/jpeg');
+
+  // Hardcopy links, added after publishing, show on the book page.
+  const links = (body: unknown) => fetch(`/api/ebook-submissions/${submission.id}/print-links`, { method: 'PUT', headers: { 'content-type': 'application/json', 'x-test-role': 'reader' }, body: JSON.stringify(body) });
+  assert.equal((await links({ amazon: 'https://evil.example/amazon.com/dp/1' })).status, 422);
+  assert.equal((await links({ lulu: 'http://www.lulu.com/shop/x' })).status, 422, 'https only');
+  const saved = await (await links({ amazon: 'https://www.amazon.nl/dp/B0TEST1234#reviews', lulu: 'https://www.lulu.com/shop/test-codex/paperback' })).json();
+  assert.deepEqual(saved.printLinks, { amazon: 'https://www.amazon.nl/dp/B0TEST1234', lulu: 'https://www.lulu.com/shop/test-codex/paperback' });
+  const page = await (await fetch(`/api/catalog/books/${bookId}`)).json();
+  assert.deepEqual(page.book.printLinks, saved.printLinks);
 });
 
 test('the author fixes a small cover by uploading a larger one, enlarging it, or going back', async () => {

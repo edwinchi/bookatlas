@@ -19,6 +19,8 @@ export interface SubmissionData {
   rejectReason?: string;
   /** The author's answer to the cover findings, applied on every preparation from the original upload. */
   coverFix?: { kind: 'upload'; file: StoredFile; width: number; height: number } | { kind: 'enlarge' };
+  /** Where the printed book is sold; shown on the book page. */
+  printLinks?: { amazon?: string; lulu?: string };
   version: number;
 }
 
