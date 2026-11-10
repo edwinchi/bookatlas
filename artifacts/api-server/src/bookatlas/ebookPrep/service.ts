@@ -45,12 +45,29 @@ export function view(row: Submission, who: Identity) {
   };
 }
 
-export async function startSubmission(who: Identity, intake: SubmissionIntake, fileName: string, size: number) {
+function checkIntakeAndFile(intake: SubmissionIntake, fileName: string, size: number) {
   const errors = validateIntake(intake);
   if (Object.keys(errors).length) throw Object.assign(new PrepError('Some details are missing or invalid.', 422), { fields: errors });
   if (!/\.epub$/i.test(fileName) || fileName.length > 200) throw new PrepError('Upload an .epub file.');
   if (!Number.isSafeInteger(size) || size < 1 || size > MAX_UPLOAD_BYTES) throw new PrepError('The EPUB must be between 1 byte and 150 MB.', 413);
-  return createSubmission(who.id, who.email, intake, { fileName, size, parts: Math.ceil(size / PART_BYTES) });
+  return { fileName, size, parts: Math.ceil(size / PART_BYTES) };
+}
+
+export async function startSubmission(who: Identity, intake: SubmissionIntake, fileName: string, size: number) {
+  return createSubmission(who.id, who.email, intake, checkIntakeAndFile(intake, fileName, size));
+}
+
+/**
+ * The author replaces the EPUB with a corrected one before publishing. The details and the cover
+ * choice carry over; the old upload is deleted and the new one is prepared like a first upload.
+ */
+export async function restartUpload(who: Identity, id: string, intake: SubmissionIntake, fileName: string, size: number) {
+  const row = owned(await loadSubmission(id), who);
+  if (![...EDITABLE, 'uploading'].includes(row.status)) throw new PrepError('The EPUB can be replaced only before publishing.', 409);
+  const upload = checkIntakeAndFile(intake, fileName, size);
+  const previous = row.data.upload;
+  if (previous && !previous.purged) await removeFile(uploadKey(id), previous.parts);
+  return saveSubmission(row, { status: 'uploading', lease_until: null, data: { intake, upload, report: undefined, epubcheck: undefined } });
 }
 
 export async function uploadPart(who: Identity, id: string, index: number, bytes: Uint8Array) {

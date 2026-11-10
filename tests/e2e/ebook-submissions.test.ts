@@ -156,6 +156,47 @@ test('a paid book: everyone gets the preview, the author and admins the whole bo
   assert.equal((await contentAs('reader')).access, 'full', 'test-reader-1 submitted it, so it is their book');
 });
 
+test('the author replaces the EPUB with a corrected one until the book is published', async () => {
+  const { fetch } = await getSharedTestServer();
+  const send = async (id: string, upload: { parts: number }, partBytes: number, bytes: Uint8Array) => {
+    for (let part = 0; part < upload.parts; part += 1) {
+      const put = await fetch(`/api/ebook-submissions/${id}/upload/${part}`, {
+        method: 'PUT', headers: { 'content-type': 'application/octet-stream', 'x-test-role': 'reader' },
+        body: bytes.subarray(part * partBytes, (part + 1) * partBytes),
+      });
+      assert.equal(put.status, 204);
+    }
+    return (await fetch(`/api/ebook-submissions/${id}/prepare`, json({}))).json();
+  };
+  const first = epub2(5);
+  const submission = await (await fetch('/api/ebook-submissions', json({ intake, fileName: 'draft.epub', size: first.byteLength }))).json();
+  const prepared = await send(submission.id, submission.upload, submission.partBytes, first);
+  assert.equal(prepared.report.cover.height, 1130);
+
+  const corrected = epub2(6);
+  const restarted = await (await fetch(`/api/ebook-submissions/${submission.id}/reupload`, json({ intake: { ...intake, title: 'The Test Codex, Revised' }, fileName: 'corrected.epub', size: corrected.byteLength }))).json();
+  assert.equal(restarted.status, 'uploading');
+  assert.equal(restarted.report, null, 'the old report is gone');
+  assert.equal(restarted.upload.fileName, 'corrected.epub');
+  const again = await send(submission.id, restarted.upload, restarted.partBytes, corrected);
+  assert.equal(again.report.cover.height, 1356, 'prepared from the corrected file');
+  assert.equal(again.intake.title, 'The Test Codex, Revised');
+  assert.equal(again.report.summary.errors, 0);
+
+  // Once published, the EPUB can no longer be swapped.
+  const worker = { authorization: `Bearer ${WORKER}` };
+  for (let done = false; !done;) {
+    const claim = await fetch('/api/internal/ebook-checks/claim', { method: 'POST', headers: worker });
+    assert.equal(claim.status, 200);
+    const job = await claim.json();
+    await fetch(`/api/internal/ebook-checks/${job.id}/result`, { method: 'POST', headers: { ...worker, 'content-type': 'application/json' }, body: JSON.stringify({ sha256: job.sha256, messages: [] }) });
+    done = job.id === submission.id;
+  }
+  assert.equal((await (await fetch(`/api/ebook-submissions/${submission.id}/publish`, json({}, 'admin'))).json()).status, 'published');
+  const late = await fetch(`/api/ebook-submissions/${submission.id}/reupload`, json({ intake, fileName: 'late.epub', size: corrected.byteLength }));
+  assert.equal(late.status, 409);
+});
+
 test('store feedback is matched to rules and makes them blocking', async () => {
   const { fetch } = await getSharedTestServer();
   const lulu = await (await fetch('/api/ebook-prep/feedback', json({ store: 'Lulu', message: 'Copyright year mismatch ~ Copyright year entered in the metadata does not match copyright year in the interior file.' }, 'admin'))).json();

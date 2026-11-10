@@ -60,18 +60,27 @@ export function useEbookApi() {
     return res.status === 204 ? (undefined as T) : res.json();
   };
 
+  const uploadAndPrepare = async (submission: Submission, file: File, onProgress: (done: number, total: number) => void) => {
+    const parts = submission.upload!.parts;
+    for (let part = 0; part < parts; part += 1) {
+      const blob = file.slice(part * submission.partBytes, (part + 1) * submission.partBytes);
+      await request(`/api/ebook-submissions/${submission.id}/upload/${part}`, { method: 'PUT', headers: { 'Content-Type': 'application/octet-stream' }, body: blob });
+      onProgress(part + 1, parts);
+    }
+    return json<Submission>(`/api/ebook-submissions/${submission.id}/prepare`, 'POST', {});
+  };
+
   return {
     list: () => json<{ submissions: Submission[] }>('/api/ebook-submissions').then((r) => r.submissions),
     get: (id: string) => json<Submission>(`/api/ebook-submissions/${id}`),
     async submit(intake: SubmissionIntake, file: File, onProgress: (done: number, total: number) => void) {
       const created = await json<Submission>('/api/ebook-submissions', 'POST', { intake, fileName: file.name, size: file.size });
-      const parts = created.upload!.parts;
-      for (let part = 0; part < parts; part += 1) {
-        const blob = file.slice(part * created.partBytes, (part + 1) * created.partBytes);
-        await request(`/api/ebook-submissions/${created.id}/upload/${part}`, { method: 'PUT', headers: { 'Content-Type': 'application/octet-stream' }, body: blob });
-        onProgress(part + 1, parts);
-      }
-      return json<Submission>(`/api/ebook-submissions/${created.id}/prepare`, 'POST', {});
+      return uploadAndPrepare(created, file, onProgress);
+    },
+    /** A corrected EPUB for a submission that is not published yet; details and cover choice carry over. */
+    async reupload(id: string, intake: SubmissionIntake, file: File, onProgress: (done: number, total: number) => void) {
+      const restarted = await json<Submission>(`/api/ebook-submissions/${id}/reupload`, 'POST', { intake, fileName: file.name, size: file.size });
+      return uploadAndPrepare(restarted, file, onProgress);
     },
     async replaceCover(id: string, file: File) {
       const image = await coverForUpload(file);

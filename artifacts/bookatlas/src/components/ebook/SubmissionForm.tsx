@@ -15,7 +15,7 @@ const label = 'block text-xs font-semibold text-slate-700';
 
 /**
  * Asks for everything a complete eBook (and, optionally, a print edition) needs, then uploads the
- * EPUB. With `initial`, edits the details of an existing submission instead (no file).
+ * EPUB. With `initial`, edits an existing submission; a corrected EPUB is optional unless `fileRequired`.
  */
 export const SubmissionForm: React.FC<{
   categories: string[];
@@ -23,9 +23,10 @@ export const SubmissionForm: React.FC<{
   serverErrors?: Record<string, string>;
   progress?: { done: number; total: number } | null;
   busy: boolean;
+  fileRequired?: boolean;
   onSubmit: (intake: SubmissionIntake, file: File | null) => void;
   onCancel?: () => void;
-}> = ({ categories, initial, serverErrors, progress, busy, onSubmit, onCancel }) => {
+}> = ({ categories, initial, serverErrors, progress, busy, fileRequired = !initial, onSubmit, onCancel }) => {
   const [intake, setIntake] = useState<SubmissionIntake>(initial ?? EMPTY);
   const [file, setFile] = useState<File | null>(null);
   const [newCategory, setNewCategory] = useState('');
@@ -40,7 +41,7 @@ export const SubmissionForm: React.FC<{
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const found = validateIntake(intake);
-    if (!initial && !file) found.file = 'Choose your EPUB file.';
+    if (fileRequired && !file) found.file = initial ? 'The last upload did not finish. Choose your EPUB file again.' : 'Choose your EPUB file.';
     setErrors(found);
     if (Object.keys(found).length) return;
     onSubmit(intake, file);
@@ -136,20 +137,22 @@ export const SubmissionForm: React.FC<{
         )}
       </fieldset>
 
-      {!initial && (
-        <fieldset className="space-y-2">
-          <legend className="font-serif text-lg font-bold text-slate-900">Your EPUB</legend>
-          <input type="file" accept=".epub,application/epub+zip" onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-indigo-700" />
-          <p className="text-xs text-slate-500">Up to 150 MB. A full print-wrap cover is cropped to its front automatically.</p>
-          {error('file')}
-        </fieldset>
-      )}
+      <fieldset className="space-y-2">
+        <legend className="font-serif text-lg font-bold text-slate-900">{initial && !fileRequired ? 'Replace the EPUB (optional)' : 'Your EPUB'}</legend>
+        <input type="file" accept=".epub,application/epub+zip" onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-indigo-700" />
+        <p className="text-xs text-slate-500">
+          {initial
+            ? 'Made corrections? Upload the new file. Your details and cover choice are kept, and the book is prepared and checked again. Leave this empty to keep the current file.'
+            : 'Up to 150 MB. A full print-wrap cover is cropped to its front automatically.'}
+        </p>
+        {error('file')}
+      </fieldset>
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={busy} className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Upload className="h-4 w-4" aria-hidden />}
-          {initial ? 'Save and prepare again' : 'Upload and prepare'}
+          {!initial || file ? 'Upload and prepare' : 'Save and prepare again'}
         </button>
         {onCancel && <button type="button" onClick={onCancel} className="text-sm font-semibold text-slate-600 hover:text-slate-900">Cancel</button>}
         {progress && (

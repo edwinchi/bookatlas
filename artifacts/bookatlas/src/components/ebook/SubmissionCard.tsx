@@ -3,7 +3,7 @@ import { AlertCircle, AlertTriangle, CheckCircle2, Download, ImageUp, Info, Load
 import type { Finding, Submission, SubmissionStatus } from './ebookApi';
 
 const STATUS: Record<SubmissionStatus, { label: string; tone: string; detail: string }> = {
-  uploading: { label: 'Uploading', tone: 'bg-slate-100 text-slate-700', detail: 'The upload did not finish. Upload the file again.' },
+  uploading: { label: 'Uploading', tone: 'bg-slate-100 text-slate-700', detail: 'The upload did not finish. Choose "Upload again" to send the file again.' },
   preparing: { label: 'Preparing', tone: 'bg-indigo-50 text-indigo-700', detail: 'Fixing and checking your eBook.' },
   checking: { label: 'Validating', tone: 'bg-indigo-50 text-indigo-700', detail: 'Running the official EPUBCheck validator. This takes a minute or two.' },
   ready: { label: 'Ready for review', tone: 'bg-emerald-50 text-emerald-800', detail: 'Your eBook passed every check. BookAtlas reviews it before it goes on sale.' },
@@ -69,6 +69,8 @@ export const SubmissionCard: React.FC<{
   const fixes = s.report?.rounds.flatMap((r) => r.changes) ?? [];
   const findings = s.report?.findings ?? [];
   const editable = ['needs_author', 'ready', 'checking'].includes(s.status);
+  // Details and the EPUB itself can be changed until the book is published.
+  const canEdit = editable || s.status === 'uploading';
   const coverFinding = editable ? findings.find((f) => COVER_RULES.includes(f.rule) && f.severity !== 'info') : undefined;
 
   return (
@@ -143,9 +145,9 @@ export const SubmissionCard: React.FC<{
             {busy === 'cover' ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Download className="h-3.5 w-3.5" aria-hidden />}Store cover (JPG)
           </button>
         )}
-        {editable && (
+        {canEdit && (
           <button type="button" onClick={onEdit} className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
-            <Pencil className="h-3.5 w-3.5" aria-hidden />Edit details
+            <Pencil className="h-3.5 w-3.5" aria-hidden />{s.status === 'uploading' ? 'Upload again' : 'Edit details or replace EPUB'}
           </button>
         )}
         {isAdmin && s.status === 'ready' && (

@@ -135,10 +135,14 @@ export const EbookPublishing: React.FC = () => {
                 serverErrors={problem?.fields}
                 progress={progress}
                 busy={busy}
+                fileRequired={mode.kind === 'new' || mode.submission.status === 'uploading'}
                 onCancel={() => setMode(null)}
-                onSubmit={(intake, file) => handle(() => mode.kind === 'edit'
-                  ? api.updateIntake(mode.submission.id, intake)
-                  : api.submit(intake, file!, (done, total) => setProgress({ done, total })))}
+                onSubmit={(intake, file) => {
+                  const onProgress = (done: number, total: number) => setProgress({ done, total });
+                  return handle(() => mode.kind === 'new' ? api.submit(intake, file!, onProgress)
+                    : file ? api.reupload(mode.submission.id, intake, file, onProgress)
+                      : api.updateIntake(mode.submission.id, intake));
+                }}
               />
             </section>
           )}

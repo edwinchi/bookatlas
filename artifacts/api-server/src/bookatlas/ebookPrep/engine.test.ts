@@ -152,4 +152,5 @@ test('access policy for submission, reader and worker routes', () => {
   assert.equal(accessFor('PUT', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/cover'), 'reader');
   assert.equal(accessFor('DELETE', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/cover'), 'reader');
   assert.equal(accessFor('POST', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/cover/enlarge'), 'reader');
+  assert.equal(accessFor('POST', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/reupload'), 'reader');
 });
