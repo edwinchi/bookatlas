@@ -3,12 +3,13 @@ import { normaliseIsbn, validateIntake, type SubmissionIntake } from '@workspace
 import type { Identity } from '../../auth/policy.js';
 import { MAX_UPLOAD_BYTES, PrepError } from './archive.js';
 import { matchStoreMessage, prepareEpub, type PrepReport } from './engine.js';
+import { decodeImage, imageSize } from './images.js';
 import { RULES, type EpubcheckMessage } from './rules.js';
 import { readerContent, sampleChapters, type ReaderContent } from './content.js';
 import { PART_BYTES, getFile, getObject, getPart, putFile, putObject, putPart, removeFile, sha256 } from './store.js';
 import {
   addFeedback, createSubmission, expiredUploads, learnedBlockingRules, listFeedback, listSubmissions,
-  loadSubmission, nextForCheck, saveSubmission, type Submission,
+  loadSubmission, nextForCheck, saveSubmission, type Submission, type SubmissionData,
 } from './submissions.js';
 
 export const MAX_CHECK_ROUNDS = 3;
@@ -18,6 +19,8 @@ const LEASE_MINUTES = 10;
 const uploadKey = (id: string) => `submissions/${id}/upload`;
 const preparedKey = (id: string) => `submissions/${id}/prepared-epub`;
 const coverKey = (id: string) => `submissions/${id}/front-cover`;
+const coverUploadKey = (id: string) => `submissions/${id}/cover-upload`;
+const EDITABLE = ['needs_author', 'ready', 'checking'];
 
 export const workerConfigured = () => (process.env.EBOOK_WORKER_TOKEN?.trim().length ?? 0) >= 32;
 
@@ -33,6 +36,7 @@ export function view(row: Submission, who: Identity) {
     upload: d.upload ? { fileName: d.upload.fileName, size: d.upload.size, parts: d.upload.parts, purged: !!d.upload.purged } : null,
     prepared: d.prepared ? { size: d.prepared.size, parts: d.prepared.parts, sha256: d.prepared.sha256 } : null,
     cover: d.cover ? { size: d.cover.size, parts: d.cover.parts } : null,
+    coverFix: d.coverFix ? (d.coverFix.kind === 'upload' ? { kind: 'upload', width: d.coverFix.width, height: d.coverFix.height } : { kind: 'enlarge' }) : null,
     epubcheck: d.epubcheck ?? null, bookId: row.book_id, rejectReason: d.rejectReason ?? null,
     ownerEmail: who.role === 'admin' ? d.ownerEmail : undefined,
     partBytes: PART_BYTES, createdAt: row.created_at, updatedAt: row.updated_at,
@@ -56,10 +60,16 @@ export async function uploadPart(who: Identity, id: string, index: number, bytes
   await putPart(uploadKey(id), index, bytes);
 }
 
+async function coverOption(row: Submission) {
+  const fix = row.data.coverFix;
+  if (!fix) return undefined;
+  return fix.kind === 'upload' ? { replacement: await getFile(coverUploadKey(row.id), fix.file) } : { enlarge: true };
+}
+
 async function runPreparation(row: Submission, source: Uint8Array, epubcheck: EpubcheckMessage[] = [], round = 0) {
   let result;
   try {
-    result = prepareEpub(source, row.data.intake, { epubcheck, blockingRules: await learnedBlockingRules() });
+    result = prepareEpub(source, row.data.intake, { epubcheck, blockingRules: await learnedBlockingRules(), cover: await coverOption(row) });
   } catch (error) {
     const message = error instanceof PrepError ? error.message : 'The EPUB could not be read. Export it again from your writing tool and re-upload.';
     const report: PrepReport = {
@@ -101,10 +111,37 @@ export async function prepareSubmission(who: Identity, id: string) {
 
 export async function updateIntake(who: Identity, id: string, intake: SubmissionIntake) {
   const row = owned(await loadSubmission(id), who);
-  if (!['needs_author', 'ready', 'checking'].includes(row.status)) throw new PrepError('Details can be changed only before publishing.', 409);
+  if (!EDITABLE.includes(row.status)) throw new PrepError('Details can be changed only before publishing.', 409);
   const errors = validateIntake(intake);
   if (Object.keys(errors).length) throw Object.assign(new PrepError('Some details are missing or invalid.', 422), { fields: errors });
   await saveSubmission(row, { data: { intake } });
+  return prepareSubmission(who, id);
+}
+
+/**
+ * The author answers a cover finding: upload a replacement front cover, enlarge the current one,
+ * or go back to the cover in the EPUB. The book is then prepared again from the original upload.
+ */
+export async function setCoverFix(who: Identity, id: string, fix: { upload: Uint8Array } | 'enlarge' | 'original') {
+  const row = owned(await loadSubmission(id), who);
+  if (!EDITABLE.includes(row.status)) throw new PrepError('The cover can be changed only before publishing.', 409);
+  const previous = row.data.coverFix;
+  const dropPrevious = async () => { if (previous?.kind === 'upload') await removeFile(coverUploadKey(id), previous.file.parts); };
+  let next: SubmissionData['coverFix'];
+  if (typeof fix === 'object') {
+    const bytes = fix.upload;
+    const size = imageSize(bytes);
+    if (!size) throw new PrepError('Upload the front cover as a JPEG or PNG image.', 415);
+    try { decodeImage(bytes); } catch { throw new PrepError('The image could not be read. Export it again as JPEG or PNG.'); }
+    if (size.width >= size.height) throw new PrepError(`The image is ${size.width} × ${size.height}. Upload the front cover only, taller than it is wide.`);
+    if (size.height < 1000) throw new PrepError(`The image is ${size.width} × ${size.height}; stores need at least 1000 pixels on the long side.`);
+    await dropPrevious();
+    next = { kind: 'upload', file: await putFile(coverUploadKey(id), bytes, bytes[0] === 0x89 ? 'image/png' : 'image/jpeg'), ...size };
+  } else {
+    await dropPrevious();
+    if (fix === 'enlarge') next = { kind: 'enlarge' };
+  }
+  await saveSubmission(row, { data: { coverFix: next } });
   return prepareSubmission(who, id);
 }
 
@@ -237,6 +274,7 @@ export async function feedbackOverview() {
 export async function purgeExpired() {
   for (const row of await expiredUploads()) {
     await removeFile(uploadKey(row.id), row.data.upload!.parts);
+    if (row.data.coverFix?.kind === 'upload') await removeFile(coverUploadKey(row.id), row.data.coverFix.file.parts);
     if (row.status === 'rejected' && row.data.prepared) await removeFile(preparedKey(row.id), row.data.prepared.parts);
     await saveSubmission(row, { data: { upload: { ...row.data.upload!, purged: true } } });
   }

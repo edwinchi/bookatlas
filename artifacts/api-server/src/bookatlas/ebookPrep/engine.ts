@@ -32,9 +32,9 @@ function runChecks(ctx: PrepContext, rules: Rule[], blocking: Set<string>) {
  * `blockingRules` are rules a store has rejected books for (learned from feedback); their
  * warnings count as errors.
  */
-export function prepareEpub(input: Uint8Array, intake: SubmissionIntake, options: { epubcheck?: EpubcheckMessage[]; blockingRules?: string[] } = {}): PrepResult {
+export function prepareEpub(input: Uint8Array, intake: SubmissionIntake, options: { epubcheck?: EpubcheckMessage[]; blockingRules?: string[]; cover?: PrepContext['cover'] } = {}): PrepResult {
   const epub = unpackEpub(input);
-  const ctx: PrepContext = { epub, opf: new PackageDocument(epub), intake, epubcheck: options.epubcheck ?? [], notes: {} };
+  const ctx: PrepContext = { epub, opf: new PackageDocument(epub), intake, epubcheck: options.epubcheck ?? [], cover: options.cover, notes: {} };
   const blocking = new Set(options.blockingRules ?? []);
   const rounds: PrepRound[] = [];
 

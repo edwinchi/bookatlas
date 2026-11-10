@@ -56,6 +56,28 @@ export function crop(raster: Raster, x: number, y: number, width: number, height
   return { width, height, data };
 }
 
+/** Bilinear resample to `width` x `height`; used to enlarge a cover the author chose not to replace. */
+export function resize(raster: Raster, width: number, height: number): Raster {
+  if (width * height > MAX_PIXELS) throw new Error('Unsupported or oversized image.');
+  const data = new Uint8Array(width * height * 4);
+  const sx = raster.width / width, sy = raster.height / height;
+  for (let y = 0; y < height; y += 1) {
+    const fy = Math.max(0, (y + 0.5) * sy - 0.5), y0 = Math.floor(fy), y1 = Math.min(raster.height - 1, y0 + 1), wy = fy - y0;
+    for (let x = 0; x < width; x += 1) {
+      const fx = Math.max(0, (x + 0.5) * sx - 0.5), x0 = Math.floor(fx), x1 = Math.min(raster.width - 1, x0 + 1), wx = fx - x0;
+      const a = (y0 * raster.width + x0) * 4, b = (y0 * raster.width + x1) * 4;
+      const c = (y1 * raster.width + x0) * 4, d = (y1 * raster.width + x1) * 4;
+      const o = (y * width + x) * 4;
+      for (let k = 0; k < 4; k += 1) {
+        const top = raster.data[a + k]! + (raster.data[b + k]! - raster.data[a + k]!) * wx;
+        const bottom = raster.data[c + k]! + (raster.data[d + k]! - raster.data[c + k]!) * wx;
+        data[o + k] = Math.round(top + (bottom - top) * wy);
+      }
+    }
+  }
+  return { width, height, data };
+}
+
 /** Squared RGB distance below which a pixel counts as background (about 12% of full range). */
 const FUZZ = (0.12 * 441) ** 2;
 

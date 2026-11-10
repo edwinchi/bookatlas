@@ -7,7 +7,7 @@ import { PART_BYTES } from './store.js';
 import type { EpubcheckMessage } from './rules.js';
 import {
   bookContent, bookCover, bookImage, checkPart, claimCheck, feedbackOverview, getFor, listFor, prepareSubmission,
-  publishSubmission, recordCheck, recordFeedback, rejectSubmission, startSubmission, submissionFile, updateIntake,
+  publishSubmission, recordCheck, recordFeedback, rejectSubmission, setCoverFix, startSubmission, submissionFile, updateIntake,
   uploadPart, view, workerConfigured,
 } from './service.js';
 import { logger } from '../../lib/logger.js';
@@ -69,6 +69,7 @@ function sendBytes(res: Response, bytes: Uint8Array, contentType: string, cache 
 
 export function mountEbookPrep(app: Express, onPublished: (book: Book, categories: string[]) => void) {
   const raw = express.raw({ type: 'application/octet-stream', limit: PART_BYTES });
+  const image = express.raw({ type: ['image/jpeg', 'image/png'], limit: PART_BYTES });
 
   // Authors (signed-in readers) and admins
   app.get('/api/ebook-submissions', guarded(async (req, res) => {
@@ -91,6 +92,17 @@ export function mountEbookPrep(app: Express, onPublished: (book: Book, categorie
   }));
   app.put('/api/ebook-submissions/:id/intake', guarded(async (req, res) => {
     res.json(view(await updateIntake(req.bookatlasIdentity!, submissionId(req), intakeFrom(req.body?.intake)), req.bookatlasIdentity!));
+  }));
+  // Cover fixes: a replacement front cover (one request, 4 MB at most), enlarge, or back to the EPUB's own.
+  app.put('/api/ebook-submissions/:id/cover', image, guarded(async (req, res) => {
+    if (!Buffer.isBuffer(req.body) || !req.body.length) throw new PrepError('Send the cover as image/jpeg or image/png, 4 MB at most.', 415);
+    res.json(view(await setCoverFix(req.bookatlasIdentity!, submissionId(req), { upload: new Uint8Array(req.body) }), req.bookatlasIdentity!));
+  }));
+  app.post('/api/ebook-submissions/:id/cover/enlarge', guarded(async (req, res) => {
+    res.json(view(await setCoverFix(req.bookatlasIdentity!, submissionId(req), 'enlarge'), req.bookatlasIdentity!));
+  }));
+  app.delete('/api/ebook-submissions/:id/cover', guarded(async (req, res) => {
+    res.json(view(await setCoverFix(req.bookatlasIdentity!, submissionId(req), 'original'), req.bookatlasIdentity!));
   }));
   app.get('/api/ebook-submissions/:id/files/:file', guarded(async (req, res) => {
     const file = req.params.file === 'cover' ? 'cover' : req.params.file === 'epub' ? 'epub' : null;

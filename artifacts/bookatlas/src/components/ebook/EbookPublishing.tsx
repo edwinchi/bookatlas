@@ -151,6 +151,8 @@ export const EbookPublishing: React.FC = () => {
                   <SubmissionCard key={s.id} submission={s} isAdmin={isAdmin}
                     onDownload={async (file) => saveBlob(await api.download(s.id, file), file === 'epub' ? (s.upload?.fileName ?? 'book.epub').replace(/\.epub$/i, '-prepared.epub') : `${s.intake.title}-cover.jpg`)}
                     onEdit={() => setMode({ kind: 'edit', submission: s })}
+                    onCover={async (fix) => handle(() => fix === 'enlarge' ? api.enlargeCover(s.id)
+                      : fix === 'original' ? api.originalCover(s.id) : api.replaceCover(s.id, fix.upload))}
                     onPublish={async () => handle(() => api.publish(s.id))}
                     onReject={async (reason) => handle(() => api.reject(s.id, reason))}
                   />

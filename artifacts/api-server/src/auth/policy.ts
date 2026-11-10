@@ -19,6 +19,8 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (/^\/api\/ebook-submissions\/[^/]+\/upload\/\d+$/.test(normalized) && method === 'PUT') return 'reader';
   if (/^\/api\/ebook-submissions\/[^/]+\/(?:prepare)$/.test(normalized) && method === 'POST') return 'reader';
   if (/^\/api\/ebook-submissions\/[^/]+\/intake$/.test(normalized) && method === 'PUT') return 'reader';
+  if (/^\/api\/ebook-submissions\/[^/]+\/cover$/.test(normalized) && ['PUT', 'DELETE'].includes(method)) return 'reader';
+  if (/^\/api\/ebook-submissions\/[^/]+\/cover\/enlarge$/.test(normalized) && method === 'POST') return 'reader';
   if (/^\/api\/ebook-submissions\/[^/]+\/files\/(?:epub|cover)(?:\/parts\/\d+)?$/.test(normalized) && method === 'GET') return 'reader';
   // The EPUBCheck worker authenticates with its bearer token inside the route.
   if (/^\/api\/internal\/ebook-checks\/(?:claim|[^/]+\/(?:parts\/\d+|result))$/.test(normalized)) return 'self-service';

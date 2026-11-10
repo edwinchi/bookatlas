@@ -20,6 +20,13 @@ export function wrapCover(scale = 1) {
   return new Uint8Array(PNG.sync.write(png));
 }
 
+/** A plain portrait front cover, as an author would upload to replace a small one. */
+export function frontCover(width: number, height: number) {
+  const png = new PNG({ width, height });
+  for (let i = 0; i < png.data.length; i += 4) { png.data[i] = 220; png.data[i + 1] = 170; png.data[i + 2] = 40; png.data[i + 3] = 255; }
+  return new Uint8Array(PNG.sync.write(png));
+}
+
 /** Minimal sfnt with an OS/2 table carrying the Microsoft vendor id. */
 export function microsoftFont() {
   const os2 = new Uint8Array(78);

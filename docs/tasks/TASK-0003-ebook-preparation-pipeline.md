@@ -85,15 +85,16 @@ The source of truth is `lib/bookatlas-catalog/src/publishing/requirements.ts`. T
 | Production tables `bookatlas_ebook_submissions`, `bookatlas_prep_feedback` | ✅ 2026-11-10 created by the owner in the Supabase SQL editor; verified through the REST API (bucket `bookatlas-ebooks` private) |
 | Owner admin role | ✅ 2026-11-10 (owner approval, Level 2 permissions): production has no `BOOKATLAS_OWNER_EMAIL`, so the owner's Clerk account had the reader role and could not publish. Set `publicMetadata.role = admin` on that account through the Clerk API. Rollback: remove the role in the Clerk dashboard |
 | Production deploy | ✅ 2026-11-09 `bookatlas-h4c2hkxhw` (`68fb31f`, owner sign-off "publish to live site") on booksatlas.app. Verified: security 5/5, browser 12/12, sweep 48/48 with no page errors, account journey 7/7; new routes answer 401 without sign-in, worker claim 401 without token |
+| Cover fixes on the submission card (owner request 2026-11-10) | ✅ Built and tested; **not deployed**. Under a cover finding the card explains the fix and offers **Upload a larger cover** (JPEG/PNG, front only, portrait, at least 1000 px tall; the browser re-encodes files over 4 MB as JPEG) and, for covers below 1600 × 2560, **Enlarge to 2560 px tall** (bilinear, proportions kept, stated plainly that it adds no detail). **Use the original cover** undoes either. The choice is stored in `data.coverFix` (the uploaded image under `submissions/<id>/cover-upload`, purged with the raw upload) and applied by the `cover-size` rule on every preparation from the original upload. On *The Awakened Codex*: enlarge gives 1910 × 2560, 0 errors, 0 warnings, EPUBCheck 0/0, 12 s |
 | Publish *The Awakened Codex* (owner sign-off 2026-11-09, "go, deploy all") | ⏳ The owner uploads it on "Upload your eBook" and publishes |
 
 ## Verification (2026-11-09)
 
-`pnpm run typecheck` clean; `pnpm test:unit` 103/103; `pnpm test:e2e` 184/184 (includes `tests/e2e/ebook-submissions.test.ts`: upload → prepare → worker check → publish into a new category → signed-in reading → public cover → store feedback); `pnpm test:catalog` 3/3; `pnpm audit --prod` clean. The schema-count tests now expect 10 tables.
+`pnpm run typecheck` clean; `pnpm test:unit` 105/105; `pnpm test:e2e` 185/185 (2026-11-10, with the cover fixes) (includes `tests/e2e/ebook-submissions.test.ts`: upload → prepare → worker check → publish into a new category → signed-in reading → public cover → store feedback); `pnpm test:catalog` 3/3; `pnpm audit --prod` clean. The schema-count tests now expect 10 tables.
 
 ## Follow-ups
 
 - Host the EPUBCheck worker and set `EBOOK_WORKER_TOKEN` on Vercel and the worker (Level 1 infrastructure, Level 3 credential).
 - Add the submission routes to `lib/api-spec/openapi.yaml` and regenerate the client.
-- Covers below 1600 × 2560 get a warning; *The Awakened Codex* is 1480 × 1984.
+- Covers below 1600 × 2560 get a warning; the author can now upload a larger cover or enlarge it from the card.
 - Book images larger than 4.5 MB cannot be served through Vercel; the engine should downscale them.

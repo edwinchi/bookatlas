@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { isValidIsbn, normaliseIsbn, type SubmissionIntake } from '@workspace/bookatlas-catalog/publishing';
 import type { EpubFiles } from './archive.js';
 import { PackageDocument, attributes, decodeEntities, escapeXml, relativeHref, resolvePath, type ManifestItem } from './opf.js';
-import { crop, decodeImage, encodeJpeg, encodePng, findFrontPanel, imageSize } from './images.js';
+import { crop, decodeImage, encodeJpeg, encodePng, findFrontPanel, imageSize, resize, type Raster } from './images.js';
 import { deobfuscate, forbidsEmbedding, inspectFont, isRedistributionRestricted } from './fonts.js';
 
 export type Severity = 'error' | 'warning' | 'info';
@@ -15,7 +15,9 @@ export interface PrepContext {
   intake: SubmissionIntake;
   /** Messages from the last EPUBCheck run of this book; cleared once a fix changes the file. */
   epubcheck: EpubcheckMessage[];
-  notes: { coverCrop?: string };
+  /** The author's answer to a cover finding: a replacement front cover, or enlarge the current one. */
+  cover?: { replacement?: Uint8Array; enlarge?: boolean };
+  notes: { coverCrop?: string; coverReplaced?: boolean; coverEnlarged?: boolean };
 }
 
 export interface Rule {
@@ -283,12 +285,36 @@ function coverPage(ctx: PrepContext, cover: ManifestItem) {
   return ctx.opf.spine().find((i) => ctx.epub.has(i.path) && ctx.epub.text(i.path).includes(relativeHref(i.path.includes('/') ? i.path.slice(0, i.path.lastIndexOf('/')) : '', cover.path)));
 }
 
+/** Keep the cover page's SVG viewBox and image size in step with a new cover image. */
+function resizeCoverPage(ctx: PrepContext, cover: ManifestItem, from: { width: number; height: number }, to: { width: number; height: number }) {
+  const page = coverPage(ctx, cover);
+  if (!page) return;
+  const html = ctx.epub.text(page.path)
+    .replace(new RegExp(`viewBox="0 0 ${from.width} ${from.height}"`), `viewBox="0 0 ${to.width} ${to.height}"`)
+    .replace(new RegExp(`width="${from.width}"(\\s+)height="${from.height}"`), `width="${to.width}"$1height="${to.height}"`);
+  ctx.epub.setText(page.path, html);
+}
+
+/** Write a new cover in the cover item's own format, so the manifest media type stays true. */
+function writeCover(ctx: PrepContext, cover: ManifestItem, image: Raster | Uint8Array) {
+  const png = ctx.epub.bytes(cover.path)[0] === 0x89;
+  if (image instanceof Uint8Array && (image[0] === 0x89) === png) { ctx.epub.setBytes(cover.path, image); return; }
+  const raster = image instanceof Uint8Array ? decodeImage(image) : image;
+  ctx.epub.setBytes(cover.path, png ? encodePng(raster) : encodeJpeg(raster));
+}
+
+const pendingReplacement = (ctx: PrepContext) => !!ctx.cover?.replacement && !ctx.notes.coverReplaced;
+
+export const RECOMMENDED_COVER = { width: 1600, height: 2560 };
+
 const coverFrontOnly: Rule = {
   id: 'cover-front-only',
   title: 'Front cover only',
   storeMessages: [/back cover/i, /marketing image/i, /cover.*(spine|wrap)/i],
   check(ctx) {
     const cover = ctx.opf.coverItem();
+    // The author's replacement supersedes whatever the EPUB carries (applied by cover-size).
+    if (pendingReplacement(ctx) && cover && ctx.epub.has(cover.path)) return [];
     if (!cover || !ctx.epub.has(cover.path)) return [finding('cover-front-only', 'error', 'The book has no cover image. Add a front cover.')];
     const size = imageSize(ctx.epub.bytes(cover.path));
     if (!size) return [finding('cover-front-only', 'error', 'The cover must be a JPEG or PNG image.')];
@@ -306,13 +332,7 @@ const coverFrontOnly: Rule = {
     const png = bytes[0] === 0x89;
     ctx.epub.setBytes(cover.path, png ? encodePng(front) : encodeJpeg(front));
     ctx.notes.coverCrop = panel.method;
-    const page = coverPage(ctx, cover);
-    if (page) {
-      const html = ctx.epub.text(page.path)
-        .replace(new RegExp(`viewBox="0 0 ${raster.width} ${raster.height}"`), `viewBox="0 0 ${front.width} ${front.height}"`)
-        .replace(new RegExp(`width="${raster.width}"(\\s+)height="${raster.height}"`), `width="${front.width}"$1height="${front.height}"`);
-      ctx.epub.setText(page.path, html);
-    }
+    resizeCoverPage(ctx, cover, raster, front);
     return [`Cropped the cover from the ${raster.width} × ${raster.height} print wrap to its ${front.width} × ${front.height} front panel (${panel.method === 'background' ? 'found against the background' : panel.method === 'print-spec' ? 'measured from the trim size and page count' : 'estimated'}).`];
   },
 };
@@ -322,13 +342,44 @@ const coverSize: Rule = {
   title: 'Cover size',
   storeMessages: [/cover.*(resolution|size|dimension|pixels)/i],
   check(ctx) {
+    if (pendingReplacement(ctx)) return [finding('cover-size', 'info', 'Your replacement cover is waiting to be applied.', true)];
     const cover = ctx.opf.coverItem();
     if (!cover || !ctx.epub.has(cover.path)) return [];
     const size = imageSize(ctx.epub.bytes(cover.path));
     if (!size || size.width > size.height * 1.05) return [];
     if (size.height < 1000) return [finding('cover-size', 'error', `The cover is ${size.width} × ${size.height}; stores need at least 1000 pixels on the long side. Supply a larger front cover.`)];
-    if (size.height < 2560 || size.width < 1600) return [finding('cover-size', 'warning', `The cover is ${size.width} × ${size.height}. 1600 × 2560 is recommended so it stays sharp on large screens.`)];
+    if (size.height < RECOMMENDED_COVER.height || size.width < RECOMMENDED_COVER.width) {
+      const fixable = !!ctx.cover?.enlarge && !ctx.notes.coverEnlarged;
+      return [finding('cover-size', 'warning', `The cover is ${size.width} × ${size.height}. 1600 × 2560 is recommended so it stays sharp on large screens.`, fixable)];
+    }
     return [];
+  },
+  fix(ctx) {
+    const cover = ctx.opf.coverItem();
+    if (pendingReplacement(ctx)) {
+      const bytes = ctx.cover!.replacement!;
+      const next = imageSize(bytes)!;
+      ctx.notes.coverReplaced = true;
+      if (!cover || !ctx.epub.has(cover.path)) {
+        const png = bytes[0] === 0x89;
+        const path = `${ctx.opf.dir ? `${ctx.opf.dir}/` : ''}bookatlas-cover.${png ? 'png' : 'jpg'}`;
+        ctx.epub.setBytes(path, bytes);
+        ctx.opf.addItem('bookatlas-cover', path, png ? 'image/png' : 'image/jpeg', 'cover-image');
+        return [`Added the cover you uploaded (${next.width} × ${next.height}).`];
+      }
+      const from = imageSize(ctx.epub.bytes(cover.path)) ?? next;
+      writeCover(ctx, cover, bytes);
+      resizeCoverPage(ctx, cover, from, next);
+      return [`Replaced the cover with the one you uploaded (${next.width} × ${next.height}).`];
+    }
+    const before = decodeImage(ctx.epub.bytes(cover!.path));
+    // Enlarge to the recommended size, keeping the cover's proportions.
+    const scale = Math.max(RECOMMENDED_COVER.height / before.height, RECOMMENDED_COVER.width / before.width);
+    const next = resize(before, Math.round(before.width * scale), Math.round(before.height * scale));
+    writeCover(ctx, cover!, next);
+    resizeCoverPage(ctx, cover!, before, next);
+    ctx.notes.coverEnlarged = true;
+    return [`Enlarged the cover from ${before.width} × ${before.height} to ${next.width} × ${next.height}, as you asked.`];
   },
 };
 

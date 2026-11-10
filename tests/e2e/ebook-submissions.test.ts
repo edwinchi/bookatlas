@@ -8,7 +8,7 @@ const WORKER = 'synthetic-ebook-worker-token-for-tests-0123456789';
 process.env.EBOOK_WORKER_TOKEN = WORKER;
 
 import { getSharedTestServer, closeSharedTestServer } from './helpers.ts';
-import { epub2 } from '../../artifacts/api-server/src/bookatlas/ebookPrep/testFixtures.ts';
+import { epub2, frontCover } from '../../artifacts/api-server/src/bookatlas/ebookPrep/testFixtures.ts';
 
 after(async () => {
   delete process.env.EBOOK_WORKER_TOKEN;
@@ -91,6 +91,39 @@ test('an author submission is prepared, checked, published and readable', async 
   assert.ok(chapter.content.includes('3. Matthew 7:13'));
   const cover = await fetch(`/api/catalog/covers/${bookId}.jpg`);
   assert.equal(cover.headers.get('content-type'), 'image/jpeg');
+});
+
+test('the author fixes a small cover by uploading a larger one, enlarging it, or going back', async () => {
+  const { fetch } = await getSharedTestServer();
+  const file = epub2(5);
+  const submission = await (await fetch('/api/ebook-submissions', json({ intake, fileName: 'cover.epub', size: file.byteLength }))).json();
+  for (let part = 0; part < submission.upload.parts; part += 1) {
+    await fetch(`/api/ebook-submissions/${submission.id}/upload/${part}`, {
+      method: 'PUT', headers: { 'content-type': 'application/octet-stream', 'x-test-role': 'reader' },
+      body: file.subarray(part * submission.partBytes, (part + 1) * submission.partBytes),
+    });
+  }
+  const prepared = await (await fetch(`/api/ebook-submissions/${submission.id}/prepare`, json({}))).json();
+  assert.equal(prepared.report.findings.find((f: { rule: string }) => f.rule === 'cover-size').severity, 'warning');
+  const coverPath = `/api/ebook-submissions/${submission.id}/cover`;
+  const put = (bytes: Uint8Array, role = 'reader') => fetch(coverPath, { method: 'PUT', headers: { 'content-type': 'image/png', 'x-test-role': role }, body: bytes });
+
+  const wide = await put(frontCover(1600, 1000));
+  assert.equal(wide.status, 400);
+  assert.match((await wide.json()).error, /front cover only/);
+
+  const replaced = await (await put(frontCover(1600, 2560))).json();
+  assert.deepEqual(replaced.coverFix, { kind: 'upload', width: 1600, height: 2560 });
+  assert.equal(replaced.report.cover.height, 2560);
+  assert.ok(!replaced.report.findings.some((f: { rule: string }) => f.rule === 'cover-size'));
+
+  const enlarged = await (await fetch(`${coverPath}/enlarge`, json({}))).json();
+  assert.deepEqual(enlarged.coverFix, { kind: 'enlarge' });
+  assert.equal(enlarged.report.cover.height, 2560);
+
+  const original = await (await fetch(coverPath, { method: 'DELETE', headers: { 'x-test-role': 'reader' } })).json();
+  assert.equal(original.coverFix, null);
+  assert.equal(original.report.cover.height, 1130);
 });
 
 test('store feedback is matched to rules and makes them blocking', async () => {

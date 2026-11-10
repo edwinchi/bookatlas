@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle2, Download, Info, Loader2, Pencil, Send, XCircle } from 'lucide-react';
-import type { Submission, SubmissionStatus } from './ebookApi';
+import React, { useRef, useState } from 'react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Download, ImageUp, Info, Loader2, Maximize2, Pencil, RotateCcw, Send, XCircle } from 'lucide-react';
+import type { Finding, Submission, SubmissionStatus } from './ebookApi';
 
 const STATUS: Record<SubmissionStatus, { label: string; tone: string; detail: string }> = {
   uploading: { label: 'Uploading', tone: 'bg-slate-100 text-slate-700', detail: 'The upload did not finish. Upload the file again.' },
@@ -15,15 +15,53 @@ const STATUS: Record<SubmissionStatus, { label: string; tone: string; detail: st
 const ICON = { error: AlertCircle, warning: AlertTriangle, info: Info } as const;
 const TONE = { error: 'text-rose-700', warning: 'text-amber-700', info: 'text-slate-500' } as const;
 const mb = (n: number) => `${(n / 1024 / 1024).toFixed(1)} MB`;
+const COVER_RULES = ['cover-size', 'cover-front-only'];
+const button = 'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold disabled:opacity-50';
+
+/** How to fix a cover finding, with the fixes the author can apply here. */
+const CoverFix: React.FC<{
+  finding: Finding;
+  busy: string | null;
+  onUpload: (file: File) => void;
+  onEnlarge: () => void;
+}> = ({ finding, busy, onUpload, onEnlarge }) => {
+  const input = useRef<HTMLInputElement>(null);
+  const tooSmall = finding.rule === 'cover-size' && finding.severity === 'warning';
+  return (
+    <div className="mt-2 ml-6 rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-slate-700">
+      <p className="font-semibold text-slate-900">How to fix</p>
+      <p className="mt-1">
+        {tooSmall
+          ? 'Export the front cover from your design file at 1600 × 2560 pixels or larger (JPEG or PNG, front only: no back cover, spine or barcode) and upload it here.'
+          : 'Upload the front cover on its own, as a JPEG or PNG, ideally 1600 × 2560 pixels: no back cover, spine or barcode.'}
+        {' '}We put it into your eBook and check the book again.
+      </p>
+      {tooSmall && <p className="mt-1 text-slate-500">No larger file? Enlarge this one instead. It meets the recommended size, but cannot add detail the original does not have.</p>}
+      <div className="mt-2 flex flex-wrap gap-2">
+        <input ref={input} type="file" accept="image/jpeg,image/png" className="hidden" aria-label="Replacement front cover"
+          onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ''; if (file) onUpload(file); }} />
+        <button type="button" disabled={!!busy} onClick={() => input.current?.click()} className={`${button} border-indigo-600 bg-indigo-600 text-white hover:bg-indigo-500`}>
+          {busy === 'cover-upload' ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <ImageUp className="h-3.5 w-3.5" aria-hidden />}Upload a larger cover
+        </button>
+        {tooSmall && (
+          <button type="button" disabled={!!busy} onClick={onEnlarge} className={`${button} border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}>
+            {busy === 'cover-enlarge' ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Maximize2 className="h-3.5 w-3.5" aria-hidden />}Enlarge to 2560 px tall
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const SubmissionCard: React.FC<{
   submission: Submission;
   isAdmin: boolean;
   onDownload: (file: 'epub' | 'cover') => Promise<void>;
   onEdit: () => void;
+  onCover: (fix: { upload: File } | 'enlarge' | 'original') => Promise<void>;
   onPublish: () => Promise<void>;
   onReject: (reason: string) => Promise<void>;
-}> = ({ submission: s, isAdmin, onDownload, onEdit, onPublish, onReject }) => {
+}> = ({ submission: s, isAdmin, onDownload, onEdit, onCover, onPublish, onReject }) => {
   const [busy, setBusy] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const status = STATUS[s.status];
@@ -31,6 +69,7 @@ export const SubmissionCard: React.FC<{
   const fixes = s.report?.rounds.flatMap((r) => r.changes) ?? [];
   const findings = s.report?.findings ?? [];
   const editable = ['needs_author', 'ready', 'checking'].includes(s.status);
+  const coverFinding = editable ? findings.find((f) => COVER_RULES.includes(f.rule) && f.severity !== 'info') : undefined;
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -61,7 +100,16 @@ export const SubmissionCard: React.FC<{
               <ul className="mt-2 space-y-1.5">
                 {findings.map((f, i) => {
                   const Icon = ICON[f.severity];
-                  return <li key={i} className={`flex gap-2 text-sm ${TONE[f.severity]}`}><Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /><span>{f.message}</span></li>;
+                  return (
+                    <li key={i}>
+                      <p className={`flex gap-2 text-sm ${TONE[f.severity]}`}><Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /><span>{f.message}</span></p>
+                      {f === coverFinding && (
+                        <CoverFix finding={f} busy={busy}
+                          onUpload={(file) => run('cover-upload', () => onCover({ upload: file }))}
+                          onEnlarge={() => run('cover-enlarge', () => onCover('enlarge'))} />
+                      )}
+                    </li>
+                  );
                 })}
               </ul>
             ) : <p className="mt-2 text-sm text-emerald-700">No open issues.</p>}
@@ -70,6 +118,16 @@ export const SubmissionCard: React.FC<{
               {s.report.cover && ` · cover ${s.report.cover.width} × ${s.report.cover.height}`}
               {s.epubcheck?.ran ? ` · EPUBCheck: ${s.epubcheck.messages.length} messages` : ''}
             </p>
+            {s.coverFix && (
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
+                {s.coverFix.kind === 'upload' ? `Using the cover you uploaded (${s.coverFix.width} × ${s.coverFix.height}).` : 'Cover enlarged at your request.'}
+                {editable && (
+                  <button type="button" disabled={!!busy} onClick={() => run('cover-original', () => onCover('original'))} className="inline-flex items-center gap-1 font-semibold text-indigo-700 hover:underline disabled:opacity-50">
+                    {busy === 'cover-original' ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden /> : <RotateCcw className="h-3 w-3" aria-hidden />}Use the original cover
+                  </button>
+                )}
+              </p>
+            )}
           </section>
         </div>
       )}

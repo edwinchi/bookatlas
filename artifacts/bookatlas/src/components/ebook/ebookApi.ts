@@ -19,6 +19,7 @@ export interface Submission {
   upload: { fileName: string; size: number; parts: number; purged: boolean } | null;
   prepared: { size: number; parts: number } | null;
   cover: { size: number; parts: number } | null;
+  coverFix: { kind: 'upload'; width: number; height: number } | { kind: 'enlarge' } | null;
   epubcheck: { round: number; ran: boolean; messages: unknown[]; checkedAt: string } | null;
   bookId: string | null;
   rejectReason: string | null;
@@ -72,6 +73,12 @@ export function useEbookApi() {
       }
       return json<Submission>(`/api/ebook-submissions/${created.id}/prepare`, 'POST', {});
     },
+    async replaceCover(id: string, file: File) {
+      const image = await coverForUpload(file);
+      return (await request(`/api/ebook-submissions/${id}/cover`, { method: 'PUT', headers: { 'Content-Type': image.type }, body: image })).json() as Promise<Submission>;
+    },
+    enlargeCover: (id: string) => json<Submission>(`/api/ebook-submissions/${id}/cover/enlarge`, 'POST', {}),
+    originalCover: (id: string) => json<Submission>(`/api/ebook-submissions/${id}/cover`, 'DELETE'),
     updateIntake: (id: string, intake: SubmissionIntake) => json<Submission>(`/api/ebook-submissions/${id}/intake`, 'PUT', { intake }),
     async download(id: string, file: 'epub' | 'cover') {
       const manifest = await json<{ parts: number; contentType: string }>(`/api/ebook-submissions/${id}/files/${file}`);
@@ -91,6 +98,25 @@ export function useEbookApi() {
       return URL.createObjectURL(await (await request(`/api/reader/catalog/${bookId}/images/${name}`)).blob());
     },
   };
+}
+
+const COVER_BYTES = 4 * 1024 * 1024;
+
+/** JPEG and PNG under 4 MB go as they are; anything else is re-encoded as JPEG at full size. */
+async function coverForUpload(file: File): Promise<Blob> {
+  if (['image/jpeg', 'image/png'].includes(file.type) && file.size <= COVER_BYTES) return file;
+  let bitmap: ImageBitmap;
+  try { bitmap = await createImageBitmap(file); } catch { throw new EbookApiError('Use a JPEG or PNG image for the cover.', 415); }
+  const canvas = document.createElement('canvas');
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  canvas.getContext('2d')!.drawImage(bitmap, 0, 0);
+  bitmap.close();
+  for (const quality of [0.92, 0.85, 0.75]) {
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+    if (blob && blob.size <= COVER_BYTES) return blob;
+  }
+  throw new EbookApiError('The cover is too large to upload. Export it as a JPEG under 4 MB.', 413);
 }
 
 export function saveBlob(blob: Blob, fileName: string) {

@@ -7,7 +7,7 @@ import { readerContent, sampleChapters } from './content.js';
 import { unpackEpub } from './archive.js';
 import { imageSize } from './images.js';
 import { accessFor } from '../../auth/policy.js';
-import { epub2 } from './testFixtures.js';
+import { epub2, frontCover } from './testFixtures.js';
 
 const intake: SubmissionIntake = {
   title: 'The Test Codex', author: 'Ada Writer', language: 'English', description: 'd'.repeat(200),
@@ -73,6 +73,32 @@ test('store feedback the engine learned from blocks warnings of that rule', () =
   assert.ok(blocked.report.findings.some((f) => f.rule === 'cover-size' && f.severity === 'error'));
 });
 
+test('an uploaded front cover replaces the one in the EPUB, without cropping it', () => {
+  const result = prepareEpub(epub2(5), intake, { cover: { replacement: frontCover(1000, 1600) } });
+  const changes = result.report.rounds.flatMap((r) => r.changes);
+  assert.ok(changes.some((c) => c.change === 'Replaced the cover with the one you uploaded (1000 × 1600).'), JSON.stringify(changes));
+  assert.ok(!changes.some((c) => c.rule === 'cover-front-only'), 'the old wrap is not cropped first');
+  const out = files(result.epub);
+  assert.deepEqual(imageSize(out['cover.png']!), { width: 1000, height: 1600 });
+  assert.match(strFromU8(out['titlepage.xhtml']!), /viewBox="0 0 1000 1600"/);
+  assert.equal(result.report.findings.find((f) => f.rule === 'cover-size')?.severity, 'warning', 'still below 1600 × 2560');
+  assert.equal(prepareEpub(result.epub, intake).report.rounds.length, 0, 'the result is a fixpoint');
+});
+
+test('enlarging a small cover reaches the recommended size only when the author asks', () => {
+  const plain = prepareEpub(epub2(5), intake);
+  assert.equal(plain.report.findings.find((f) => f.rule === 'cover-size')?.fixable, false);
+  const result = prepareEpub(epub2(5), intake, { cover: { enlarge: true } });
+  const out = files(result.epub);
+  const size = imageSize(out['cover.png']!)!;
+  assert.equal(size.height, 2560);
+  assert.ok(Math.abs(size.width / size.height - 875 / 1130) < 0.002, `keeps proportions: ${size.width} × ${size.height}`);
+  assert.ok(!result.report.findings.some((f) => f.rule === 'cover-size'));
+  assert.match(strFromU8(out['titlepage.xhtml']!), new RegExp(`viewBox="0 0 ${size.width} 2560"`));
+  // A cover under 1000 pixels stays an error: enlarging that far would only blur it.
+  assert.equal(prepareEpub(epub2(2), intake, { cover: { enlarge: true } }).report.findings.find((f) => f.rule === 'cover-size')?.severity, 'error');
+});
+
 test('reader content keeps chapters, subtitles, numbered lists and no markup', () => {
   const { epub } = prepareEpub(epub2(), intake);
   const { chapters } = readerContent(epub, intake.title);
@@ -113,4 +139,7 @@ test('access policy for submission, reader and worker routes', () => {
   assert.equal(accessFor('GET', '/api/reader/catalog/atlas-ebook-12345678/content'), 'reader');
   assert.equal(accessFor('GET', '/api/catalog/covers/atlas-ebook-12345678.jpg'), 'public');
   assert.equal(accessFor('POST', '/api/internal/ebook-checks/claim'), 'self-service');
+  assert.equal(accessFor('PUT', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/cover'), 'reader');
+  assert.equal(accessFor('DELETE', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/cover'), 'reader');
+  assert.equal(accessFor('POST', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/cover/enlarge'), 'reader');
 });

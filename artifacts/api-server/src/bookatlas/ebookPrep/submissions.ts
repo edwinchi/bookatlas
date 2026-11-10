@@ -17,6 +17,8 @@ export interface SubmissionData {
   report?: PrepReport;
   epubcheck?: { round: number; ran: boolean; messages: EpubcheckMessage[]; checkedAt: string };
   rejectReason?: string;
+  /** The author's answer to the cover findings, applied on every preparation from the original upload. */
+  coverFix?: { kind: 'upload'; file: StoredFile; width: number; height: number } | { kind: 'enlarge' };
   version: number;
 }
 
