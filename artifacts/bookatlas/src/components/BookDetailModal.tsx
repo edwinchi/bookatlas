@@ -55,7 +55,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
 }) => {
   const publicationId = (book as Book & { publicationId?: string }).publicationId;
   const isGenerated = !!publicationId;
-  // Prepared eBooks (TASK-0003): free full text for signed-in readers, and no ratings until real readers leave them.
+  // Prepared eBooks (TASK-0003): everyone gets the preview; free books open in full for signed-in readers. No ratings until real readers leave them.
   const prepared = !!book.hasReaderContent;
   const unrated = isGenerated || (prepared && book.reviewCount === 0);
   const readsFree = prepared && book.price === 0;
@@ -186,7 +186,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                   className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-950 text-white font-semibold text-sm rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
                 >
                   <BookOpen className="w-4 h-4 text-amber-400" />
-                  <span>{prepared && account ? 'Open the Book' : 'Read Free Instant Sample'}</span>
+                  <span>{readsFree && account ? 'Open the Book' : prepared ? 'Read & Listen to the Free Preview' : 'Read Free Instant Sample'}</span>
                 </button>
 
                 {book.audioDurationMinutes && (

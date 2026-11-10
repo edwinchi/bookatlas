@@ -13,7 +13,8 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (method === 'GET' && publicGets.has(normalized)) return 'public';
   // eBook submissions (TASK-0003): authors are signed-in readers; publish and reject stay admin.
   if (method === 'GET' && /^\/api\/catalog\/covers\/[^/]+$/.test(normalized)) return 'public';
-  if (method === 'GET' && /^\/api\/reader\/catalog\/[^/]+\/(?:content|images\/[^/]+)$/.test(normalized)) return 'reader';
+  // Everyone may read a prepared book's preview; the route decides who gets the whole book.
+  if (method === 'GET' && /^\/api\/reader\/catalog\/[^/]+\/(?:content|images\/[^/]+)$/.test(normalized)) return 'self-service';
   if (normalized === '/api/ebook-submissions' && ['GET', 'POST'].includes(method)) return 'reader';
   if (/^\/api\/ebook-submissions\/[^/]+$/.test(normalized) && method === 'GET') return 'reader';
   if (/^\/api\/ebook-submissions\/[^/]+\/upload\/\d+$/.test(normalized) && method === 'PUT') return 'reader';

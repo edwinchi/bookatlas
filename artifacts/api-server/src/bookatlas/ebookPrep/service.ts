@@ -5,11 +5,11 @@ import { MAX_UPLOAD_BYTES, PrepError } from './archive.js';
 import { matchStoreMessage, prepareEpub, type PrepReport } from './engine.js';
 import { decodeImage, imageSize } from './images.js';
 import { RULES, type EpubcheckMessage } from './rules.js';
-import { readerContent, sampleChapters, type ReaderContent } from './content.js';
+import { previewChapters, readerContent, sampleChapters, type ReaderContent } from './content.js';
 import { PART_BYTES, getFile, getObject, getPart, putFile, putObject, putPart, removeFile, sha256 } from './store.js';
 import {
   addFeedback, createSubmission, expiredUploads, learnedBlockingRules, listFeedback, listSubmissions,
-  loadSubmission, nextForCheck, saveSubmission, type Submission, type SubmissionData,
+  loadSubmission, nextForCheck, saveSubmission, submissionForBook, type Submission, type SubmissionData,
 } from './submissions.js';
 
 export const MAX_CHECK_ROUNDS = 3;
@@ -294,11 +294,34 @@ export async function bookContent(id: string) {
   return parsed as { chapters: ReaderContent['chapters']; imageTypes: Record<string, string> };
 }
 
-export async function bookImage(id: string, name: string) {
+const authors = new Map<string, string | null>();
+
+/**
+ * Who reads the whole book: signed-in readers of a free book, admins, and the book's author.
+ * Buyers join them once real payments record purchases (TASK-0002, Discovery J); until then
+ * everyone else, signed in or not, gets the preview.
+ */
+async function readerAccess(id: string, who: Identity | undefined, price: number | undefined): Promise<'full' | 'preview'> {
+  if (!who) return 'preview';
+  if (who.role === 'admin' || price === 0) return 'full';
+  if (!authors.has(id)) authors.set(id, (await submissionForBook(id))?.owner_id ?? null);
+  return authors.get(id) === who.id ? 'full' : 'preview';
+}
+
+export async function readableContent(id: string, who: Identity | undefined, price: number | undefined) {
+  const { chapters } = await bookContent(id);
+  const access = await readerAccess(id, who, price);
+  return { access, chapters: access === 'full' ? chapters : previewChapters(chapters) };
+}
+
+export async function bookImage(id: string, name: string, who: Identity | undefined, price: number | undefined) {
   if (!/^img-\d{4}\.(jpg|png|gif|webp)$/.test(name)) throw new PrepError('Image not found.', 404);
-  const { imageTypes } = await bookContent(id);
+  const { chapters, imageTypes } = await bookContent(id);
   const contentType = imageTypes[name];
   if (!contentType) throw new PrepError('Image not found.', 404);
+  if (await readerAccess(id, who, price) === 'preview' && !previewChapters(chapters).some((c) => c.figures?.some((f) => f.src === name))) {
+    throw new PrepError('Buy this book to see the rest of it.', 403);
+  }
   return { bytes: await getObject(bookKey(id, `images/${name}`)), contentType };
 }
 

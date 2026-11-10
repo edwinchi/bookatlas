@@ -93,7 +93,7 @@ export function useEbookApi() {
     feedback: () => json<FeedbackOverview>('/api/ebook-prep/feedback'),
     addFeedback: (store: string, message: string, submissionId?: string) =>
       json<{ matched_rules: string[] }>('/api/ebook-prep/feedback', 'POST', { store, message, submissionId }),
-    readerContent: (bookId: string) => json<{ chapters: import('../../types').Chapter[] }>(`/api/reader/catalog/${bookId}/content`),
+    readerContent: (bookId: string) => json<{ chapters: import('../../types').Chapter[]; access: 'full' | 'preview' }>(`/api/reader/catalog/${bookId}/content`),
     async readerImage(bookId: string, name: string) {
       return URL.createObjectURL(await (await request(`/api/reader/catalog/${bookId}/images/${name}`)).blob());
     },

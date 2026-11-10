@@ -65,6 +65,13 @@ export async function loadSubmission(id: string): Promise<Submission> {
   return result.data as Submission;
 }
 
+export async function submissionForBook(bookId: string): Promise<Submission | null> {
+  if (!bookatlasDb) return clone([...memorySubmissions.values()].find((row) => row.book_id === bookId) ?? null);
+  const result = await bookatlasDb.from('ebook_submissions').select('*').eq('book_id', bookId).maybeSingle();
+  if (result.error) throw new PrepError('The submission could not be read.', 503);
+  return (result.data as Submission | null) ?? null;
+}
+
 /** Save with optimistic concurrency: fails if someone else saved since `row` was loaded. */
 export async function saveSubmission(row: Submission, changes: Partial<Omit<Submission, 'id' | 'owner_id' | 'data'>> & { data?: Partial<SubmissionData> }) {
   const next: Submission = {

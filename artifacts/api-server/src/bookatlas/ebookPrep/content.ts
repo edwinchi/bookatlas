@@ -146,9 +146,19 @@ export function readerContent(epubBytes: Uint8Array, bookTitle: string): ReaderC
 const isMostlyHeadings = (c: Chapter) => (c.headings?.length ?? 0) > c.content.length / 2;
 
 /** The free sample: the first chapter with real text, without images (they need a signed-in reader). */
+const OPENING = /^(introduction|prologue|preface|foreword)/i;
+
+/**
+ * The free preview everyone may read and listen to: the book up to and including its
+ * introduction, or, without one, up to and including the first full chapter.
+ */
+export function previewChapters(chapters: Chapter[]): Chapter[] {
+  let end = chapters.slice(0, 5).findIndex((c) => OPENING.test(c.title));
+  if (end < 0) end = chapters.findIndex((c) => c.content.length >= 10 && !isMostlyHeadings(c));
+  return chapters.slice(0, (end < 0 ? 0 : end) + 1);
+}
+
+/** The preview as text for the public catalog; the reader loads its images from the API. */
 export function sampleChapters(chapters: Chapter[]): Chapter[] {
-  const first = chapters.find((c) => c.content.length >= 10 && !isMostlyHeadings(c)) ?? chapters[0];
-  if (!first) return [];
-  const { figures: _figures, ...text } = first;
-  return [text];
+  return previewChapters(chapters).map(({ figures: _figures, ...text }) => text);
 }

@@ -70,23 +70,27 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const [currentChapterIndex, setCurrentChapterIndex] = useState(initialChapterIndex);
   const [currentParagraphIndex, setCurrentParagraphIndex] = useState(initialParagraphIndex);
 
-  // Prepared eBooks (TASK-0003): signed-in readers get the full book, visitors the free sample.
+  // Prepared eBooks (TASK-0003): everyone reads and listens to the preview (up to the introduction);
+  // the server sends the whole book to readers entitled to it.
   const { account, requireSignIn } = useAccount();
   const ebookApi = useEbookApi();
   const [fullChapters, setFullChapters] = useState<Chapter[] | null>(null);
+  const [access, setAccess] = useState<'full' | 'preview'>('preview');
   const [fullError, setFullError] = useState<string | null>(null);
   useEffect(() => {
-    if (!book.hasReaderContent || !account) return;
+    if (!book.hasReaderContent) return;
     let cancelled = false;
     ebookApi.readerContent(book.id)
       .then((r) => {
         if (cancelled) return;
         setFullChapters(r.chapters);
+        setAccess(r.access);
         setCurrentChapterIndex((i) => Math.min(i, Math.max(0, r.chapters.length - 1)));
       })
-      .catch(() => { if (!cancelled) setFullError('The full book could not be loaded, so the free sample is shown. Please retry later.'); });
+      .catch(() => { if (!cancelled) setFullError('The book could not be loaded, so the free sample is shown. Please retry later.'); });
     return () => { cancelled = true; };
   }, [book.id, book.hasReaderContent, account?.id]);
+  const inPreview = !!book.hasReaderContent && access === 'preview';
   const [showToc, setShowToc] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAICopilot, setShowAICopilot] = useState(false);
@@ -701,6 +705,15 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                 {currentChapter.subtitle}
               </p>
             )}
+            {inPreview && (
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
+                <span className="px-2.5 py-1 rounded-full border border-current/20 opacity-80">Free preview for everyone</span>
+                <button onClick={toggleSpeech} className="px-3 py-1 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors">
+                  {isSpeaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                  {isSpeaking ? 'Stop listening' : 'Listen to this chapter'}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Chapter Paragraphs */}
@@ -757,15 +770,24 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             ))}
           </div>
 
-          {book.hasReaderContent && !account && (
+          {inPreview && currentChapterIndex === chapters.length - 1 && (book.price === 0 ? !account && (
             <div className="mt-14 p-6 rounded-2xl border border-current/20 bg-current/5 text-center space-y-3">
               <h4 className="font-bold text-base">Read the whole of {book.title} free</h4>
-              <p className="text-xs sm:text-sm opacity-80 max-w-md mx-auto">Sign in with a free BookAtlas account to continue past this sample.</p>
+              <p className="text-xs sm:text-sm opacity-80 max-w-md mx-auto">Sign in with a free BookAtlas account to continue past this preview.</p>
               <button onClick={() => requireSignIn('reading the full book')} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-colors cursor-pointer">
                 Sign in to keep reading
               </button>
             </div>
-          )}
+          ) : (
+            <div className="mt-14 p-6 rounded-2xl border border-current/20 bg-current/5 text-center space-y-3">
+              <h4 className="font-bold text-base">You have reached the end of the free preview</h4>
+              <p className="text-xs sm:text-sm opacity-80 max-w-md mx-auto">Buy {book.title} to read and listen to the whole book.</p>
+              <button onClick={() => { onAddToCart(book); onClose(); }} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm rounded-xl inline-flex items-center gap-2 shadow-md transition-colors cursor-pointer">
+                <ShoppingBag className="w-4 h-4 text-amber-300" />
+                <span>Buy Full eBook for {symbol}{book.price.toFixed(2)}</span>
+              </button>
+            </div>
+          ))}
 
           {/* End of Preview Banner */}
           {!book.hasReaderContent && (

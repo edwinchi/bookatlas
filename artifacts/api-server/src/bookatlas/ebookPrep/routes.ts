@@ -6,8 +6,8 @@ import { PrepError } from './archive.js';
 import { PART_BYTES } from './store.js';
 import type { EpubcheckMessage } from './rules.js';
 import {
-  bookContent, bookCover, bookImage, checkPart, claimCheck, feedbackOverview, getFor, listFor, prepareSubmission,
-  publishSubmission, recordCheck, recordFeedback, rejectSubmission, setCoverFix, startSubmission, submissionFile, updateIntake,
+  bookCover, bookImage, checkPart, claimCheck, feedbackOverview, getFor, listFor, prepareSubmission,
+  publishSubmission, readableContent, recordCheck, recordFeedback, rejectSubmission, setCoverFix, startSubmission, submissionFile, updateIntake,
   uploadPart, view, workerConfigured,
 } from './service.js';
 import { logger } from '../../lib/logger.js';
@@ -67,7 +67,7 @@ function sendBytes(res: Response, bytes: Uint8Array, contentType: string, cache 
   res.type(contentType).send(Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength));
 }
 
-export function mountEbookPrep(app: Express, onPublished: (book: Book, categories: string[]) => void) {
+export function mountEbookPrep(app: Express, onPublished: (book: Book, categories: string[]) => void, priceOf: (bookId: string) => number | undefined) {
   const raw = express.raw({ type: 'application/octet-stream', limit: PART_BYTES });
   const image = express.raw({ type: ['image/jpeg', 'image/png'], limit: PART_BYTES });
 
@@ -162,13 +162,15 @@ export function mountEbookPrep(app: Express, onPublished: (book: Book, categorie
     res.json({ status: row.status });
   }));
 
-  // Readers (signed in) and the public cover
+  // Readers: everyone gets the preview, entitled readers the whole book (see readerAccess). The cover is public.
   app.get('/api/reader/catalog/:bookId/content', guarded(async (req, res) => {
+    const id = String(req.params.bookId);
     res.setHeader('Cache-Control', 'private, no-store');
-    res.json({ chapters: (await bookContent(String(req.params.bookId))).chapters });
+    res.json(await readableContent(id, req.bookatlasIdentity, priceOf(id)));
   }));
   app.get('/api/reader/catalog/:bookId/images/:name', guarded(async (req, res) => {
-    const image = await bookImage(String(req.params.bookId), String(req.params.name));
+    const id = String(req.params.bookId);
+    const image = await bookImage(id, String(req.params.name), req.bookatlasIdentity, priceOf(id));
     sendBytes(res, image.bytes, image.contentType, 'private, max-age=3600');
   }));
   app.get('/api/catalog/covers/:file', guarded(async (req, res) => {

@@ -81,8 +81,8 @@ test('an author submission is prepared, checked, published and readable', async 
   const book = catalog.books.find((b: { id: string }) => b.id === bookId);
   assert.ok(book, 'listed in its new category');
   assert.equal(book.hasReaderContent, true);
-  assert.equal(book.sampleChapters.length, 1);
-  assert.ok(!book.sampleChapters[0].figures, 'the public sample carries no reader-only images');
+  assert.equal(book.sampleChapters.at(-1).title, 'Chapter 1: Welcome', 'the sample runs up to the first full chapter');
+  assert.ok(book.sampleChapters.every((c: { figures?: unknown }) => !c.figures), 'the catalog sample is text; the reader loads images');
   const categories = await (await fetch('/api/categories')).json();
   assert.ok(categories.allCategories.includes('Spiritual Healing & Alignment'));
 
@@ -124,6 +124,36 @@ test('the author fixes a small cover by uploading a larger one, enlarging it, or
   const original = await (await fetch(coverPath, { method: 'DELETE', headers: { 'x-test-role': 'reader' } })).json();
   assert.equal(original.coverFix, null);
   assert.equal(original.report.cover.height, 1130);
+});
+
+test('a paid book: everyone gets the preview, the author and admins the whole book', async () => {
+  const { fetch } = await getSharedTestServer();
+  const file = epub2(5);
+  const submission = await (await fetch('/api/ebook-submissions', json({ intake: { ...intake, title: 'The Paid Codex', price: 4.99 }, fileName: 'paid.epub', size: file.byteLength }))).json();
+  for (let part = 0; part < submission.upload.parts; part += 1) {
+    await fetch(`/api/ebook-submissions/${submission.id}/upload/${part}`, {
+      method: 'PUT', headers: { 'content-type': 'application/octet-stream', 'x-test-role': 'reader' },
+      body: file.subarray(part * submission.partBytes, (part + 1) * submission.partBytes),
+    });
+  }
+  await fetch(`/api/ebook-submissions/${submission.id}/prepare`, json({}));
+  const worker = { authorization: `Bearer ${WORKER}` };
+  // Other tests may have left submissions in the queue; validate them all until this one is done.
+  for (let done = false; !done;) {
+    const claim = await fetch('/api/internal/ebook-checks/claim', { method: 'POST', headers: worker });
+    assert.equal(claim.status, 200, 'this submission is waiting for validation');
+    const job = await claim.json();
+    await fetch(`/api/internal/ebook-checks/${job.id}/result`, { method: 'POST', headers: { ...worker, 'content-type': 'application/json' }, body: JSON.stringify({ sha256: job.sha256, messages: [] }) });
+    done = job.id === submission.id;
+  }
+  const { bookId } = await (await fetch(`/api/ebook-submissions/${submission.id}/publish`, json({}, 'admin'))).json();
+
+  const contentAs = async (role: string) => (await fetch(`/api/reader/catalog/${bookId}/content`, as(role))).json();
+  const visitor = await contentAs('unauthenticated');
+  assert.equal(visitor.access, 'preview');
+  assert.ok(visitor.chapters.length >= 1);
+  assert.equal((await contentAs('admin')).access, 'full');
+  assert.equal((await contentAs('reader')).access, 'full', 'test-reader-1 submitted it, so it is their book');
 });
 
 test('store feedback is matched to rules and makes them blocking', async () => {

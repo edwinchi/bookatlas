@@ -463,7 +463,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
       }
     }
     addLog('inventory_sync', `Published New Title: "${book.title}"`, `Prepared eBook added to ${categories.join(', ')}.`, 'eBook Preparation');
-  });
+  }, (bookId) => liveCatalog.find((item: { id: string; price: number }) => item.id === bookId)?.price);
   mountWorkforce(app);
 
   app.get('/api/auth/me', (req, res) => {

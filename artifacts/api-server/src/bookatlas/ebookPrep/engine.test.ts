@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { printCoverSpec, validateIntake, type SubmissionIntake } from '@workspace/bookatlas-catalog/publishing';
 import { prepareEpub, matchStoreMessage } from './engine.js';
-import { readerContent, sampleChapters } from './content.js';
+import { previewChapters, readerContent, sampleChapters } from './content.js';
 import { unpackEpub } from './archive.js';
 import { imageSize } from './images.js';
 import { accessFor } from '../../auth/policy.js';
@@ -106,7 +106,16 @@ test('reader content keeps chapters, subtitles, numbered lists and no markup', (
   assert.equal(ch1.subtitle, undefined, 'a bare "Chapter 1" heading absorbs its subtitle');
   assert.ok(ch1.content.includes('3. Matthew 7:13') && ch1.content.includes('4. John 14:6'));
   assert.ok(chapters.every((c) => c.content.every((p) => !/[<>]/.test(p))));
-  assert.equal(sampleChapters(chapters)[0]!.title, 'Chapter 1: Welcome');
+  assert.equal(sampleChapters(chapters).at(-1)!.title, 'Chapter 1: Welcome', 'the sample runs up to the first full chapter');
+});
+
+test('the free preview runs up to and including the introduction', () => {
+  const ch = (title: string, paragraphs: number) => ({ title, content: Array.from({ length: paragraphs }, (_, i) => `Paragraph ${i + 1}.`) });
+  const book = [ch('The Awakened Codex', 9), ch('Introduction', 37), ch('Chapter 1', 500), ch('Chapter 2', 300)];
+  assert.deepEqual(previewChapters(book).map((c) => c.title), ['The Awakened Codex', 'Introduction']);
+  assert.deepEqual(previewChapters([ch('Title page', 3), ch('Chapter 1', 40), ch('Chapter 2', 40)]).map((c) => c.title), ['Title page', 'Chapter 1'],
+    'without an introduction, up to the first full chapter');
+  assert.deepEqual(sampleChapters(book).map((c) => c.title), ['The Awakened Codex', 'Introduction']);
 });
 
 test('unsafe archive paths are rejected', () => {
@@ -136,7 +145,8 @@ test('access policy for submission, reader and worker routes', () => {
   assert.equal(accessFor('PUT', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/upload/3'), 'reader');
   assert.equal(accessFor('POST', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/publish'), 'admin');
   assert.equal(accessFor('GET', '/api/ebook-prep/feedback'), 'admin');
-  assert.equal(accessFor('GET', '/api/reader/catalog/atlas-ebook-12345678/content'), 'reader');
+  assert.equal(accessFor('GET', '/api/reader/catalog/atlas-ebook-12345678/content'), 'self-service', 'the route decides preview or full');
+  assert.equal(accessFor('GET', '/api/reader/catalog/atlas-ebook-12345678/images/img-0001.png'), 'self-service');
   assert.equal(accessFor('GET', '/api/catalog/covers/atlas-ebook-12345678.jpg'), 'public');
   assert.equal(accessFor('POST', '/api/internal/ebook-checks/claim'), 'self-service');
   assert.equal(accessFor('PUT', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/cover'), 'reader');
