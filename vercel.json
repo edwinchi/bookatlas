@@ -4,6 +4,7 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/bookatlas run build",
   "outputDirectory": "artifacts/bookatlas/dist/public",
+  "regions": ["fra1"],
   "functions": {
     "api/index.mjs": {
       "maxDuration": 60,
