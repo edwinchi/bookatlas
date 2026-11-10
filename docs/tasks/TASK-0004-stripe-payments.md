@@ -6,7 +6,7 @@
 | Source brief | Owner, 2026-11-10: "let us setup stripe so ideal can work as well and others globally" |
 | Priority | High |
 | Approval level | **2** (payments, schema, permissions), approved 2026-11-10. Live keys and the production deploy are **3** |
-| Status | ⏳ Deployed and switched off. Live key stored (Vercel, sensitive). Waiting for the purchases table, iDEAL activation and the webhook |
+| Status | ✅ Live payments on since 2026-11-10 (`bookatlas-nml4uta11`). Waiting for iDEAL activation, Stripe Tax registrations and a first real purchase |
 | Builds on | [TASK-0002](TASK-0002-self-publishing-platform.md) Discovery J, [TASK-0003](TASK-0003-ebook-preparation-pipeline.md) D5 (buyers only, preview for everyone) |
 | Last updated | 2026-11-10 |
 
@@ -54,9 +54,9 @@
 | Owner: payment methods | ⏳ Cards, Apple Pay, Google Pay, Link, Bancontact, Klarna, EPS and others are available; **iDEAL is not enabled** yet |
 | Owner: Stripe Tax registrations | ⏳ Stripe Tax is active but has **no registrations**; `STRIPE_TAX` stays unset until NL VAT and EU OSS are added |
 | Shared Stripe account | ✅ The account also serves other sites (four webhook endpoints). BookAtlas sessions carry `metadata.app = bookatlas`; the webhook ignores untagged sessions (tested) |
-| Owner: run the `bookatlas_purchases` SQL in Supabase | ⛔ 2026-11-10 still missing (PostgREST PGRST205); payments stay off. `paymentsConfigured` needs both the key and the webhook secret, so the key alone takes no orders |
+| Owner: run the `bookatlas_purchases` SQL in Supabase | ✅ 2026-11-10 (second run) |
 | Test-mode run: real Stripe test checkout with card and iDEAL, webhook via a test endpoint | ⬜ |
-| Live keys, webhook endpoint on booksatlas.app, `STRIPE_TAX=on`, production deploy | ⬜ Level 3 sign-off |
+| Webhook and go-live | ✅ 2026-11-10 (owner sign-off): live endpoint `we_1UaErjRV4gYJjN7FOTpVo3Ux` → `https://booksatlas.app/api/stripe/webhook` (checkout.session.completed, checkout.session.async_payment_succeeded, charge.refunded); signing secret in Vercel as sensitive `STRIPE_WEBHOOK_SECRET`; deployed `bookatlas-nml4uta11`. Live: `/api/payments/config` enabled, unsigned and forged webhooks 400, anonymous checkout 401, security 5/5, browser 12/12. `STRIPE_TAX` unset until registrations exist |
 
 ## Follow-ups
 
