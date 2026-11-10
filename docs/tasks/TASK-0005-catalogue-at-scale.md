@@ -41,9 +41,30 @@ The server loaded every book into memory and sent all of them to every browser, 
 | Schema: columns, indexes, facets view and functions (`db/schema.sql`) | ✅ written; ⛔ owner runs it in Supabase |
 | Storefront on the API (grid, shelves, facets, full record on open) | ✅ |
 | Tests | ✅ `tests/e2e/catalog-search.test.ts` (search with accents, filters, sort, paging without overlap, page cap, facets, shelves, book page, cache headers). `pnpm test:unit` 106/106, `pnpm test:e2e` 190/190 |
-| Load test at 1.5M titles (Postgres 16 + PostgREST, the production store code) | see below |
+| Load test at 1.5M titles (Postgres 16 + PostgREST v12, the production store code, 3.7 GB table) | ✅ see Load test |
 | Phase 2: distributor feed import (ONIX 3.0 / CSV), batch upsert | ⬜ |
 | Phase 3: category section redesign on facets; admin studio on the store | ⬜ |
+
+## Load test (2026-11-10)
+
+1,500,000 generated titles (30 categories, 8 languages, three formats) in Postgres 16 behind PostgREST v12 (`db-max-rows` 1000, as on Supabase), queried through `postgresCatalog`. Median of 7 runs, no edge cache:
+
+| Query | Median | Worst |
+|---|---|---|
+| Front page (featured, 24) | 27 ms | 35 ms |
+| Search, one word | 26 ms | 29 ms |
+| Search, two words | 67 ms | 83 ms |
+| Rare word inside a category | 95 ms | 124 ms |
+| Category, sorted by rating | 43 ms | 71 ms |
+| Audiobooks under €5, price ascending | 21 ms | 26 ms |
+| Dutch, newest | 23 ms | 27 ms |
+| Plus only, bestsellers | 18 ms | 23 ms |
+| Page 50 of a category | 29 ms | 34 ms |
+| Category counts | 6 ms | 17 ms |
+| 10 home-page shelves in parallel | 87 ms | 160 ms |
+| Book page | 12 ms | 18 ms |
+
+What made the difference: exact counts took 1–2 s, so totals are the planner's estimate (exact when the results end on the page); and a category page sorted by rating read 15,000 rows before finding 24 (338 ms), so every sort index carries `genres` (`include`) and a page is two steps, ids by index-only scan then cards (16 ms). Repeat queries come from the edge cache.
 
 ## Follow-ups
 

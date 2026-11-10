@@ -78,7 +78,11 @@ export function memoryCatalog(books: () => Book[]): CatalogStore {
 
 const LIST_COLUMNS = 'card';
 
-/** Production: Postgres indexes answer every query (full-text search, categories, sorts, keyset-free pages). */
+/**
+ * Production: Postgres indexes answer every query. A page is two steps: the ids in order (an
+ * index-only scan for category pages), then those cards. Totals are the planner's estimate,
+ * made exact whenever the results end on this page.
+ */
 export function postgresCatalog(db: NonNullable<typeof bookatlasDb>): CatalogStore {
   let refreshAt = 0;
   const refreshFacets = () => {
@@ -89,7 +93,7 @@ export function postgresCatalog(db: NonNullable<typeof bookatlasDb>): CatalogSto
   return {
     async search(query) {
       const { page, limit } = pageOf(query);
-      let qb = db.from('books').select(LIST_COLUMNS, { count: 'estimated' });
+      let qb = db.from('books').select('id', { count: 'planned' });
       const tsq = toTsQuery(query.q);
       if (tsq) qb = qb.textSearch('search', tsq, { config: 'simple' });
       if (query.genre) qb = qb.contains('genres', [query.genre]);
@@ -114,10 +118,18 @@ export function postgresCatalog(db: NonNullable<typeof bookatlasDb>): CatalogSto
       else qb = qb.order('is_editor_pick', { ascending: false });
       qb = qb.order('popularity', { ascending: false }).order('id', { ascending: true });
       const from = (page - 1) * limit;
-      const { data, count, error } = await qb.range(from, from + limit - 1);
+      // One extra id tells us exactly whether another page exists.
+      const { data, count, error } = await qb.range(from, from + limit);
       if (error) { logger.error({ err: error }, '[catalog] search failed'); throw new CatalogError('The catalogue is temporarily unavailable.'); }
-      const total = count ?? 0;
-      return { books: (data as unknown as { card: BookCard }[]).map((r) => r.card), total, page, limit, hasMore: from + limit < total };
+      const ids = (data as { id: string }[]).map((r) => r.id);
+      const hasMore = ids.length > limit;
+      const pageIds = ids.slice(0, limit);
+      const total = hasMore ? Math.max(count ?? 0, from + ids.length) : from + pageIds.length;
+      if (!pageIds.length) return { books: [], total, page, limit, hasMore: false };
+      const cards = await db.from('books').select('id,card').in('id', pageIds);
+      if (cards.error) { logger.error({ err: cards.error }, '[catalog] cards failed'); throw new CatalogError('The catalogue is temporarily unavailable.'); }
+      const byId = new Map((cards.data as unknown as { id: string; card: BookCard }[]).map((r) => [r.id, r.card]));
+      return { books: pageIds.flatMap((id) => byId.get(id) ?? []), total, page, limit, hasMore };
     },
     async get(id) {
       const { data, error } = await db.from('books').select('data').eq('id', id).maybeSingle();

@@ -54,12 +54,12 @@ alter table public.bookatlas_books
   add column if not exists search tsvector generated always as (to_tsvector('simple', search_text)) stored;
 create index if not exists bookatlas_books_search_idx on public.bookatlas_books using gin (search);
 create index if not exists bookatlas_books_genres_idx on public.bookatlas_books using gin (genres);
-create index if not exists bookatlas_books_featured_idx on public.bookatlas_books (is_editor_pick desc, popularity desc, id);
-create index if not exists bookatlas_books_bestseller_idx on public.bookatlas_books (is_bestseller desc, popularity desc, id);
-create index if not exists bookatlas_books_popularity_idx on public.bookatlas_books (popularity desc, id);
-create index if not exists bookatlas_books_rating_idx on public.bookatlas_books (rating desc, popularity desc, id);
-create index if not exists bookatlas_books_price_idx on public.bookatlas_books (price, popularity desc, id);
-create index if not exists bookatlas_books_newest_idx on public.bookatlas_books (published_at desc nulls last, popularity desc, id);
+-- One index per sort, carrying the categories: a category page is an index-only scan.
+create index if not exists bookatlas_books_featured_idx on public.bookatlas_books (is_editor_pick desc, popularity desc, id) include (genres);
+create index if not exists bookatlas_books_bestseller_idx on public.bookatlas_books (is_bestseller desc, popularity desc, id) include (genres);
+create index if not exists bookatlas_books_rating_idx on public.bookatlas_books (rating desc, popularity desc, id) include (genres);
+create index if not exists bookatlas_books_price_idx on public.bookatlas_books (price, popularity desc, id) include (genres);
+create index if not exists bookatlas_books_newest_idx on public.bookatlas_books (published_at desc nulls last, popularity desc, id) include (genres);
 create index if not exists bookatlas_books_format_idx on public.bookatlas_books (format, popularity desc);
 create index if not exists bookatlas_books_language_idx on public.bookatlas_books (language, popularity desc);
 create index if not exists bookatlas_books_plus_idx on public.bookatlas_books (popularity desc) where is_plus;
