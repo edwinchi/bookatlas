@@ -76,11 +76,15 @@ export async function startNewVersion(who: Identity, id: string, intake: Submiss
  */
 export async function restartUpload(who: Identity, id: string, intake: SubmissionIntake, fileName: string, size: number) {
   const row = owned(await loadSubmission(id), who);
-  if (![...EDITABLE, 'uploading'].includes(row.status)) throw new PrepError('The EPUB can be replaced only before publishing.', 409);
+  // A rejected submission is resubmitted the same way: the corrected file goes through every check again.
+  if (![...EDITABLE, 'uploading', 'rejected'].includes(row.status)) throw new PrepError('The EPUB can be replaced only before publishing.', 409);
   const upload = checkIntakeAndFile(intake, fileName, size);
   const previous = row.data.upload;
   if (previous && !previous.purged) await removeFile(uploadKey(id), previous.parts);
-  return saveSubmission(row, { status: 'uploading', lease_until: null, data: { intake, upload, report: undefined, epubcheck: undefined } });
+  return saveSubmission(row, {
+    status: 'uploading', lease_until: null, purge_after: null,
+    data: { intake, upload, report: undefined, epubcheck: undefined, rejectReason: undefined },
+  });
 }
 
 export async function uploadPart(who: Identity, id: string, index: number, bytes: Uint8Array) {

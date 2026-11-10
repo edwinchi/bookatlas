@@ -233,6 +233,28 @@ test('the author replaces the EPUB with a corrected one until the book is publis
   assert.equal(reader.access, 'full', 'the author still reads the whole book');
 });
 
+test('a rejected submission is corrected and resubmitted', async () => {
+  const { fetch } = await getSharedTestServer();
+  const file = epub2(5);
+  const sub = await (await fetch('/api/ebook-submissions', json({ intake, fileName: 'first.epub', size: file.byteLength }))).json();
+  for (let part = 0; part < sub.upload.parts; part += 1) {
+    await fetch(`/api/ebook-submissions/${sub.id}/upload/${part}`, { method: 'PUT', headers: { 'content-type': 'application/octet-stream', 'x-test-role': 'reader' }, body: file.subarray(part * sub.partBytes, (part + 1) * sub.partBytes) });
+  }
+  await fetch(`/api/ebook-submissions/${sub.id}/prepare`, json({}));
+  const rejected = await (await fetch(`/api/ebook-submissions/${sub.id}/reject`, json({ reason: 'Chapter 3 is missing.' }, 'admin'))).json();
+  assert.equal(rejected.status, 'rejected');
+  const corrected = epub2(6);
+  const again = await (await fetch(`/api/ebook-submissions/${sub.id}/reupload`, json({ intake, fileName: 'corrected.epub', size: corrected.byteLength }))).json();
+  assert.equal(again.status, 'uploading');
+  assert.equal(again.rejectReason, null, 'the old rejection is cleared');
+  for (let part = 0; part < again.upload.parts; part += 1) {
+    await fetch(`/api/ebook-submissions/${sub.id}/upload/${part}`, { method: 'PUT', headers: { 'content-type': 'application/octet-stream', 'x-test-role': 'reader' }, body: corrected.subarray(part * again.partBytes, (part + 1) * again.partBytes) });
+  }
+  const prepared = await (await fetch(`/api/ebook-submissions/${sub.id}/prepare`, json({}))).json();
+  assert.ok(['checking', 'ready'].includes(prepared.status), prepared.status);
+  assert.equal(prepared.report.cover.height, 1356, 'prepared from the corrected file');
+});
+
 test('store feedback is matched to rules and makes them blocking', async () => {
   const { fetch } = await getSharedTestServer();
   const lulu = await (await fetch('/api/ebook-prep/feedback', json({ store: 'Lulu', message: 'Copyright year mismatch ~ Copyright year entered in the metadata does not match copyright year in the interior file.' }, 'admin'))).json();

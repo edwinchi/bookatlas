@@ -96,7 +96,7 @@ export const SubmissionCard: React.FC<{
   const findings = s.report?.findings ?? [];
   const editable = ['needs_author', 'ready', 'checking'].includes(s.status);
   // Details and the EPUB itself can be changed until the book is published.
-  const canEdit = editable || s.status === 'uploading';
+  const canEdit = editable || s.status === 'uploading' || s.status === 'rejected';
   const coverFinding = editable ? findings.find((f) => COVER_RULES.includes(f.rule) && f.severity !== 'info') : undefined;
 
   return (
@@ -185,7 +185,7 @@ export const SubmissionCard: React.FC<{
         )}
         {canEdit && (
           <button type="button" onClick={onEdit} className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
-            <Pencil className="h-3.5 w-3.5" aria-hidden />{s.status === 'uploading' ? 'Upload again' : 'Edit details or replace EPUB'}
+            <Pencil className="h-3.5 w-3.5" aria-hidden />{s.status === 'uploading' ? 'Upload again' : s.status === 'rejected' ? 'Correct and resubmit' : 'Edit details or replace EPUB'}
           </button>
         )}
         {isAdmin && s.status === 'ready' && (

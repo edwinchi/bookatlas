@@ -136,7 +136,7 @@ export const EbookPublishing: React.FC = () => {
                 serverErrors={problem?.fields}
                 progress={progress}
                 busy={busy}
-                fileRequired={mode.kind === 'new' || mode.submission.status === 'uploading' || mode.submission.status === 'published'}
+                fileRequired={mode.kind === 'new' || ['uploading', 'published', 'rejected'].includes(mode.submission.status)}
                 onCancel={() => setMode(null)}
                 onSubmit={(intake, file) => {
                   const onProgress = (done: number, total: number) => setProgress({ done, total });
