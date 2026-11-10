@@ -14,6 +14,8 @@ import { mountPublishingReadiness } from './publishing/routes.js';
 import { mountPublishingJobs } from './publishing/jobRoutes.js';
 import { mountEbookPrep } from './ebookPrep/routes.js';
 import { mountPayments } from './payments/routes.js';
+import { purchasesOf } from './payments/purchases.js';
+import { listSubmissions } from './ebookPrep/submissions.js';
 import { mountCatalog } from './catalog/routes.js';
 import { parseCatalogQuery } from '@workspace/bookatlas-catalog/query';
 import { memoryCatalog, postgresCatalog } from './catalog/store.js';
@@ -732,6 +734,17 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
         .select('kind,status,created_at,updated_at').eq('recipient', email);
       if (error) throw new AccountStoreError('Email delivery records are unavailable.');
       return data ?? [];
+    },
+    async purchases(userId) {
+      try { return await purchasesOf(userId); } catch { throw new AccountStoreError('Purchase records are unavailable.'); }
+    },
+    async submissions(userId) {
+      try {
+        return (await listSubmissions(userId)).map((s) => ({
+          id: s.id, status: s.status, title: s.data.intake.title, author: s.data.intake.author, bookId: s.book_id,
+          fileName: s.data.upload?.fileName, details: s.data.intake, printLinks: s.data.printLinks, createdAt: s.created_at, updatedAt: s.updated_at,
+        }));
+      } catch { throw new AccountStoreError('eBook submissions are unavailable.'); }
     },
     async erase(email) {
       if (bookatlasDb) {

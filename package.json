@@ -17,7 +17,8 @@
     "test:browser": "node --test --test-concurrency=1 tests/browser/storefront.test.mjs",
     "test:sweep": "node tests/browser/site-sweep.mjs",
     "test:all": "node scripts/test-all.mjs",
-    "test:account": "node --env-file-if-exists=.env.local --test --test-concurrency=1 tests/browser/account.test.mjs"
+    "test:account": "node --env-file-if-exists=.env.local --test --test-concurrency=1 tests/browser/account.test.mjs",
+    "test:supabase": "node --env-file-if-exists=.env.local --test tests/security/supabase.test.mjs"
   },
   "private": true,
   "dependencies": {

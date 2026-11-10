@@ -6,7 +6,7 @@
 | Source brief | Owner, 2026-11-09: "prepare the steps you used above and apply that to any books that the customer will upload as epub … request all that is needed … for a hardcopy or print version as well … carry out a recursive self improvement … publish this epub to booksatlas … in the right category, if category missing create it" |
 | Priority | High |
 | Approval level | **2** (schema, storage, retention, permissions), approved 2026-11-09. Production deploy and the production data write for the first book are **3** |
-| Status | ⏳ Deployed; tables created; waiting for the first publication |
+| Status | ✅ Live: *The Awakened Codex* published (new version at €9.36). Open: EPUBCheck worker hosting |
 | Builds on | [TASK-0002](TASK-0002-self-publishing-platform.md) (Discovery K: EPUB for sale, print-ready packages for KDP and Lulu) |
 | Last updated | 2026-11-10 |
 
@@ -100,6 +100,6 @@ The source of truth is `lib/bookatlas-catalog/src/publishing/requirements.ts`. T
 ## Follow-ups
 
 - Host the EPUBCheck worker and set `EBOOK_WORKER_TOKEN` on Vercel and the worker (Level 1 infrastructure, Level 3 credential).
-- Add the submission routes to `lib/api-spec/openapi.yaml` and regenerate the client.
+- ~~Add the submission routes to `lib/api-spec/openapi.yaml` and regenerate the client.~~ ✅ 2026-11-10: catalogue, reader, payments, submissions (upload, prepare, reupload, new version, cover, price, print links, readiness, files, publish, reject), store feedback and feed import are in the spec; client and zod schemas regenerated.
 - Covers below 1600 × 2560 get a warning; the author can now upload a larger cover or enlarge it from the card.
-- Book images larger than 4.5 MB cannot be served through Vercel; the engine should downscale them.
+- ~~Book images larger than 4.5 MB cannot be served through Vercel; the engine should downscale them.~~ ✅ 2026-11-10: rule `image-weight` reduces book images over 4 MB in their own format (at most 2,400 px); the reader keeps web copies of images over 600 KB (at most 1,600 px, JPEG unless transparent). On *The Awakened Codex* the title-page image drops from 6 MB to 418 KB. The live book gets this when its reader content is regenerated (production data write, needs the owner's yes).

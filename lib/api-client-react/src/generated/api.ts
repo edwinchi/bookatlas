@@ -24,19 +24,46 @@ import type {
   AccountDeletionResult,
   AccountExport,
   AccountProfile,
+  AddStoreFeedback201,
+  CatalogFacets,
+  CatalogPage,
+  CheckoutInput,
+  CheckoutSession,
+  CheckoutStatus,
+  EbookIntakeUpdate,
+  EbookSubmission,
+  EbookSubmissionStart,
+  FeedImportResult,
+  GetCatalogBook200,
+  GetCatalogShelves200,
+  GetCatalogShelvesParams,
+  GetEbookSubmissionFile200,
   GetEmailUnsubscribePageParams,
+  GetStoreFeedback200,
   HealthStatus,
+  ImportCatalogFeedParams,
+  ListEbookSubmissions200,
+  ListOwnPurchases200,
   MembershipResult,
+  PaymentsConfig,
+  PriceInput,
+  PrintLinks,
   PublishingJob,
   PublishingJobAction,
   PublishingJobInput,
   PublishingReadiness,
+  ReaderContent,
   ReaderNarration,
   ReaderNarrationInput,
   ReaderProfileSyncInput,
   ReaderProfileSyncResult,
+  ReadinessPackage,
   ReadingUpdateInput,
   ReadingUpdatePreference,
+  RejectInput,
+  SearchCatalogParams,
+  StoreFeedbackInput,
+  StripeEvent,
   UnsubscribeTokenInput,
   WorkforceReviewInput,
   WorkforceRunInput,
@@ -1879,4 +1906,2687 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
+
+export const getSearchCatalogUrl = (params?: SearchCatalogParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/catalog/search?${stringifiedParams}` : `/api/catalog/search`
+}
+
+/**
+ * @summary One page of catalogue cards; search, filters and sort are answered by indexes
+ */
+export const searchCatalog = async (params?: SearchCatalogParams, options?: Parameters<typeof customFetch>[1]): Promise<CatalogPage> => {
+
+  return customFetch<CatalogPage>(getSearchCatalogUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchCatalogQueryKey = (params?: SearchCatalogParams,) => {
+    return [
+    `/api/catalog/search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchCatalogQueryOptions = <TData = Awaited<ReturnType<typeof searchCatalog>>, TError = ErrorType<void>>(params?: SearchCatalogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchCatalogQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchCatalog>>> = ({ signal }) => searchCatalog(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchCatalog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchCatalogQueryResult = NonNullable<Awaited<ReturnType<typeof searchCatalog>>>
+export type SearchCatalogQueryError = ErrorType<void>
+
+
+/**
+ * @summary One page of catalogue cards; search, filters and sort are answered by indexes
+ */
+
+export function useSearchCatalog<TData = Awaited<ReturnType<typeof searchCatalog>>, TError = ErrorType<void>>(
+ params?: SearchCatalogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchCatalogQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetCatalogBookUrl = (id: string,) => {
+
+
+
+
+  return `/api/catalog/books/${id}`
+}
+
+/**
+ * @summary The whole record of one book (sample chapters, reviews, author bio)
+ */
+export const getCatalogBook = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<GetCatalogBook200> => {
+
+  return customFetch<GetCatalogBook200>(getGetCatalogBookUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCatalogBookQueryKey = (id: string,) => {
+    return [
+    `/api/catalog/books/${id}`
+    ] as const;
+    }
+
+
+export const getGetCatalogBookQueryOptions = <TData = Awaited<ReturnType<typeof getCatalogBook>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCatalogBook>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCatalogBookQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCatalogBook>>> = ({ signal }) => getCatalogBook(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCatalogBook>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCatalogBookQueryResult = NonNullable<Awaited<ReturnType<typeof getCatalogBook>>>
+export type GetCatalogBookQueryError = ErrorType<void>
+
+
+/**
+ * @summary The whole record of one book (sample chapters, reviews, author bio)
+ */
+
+export function useGetCatalogBook<TData = Awaited<ReturnType<typeof getCatalogBook>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCatalogBook>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCatalogBookQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetCatalogFacetsUrl = () => {
+
+
+
+
+  return `/api/catalog/facets`
+}
+
+/**
+ * @summary Titles per category, language and format (precomputed)
+ */
+export const getCatalogFacets = async ( options?: Parameters<typeof customFetch>[1]): Promise<CatalogFacets> => {
+
+  return customFetch<CatalogFacets>(getGetCatalogFacetsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCatalogFacetsQueryKey = () => {
+    return [
+    `/api/catalog/facets`
+    ] as const;
+    }
+
+
+export const getGetCatalogFacetsQueryOptions = <TData = Awaited<ReturnType<typeof getCatalogFacets>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCatalogFacets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCatalogFacetsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCatalogFacets>>> = ({ signal }) => getCatalogFacets({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCatalogFacets>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCatalogFacetsQueryResult = NonNullable<Awaited<ReturnType<typeof getCatalogFacets>>>
+export type GetCatalogFacetsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Titles per category, language and format (precomputed)
+ */
+
+export function useGetCatalogFacets<TData = Awaited<ReturnType<typeof getCatalogFacets>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCatalogFacets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCatalogFacetsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetCatalogShelvesUrl = (params: GetCatalogShelvesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/catalog/shelves?${stringifiedParams}` : `/api/catalog/shelves`
+}
+
+/**
+ * @summary Home-page shelves, each a small query
+ */
+export const getCatalogShelves = async (params: GetCatalogShelvesParams, options?: Parameters<typeof customFetch>[1]): Promise<GetCatalogShelves200> => {
+
+  return customFetch<GetCatalogShelves200>(getGetCatalogShelvesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCatalogShelvesQueryKey = (params?: GetCatalogShelvesParams,) => {
+    return [
+    `/api/catalog/shelves`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetCatalogShelvesQueryOptions = <TData = Awaited<ReturnType<typeof getCatalogShelves>>, TError = ErrorType<unknown>>(params: GetCatalogShelvesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCatalogShelves>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCatalogShelvesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCatalogShelves>>> = ({ signal }) => getCatalogShelves(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCatalogShelves>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCatalogShelvesQueryResult = NonNullable<Awaited<ReturnType<typeof getCatalogShelves>>>
+export type GetCatalogShelvesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Home-page shelves, each a small query
+ */
+
+export function useGetCatalogShelves<TData = Awaited<ReturnType<typeof getCatalogShelves>>, TError = ErrorType<unknown>>(
+ params: GetCatalogShelvesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCatalogShelves>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCatalogShelvesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetCatalogCoverUrl = (file: string,) => {
+
+
+
+
+  return `/api/catalog/covers/${file}`
+}
+
+/**
+ * @summary Front cover of a BookAtlas eBook
+ */
+export const getCatalogCover = async (file: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetCatalogCoverUrl(file),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCatalogCoverQueryKey = (file: string,) => {
+    return [
+    `/api/catalog/covers/${file}`
+    ] as const;
+    }
+
+
+export const getGetCatalogCoverQueryOptions = <TData = Awaited<ReturnType<typeof getCatalogCover>>, TError = ErrorType<void>>(file: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCatalogCover>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCatalogCoverQueryKey(file);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCatalogCover>>> = ({ signal }) => getCatalogCover(file, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: file !== null && file !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCatalogCover>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCatalogCoverQueryResult = NonNullable<Awaited<ReturnType<typeof getCatalogCover>>>
+export type GetCatalogCoverQueryError = ErrorType<void>
+
+
+/**
+ * @summary Front cover of a BookAtlas eBook
+ */
+
+export function useGetCatalogCover<TData = Awaited<ReturnType<typeof getCatalogCover>>, TError = ErrorType<void>>(
+ file: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCatalogCover>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCatalogCoverQueryOptions(file,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetReaderContentUrl = (bookId: string,) => {
+
+
+
+
+  return `/api/reader/catalog/${bookId}/content`
+}
+
+/**
+ * Full text for signed-in readers of free books, admins, the book's author and its buyers.
+ * @summary Everyone gets the preview (up to the introduction); entitled readers the whole book
+ */
+export const getReaderContent = async (bookId: string, options?: Parameters<typeof customFetch>[1]): Promise<ReaderContent> => {
+
+  return customFetch<ReaderContent>(getGetReaderContentUrl(bookId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReaderContentQueryKey = (bookId: string,) => {
+    return [
+    `/api/reader/catalog/${bookId}/content`
+    ] as const;
+    }
+
+
+export const getGetReaderContentQueryOptions = <TData = Awaited<ReturnType<typeof getReaderContent>>, TError = ErrorType<void>>(bookId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReaderContent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReaderContentQueryKey(bookId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReaderContent>>> = ({ signal }) => getReaderContent(bookId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: bookId !== null && bookId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReaderContent>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetReaderContentQueryResult = NonNullable<Awaited<ReturnType<typeof getReaderContent>>>
+export type GetReaderContentQueryError = ErrorType<void>
+
+
+/**
+ * @summary Everyone gets the preview (up to the introduction); entitled readers the whole book
+ */
+
+export function useGetReaderContent<TData = Awaited<ReturnType<typeof getReaderContent>>, TError = ErrorType<void>>(
+ bookId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReaderContent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetReaderContentQueryOptions(bookId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetReaderImageUrl = (bookId: string,
+    name: string,) => {
+
+
+
+
+  return `/api/reader/catalog/${bookId}/images/${name}`
+}
+
+/**
+ * @summary An image of the book; outside the preview only for entitled readers
+ */
+export const getReaderImage = async (bookId: string,
+    name: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetReaderImageUrl(bookId,name),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReaderImageQueryKey = (bookId: string,
+    name: string,) => {
+    return [
+    `/api/reader/catalog/${bookId}/images/${name}`
+    ] as const;
+    }
+
+
+export const getGetReaderImageQueryOptions = <TData = Awaited<ReturnType<typeof getReaderImage>>, TError = ErrorType<void>>(bookId: string,
+    name: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReaderImage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReaderImageQueryKey(bookId,name);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReaderImage>>> = ({ signal }) => getReaderImage(bookId,name, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: bookId !== null && bookId !== undefined && name !== null && name !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReaderImage>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetReaderImageQueryResult = NonNullable<Awaited<ReturnType<typeof getReaderImage>>>
+export type GetReaderImageQueryError = ErrorType<void>
+
+
+/**
+ * @summary An image of the book; outside the preview only for entitled readers
+ */
+
+export function useGetReaderImage<TData = Awaited<ReturnType<typeof getReaderImage>>, TError = ErrorType<void>>(
+ bookId: string,
+    name: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReaderImage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetReaderImageQueryOptions(bookId,name,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getImportCatalogFeedUrl = (params: ImportCatalogFeedParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/catalog/import?${stringifiedParams}` : `/api/admin/catalog/import`
+}
+
+/**
+ * @summary Import one part (at most 4 MB) of a distributor feed; titles are listed, not sold
+ */
+export const importCatalogFeed = async (importCatalogFeedBody: string,
+    params: ImportCatalogFeedParams, options?: Parameters<typeof customFetch>[1]): Promise<FeedImportResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FeedImportResult>(getImportCatalogFeedUrl(params),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'text/csv', ...getHeaders(options?.headers) },
+    body: JSON.stringify(importCatalogFeedBody)
+  }
+);}
+
+
+
+
+
+export const getImportCatalogFeedMutationKey = () => ['importCatalogFeed'] as const;
+
+export const getImportCatalogFeedMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importCatalogFeed>>, TError,ImportCatalogFeedMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importCatalogFeed>>, TError,ImportCatalogFeedMutationVariables, TContext> => {
+
+const mutationKey = getImportCatalogFeedMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importCatalogFeed>>, ImportCatalogFeedMutationVariables> = (props) => {
+          const {data,params} = props ?? {};
+
+          return  importCatalogFeed(data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportCatalogFeedMutationResult = NonNullable<Awaited<ReturnType<typeof importCatalogFeed>>>
+    export type ImportCatalogFeedMutationBody = BodyType<string>
+    export type ImportCatalogFeedMutationError = ErrorType<void>
+    export type ImportCatalogFeedMutationVariables = {data: BodyType<string>;params: ImportCatalogFeedParams}
+
+    /**
+ * @summary Import one part (at most 4 MB) of a distributor feed; titles are listed, not sold
+ */
+export const useImportCatalogFeed = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importCatalogFeed>>, TError,ImportCatalogFeedMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importCatalogFeed>>,
+        TError,
+        ImportCatalogFeedMutationVariables,
+        TContext
+      > => {
+      return useMutation(getImportCatalogFeedMutationOptions(options));
+    }
+
+export const getGetPaymentsConfigUrl = () => {
+
+
+
+
+  return `/api/payments/config`
+}
+
+/**
+ * @summary Whether Stripe Checkout is live
+ */
+export const getPaymentsConfig = async ( options?: Parameters<typeof customFetch>[1]): Promise<PaymentsConfig> => {
+
+  return customFetch<PaymentsConfig>(getGetPaymentsConfigUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPaymentsConfigQueryKey = () => {
+    return [
+    `/api/payments/config`
+    ] as const;
+    }
+
+
+export const getGetPaymentsConfigQueryOptions = <TData = Awaited<ReturnType<typeof getPaymentsConfig>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPaymentsConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPaymentsConfigQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPaymentsConfig>>> = ({ signal }) => getPaymentsConfig({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPaymentsConfig>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPaymentsConfigQueryResult = NonNullable<Awaited<ReturnType<typeof getPaymentsConfig>>>
+export type GetPaymentsConfigQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Whether Stripe Checkout is live
+ */
+
+export function useGetPaymentsConfig<TData = Awaited<ReturnType<typeof getPaymentsConfig>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPaymentsConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPaymentsConfigQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateCheckoutSessionUrl = () => {
+
+
+
+
+  return `/api/checkout/sessions`
+}
+
+/**
+ * @summary Start a Stripe Checkout for prepared eBooks; prices come from the catalogue
+ */
+export const createCheckoutSession = async (checkoutInput: CheckoutInput, options?: Parameters<typeof customFetch>[1]): Promise<CheckoutSession> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CheckoutSession>(getCreateCheckoutSessionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(checkoutInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCheckoutSessionMutationKey = () => ['createCheckoutSession'] as const;
+
+export const getCreateCheckoutSessionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCheckoutSession>>, TError,CreateCheckoutSessionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCheckoutSession>>, TError,CreateCheckoutSessionMutationVariables, TContext> => {
+
+const mutationKey = getCreateCheckoutSessionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCheckoutSession>>, CreateCheckoutSessionMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCheckoutSession(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCheckoutSessionMutationResult = NonNullable<Awaited<ReturnType<typeof createCheckoutSession>>>
+    export type CreateCheckoutSessionMutationBody = BodyType<CheckoutInput>
+    export type CreateCheckoutSessionMutationError = ErrorType<void>
+    export type CreateCheckoutSessionMutationVariables = {data: BodyType<CheckoutInput>}
+
+    /**
+ * @summary Start a Stripe Checkout for prepared eBooks; prices come from the catalogue
+ */
+export const useCreateCheckoutSession = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCheckoutSession>>, TError,CreateCheckoutSessionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCheckoutSession>>,
+        TError,
+        CreateCheckoutSessionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateCheckoutSessionMutationOptions(options));
+    }
+
+export const getGetCheckoutStatusUrl = (id: string,) => {
+
+
+
+
+  return `/api/checkout/sessions/${id}`
+}
+
+/**
+ * @summary Whether the signed-in reader's checkout is paid; paid sessions are fulfilled here too
+ */
+export const getCheckoutStatus = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<CheckoutStatus> => {
+
+  return customFetch<CheckoutStatus>(getGetCheckoutStatusUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCheckoutStatusQueryKey = (id: string,) => {
+    return [
+    `/api/checkout/sessions/${id}`
+    ] as const;
+    }
+
+
+export const getGetCheckoutStatusQueryOptions = <TData = Awaited<ReturnType<typeof getCheckoutStatus>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCheckoutStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCheckoutStatusQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCheckoutStatus>>> = ({ signal }) => getCheckoutStatus(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCheckoutStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCheckoutStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getCheckoutStatus>>>
+export type GetCheckoutStatusQueryError = ErrorType<void>
+
+
+/**
+ * @summary Whether the signed-in reader's checkout is paid; paid sessions are fulfilled here too
+ */
+
+export function useGetCheckoutStatus<TData = Awaited<ReturnType<typeof getCheckoutStatus>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCheckoutStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCheckoutStatusQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListOwnPurchasesUrl = () => {
+
+
+
+
+  return `/api/purchases`
+}
+
+/**
+ * @summary Books the signed-in reader bought
+ */
+export const listOwnPurchases = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListOwnPurchases200> => {
+
+  return customFetch<ListOwnPurchases200>(getListOwnPurchasesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOwnPurchasesQueryKey = () => {
+    return [
+    `/api/purchases`
+    ] as const;
+    }
+
+
+export const getListOwnPurchasesQueryOptions = <TData = Awaited<ReturnType<typeof listOwnPurchases>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOwnPurchases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOwnPurchasesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOwnPurchases>>> = ({ signal }) => listOwnPurchases({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOwnPurchases>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOwnPurchasesQueryResult = NonNullable<Awaited<ReturnType<typeof listOwnPurchases>>>
+export type ListOwnPurchasesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Books the signed-in reader bought
+ */
+
+export function useListOwnPurchases<TData = Awaited<ReturnType<typeof listOwnPurchases>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOwnPurchases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOwnPurchasesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getReceiveStripeWebhookUrl = () => {
+
+
+
+
+  return `/api/stripe/webhook`
+}
+
+/**
+ * @summary Stripe events, verified against the raw body with the endpoint secret
+ */
+export const receiveStripeWebhook = async (stripeEvent: StripeEvent, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getReceiveStripeWebhookUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(stripeEvent)
+  }
+);}
+
+
+
+
+
+export const getReceiveStripeWebhookMutationKey = () => ['receiveStripeWebhook'] as const;
+
+export const getReceiveStripeWebhookMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof receiveStripeWebhook>>, TError,ReceiveStripeWebhookMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof receiveStripeWebhook>>, TError,ReceiveStripeWebhookMutationVariables, TContext> => {
+
+const mutationKey = getReceiveStripeWebhookMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof receiveStripeWebhook>>, ReceiveStripeWebhookMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  receiveStripeWebhook(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReceiveStripeWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof receiveStripeWebhook>>>
+    export type ReceiveStripeWebhookMutationBody = BodyType<StripeEvent>
+    export type ReceiveStripeWebhookMutationError = ErrorType<void>
+    export type ReceiveStripeWebhookMutationVariables = {data: BodyType<StripeEvent>}
+
+    /**
+ * @summary Stripe events, verified against the raw body with the endpoint secret
+ */
+export const useReceiveStripeWebhook = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof receiveStripeWebhook>>, TError,ReceiveStripeWebhookMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof receiveStripeWebhook>>,
+        TError,
+        ReceiveStripeWebhookMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReceiveStripeWebhookMutationOptions(options));
+    }
+
+export const getListEbookSubmissionsUrl = () => {
+
+
+
+
+  return `/api/ebook-submissions`
+}
+
+/**
+ * @summary The signed-in author's submissions (every submission for admins)
+ */
+export const listEbookSubmissions = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListEbookSubmissions200> => {
+
+  return customFetch<ListEbookSubmissions200>(getListEbookSubmissionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEbookSubmissionsQueryKey = () => {
+    return [
+    `/api/ebook-submissions`
+    ] as const;
+    }
+
+
+export const getListEbookSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof listEbookSubmissions>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEbookSubmissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEbookSubmissionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEbookSubmissions>>> = ({ signal }) => listEbookSubmissions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEbookSubmissions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEbookSubmissionsQueryResult = NonNullable<Awaited<ReturnType<typeof listEbookSubmissions>>>
+export type ListEbookSubmissionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The signed-in author's submissions (every submission for admins)
+ */
+
+export function useListEbookSubmissions<TData = Awaited<ReturnType<typeof listEbookSubmissions>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEbookSubmissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEbookSubmissionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getStartEbookSubmissionUrl = () => {
+
+
+
+
+  return `/api/ebook-submissions`
+}
+
+/**
+ * @summary Start a submission; the EPUB is then uploaded in parts of 4 MB
+ */
+export const startEbookSubmission = async (ebookSubmissionStart: EbookSubmissionStart, options?: Parameters<typeof customFetch>[1]): Promise<EbookSubmission> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EbookSubmission>(getStartEbookSubmissionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(ebookSubmissionStart)
+  }
+);}
+
+
+
+
+
+export const getStartEbookSubmissionMutationKey = () => ['startEbookSubmission'] as const;
+
+export const getStartEbookSubmissionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startEbookSubmission>>, TError,StartEbookSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startEbookSubmission>>, TError,StartEbookSubmissionMutationVariables, TContext> => {
+
+const mutationKey = getStartEbookSubmissionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startEbookSubmission>>, StartEbookSubmissionMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  startEbookSubmission(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartEbookSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof startEbookSubmission>>>
+    export type StartEbookSubmissionMutationBody = BodyType<EbookSubmissionStart>
+    export type StartEbookSubmissionMutationError = ErrorType<void>
+    export type StartEbookSubmissionMutationVariables = {data: BodyType<EbookSubmissionStart>}
+
+    /**
+ * @summary Start a submission; the EPUB is then uploaded in parts of 4 MB
+ */
+export const useStartEbookSubmission = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startEbookSubmission>>, TError,StartEbookSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startEbookSubmission>>,
+        TError,
+        StartEbookSubmissionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getStartEbookSubmissionMutationOptions(options));
+    }
+
+export const getGetEbookSubmissionUrl = (id: string,) => {
+
+
+
+
+  return `/api/ebook-submissions/${id}`
+}
+
+export const getEbookSubmission = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<EbookSubmission> => {
+
+  return customFetch<EbookSubmission>(getGetEbookSubmissionUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEbookSubmissionQueryKey = (id: string,) => {
+    return [
+    `/api/ebook-submissions/${id}`
+    ] as const;
+    }
+
+
+export const getGetEbookSubmissionQueryOptions = <TData = Awaited<ReturnType<typeof getEbookSubmission>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEbookSubmission>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEbookSubmissionQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEbookSubmission>>> = ({ signal }) => getEbookSubmission(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEbookSubmission>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEbookSubmissionQueryResult = NonNullable<Awaited<ReturnType<typeof getEbookSubmission>>>
+export type GetEbookSubmissionQueryError = ErrorType<void>
+
+
+
+export function useGetEbookSubmission<TData = Awaited<ReturnType<typeof getEbookSubmission>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEbookSubmission>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEbookSubmissionQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUploadEbookSubmissionPartUrl = (id: string,
+    part: number,) => {
+
+
+
+
+  return `/api/ebook-submissions/${id}/upload/${part}`
+}
+
+export const uploadEbookSubmissionPart = async (id: string,
+    part: number,
+    uploadEbookSubmissionPartBody: Blob, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getUploadEbookSubmissionPartUrl(id,part),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/octet-stream', ...getHeaders(options?.headers) },
+    body: uploadEbookSubmissionPartBody
+  }
+);}
+
+
+
+
+
+export const getUploadEbookSubmissionPartMutationKey = () => ['uploadEbookSubmissionPart'] as const;
+
+export const getUploadEbookSubmissionPartMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadEbookSubmissionPart>>, TError,UploadEbookSubmissionPartMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadEbookSubmissionPart>>, TError,UploadEbookSubmissionPartMutationVariables, TContext> => {
+
+const mutationKey = getUploadEbookSubmissionPartMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadEbookSubmissionPart>>, UploadEbookSubmissionPartMutationVariables> = (props) => {
+          const {id,part,data} = props ?? {};
+
+          return  uploadEbookSubmissionPart(id,part,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadEbookSubmissionPartMutationResult = NonNullable<Awaited<ReturnType<typeof uploadEbookSubmissionPart>>>
+    export type UploadEbookSubmissionPartMutationBody = BodyType<Blob>
+    export type UploadEbookSubmissionPartMutationError = ErrorType<void>
+    export type UploadEbookSubmissionPartMutationVariables = {id: string;part: number;data: BodyType<Blob>}
+
+    export const useUploadEbookSubmissionPart = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadEbookSubmissionPart>>, TError,UploadEbookSubmissionPartMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadEbookSubmissionPart>>,
+        TError,
+        UploadEbookSubmissionPartMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUploadEbookSubmissionPartMutationOptions(options));
+    }
+
+export const getPrepareEbookSubmissionUrl = (id: string,) => {
+
+
+
+
+  return `/api/ebook-submissions/${id}/prepare`
+}
+
+/**
+ * @summary Run the preparation engine on the uploaded EPUB
+ */
+export const prepareEbookSubmission = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<EbookSubmission> => {
+
+  return customFetch<EbookSubmission>(getPrepareEbookSubmissionUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getPrepareEbookSubmissionMutationKey = () => ['prepareEbookSubmission'] as const;
+
+export const getPrepareEbookSubmissionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof prepareEbookSubmission>>, TError,PrepareEbookSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof prepareEbookSubmission>>, TError,PrepareEbookSubmissionMutationVariables, TContext> => {
+
+const mutationKey = getPrepareEbookSubmissionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof prepareEbookSubmission>>, PrepareEbookSubmissionMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  prepareEbookSubmission(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PrepareEbookSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof prepareEbookSubmission>>>
+
+    export type PrepareEbookSubmissionMutationError = ErrorType<unknown>
+    export type PrepareEbookSubmissionMutationVariables = {id: string}
+
+    /**
+ * @summary Run the preparation engine on the uploaded EPUB
+ */
+export const usePrepareEbookSubmission = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof prepareEbookSubmission>>, TError,PrepareEbookSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof prepareEbookSubmission>>,
+        TError,
+        PrepareEbookSubmissionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPrepareEbookSubmissionMutationOptions(options));
+    }
+
+export const getReuploadEbookSubmissionUrl = (id: string,) => {
+
+
+
+
+  return `/api/ebook-submissions/${id}/reupload`
+}
+
+/**
+ * @summary Replace the EPUB before publishing (also after a rejection); details and cover choice carry over
+ */
+export const reuploadEbookSubmission = async (id: string,
+    ebookSubmissionStart: EbookSubmissionStart, options?: Parameters<typeof customFetch>[1]): Promise<EbookSubmission> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EbookSubmission>(getReuploadEbookSubmissionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(ebookSubmissionStart)
+  }
+);}
+
+
+
+
+
+export const getReuploadEbookSubmissionMutationKey = () => ['reuploadEbookSubmission'] as const;
+
+export const getReuploadEbookSubmissionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reuploadEbookSubmission>>, TError,ReuploadEbookSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reuploadEbookSubmission>>, TError,ReuploadEbookSubmissionMutationVariables, TContext> => {
+
+const mutationKey = getReuploadEbookSubmissionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reuploadEbookSubmission>>, ReuploadEbookSubmissionMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reuploadEbookSubmission(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReuploadEbookSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof reuploadEbookSubmission>>>
+    export type ReuploadEbookSubmissionMutationBody = BodyType<EbookSubmissionStart>
+    export type ReuploadEbookSubmissionMutationError = ErrorType<void>
+    export type ReuploadEbookSubmissionMutationVariables = {id: string;data: BodyType<EbookSubmissionStart>}
+
+    /**
+ * @summary Replace the EPUB before publishing (also after a rejection); details and cover choice carry over
+ */
+export const useReuploadEbookSubmission = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reuploadEbookSubmission>>, TError,ReuploadEbookSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reuploadEbookSubmission>>,
+        TError,
+        ReuploadEbookSubmissionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReuploadEbookSubmissionMutationOptions(options));
+    }
+
+export const getStartEbookNewVersionUrl = (id: string,) => {
+
+
+
+
+  return `/api/ebook-submissions/${id}/new-version`
+}
+
+/**
+ * @summary A corrected EPUB for a published book; publishing it replaces the book under the same id
+ */
+export const startEbookNewVersion = async (id: string,
+    ebookSubmissionStart: EbookSubmissionStart, options?: Parameters<typeof customFetch>[1]): Promise<EbookSubmission> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EbookSubmission>(getStartEbookNewVersionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(ebookSubmissionStart)
+  }
+);}
+
+
+
+
+
+export const getStartEbookNewVersionMutationKey = () => ['startEbookNewVersion'] as const;
+
+export const getStartEbookNewVersionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startEbookNewVersion>>, TError,StartEbookNewVersionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startEbookNewVersion>>, TError,StartEbookNewVersionMutationVariables, TContext> => {
+
+const mutationKey = getStartEbookNewVersionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startEbookNewVersion>>, StartEbookNewVersionMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  startEbookNewVersion(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartEbookNewVersionMutationResult = NonNullable<Awaited<ReturnType<typeof startEbookNewVersion>>>
+    export type StartEbookNewVersionMutationBody = BodyType<EbookSubmissionStart>
+    export type StartEbookNewVersionMutationError = ErrorType<void>
+    export type StartEbookNewVersionMutationVariables = {id: string;data: BodyType<EbookSubmissionStart>}
+
+    /**
+ * @summary A corrected EPUB for a published book; publishing it replaces the book under the same id
+ */
+export const useStartEbookNewVersion = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startEbookNewVersion>>, TError,StartEbookNewVersionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startEbookNewVersion>>,
+        TError,
+        StartEbookNewVersionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getStartEbookNewVersionMutationOptions(options));
+    }
+
+export const getUpdateEbookSubmissionDetailsUrl = (id: string,) => {
+
+
+
+
+  return `/api/ebook-submissions/${id}/intake`
+}
+
+export const updateEbookSubmissionDetails = async (id: string,
+    ebookIntakeUpdate: EbookIntakeUpdate, options?: Parameters<typeof customFetch>[1]): Promise<EbookSubmission> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EbookSubmission>(getUpdateEbookSubmissionDetailsUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(ebookIntakeUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateEbookSubmissionDetailsMutationKey = () => ['updateEbookSubmissionDetails'] as const;
+
+export const getUpdateEbookSubmissionDetailsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEbookSubmissionDetails>>, TError,UpdateEbookSubmissionDetailsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateEbookSubmissionDetails>>, TError,UpdateEbookSubmissionDetailsMutationVariables, TContext> => {
+
+const mutationKey = getUpdateEbookSubmissionDetailsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEbookSubmissionDetails>>, UpdateEbookSubmissionDetailsMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateEbookSubmissionDetails(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateEbookSubmissionDetailsMutationResult = NonNullable<Awaited<ReturnType<typeof updateEbookSubmissionDetails>>>
+    export type UpdateEbookSubmissionDetailsMutationBody = BodyType<EbookIntakeUpdate>
+    export type UpdateEbookSubmissionDetailsMutationError = ErrorType<unknown>
+    export type UpdateEbookSubmissionDetailsMutationVariables = {id: string;data: BodyType<EbookIntakeUpdate>}
+
+    export const useUpdateEbookSubmissionDetails = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEbookSubmissionDetails>>, TError,UpdateEbookSubmissionDetailsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateEbookSubmissionDetails>>,
+        TError,
+        UpdateEbookSubmissionDetailsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateEbookSubmissionDetailsMutationOptions(options));
+    }
+
+export const getReplaceEbookCoverUrl = (id: string,) => {
+
+
+
+
+  return `/api/ebook-submissions/${id}/cover`
+}
+
+/**
+ * @summary Upload a replacement front cover (JPEG or PNG, portrait, at most 4 MB)
+ */
+export const replaceEbookCover = async (id: string,
+    replaceEbookCoverBody: Blob, options?: Parameters<typeof customFetch>[1]): Promise<EbookSubmission> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EbookSubmission>(getReplaceEbookCoverUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'image/jpeg', ...getHeaders(options?.headers) },
+    body: replaceEbookCoverBody
+  }
+);}
+
+
+
+
+
+export const getReplaceEbookCoverMutationKey = () => ['replaceEbookCover'] as const;
+
+export const getReplaceEbookCoverMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceEbookCover>>, TError,ReplaceEbookCoverMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof replaceEbookCover>>, TError,ReplaceEbookCoverMutationVariables, TContext> => {
+
+const mutationKey = getReplaceEbookCoverMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof replaceEbookCover>>, ReplaceEbookCoverMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  replaceEbookCover(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReplaceEbookCoverMutationResult = NonNullable<Awaited<ReturnType<typeof replaceEbookCover>>>
+    export type ReplaceEbookCoverMutationBody = BodyType<Blob>
+    export type ReplaceEbookCoverMutationError = ErrorType<unknown>
+    export type ReplaceEbookCoverMutationVariables = {id: string;data: BodyType<Blob>}
+
+    /**
+ * @summary Upload a replacement front cover (JPEG or PNG, portrait, at most 4 MB)
+ */
+export const useReplaceEbookCover = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceEbookCover>>, TError,ReplaceEbookCoverMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof replaceEbookCover>>,
+        TError,
+        ReplaceEbookCoverMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReplaceEbookCoverMutationOptions(options));
+    }
+
+export const getUseOriginalEbookCoverUrl = (id: string,) => {
+
+
+
+
+  return `/api/ebook-submissions/${id}/cover`
+}
+
+export const useOriginalEbookCover = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<EbookSubmission> => {
+
+  return customFetch<EbookSubmission>(getUseOriginalEbookCoverUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getUseOriginalEbookCoverMutationKey = () => ['useOriginalEbookCover'] as const;
+
+export const getUseOriginalEbookCoverMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof useOriginalEbookCover>>, TError,UseOriginalEbookCoverMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof useOriginalEbookCover>>, TError,UseOriginalEbookCoverMutationVariables, TContext> => {
+
+const mutationKey = getUseOriginalEbookCoverMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof useOriginalEbookCover>>, UseOriginalEbookCoverMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  useOriginalEbookCover(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UseOriginalEbookCoverMutationResult = NonNullable<Awaited<ReturnType<typeof useOriginalEbookCover>>>
+
+    export type UseOriginalEbookCoverMutationError = ErrorType<unknown>
+    export type UseOriginalEbookCoverMutationVariables = {id: string}
+
+    export const useUseOriginalEbookCover = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof useOriginalEbookCover>>, TError,UseOriginalEbookCoverMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof useOriginalEbookCover>>,
+        TError,
+        UseOriginalEbookCoverMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUseOriginalEbookCoverMutationOptions(options));
+    }
+
+export const getEnlargeEbookCoverUrl = (id: string,) => {
+
+
+
+
+  return `/api/ebook-submissions/${id}/cover/enlarge`
+}
+
+export const enlargeEbookCover = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<EbookSubmission> => {
+
+  return customFetch<EbookSubmission>(getEnlargeEbookCoverUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getEnlargeEbookCoverMutationKey = () => ['enlargeEbookCover'] as const;
+
+export const getEnlargeEbookCoverMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof enlargeEbookCover>>, TError,EnlargeEbookCoverMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof enlargeEbookCover>>, TError,EnlargeEbookCoverMutationVariables, TContext> => {
+
+const mutationKey = getEnlargeEbookCoverMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof enlargeEbookCover>>, EnlargeEbookCoverMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  enlargeEbookCover(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EnlargeEbookCoverMutationResult = NonNullable<Awaited<ReturnType<typeof enlargeEbookCover>>>
+
+    export type EnlargeEbookCoverMutationError = ErrorType<unknown>
+    export type EnlargeEbookCoverMutationVariables = {id: string}
+
+    export const useEnlargeEbookCover = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof enlargeEbookCover>>, TError,EnlargeEbookCoverMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof enlargeEbookCover>>,
+        TError,
+        EnlargeEbookCoverMutationVariables,
+        TContext
+      > => {
+      return useMutation(getEnlargeEbookCoverMutationOptions(options));
+    }
+
+export const getChangeEbookPriceUrl = (id: string,) => {
+
+
+
+
+  return `/api/ebook-submissions/${id}/price`
+}
+
+/**
+ * @summary Change the live price of a published book
+ */
+export const changeEbookPrice = async (id: string,
+    priceInput: PriceInput, options?: Parameters<typeof customFetch>[1]): Promise<EbookSubmission> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EbookSubmission>(getChangeEbookPriceUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(priceInput)
+  }
+);}
+
+
+
+
+
+export const getChangeEbookPriceMutationKey = () => ['changeEbookPrice'] as const;
+
+export const getChangeEbookPriceMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeEbookPrice>>, TError,ChangeEbookPriceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeEbookPrice>>, TError,ChangeEbookPriceMutationVariables, TContext> => {
+
+const mutationKey = getChangeEbookPriceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeEbookPrice>>, ChangeEbookPriceMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  changeEbookPrice(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeEbookPriceMutationResult = NonNullable<Awaited<ReturnType<typeof changeEbookPrice>>>
+    export type ChangeEbookPriceMutationBody = BodyType<PriceInput>
+    export type ChangeEbookPriceMutationError = ErrorType<void>
+    export type ChangeEbookPriceMutationVariables = {id: string;data: BodyType<PriceInput>}
+
+    /**
+ * @summary Change the live price of a published book
+ */
+export const useChangeEbookPrice = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeEbookPrice>>, TError,ChangeEbookPriceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changeEbookPrice>>,
+        TError,
+        ChangeEbookPriceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getChangeEbookPriceMutationOptions(options));
+    }
+
+export const getSetEbookPrintLinksUrl = (id: string,) => {
+
+
+
+
+  return `/api/ebook-submissions/${id}/print-links`
+}
+
+/**
+ * @summary Amazon and Lulu pages of the printed book (https on those stores only)
+ */
+export const setEbookPrintLinks = async (id: string,
+    printLinks: PrintLinks, options?: Parameters<typeof customFetch>[1]): Promise<EbookSubmission> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EbookSubmission>(getSetEbookPrintLinksUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(printLinks)
+  }
+);}
+
+
+
+
+
+export const getSetEbookPrintLinksMutationKey = () => ['setEbookPrintLinks'] as const;
+
+export const getSetEbookPrintLinksMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setEbookPrintLinks>>, TError,SetEbookPrintLinksMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setEbookPrintLinks>>, TError,SetEbookPrintLinksMutationVariables, TContext> => {
+
+const mutationKey = getSetEbookPrintLinksMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setEbookPrintLinks>>, SetEbookPrintLinksMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  setEbookPrintLinks(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetEbookPrintLinksMutationResult = NonNullable<Awaited<ReturnType<typeof setEbookPrintLinks>>>
+    export type SetEbookPrintLinksMutationBody = BodyType<PrintLinks>
+    export type SetEbookPrintLinksMutationError = ErrorType<void>
+    export type SetEbookPrintLinksMutationVariables = {id: string;data: BodyType<PrintLinks>}
+
+    /**
+ * @summary Amazon and Lulu pages of the printed book (https on those stores only)
+ */
+export const useSetEbookPrintLinks = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setEbookPrintLinks>>, TError,SetEbookPrintLinksMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setEbookPrintLinks>>,
+        TError,
+        SetEbookPrintLinksMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSetEbookPrintLinksMutationOptions(options));
+    }
+
+export const getGetEbookReadinessUrl = (id: string,) => {
+
+
+
+
+  return `/api/ebook-submissions/${id}/readiness`
+}
+
+/**
+ * @summary Amazon KDP and Lulu publication readiness package
+ */
+export const getEbookReadiness = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<ReadinessPackage> => {
+
+  return customFetch<ReadinessPackage>(getGetEbookReadinessUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEbookReadinessQueryKey = (id: string,) => {
+    return [
+    `/api/ebook-submissions/${id}/readiness`
+    ] as const;
+    }
+
+
+export const getGetEbookReadinessQueryOptions = <TData = Awaited<ReturnType<typeof getEbookReadiness>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEbookReadiness>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEbookReadinessQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEbookReadiness>>> = ({ signal }) => getEbookReadiness(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEbookReadiness>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEbookReadinessQueryResult = NonNullable<Awaited<ReturnType<typeof getEbookReadiness>>>
+export type GetEbookReadinessQueryError = ErrorType<void>
+
+
+/**
+ * @summary Amazon KDP and Lulu publication readiness package
+ */
+
+export function useGetEbookReadiness<TData = Awaited<ReturnType<typeof getEbookReadiness>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEbookReadiness>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEbookReadinessQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetEbookSubmissionFileUrl = (id: string,
+    file: 'epub' | 'cover',) => {
+
+
+
+
+  return `/api/ebook-submissions/${id}/files/${file}`
+}
+
+/**
+ * @summary Manifest of the prepared EPUB or store cover (downloaded in parts)
+ */
+export const getEbookSubmissionFile = async (id: string,
+    file: 'epub' | 'cover', options?: Parameters<typeof customFetch>[1]): Promise<GetEbookSubmissionFile200> => {
+
+  return customFetch<GetEbookSubmissionFile200>(getGetEbookSubmissionFileUrl(id,file),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEbookSubmissionFileQueryKey = (id: string,
+    file: 'epub' | 'cover',) => {
+    return [
+    `/api/ebook-submissions/${id}/files/${file}`
+    ] as const;
+    }
+
+
+export const getGetEbookSubmissionFileQueryOptions = <TData = Awaited<ReturnType<typeof getEbookSubmissionFile>>, TError = ErrorType<unknown>>(id: string,
+    file: 'epub' | 'cover', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEbookSubmissionFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEbookSubmissionFileQueryKey(id,file);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEbookSubmissionFile>>> = ({ signal }) => getEbookSubmissionFile(id,file, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && file !== null && file !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEbookSubmissionFile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEbookSubmissionFileQueryResult = NonNullable<Awaited<ReturnType<typeof getEbookSubmissionFile>>>
+export type GetEbookSubmissionFileQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Manifest of the prepared EPUB or store cover (downloaded in parts)
+ */
+
+export function useGetEbookSubmissionFile<TData = Awaited<ReturnType<typeof getEbookSubmissionFile>>, TError = ErrorType<unknown>>(
+ id: string,
+    file: 'epub' | 'cover', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEbookSubmissionFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEbookSubmissionFileQueryOptions(id,file,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetEbookSubmissionFilePartUrl = (id: string,
+    file: 'epub' | 'cover',
+    part: number,) => {
+
+
+
+
+  return `/api/ebook-submissions/${id}/files/${file}/parts/${part}`
+}
+
+export const getEbookSubmissionFilePart = async (id: string,
+    file: 'epub' | 'cover',
+    part: number, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetEbookSubmissionFilePartUrl(id,file,part),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEbookSubmissionFilePartQueryKey = (id: string,
+    file: 'epub' | 'cover',
+    part: number,) => {
+    return [
+    `/api/ebook-submissions/${id}/files/${file}/parts/${part}`
+    ] as const;
+    }
+
+
+export const getGetEbookSubmissionFilePartQueryOptions = <TData = Awaited<ReturnType<typeof getEbookSubmissionFilePart>>, TError = ErrorType<unknown>>(id: string,
+    file: 'epub' | 'cover',
+    part: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEbookSubmissionFilePart>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEbookSubmissionFilePartQueryKey(id,file,part);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEbookSubmissionFilePart>>> = ({ signal }) => getEbookSubmissionFilePart(id,file,part, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && file !== null && file !== undefined && part !== null && part !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEbookSubmissionFilePart>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEbookSubmissionFilePartQueryResult = NonNullable<Awaited<ReturnType<typeof getEbookSubmissionFilePart>>>
+export type GetEbookSubmissionFilePartQueryError = ErrorType<unknown>
+
+
+
+export function useGetEbookSubmissionFilePart<TData = Awaited<ReturnType<typeof getEbookSubmissionFilePart>>, TError = ErrorType<unknown>>(
+ id: string,
+    file: 'epub' | 'cover',
+    part: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEbookSubmissionFilePart>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEbookSubmissionFilePartQueryOptions(id,file,part,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPublishEbookSubmissionUrl = (id: string,) => {
+
+
+
+
+  return `/api/ebook-submissions/${id}/publish`
+}
+
+/**
+ * @summary Publish a ready submission to the store (admin)
+ */
+export const publishEbookSubmission = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<EbookSubmission> => {
+
+  return customFetch<EbookSubmission>(getPublishEbookSubmissionUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getPublishEbookSubmissionMutationKey = () => ['publishEbookSubmission'] as const;
+
+export const getPublishEbookSubmissionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publishEbookSubmission>>, TError,PublishEbookSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof publishEbookSubmission>>, TError,PublishEbookSubmissionMutationVariables, TContext> => {
+
+const mutationKey = getPublishEbookSubmissionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof publishEbookSubmission>>, PublishEbookSubmissionMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  publishEbookSubmission(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PublishEbookSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof publishEbookSubmission>>>
+
+    export type PublishEbookSubmissionMutationError = ErrorType<void>
+    export type PublishEbookSubmissionMutationVariables = {id: string}
+
+    /**
+ * @summary Publish a ready submission to the store (admin)
+ */
+export const usePublishEbookSubmission = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publishEbookSubmission>>, TError,PublishEbookSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof publishEbookSubmission>>,
+        TError,
+        PublishEbookSubmissionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPublishEbookSubmissionMutationOptions(options));
+    }
+
+export const getRejectEbookSubmissionUrl = (id: string,) => {
+
+
+
+
+  return `/api/ebook-submissions/${id}/reject`
+}
+
+/**
+ * @summary Return a submission to its author with a reason (admin)
+ */
+export const rejectEbookSubmission = async (id: string,
+    rejectInput: RejectInput, options?: Parameters<typeof customFetch>[1]): Promise<EbookSubmission> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EbookSubmission>(getRejectEbookSubmissionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(rejectInput)
+  }
+);}
+
+
+
+
+
+export const getRejectEbookSubmissionMutationKey = () => ['rejectEbookSubmission'] as const;
+
+export const getRejectEbookSubmissionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectEbookSubmission>>, TError,RejectEbookSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof rejectEbookSubmission>>, TError,RejectEbookSubmissionMutationVariables, TContext> => {
+
+const mutationKey = getRejectEbookSubmissionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rejectEbookSubmission>>, RejectEbookSubmissionMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  rejectEbookSubmission(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RejectEbookSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof rejectEbookSubmission>>>
+    export type RejectEbookSubmissionMutationBody = BodyType<RejectInput>
+    export type RejectEbookSubmissionMutationError = ErrorType<unknown>
+    export type RejectEbookSubmissionMutationVariables = {id: string;data: BodyType<RejectInput>}
+
+    /**
+ * @summary Return a submission to its author with a reason (admin)
+ */
+export const useRejectEbookSubmission = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectEbookSubmission>>, TError,RejectEbookSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof rejectEbookSubmission>>,
+        TError,
+        RejectEbookSubmissionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRejectEbookSubmissionMutationOptions(options));
+    }
+
+export const getGetStoreFeedbackUrl = () => {
+
+
+
+
+  return `/api/ebook-prep/feedback`
+}
+
+/**
+ * @summary Store rejection messages and the rules they made blocking (admin)
+ */
+export const getStoreFeedback = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetStoreFeedback200> => {
+
+  return customFetch<GetStoreFeedback200>(getGetStoreFeedbackUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStoreFeedbackQueryKey = () => {
+    return [
+    `/api/ebook-prep/feedback`
+    ] as const;
+    }
+
+
+export const getGetStoreFeedbackQueryOptions = <TData = Awaited<ReturnType<typeof getStoreFeedback>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStoreFeedback>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStoreFeedbackQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStoreFeedback>>> = ({ signal }) => getStoreFeedback({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStoreFeedback>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetStoreFeedbackQueryResult = NonNullable<Awaited<ReturnType<typeof getStoreFeedback>>>
+export type GetStoreFeedbackQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Store rejection messages and the rules they made blocking (admin)
+ */
+
+export function useGetStoreFeedback<TData = Awaited<ReturnType<typeof getStoreFeedback>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStoreFeedback>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetStoreFeedbackQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAddStoreFeedbackUrl = () => {
+
+
+
+
+  return `/api/ebook-prep/feedback`
+}
+
+export const addStoreFeedback = async (storeFeedbackInput: StoreFeedbackInput, options?: Parameters<typeof customFetch>[1]): Promise<AddStoreFeedback201> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AddStoreFeedback201>(getAddStoreFeedbackUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(storeFeedbackInput)
+  }
+);}
+
+
+
+
+
+export const getAddStoreFeedbackMutationKey = () => ['addStoreFeedback'] as const;
+
+export const getAddStoreFeedbackMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addStoreFeedback>>, TError,AddStoreFeedbackMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addStoreFeedback>>, TError,AddStoreFeedbackMutationVariables, TContext> => {
+
+const mutationKey = getAddStoreFeedbackMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addStoreFeedback>>, AddStoreFeedbackMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  addStoreFeedback(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddStoreFeedbackMutationResult = NonNullable<Awaited<ReturnType<typeof addStoreFeedback>>>
+    export type AddStoreFeedbackMutationBody = BodyType<StoreFeedbackInput>
+    export type AddStoreFeedbackMutationError = ErrorType<unknown>
+    export type AddStoreFeedbackMutationVariables = {data: BodyType<StoreFeedbackInput>}
+
+    export const useAddStoreFeedback = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addStoreFeedback>>, TError,AddStoreFeedbackMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addStoreFeedback>>,
+        TError,
+        AddStoreFeedbackMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAddStoreFeedbackMutationOptions(options));
+    }
 

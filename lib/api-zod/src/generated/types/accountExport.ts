@@ -5,7 +5,9 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { AccountExportEbookSubmissionsItem } from './accountExportEbookSubmissionsItem';
 import type { AccountExportEmailDeliveriesItem } from './accountExportEmailDeliveriesItem';
+import type { AccountExportPurchasesItem } from './accountExportPurchasesItem';
 import type { AccountExportSubscriber } from './accountExportSubscriber';
 import type { AccountIdentity } from './accountIdentity';
 import type { RegisteredReader } from './registeredReader';
@@ -17,4 +19,6 @@ export interface AccountExport {
   /** @nullable */
   subscriber: AccountExportSubscriber;
   emailDeliveries: AccountExportEmailDeliveriesItem[];
+  purchases?: AccountExportPurchasesItem[];
+  ebookSubmissions?: AccountExportEbookSubmissionsItem[];
 }

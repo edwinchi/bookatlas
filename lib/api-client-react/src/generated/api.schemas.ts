@@ -5,6 +5,291 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type CatalogBookFormat = typeof CatalogBookFormat[keyof typeof CatalogBookFormat];
+
+
+export const CatalogBookFormat = {
+  ebook: 'ebook',
+  audiobook: 'audiobook',
+  bundle: 'bundle',
+} as const;
+
+export type CatalogBookAvailability = typeof CatalogBookAvailability[keyof typeof CatalogBookAvailability];
+
+
+export const CatalogBookAvailability = {
+  listed: 'listed',
+} as const;
+
+export interface PrintLinks {
+  amazon?: string;
+  lulu?: string;
+}
+
+/**
+ * A book; lists return cards without sampleChapters, reviews, editorialReview and authorBio
+ */
+export interface CatalogBook {
+  id: string;
+  title: string;
+  subtitle?: string;
+  author: string;
+  price: number;
+  format: CatalogBookFormat;
+  primaryGenre: string;
+  genres?: string[];
+  coverImage?: string;
+  hasReaderContent?: boolean;
+  isSample?: boolean;
+  availability?: CatalogBookAvailability;
+  printLinks?: PrintLinks;
+  [key: string]: unknown;
+ }
+
+export interface CatalogPage {
+  books: CatalogBook[];
+  /** Planner estimate */
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+export interface CatalogCount {
+  name: string;
+  count: number;
+}
+
+export interface CatalogFacets {
+  total: number;
+  categories: CatalogCount[];
+  languages: CatalogCount[];
+  formats: CatalogCount[];
+}
+
+export type ReaderChapterFiguresItem = {
+  at: number;
+  src: string;
+  alt: string;
+};
+
+export interface ReaderChapter {
+  title: string;
+  subtitle?: string;
+  content: string[];
+  headings?: number[];
+  figures?: ReaderChapterFiguresItem[];
+}
+
+export type ReaderContentAccess = typeof ReaderContentAccess[keyof typeof ReaderContentAccess];
+
+
+export const ReaderContentAccess = {
+  full: 'full',
+  preview: 'preview',
+} as const;
+
+export interface ReaderContent {
+  access: ReaderContentAccess;
+  chapters: ReaderChapter[];
+}
+
+export type FeedImportResultErrorsItem = {
+  record: string;
+  reason: string;
+};
+
+export interface FeedImportResult {
+  imported: number;
+  errors: FeedImportResultErrorsItem[];
+  moreErrors: number;
+}
+
+export type PaymentsConfigCurrency = typeof PaymentsConfigCurrency[keyof typeof PaymentsConfigCurrency];
+
+
+export const PaymentsConfigCurrency = {
+  EUR: 'EUR',
+} as const;
+
+export interface PaymentsConfig {
+  enabled: boolean;
+  currency: PaymentsConfigCurrency;
+}
+
+export interface CheckoutInput {
+  /**
+     * @minItems 1
+     * @maxItems 20
+     */
+  bookIds: string[];
+}
+
+export interface CheckoutSession {
+  url: string;
+  id: string;
+}
+
+export interface CheckoutStatus {
+  paid: boolean;
+  pending: boolean;
+  bookIds: string[];
+}
+
+export type EbookIntakeAiContent = typeof EbookIntakeAiContent[keyof typeof EbookIntakeAiContent];
+
+
+export const EbookIntakeAiContent = {
+  none: 'none',
+  assisted: 'assisted',
+  generated: 'generated',
+} as const;
+
+export type EbookIntakeBinding = typeof EbookIntakeBinding[keyof typeof EbookIntakeBinding];
+
+
+export const EbookIntakeBinding = {
+  paperback: 'paperback',
+  hardcover: 'hardcover',
+} as const;
+
+/**
+ * Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts
+ */
+export interface EbookIntake {
+  title: string;
+  subtitle?: string;
+  author: string;
+  language: string;
+  /**
+     * @minLength 150
+     * @maxLength 4000
+     */
+  description: string;
+  /**
+     * @minItems 1
+     * @maxItems 3
+     */
+  categories: string[];
+  /** @maxItems 7 */
+  keywords: string[];
+  copyrightHolder: string;
+  copyrightYear: number;
+  ebookIsbn?: string;
+  /** @minimum 0 */
+  price: number;
+  rightsConfirmed: boolean;
+  aiContent: EbookIntakeAiContent;
+  wantsPrint: boolean;
+  binding?: EbookIntakeBinding;
+  trimSize?: string;
+  paper?: string;
+  pageCount?: number;
+  printIsbn?: string;
+  backCoverBlurb?: string;
+  authorBio?: string;
+}
+
+export interface EbookSubmissionStart {
+  intake: EbookIntake;
+  /** @pattern \.epub$ */
+  fileName: string;
+  /**
+     * @minimum 1
+     * @maximum 157286400
+     */
+  size: number;
+}
+
+export type EbookSubmissionStatus = typeof EbookSubmissionStatus[keyof typeof EbookSubmissionStatus];
+
+
+export const EbookSubmissionStatus = {
+  uploading: 'uploading',
+  preparing: 'preparing',
+  checking: 'checking',
+  ready: 'ready',
+  needs_author: 'needs_author',
+  published: 'published',
+  rejected: 'rejected',
+} as const;
+
+/**
+ * @nullable
+ */
+export type EbookSubmissionReport = { [key: string]: unknown } | null;
+
+export interface EbookSubmission {
+  id: string;
+  status: EbookSubmissionStatus;
+  intake: EbookIntake;
+  /** @nullable */
+  report?: EbookSubmissionReport;
+  /** @nullable */
+  bookId?: string | null;
+  /** @nullable */
+  replacesBookId?: string | null;
+  printLinks?: PrintLinks;
+  partBytes?: number;
+  [key: string]: unknown;
+ }
+
+export interface EbookIntakeUpdate {
+  intake: EbookIntake;
+}
+
+export interface PriceInput {
+  /**
+     * @minimum 0
+     * @maximum 999
+     */
+  price: number;
+}
+
+export interface StripeEvent { [key: string]: unknown }
+
+export interface RejectInput {
+  /** @maxLength 1000 */
+  reason: string;
+}
+
+export interface StoreFeedbackInput {
+  store: string;
+  message: string;
+  submissionId?: string;
+}
+
+export type ReadinessPackageIssuesItem = { [key: string]: unknown };
+
+export type ReadinessPackageChaptersItem = { [key: string]: unknown };
+
+export type ReadinessPackageKdpEbookItem = { [key: string]: unknown };
+
+export type ReadinessPackageKdpPrintItem = { [key: string]: unknown };
+
+export type ReadinessPackageLuluItem = { [key: string]: unknown };
+
+export type ReadinessPackageMetadata = { [key: string]: unknown };
+
+export interface ReadinessPackage {
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  score: number;
+  verdict: string;
+  summary: string;
+  issues: ReadinessPackageIssuesItem[];
+  chapters: ReadinessPackageChaptersItem[];
+  kdpEbook: ReadinessPackageKdpEbookItem[];
+  kdpPrint: ReadinessPackageKdpPrintItem[];
+  lulu: ReadinessPackageLuluItem[];
+  metadata: ReadinessPackageMetadata;
+  description: string;
+  copyright: string;
+  markdown: string;
+}
+
 export type ReaderNarrationInputVoiceName = typeof ReaderNarrationInputVoiceName[keyof typeof ReaderNarrationInputVoiceName];
 
 
@@ -200,6 +485,10 @@ export type AccountExportSubscriber = { [key: string]: unknown } | null;
 
 export type AccountExportEmailDeliveriesItem = { [key: string]: unknown };
 
+export type AccountExportPurchasesItem = { [key: string]: unknown };
+
+export type AccountExportEbookSubmissionsItem = { [key: string]: unknown };
+
 export type AccountIdentityRole = typeof AccountIdentityRole[keyof typeof AccountIdentityRole];
 
 
@@ -222,6 +511,8 @@ export interface AccountExport {
   /** @nullable */
   subscriber: AccountExportSubscriber;
   emailDeliveries: AccountExportEmailDeliveriesItem[];
+  purchases?: AccountExportPurchasesItem[];
+  ebookSubmissions?: AccountExportEbookSubmissionsItem[];
 }
 
 export type AccountDeletionInputConfirm = typeof AccountDeletionInputConfirm[keyof typeof AccountDeletionInputConfirm];
@@ -443,4 +734,122 @@ export interface HealthStatus {
 export type GetEmailUnsubscribePageParams = {
 token: string;
 };
+
+export type SearchCatalogParams = {
+/**
+ * @maxLength 200
+ */
+q?: string;
+genre?: string;
+format?: SearchCatalogFormat;
+price?: SearchCatalogPrice;
+/**
+ * @minimum 0
+ * @maximum 5
+ */
+minRating?: number;
+language?: string;
+plus?: SearchCatalogPlus;
+audio?: SearchCatalogAudio;
+sort?: SearchCatalogSort;
+/**
+ * @minimum 1
+ * @maximum 400
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
+
+export type SearchCatalogFormat = typeof SearchCatalogFormat[keyof typeof SearchCatalogFormat];
+
+
+export const SearchCatalogFormat = {
+  all: 'all',
+  ebook: 'ebook',
+  audiobook: 'audiobook',
+} as const;
+
+export type SearchCatalogPrice = typeof SearchCatalogPrice[keyof typeof SearchCatalogPrice];
+
+
+export const SearchCatalogPrice = {
+  all: 'all',
+  free: 'free',
+  under5: 'under5',
+  under10: 'under10',
+  deals: 'deals',
+} as const;
+
+export type SearchCatalogPlus = typeof SearchCatalogPlus[keyof typeof SearchCatalogPlus];
+
+
+export const SearchCatalogPlus = {
+  NUMBER_1: '1',
+} as const;
+
+export type SearchCatalogAudio = typeof SearchCatalogAudio[keyof typeof SearchCatalogAudio];
+
+
+export const SearchCatalogAudio = {
+  NUMBER_1: '1',
+} as const;
+
+export type SearchCatalogSort = typeof SearchCatalogSort[keyof typeof SearchCatalogSort];
+
+
+export const SearchCatalogSort = {
+  featured: 'featured',
+  bestseller: 'bestseller',
+  rating: 'rating',
+  priceAsc: 'priceAsc',
+  priceDesc: 'priceDesc',
+  newest: 'newest',
+} as const;
+
+export type GetCatalogBook200 = {
+  book: CatalogBook;
+};
+
+export type GetCatalogShelvesParams = {
+/**
+ * Comma-separated shelf ids: hero, featured, african, consciousness, amsterdam, plus, scifi, audio, thriller, newest
+ */
+ids: string;
+};
+
+export type GetCatalogShelves200Shelves = {[key: string]: CatalogBook[]};
+
+export type GetCatalogShelves200 = {
+  shelves: GetCatalogShelves200Shelves;
+};
+
+export type ImportCatalogFeedParams = {
+format: ImportCatalogFeedFormat;
+};
+
+export type ImportCatalogFeedFormat = typeof ImportCatalogFeedFormat[keyof typeof ImportCatalogFeedFormat];
+
+
+export const ImportCatalogFeedFormat = {
+  csv: 'csv',
+  onix: 'onix',
+} as const;
+
+export type ListOwnPurchases200 = {
+  bookIds: string[];
+};
+
+export type ListEbookSubmissions200 = {
+  submissions: EbookSubmission[];
+};
+
+export type GetEbookSubmissionFile200 = { [key: string]: unknown };
+
+export type GetStoreFeedback200 = { [key: string]: unknown };
+
+export type AddStoreFeedback201 = { [key: string]: unknown };
 

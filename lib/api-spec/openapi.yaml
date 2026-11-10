@@ -357,13 +357,576 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  # --- Catalogue at scale (TASK-0005): public, edge-cached ---
+  /catalog/search:
+    get:
+      operationId: searchCatalog
+      summary: One page of catalogue cards; search, filters and sort are answered by indexes
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 200 } }
+        - { name: genre, in: query, schema: { type: string } }
+        - { name: format, in: query, schema: { type: string, enum: [all, ebook, audiobook] } }
+        - { name: price, in: query, schema: { type: string, enum: [all, free, under5, under10, deals] } }
+        - { name: minRating, in: query, schema: { type: number, minimum: 0, maximum: 5 } }
+        - { name: language, in: query, schema: { type: string } }
+        - { name: plus, in: query, schema: { type: string, enum: ["1"] } }
+        - { name: audio, in: query, schema: { type: string, enum: ["1"] } }
+        - { name: sort, in: query, schema: { type: string, enum: [featured, bestseller, rating, priceAsc, priceDesc, newest] } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 400 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+      responses:
+        "200":
+          description: A page of cards (s-maxage 60)
+          content: { application/json: { schema: { $ref: "#/components/schemas/CatalogPage" } } }
+        "503": { description: Catalogue temporarily unavailable }
+  /catalog/books/{id}:
+    get:
+      operationId: getCatalogBook
+      summary: The whole record of one book (sample chapters, reviews, author bio)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, pattern: "^[\\w.-]{1,80}$" } }
+      responses:
+        "200":
+          description: The book (s-maxage 60)
+          content:
+            application/json:
+              schema: { type: object, required: [book], properties: { book: { $ref: "#/components/schemas/CatalogBook" } } }
+        "404": { description: Book not found }
+  /catalog/facets:
+    get:
+      operationId: getCatalogFacets
+      summary: Titles per category, language and format (precomputed)
+      responses:
+        "200":
+          description: Counts (s-maxage 300)
+          content: { application/json: { schema: { $ref: "#/components/schemas/CatalogFacets" } } }
+  /catalog/shelves:
+    get:
+      operationId: getCatalogShelves
+      summary: Home-page shelves, each a small query
+      parameters:
+        - { name: ids, in: query, required: true, description: "Comma-separated shelf ids: hero, featured, african, consciousness, amsterdam, plus, scifi, audio, thriller, newest", schema: { type: string } }
+      responses:
+        "200":
+          description: Cards per shelf (s-maxage 120)
+          content:
+            application/json:
+              schema: { type: object, required: [shelves], properties: { shelves: { type: object, additionalProperties: { type: array, items: { $ref: "#/components/schemas/CatalogBook" } } } } }
+  /catalog/covers/{file}:
+    get:
+      operationId: getCatalogCover
+      summary: Front cover of a BookAtlas eBook
+      parameters:
+        - { name: file, in: path, required: true, schema: { type: string, pattern: "^atlas-ebook-[0-9a-f]{8}\\.jpg$" } }
+      responses:
+        "200": { description: JPEG cover, content: { image/jpeg: { schema: { type: string, format: binary } } } }
+        "404": { description: Cover not found }
+  /reader/catalog/{bookId}/content:
+    get:
+      operationId: getReaderContent
+      summary: Everyone gets the preview (up to the introduction); entitled readers the whole book
+      description: Full text for signed-in readers of free books, admins, the book's author and its buyers.
+      parameters:
+        - { name: bookId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Chapters of the preview or the whole book
+          content: { application/json: { schema: { $ref: "#/components/schemas/ReaderContent" } } }
+        "404": { description: Book not found }
+  /reader/catalog/{bookId}/images/{name}:
+    get:
+      operationId: getReaderImage
+      summary: An image of the book; outside the preview only for entitled readers
+      parameters:
+        - { name: bookId, in: path, required: true, schema: { type: string } }
+        - { name: name, in: path, required: true, schema: { type: string, pattern: "^img-\\d{4}\\.(jpg|png|gif|webp)$" } }
+      responses:
+        "200": { description: Image, content: { image/*: { schema: { type: string, format: binary } } } }
+        "403": { description: Outside the preview; buy the book }
+  /admin/catalog/import:
+    post:
+      operationId: importCatalogFeed
+      summary: Import one part (at most 4 MB) of a distributor feed; titles are listed, not sold
+      security: [{ clerkSession: [] }]
+      parameters:
+        - { name: format, in: query, required: true, schema: { type: string, enum: [csv, onix] } }
+      requestBody:
+        required: true
+        content:
+          text/csv: { schema: { type: string } }
+          application/xml: { schema: { type: string } }
+      responses:
+        "200":
+          description: Imported titles and the records that need attention
+          content: { application/json: { schema: { $ref: "#/components/schemas/FeedImportResult" } } }
+        "400": { description: Unknown format }
+        "403": { description: Administrator access is required }
+  # --- Payments (TASK-0004) ---
+  /payments/config:
+    get:
+      operationId: getPaymentsConfig
+      summary: Whether Stripe Checkout is live
+      responses:
+        "200":
+          description: Payment settings
+          content: { application/json: { schema: { $ref: "#/components/schemas/PaymentsConfig" } } }
+  /checkout/sessions:
+    post:
+      operationId: createCheckoutSession
+      summary: Start a Stripe Checkout for prepared eBooks; prices come from the catalogue
+      security: [{ clerkSession: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CheckoutInput" } } }
+      responses:
+        "201":
+          description: Stripe-hosted checkout page
+          content: { application/json: { schema: { $ref: "#/components/schemas/CheckoutSession" } } }
+        "409": { description: Already owned }
+        "422": { description: "A title cannot be bought (sample, listed or not prepared)" }
+        "503": { description: Payments are not set up }
+  /checkout/sessions/{id}:
+    get:
+      operationId: getCheckoutStatus
+      summary: Whether the signed-in reader's checkout is paid; paid sessions are fulfilled here too
+      security: [{ clerkSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, pattern: "^cs_(test|live)_[A-Za-z0-9]{10,200}$" } }
+      responses:
+        "200":
+          description: Checkout status
+          content: { application/json: { schema: { $ref: "#/components/schemas/CheckoutStatus" } } }
+        "404": { description: Unknown checkout or another account's }
+  /purchases:
+    get:
+      operationId: listOwnPurchases
+      summary: Books the signed-in reader bought
+      security: [{ clerkSession: [] }]
+      responses:
+        "200":
+          description: Book ids
+          content:
+            application/json:
+              schema: { type: object, required: [bookIds], properties: { bookIds: { type: array, items: { type: string } } } }
+  /stripe/webhook:
+    post:
+      operationId: receiveStripeWebhook
+      summary: Stripe events, verified against the raw body with the endpoint secret
+      parameters:
+        - { name: stripe-signature, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/StripeEvent" } } }
+      responses:
+        "200": { description: Received }
+        "400": { description: Invalid signature }
+        "503": { description: Payments are not set up }
+  # --- eBook submissions (TASK-0003): authors are signed-in readers; publish and reject are admin ---
+  /ebook-submissions:
+    get:
+      operationId: listEbookSubmissions
+      summary: The signed-in author's submissions (every submission for admins)
+      security: [{ clerkSession: [] }]
+      responses:
+        "200":
+          description: Submissions
+          content:
+            application/json:
+              schema: { type: object, required: [submissions], properties: { submissions: { type: array, items: { $ref: "#/components/schemas/EbookSubmission" } } } }
+    post:
+      operationId: startEbookSubmission
+      summary: Start a submission; the EPUB is then uploaded in parts of 4 MB
+      security: [{ clerkSession: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/EbookSubmissionStart" } } }
+      responses:
+        "201":
+          description: Submission waiting for its parts
+          content: { application/json: { schema: { $ref: "#/components/schemas/EbookSubmission" } } }
+        "422": { description: Details missing or invalid (per-field messages) }
+  /ebook-submissions/{id}:
+    get:
+      operationId: getEbookSubmission
+      security: [{ clerkSession: [] }]
+      parameters: [{ $ref: "#/components/parameters/SubmissionId" }]
+      responses:
+        "200":
+          description: Submission
+          content: { application/json: { schema: { $ref: "#/components/schemas/EbookSubmission" } } }
+        "404": { description: Not found }
+  /ebook-submissions/{id}/upload/{part}:
+    put:
+      operationId: uploadEbookSubmissionPart
+      security: [{ clerkSession: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/SubmissionId" }
+        - { name: part, in: path, required: true, schema: { type: integer, minimum: 0 } }
+      requestBody:
+        required: true
+        content: { application/octet-stream: { schema: { type: string, format: binary } } }
+      responses:
+        "204": { description: Part stored }
+        "409": { description: Not accepting uploads }
+  /ebook-submissions/{id}/prepare:
+    post:
+      operationId: prepareEbookSubmission
+      summary: Run the preparation engine on the uploaded EPUB
+      security: [{ clerkSession: [] }]
+      parameters: [{ $ref: "#/components/parameters/SubmissionId" }]
+      responses:
+        "200":
+          description: Prepared submission with its report
+          content: { application/json: { schema: { $ref: "#/components/schemas/EbookSubmission" } } }
+  /ebook-submissions/{id}/reupload:
+    post:
+      operationId: reuploadEbookSubmission
+      summary: Replace the EPUB before publishing (also after a rejection); details and cover choice carry over
+      security: [{ clerkSession: [] }]
+      parameters: [{ $ref: "#/components/parameters/SubmissionId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/EbookSubmissionStart" } } }
+      responses:
+        "200":
+          description: Submission waiting for the new parts
+          content: { application/json: { schema: { $ref: "#/components/schemas/EbookSubmission" } } }
+        "409": { description: Already published }
+  /ebook-submissions/{id}/new-version:
+    post:
+      operationId: startEbookNewVersion
+      summary: A corrected EPUB for a published book; publishing it replaces the book under the same id
+      security: [{ clerkSession: [] }]
+      parameters: [{ $ref: "#/components/parameters/SubmissionId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/EbookSubmissionStart" } } }
+      responses:
+        "201":
+          description: New submission linked to the published book
+          content: { application/json: { schema: { $ref: "#/components/schemas/EbookSubmission" } } }
+        "409": { description: Only a published book can get a new version }
+  /ebook-submissions/{id}/intake:
+    put:
+      operationId: updateEbookSubmissionDetails
+      security: [{ clerkSession: [] }]
+      parameters: [{ $ref: "#/components/parameters/SubmissionId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/EbookIntakeUpdate" } } }
+      responses:
+        "200":
+          description: Details saved and the book prepared again
+          content: { application/json: { schema: { $ref: "#/components/schemas/EbookSubmission" } } }
+  /ebook-submissions/{id}/cover:
+    put:
+      operationId: replaceEbookCover
+      summary: Upload a replacement front cover (JPEG or PNG, portrait, at most 4 MB)
+      security: [{ clerkSession: [] }]
+      parameters: [{ $ref: "#/components/parameters/SubmissionId" }]
+      requestBody:
+        required: true
+        content:
+          image/jpeg: { schema: { type: string, format: binary } }
+          image/png: { schema: { type: string, format: binary } }
+      responses:
+        "200":
+          description: Cover replaced and the book prepared again
+          content: { application/json: { schema: { $ref: "#/components/schemas/EbookSubmission" } } }
+    delete:
+      operationId: useOriginalEbookCover
+      security: [{ clerkSession: [] }]
+      parameters: [{ $ref: "#/components/parameters/SubmissionId" }]
+      responses:
+        "200":
+          description: Back to the EPUB's own cover
+          content: { application/json: { schema: { $ref: "#/components/schemas/EbookSubmission" } } }
+  /ebook-submissions/{id}/cover/enlarge:
+    post:
+      operationId: enlargeEbookCover
+      security: [{ clerkSession: [] }]
+      parameters: [{ $ref: "#/components/parameters/SubmissionId" }]
+      responses:
+        "200":
+          description: Cover enlarged to 2560 px tall
+          content: { application/json: { schema: { $ref: "#/components/schemas/EbookSubmission" } } }
+  /ebook-submissions/{id}/price:
+    put:
+      operationId: changeEbookPrice
+      summary: Change the live price of a published book
+      security: [{ clerkSession: [] }]
+      parameters: [{ $ref: "#/components/parameters/SubmissionId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/PriceInput" } } }
+      responses:
+        "200":
+          description: Price changed
+          content: { application/json: { schema: { $ref: "#/components/schemas/EbookSubmission" } } }
+        "409": { description: Not published yet; use the details form }
+  /ebook-submissions/{id}/print-links:
+    put:
+      operationId: setEbookPrintLinks
+      summary: Amazon and Lulu pages of the printed book (https on those stores only)
+      security: [{ clerkSession: [] }]
+      parameters: [{ $ref: "#/components/parameters/SubmissionId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/PrintLinks" } } }
+      responses:
+        "200":
+          description: Links saved (and shown on the book page when published)
+          content: { application/json: { schema: { $ref: "#/components/schemas/EbookSubmission" } } }
+        "422": { description: Not an Amazon or Lulu https address }
+  /ebook-submissions/{id}/readiness:
+    get:
+      operationId: getEbookReadiness
+      summary: Amazon KDP and Lulu publication readiness package
+      security: [{ clerkSession: [] }]
+      parameters: [{ $ref: "#/components/parameters/SubmissionId" }]
+      responses:
+        "200":
+          description: Score, issues, chapter audit, checklists, metadata, description, copyright page and Markdown
+          content: { application/json: { schema: { $ref: "#/components/schemas/ReadinessPackage" } } }
+        "409": { description: Not prepared yet }
+  /ebook-submissions/{id}/files/{file}:
+    get:
+      operationId: getEbookSubmissionFile
+      summary: Manifest of the prepared EPUB or store cover (downloaded in parts)
+      security: [{ clerkSession: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/SubmissionId" }
+        - { name: file, in: path, required: true, schema: { type: string, enum: [epub, cover] } }
+      responses:
+        "200":
+          description: Size, parts, hash and type
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+  /ebook-submissions/{id}/files/{file}/parts/{part}:
+    get:
+      operationId: getEbookSubmissionFilePart
+      security: [{ clerkSession: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/SubmissionId" }
+        - { name: file, in: path, required: true, schema: { type: string, enum: [epub, cover] } }
+        - { name: part, in: path, required: true, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200": { description: One part, content: { application/octet-stream: { schema: { type: string, format: binary } } } }
+  /ebook-submissions/{id}/publish:
+    post:
+      operationId: publishEbookSubmission
+      summary: Publish a ready submission to the store (admin)
+      security: [{ clerkSession: [] }]
+      parameters: [{ $ref: "#/components/parameters/SubmissionId" }]
+      responses:
+        "200":
+          description: Published
+          content: { application/json: { schema: { $ref: "#/components/schemas/EbookSubmission" } } }
+        "403": { description: Administrator access is required }
+  /ebook-submissions/{id}/reject:
+    post:
+      operationId: rejectEbookSubmission
+      summary: Return a submission to its author with a reason (admin)
+      security: [{ clerkSession: [] }]
+      parameters: [{ $ref: "#/components/parameters/SubmissionId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/RejectInput" } } }
+      responses:
+        "200":
+          description: Rejected
+          content: { application/json: { schema: { $ref: "#/components/schemas/EbookSubmission" } } }
+  /ebook-prep/feedback:
+    get:
+      operationId: getStoreFeedback
+      summary: Store rejection messages and the rules they made blocking (admin)
+      security: [{ clerkSession: [] }]
+      responses:
+        "200": { description: Rules and messages, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+    post:
+      operationId: addStoreFeedback
+      security: [{ clerkSession: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/StoreFeedbackInput" } } }
+      responses:
+        "201": { description: Recorded and matched to rules, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
 components:
+  parameters:
+    SubmissionId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
   securitySchemes:
     clerkSession:
       type: apiKey
       in: cookie
       name: __session
   schemas:
+    CatalogBook:
+      type: object
+      description: A book; lists return cards without sampleChapters, reviews, editorialReview and authorBio
+      required: [id, title, author, price, format, primaryGenre]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        subtitle: { type: string }
+        author: { type: string }
+        price: { type: number }
+        format: { type: string, enum: [ebook, audiobook, bundle] }
+        primaryGenre: { type: string }
+        genres: { type: array, items: { type: string } }
+        coverImage: { type: string }
+        hasReaderContent: { type: boolean }
+        isSample: { type: boolean }
+        availability: { type: string, enum: [listed] }
+        printLinks: { $ref: "#/components/schemas/PrintLinks" }
+      additionalProperties: true
+    CatalogPage:
+      type: object
+      required: [books, total, page, limit, hasMore]
+      properties:
+        books: { type: array, items: { $ref: "#/components/schemas/CatalogBook" } }
+        total: { type: integer, description: Planner estimate, exact when the results end on this page }
+        page: { type: integer }
+        limit: { type: integer }
+        hasMore: { type: boolean }
+    CatalogCount:
+      type: object
+      required: [name, count]
+      properties: { name: { type: string }, count: { type: integer } }
+    CatalogFacets:
+      type: object
+      required: [total, categories, languages, formats]
+      properties:
+        total: { type: integer }
+        categories: { type: array, items: { $ref: "#/components/schemas/CatalogCount" } }
+        languages: { type: array, items: { $ref: "#/components/schemas/CatalogCount" } }
+        formats: { type: array, items: { $ref: "#/components/schemas/CatalogCount" } }
+    ReaderChapter:
+      type: object
+      required: [title, content]
+      properties:
+        title: { type: string }
+        subtitle: { type: string }
+        content: { type: array, items: { type: string } }
+        headings: { type: array, items: { type: integer } }
+        figures:
+          type: array
+          items: { type: object, required: [at, src, alt], properties: { at: { type: integer }, src: { type: string }, alt: { type: string } } }
+    ReaderContent:
+      type: object
+      required: [access, chapters]
+      properties:
+        access: { type: string, enum: [full, preview] }
+        chapters: { type: array, items: { $ref: "#/components/schemas/ReaderChapter" } }
+    FeedImportResult:
+      type: object
+      required: [imported, errors, moreErrors]
+      properties:
+        imported: { type: integer }
+        errors: { type: array, items: { type: object, required: [record, reason], properties: { record: { type: string }, reason: { type: string } } } }
+        moreErrors: { type: integer }
+    PaymentsConfig:
+      type: object
+      required: [enabled, currency]
+      properties: { enabled: { type: boolean }, currency: { type: string, enum: [EUR] } }
+    CheckoutInput:
+      type: object
+      required: [bookIds]
+      properties: { bookIds: { type: array, minItems: 1, maxItems: 20, items: { type: string } } }
+    CheckoutSession:
+      type: object
+      required: [url, id]
+      properties: { url: { type: string, format: uri }, id: { type: string } }
+    CheckoutStatus:
+      type: object
+      required: [paid, pending, bookIds]
+      properties: { paid: { type: boolean }, pending: { type: boolean }, bookIds: { type: array, items: { type: string } } }
+    PrintLinks:
+      type: object
+      properties: { amazon: { type: string, format: uri }, lulu: { type: string, format: uri } }
+    EbookIntake:
+      type: object
+      description: Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts
+      required: [title, author, language, description, categories, keywords, copyrightHolder, copyrightYear, price, rightsConfirmed, aiContent, wantsPrint]
+      properties:
+        title: { type: string }
+        subtitle: { type: string }
+        author: { type: string }
+        language: { type: string }
+        description: { type: string, minLength: 150, maxLength: 4000 }
+        categories: { type: array, minItems: 1, maxItems: 3, items: { type: string } }
+        keywords: { type: array, maxItems: 7, items: { type: string } }
+        copyrightHolder: { type: string }
+        copyrightYear: { type: integer }
+        ebookIsbn: { type: string }
+        price: { type: number, minimum: 0 }
+        rightsConfirmed: { type: boolean }
+        aiContent: { type: string, enum: [none, assisted, generated] }
+        wantsPrint: { type: boolean }
+        binding: { type: string, enum: [paperback, hardcover] }
+        trimSize: { type: string }
+        paper: { type: string }
+        pageCount: { type: integer }
+        printIsbn: { type: string }
+        backCoverBlurb: { type: string }
+        authorBio: { type: string }
+    EbookSubmissionStart:
+      type: object
+      required: [intake, fileName, size]
+      properties:
+        intake: { $ref: "#/components/schemas/EbookIntake" }
+        fileName: { type: string, pattern: "\\.epub$" }
+        size: { type: integer, minimum: 1, maximum: 157286400 }
+    EbookSubmission:
+      type: object
+      required: [id, status, intake]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [uploading, preparing, checking, ready, needs_author, published, rejected] }
+        intake: { $ref: "#/components/schemas/EbookIntake" }
+        report: { type: [object, "null"], additionalProperties: true }
+        bookId: { type: [string, "null"] }
+        replacesBookId: { type: [string, "null"] }
+        printLinks: { $ref: "#/components/schemas/PrintLinks" }
+        partBytes: { type: integer }
+      additionalProperties: true
+    EbookIntakeUpdate:
+      type: object
+      required: [intake]
+      properties: { intake: { $ref: "#/components/schemas/EbookIntake" } }
+    PriceInput:
+      type: object
+      required: [price]
+      properties: { price: { type: number, minimum: 0, maximum: 999 } }
+    StripeEvent:
+      type: object
+      additionalProperties: true
+    RejectInput:
+      type: object
+      required: [reason]
+      properties: { reason: { type: string, maxLength: 1000 } }
+    StoreFeedbackInput:
+      type: object
+      required: [store, message]
+      properties: { store: { type: string }, message: { type: string }, submissionId: { type: string } }
+    ReadinessPackage:
+      type: object
+      required: [score, verdict, summary, issues, chapters, kdpEbook, kdpPrint, lulu, metadata, description, copyright, markdown]
+      properties:
+        score: { type: integer, minimum: 0, maximum: 100 }
+        verdict: { type: string }
+        summary: { type: string }
+        issues: { type: array, items: { type: object, additionalProperties: true } }
+        chapters: { type: array, items: { type: object, additionalProperties: true } }
+        kdpEbook: { type: array, items: { type: object, additionalProperties: true } }
+        kdpPrint: { type: array, items: { type: object, additionalProperties: true } }
+        lulu: { type: array, items: { type: object, additionalProperties: true } }
+        metadata: { type: object, additionalProperties: true }
+        description: { type: string }
+        copyright: { type: string }
+        markdown: { type: string }
     ReaderNarrationInput:
       type: object
       additionalProperties: false
@@ -528,6 +1091,12 @@ components:
           type: [object, "null"]
           additionalProperties: true
         emailDeliveries:
+          type: array
+          items: { type: object, additionalProperties: true }
+        purchases:
+          type: array
+          items: { type: object, additionalProperties: true }
+        ebookSubmissions:
           type: array
           items: { type: object, additionalProperties: true }
     AccountDeletionInput:

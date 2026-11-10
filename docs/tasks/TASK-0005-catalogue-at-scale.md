@@ -38,7 +38,7 @@ The server loaded every book into memory and sent all of them to every browser, 
 | Step | Status |
 |---|---|
 | Query definition, store, routes, policy (public), legacy `/api/books` on the store | ✅ |
-| Schema: columns, indexes, facets view and functions (`db/schema.sql`) | ✅ written; ⛔ owner runs it in Supabase |
+| Schema: columns, indexes, facets view and functions (`db/schema.sql`) | ✅ Run by the owner in Supabase 2026-11-10; live books re-saved |
 | Storefront on the API (grid, shelves, facets, full record on open) | ✅ |
 | Tests | ✅ `tests/e2e/catalog-search.test.ts` (search with accents, filters, sort, paging without overlap, page cap, facets, shelves, book page, cache headers). `pnpm test:unit` 106/106, `pnpm test:e2e` 190/190 |
 | Load test at 1.5M titles (Postgres 16 + PostgREST v12, the production store code, 3.7 GB table) | ✅ see Load test |

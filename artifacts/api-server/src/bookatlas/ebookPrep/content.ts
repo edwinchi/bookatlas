@@ -1,5 +1,6 @@
 import type { Chapter } from '@workspace/bookatlas-catalog/types';
 import { unpackEpub } from './archive.js';
+import { decodeImage, encodeJpeg, encodePng, resize } from './images.js';
 import { PackageDocument, attributes, decodeEntities, resolvePath } from './opf.js';
 
 /**
@@ -70,6 +71,28 @@ function tokenize(html: string, dir: string): Token[] {
   return tokens;
 }
 
+/**
+ * The reader shows images on phones over mobile data: large ones get a web copy, at most 1600 px
+ * on the long side, JPEG unless they use transparency. The EPUB itself keeps the originals.
+ */
+const WEB_IMAGE_BYTES = 600 * 1024;
+const WEB_IMAGE_SIDE = 1600;
+function webImage(bytes: Uint8Array, contentType: string): { bytes: Uint8Array; contentType: string; ext?: string } {
+  if (bytes.byteLength <= WEB_IMAGE_BYTES || !['image/png', 'image/jpeg'].includes(contentType)) return { bytes, contentType };
+  try {
+    let raster = decodeImage(bytes);
+    const scale = Math.min(1, WEB_IMAGE_SIDE / Math.max(raster.width, raster.height));
+    if (scale < 1) raster = resize(raster, Math.round(raster.width * scale), Math.round(raster.height * scale));
+    let transparent = false;
+    if (contentType === 'image/png') for (let i = 3; i < raster.data.length; i += 4) if (raster.data[i]! < 255) { transparent = true; break; }
+    const out = transparent ? encodePng(raster) : encodeJpeg(raster, 82);
+    if (out.byteLength >= bytes.byteLength) return { bytes, contentType };
+    return transparent ? { bytes: out, contentType: 'image/png', ext: 'png' } : { bytes: out, contentType: 'image/jpeg', ext: 'jpg' };
+  } catch {
+    return { bytes, contentType };
+  }
+}
+
 export function readerContent(epubBytes: Uint8Array, bookTitle: string): ReaderContent {
   const epub = unpackEpub(epubBytes);
   const opf = new PackageDocument(epub);
@@ -85,8 +108,9 @@ export function readerContent(epubBytes: Uint8Array, bookTitle: string): ReaderC
     const ext = (path.split('.').pop() ?? '').toLowerCase();
     const contentType = IMAGE_TYPES[ext];
     if (!contentType || contentType === 'image/svg+xml' || !epub.has(path)) return null;
-    const name = `img-${String(images.size + 1).padStart(4, '0')}.${ext === 'jpeg' ? 'jpg' : ext}`;
-    images.set(path, { name, path, contentType, bytes: epub.bytes(path) });
+    const web = webImage(epub.bytes(path), contentType);
+    const name = `img-${String(images.size + 1).padStart(4, '0')}.${web.ext ?? (ext === 'jpeg' ? 'jpg' : ext)}`;
+    images.set(path, { name, path, contentType: web.contentType, bytes: web.bytes });
     return name;
   };
 

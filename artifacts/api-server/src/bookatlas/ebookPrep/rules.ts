@@ -532,6 +532,47 @@ const metadata: Rule = {
   },
 };
 
+/** The reader serves each image in one response, and Vercel caps responses at 4.5 MB. */
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+const MAX_IMAGE_SIDE = 2400;
+
+function heavyImages(ctx: PrepContext) {
+  const cover = ctx.opf.coverItem()?.path;
+  return ctx.opf.items().filter((i) => /^image\/(jpeg|png)$/.test(i.mediaType) && i.path !== cover && ctx.epub.has(i.path) && ctx.epub.bytes(i.path).byteLength > MAX_IMAGE_BYTES);
+}
+
+const imageWeight: Rule = {
+  id: 'image-weight',
+  title: 'Image size',
+  storeMessages: [/image.*(too large|file size|exceeds)/i],
+  check(ctx) {
+    const heavy = heavyImages(ctx);
+    return heavy.length ? [finding('image-weight', 'warning', `${heavy.length} image${heavy.length > 1 ? 's are' : ' is'} over 4 MB; they load slowly and cannot be shown in the BookAtlas reader.`, true)] : [];
+  },
+  fix(ctx) {
+    const heavy = heavyImages(ctx);
+    let before = 0, after = 0;
+    for (const item of heavy) {
+      const original = ctx.epub.bytes(item.path);
+      before += original.byteLength;
+      const png = item.mediaType === 'image/png';
+      let raster = decodeImage(original);
+      const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(raster.width, raster.height));
+      if (scale < 1) raster = resize(raster, Math.round(raster.width * scale), Math.round(raster.height * scale));
+      // Same format as before, so the manifest and every reference stay valid; smaller until it fits.
+      let out = png ? encodePng(raster) : encodeJpeg(raster, 85);
+      for (let i = 0; out.byteLength > MAX_IMAGE_BYTES && i < 6; i += 1) {
+        raster = resize(raster, Math.round(raster.width * 0.8), Math.round(raster.height * 0.8));
+        out = png ? encodePng(raster) : encodeJpeg(raster, 80);
+      }
+      ctx.epub.setBytes(item.path, out);
+      after += out.byteLength;
+    }
+    const mb = (n: number) => (n / 1024 / 1024).toFixed(1);
+    return [`Reduced ${heavy.length} image${heavy.length > 1 ? 's' : ''} over 4 MB (${mb(before)} MB → ${mb(after)} MB in total), keeping their format.`];
+  },
+};
+
 const fileSize: Rule = {
   id: 'file-size',
   title: 'File size',
@@ -575,7 +616,7 @@ const epubcheck: Rule = {
 };
 
 /** Order matters: structure first, then content, then checks that read the result. */
-export const RULES: Rule[] = [container, epub3Package, toc, metadata, copyrightYear, isbn, coverFrontOnly, coverSize, fonts, barcode, fileSize, epubcheck];
+export const RULES: Rule[] = [container, epub3Package, toc, metadata, copyrightYear, isbn, coverFrontOnly, coverSize, fonts, barcode, imageWeight, fileSize, epubcheck];
 
 export function fingerprint(bytes: Uint8Array) {
   return createHash('sha256').update(bytes).digest('hex');

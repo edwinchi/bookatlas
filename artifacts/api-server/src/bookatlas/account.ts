@@ -19,6 +19,10 @@ export interface AccountStore {
   profile(email: string): unknown | null;
   subscriber(email: string): Record<string, unknown> | null;
   emailDeliveries(email: string): Promise<Record<string, unknown>[]>;
+  /** eBooks bought with this account (TASK-0004). */
+  purchases(userId: string): Promise<Record<string, unknown>[]>;
+  /** eBooks this account submitted for publishing (TASK-0003), without file contents. */
+  submissions(userId: string): Promise<Record<string, unknown>[]>;
   /** Removes the profile, subscriber and delivery records for this email. */
   erase(email: string): Promise<void>;
   /** Removes the sign-in account at the identity provider. */
@@ -38,6 +42,8 @@ export function mountAccountRoutes(app: Express, store: AccountStore) {
         profile: store.profile(identity.email),
         subscriber: subscriber ? subscriberData : null,
         emailDeliveries: await store.emailDeliveries(identity.email),
+        purchases: await store.purchases(identity.id),
+        ebookSubmissions: await store.submissions(identity.id),
       };
       logger.info({ event: 'account.export', user: maskEmail(identity.email) }, 'Reader exported account data');
       res.setHeader('Cache-Control', 'private, no-store');

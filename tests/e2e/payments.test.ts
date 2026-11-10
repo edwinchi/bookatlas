@@ -128,4 +128,11 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
   const refund = signedEvent('charge.refunded', { id: 'ch_test_1', object: 'charge', refunded: true, payment_intent: sessions.get(id)!.payment_intent });
   assert.equal((await fetch('/api/stripe/webhook', { method: 'POST', headers: { 'content-type': 'application/json', 'stripe-signature': refund.header }, body: refund.payload })).status, 200);
   assert.equal(await access(), 'preview');
+
+  // The reader's data export lists the purchase (GDPR access), refund included.
+  const exported = await (await fetch('/api/account/export', as('reader'))).json();
+  const row = exported.purchases.find((p: { book_id: string }) => p.book_id === bookId);
+  assert.equal(row.status, 'refunded');
+  assert.equal(row.amount_total, 499);
+  assert.ok(Array.isArray(exported.ebookSubmissions));
 });

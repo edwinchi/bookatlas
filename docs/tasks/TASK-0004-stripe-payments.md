@@ -55,7 +55,7 @@
 | Owner: Stripe Tax registrations | ⏳ Stripe Tax is active but has **no registrations**; `STRIPE_TAX` stays unset until NL VAT and EU OSS are added |
 | Shared Stripe account | ✅ The account also serves other sites (four webhook endpoints). BookAtlas sessions carry `metadata.app = bookatlas`; the webhook ignores untagged sessions (tested) |
 | Owner: run the `bookatlas_purchases` SQL in Supabase | ✅ 2026-11-10 (second run) |
-| Test-mode run: real Stripe test checkout with card and iDEAL, webhook via a test endpoint | ⬜ |
+| Test-mode run | Superseded: the owner chose live keys. First real purchase and refund by the owner verify the flow end to end |
 | Webhook and go-live | ✅ 2026-11-10 (owner sign-off): live endpoint `we_1UaErjRV4gYJjN7FOTpVo3Ux` → `https://booksatlas.app/api/stripe/webhook` (checkout.session.completed, checkout.session.async_payment_succeeded, charge.refunded); signing secret in Vercel as sensitive `STRIPE_WEBHOOK_SECRET`; deployed `bookatlas-nml4uta11`. Live: `/api/payments/config` enabled, unsigned and forged webhooks 400, anonymous checkout 401, security 5/5, browser 12/12. `STRIPE_TAX` unset until registrations exist |
 
 ## Incident 2026-11-10: the cart stayed in demo mode after go-live
@@ -71,6 +71,6 @@
 
 ## Follow-ups
 
-- Include purchases in the account data export and keep them (anonymised) when an account is deleted.
+- ✅ 2026-11-10 purchases and eBook submissions are in the account data export (tested). Anonymising them on deletion is a retention change: see [TASK-0006](TASK-0006-supabase-security.md).
 - Stripe Connect payouts for other authors (TASK-0002 R1, 80% author share).
 - Paystack for African mobile money (TASK-0002 P11).

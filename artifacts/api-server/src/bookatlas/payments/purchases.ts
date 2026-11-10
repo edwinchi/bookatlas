@@ -69,6 +69,14 @@ export async function purchasedBookIds(userId: string): Promise<string[]> {
   return ids;
 }
 
+/** Every purchase row of one account, refunded ones included, for the reader's data export. */
+export async function purchasesOf(userId: string): Promise<Omit<Purchase, 'user_id'>[]> {
+  if (!bookatlasDb) return memory.filter((p) => p.user_id === userId).map(({ user_id: _u, ...rest }) => ({ ...rest }));
+  const result = await bookatlasDb.from('purchases').select('id,book_id,checkout_session_id,payment_intent_id,amount_total,currency,status,created_at,updated_at').eq('user_id', userId);
+  if (result.error) throw new PaymentError('Your purchases could not be read.', 503);
+  return result.data as Omit<Purchase, 'user_id'>[];
+}
+
 export async function hasPurchase(userId: string, bookId: string) {
   return (await purchasedBookIds(userId)).includes(bookId);
 }

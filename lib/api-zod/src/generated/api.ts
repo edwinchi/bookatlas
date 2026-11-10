@@ -520,7 +520,9 @@ export const ExportOwnAccountResponse = zod.object({
   "booksRead": zod.number()
 }),zod.null()]),
   "subscriber": zod.record(zod.string(), zod.unknown()).nullable(),
-  "emailDeliveries": zod.array(zod.record(zod.string(), zod.unknown()))
+  "emailDeliveries": zod.array(zod.record(zod.string(), zod.unknown())),
+  "purchases": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "ebookSubmissions": zod.array(zod.record(zod.string(), zod.unknown())).optional()
 })
 
 
@@ -543,5 +545,1287 @@ export const DeleteOwnAccountResponse = zod.object({
 export const HealthCheckResponse = zod.object({
   "status": zod.string()
 })
+
+
+/**
+ * @summary One page of catalogue cards; search, filters and sort are answered by indexes
+ */
+export const searchCatalogQueryQMax = 200;
+
+export const searchCatalogQueryMinRatingMin = 0;
+export const searchCatalogQueryMinRatingMax = 5;
+
+export const searchCatalogQueryPageMax = 400;
+
+export const searchCatalogQueryLimitMax = 100;
+
+
+
+export const SearchCatalogQueryParams = zod.object({
+  "q": zod.coerce.string().max(searchCatalogQueryQMax).optional(),
+  "genre": zod.coerce.string().optional(),
+  "format": zod.enum(['all', 'ebook', 'audiobook']).optional(),
+  "price": zod.enum(['all', 'free', 'under5', 'under10', 'deals']).optional(),
+  "minRating": zod.coerce.number().min(searchCatalogQueryMinRatingMin).max(searchCatalogQueryMinRatingMax).optional(),
+  "language": zod.coerce.string().optional(),
+  "plus": zod.enum(['1']).optional(),
+  "audio": zod.enum(['1']).optional(),
+  "sort": zod.enum(['featured', 'bestseller', 'rating', 'priceAsc', 'priceDesc', 'newest']).optional(),
+  "page": zod.coerce.number().int().min(1).max(searchCatalogQueryPageMax).optional(),
+  "limit": zod.coerce.number().int().min(1).max(searchCatalogQueryLimitMax).optional()
+})
+
+export const SearchCatalogResponse = zod.object({
+  "books": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "price": zod.number(),
+  "format": zod.enum(['ebook', 'audiobook', 'bundle']),
+  "primaryGenre": zod.string(),
+  "genres": zod.array(zod.string()).optional(),
+  "coverImage": zod.string().optional(),
+  "hasReaderContent": zod.boolean().optional(),
+  "isSample": zod.boolean().optional(),
+  "availability": zod.enum(['listed']).optional(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional()
+}).describe('A book; lists return cards without sampleChapters, reviews, editorialReview and authorBio')),
+  "total": zod.int().describe('Planner estimate'),
+  "page": zod.int(),
+  "limit": zod.int(),
+  "hasMore": zod.boolean()
+})
+
+
+/**
+ * @summary The whole record of one book (sample chapters, reviews, author bio)
+ */
+export const getCatalogBookPathIdRegExp = new RegExp('^[\\w.-]{1,80}$');
+
+
+export const GetCatalogBookParams = zod.object({
+  "id": zod.coerce.string().regex(getCatalogBookPathIdRegExp)
+})
+
+export const GetCatalogBookResponse = zod.object({
+  "book": zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "price": zod.number(),
+  "format": zod.enum(['ebook', 'audiobook', 'bundle']),
+  "primaryGenre": zod.string(),
+  "genres": zod.array(zod.string()).optional(),
+  "coverImage": zod.string().optional(),
+  "hasReaderContent": zod.boolean().optional(),
+  "isSample": zod.boolean().optional(),
+  "availability": zod.enum(['listed']).optional(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional()
+}).describe('A book; lists return cards without sampleChapters, reviews, editorialReview and authorBio')
+})
+
+
+/**
+ * @summary Titles per category, language and format (precomputed)
+ */
+export const GetCatalogFacetsResponse = zod.object({
+  "total": zod.int(),
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "count": zod.int()
+})),
+  "languages": zod.array(zod.object({
+  "name": zod.string(),
+  "count": zod.int()
+})),
+  "formats": zod.array(zod.object({
+  "name": zod.string(),
+  "count": zod.int()
+}))
+})
+
+
+/**
+ * @summary Home-page shelves, each a small query
+ */
+export const GetCatalogShelvesQueryParams = zod.object({
+  "ids": zod.coerce.string().describe('Comma-separated shelf ids: hero, featured, african, consciousness, amsterdam, plus, scifi, audio, thriller, newest')
+})
+
+export const GetCatalogShelvesResponse = zod.object({
+  "shelves": zod.record(zod.string(), zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "price": zod.number(),
+  "format": zod.enum(['ebook', 'audiobook', 'bundle']),
+  "primaryGenre": zod.string(),
+  "genres": zod.array(zod.string()).optional(),
+  "coverImage": zod.string().optional(),
+  "hasReaderContent": zod.boolean().optional(),
+  "isSample": zod.boolean().optional(),
+  "availability": zod.enum(['listed']).optional(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional()
+}).describe('A book; lists return cards without sampleChapters, reviews, editorialReview and authorBio')))
+})
+
+
+/**
+ * @summary Front cover of a BookAtlas eBook
+ */
+export const getCatalogCoverPathFileRegExp = new RegExp('^atlas-ebook-[0-9a-f]{8}\\.jpg$');
+
+
+export const GetCatalogCoverParams = zod.object({
+  "file": zod.coerce.string().regex(getCatalogCoverPathFileRegExp)
+})
+
+export const GetCatalogCoverResponse = zod.unknown()
+
+
+/**
+ * Full text for signed-in readers of free books, admins, the book's author and its buyers.
+ * @summary Everyone gets the preview (up to the introduction); entitled readers the whole book
+ */
+export const GetReaderContentParams = zod.object({
+  "bookId": zod.coerce.string()
+})
+
+export const GetReaderContentResponse = zod.object({
+  "access": zod.enum(['full', 'preview']),
+  "chapters": zod.array(zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "content": zod.array(zod.string()),
+  "headings": zod.array(zod.int()).optional(),
+  "figures": zod.array(zod.object({
+  "at": zod.int(),
+  "src": zod.string(),
+  "alt": zod.string()
+})).optional()
+}))
+})
+
+
+/**
+ * @summary An image of the book; outside the preview only for entitled readers
+ */
+export const getReaderImagePathNameRegExp = new RegExp('^img-\\d{4}\\.(jpg|png|gif|webp)$');
+
+
+export const GetReaderImageParams = zod.object({
+  "bookId": zod.coerce.string(),
+  "name": zod.coerce.string().regex(getReaderImagePathNameRegExp)
+})
+
+export const GetReaderImageResponse = zod.unknown()
+
+
+/**
+ * @summary Import one part (at most 4 MB) of a distributor feed; titles are listed, not sold
+ */
+export const ImportCatalogFeedQueryParams = zod.object({
+  "format": zod.enum(['csv', 'onix'])
+})
+
+export const ImportCatalogFeedResponse = zod.object({
+  "imported": zod.int(),
+  "errors": zod.array(zod.object({
+  "record": zod.string(),
+  "reason": zod.string()
+})),
+  "moreErrors": zod.int()
+})
+
+
+/**
+ * @summary Whether Stripe Checkout is live
+ */
+export const GetPaymentsConfigResponse = zod.object({
+  "enabled": zod.boolean(),
+  "currency": zod.enum(['EUR'])
+})
+
+
+/**
+ * @summary Start a Stripe Checkout for prepared eBooks; prices come from the catalogue
+ */
+export const createCheckoutSessionBodyBookIdsMax = 20;
+
+
+
+export const CreateCheckoutSessionBody = zod.object({
+  "bookIds": zod.array(zod.string()).min(1).max(createCheckoutSessionBodyBookIdsMax)
+})
+
+export const CreateCheckoutSessionResponse = zod.object({
+  "url": zod.url(),
+  "id": zod.string()
+})
+
+
+/**
+ * @summary Whether the signed-in reader's checkout is paid; paid sessions are fulfilled here too
+ */
+export const getCheckoutStatusPathIdRegExp = new RegExp('^cs_(test|live)_[A-Za-z0-9]{10,200}$');
+
+
+export const GetCheckoutStatusParams = zod.object({
+  "id": zod.coerce.string().regex(getCheckoutStatusPathIdRegExp)
+})
+
+export const GetCheckoutStatusResponse = zod.object({
+  "paid": zod.boolean(),
+  "pending": zod.boolean(),
+  "bookIds": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Books the signed-in reader bought
+ */
+export const ListOwnPurchasesResponse = zod.object({
+  "bookIds": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Stripe events, verified against the raw body with the endpoint secret
+ */
+export const ReceiveStripeWebhookHeader = zod.object({
+  "stripe-signature": zod.string()
+})
+
+export const ReceiveStripeWebhookBody = zod.record(zod.string(), zod.unknown())
+
+export const ReceiveStripeWebhookResponse = zod.unknown()
+
+
+/**
+ * @summary The signed-in author's submissions (every submission for admins)
+ */
+export const listEbookSubmissionsResponseSubmissionsItemIntakeDescriptionMin = 150;
+export const listEbookSubmissionsResponseSubmissionsItemIntakeDescriptionMax = 4000;
+
+export const listEbookSubmissionsResponseSubmissionsItemIntakeCategoriesMax = 3;
+
+export const listEbookSubmissionsResponseSubmissionsItemIntakeKeywordsMax = 7;
+
+export const listEbookSubmissionsResponseSubmissionsItemIntakePriceMin = 0;
+
+
+
+export const ListEbookSubmissionsResponse = zod.object({
+  "submissions": zod.array(zod.object({
+  "id": zod.uuid(),
+  "status": zod.enum(['uploading', 'preparing', 'checking', 'ready', 'needs_author', 'published', 'rejected']),
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(listEbookSubmissionsResponseSubmissionsItemIntakeDescriptionMin).max(listEbookSubmissionsResponseSubmissionsItemIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(listEbookSubmissionsResponseSubmissionsItemIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(listEbookSubmissionsResponseSubmissionsItemIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(listEbookSubmissionsResponseSubmissionsItemIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "report": zod.record(zod.string(), zod.unknown()).nullish(),
+  "bookId": zod.string().nullish(),
+  "replacesBookId": zod.string().nullish(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional(),
+  "partBytes": zod.int().optional()
+}))
+})
+
+
+/**
+ * @summary Start a submission; the EPUB is then uploaded in parts of 4 MB
+ */
+export const startEbookSubmissionBodyIntakeDescriptionMin = 150;
+export const startEbookSubmissionBodyIntakeDescriptionMax = 4000;
+
+export const startEbookSubmissionBodyIntakeCategoriesMax = 3;
+
+export const startEbookSubmissionBodyIntakeKeywordsMax = 7;
+
+export const startEbookSubmissionBodyIntakePriceMin = 0;
+
+export const startEbookSubmissionBodyFileNameRegExp = new RegExp('\\.epub$');
+export const startEbookSubmissionBodySizeMax = 157286400;
+
+
+
+export const StartEbookSubmissionBody = zod.object({
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(startEbookSubmissionBodyIntakeDescriptionMin).max(startEbookSubmissionBodyIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(startEbookSubmissionBodyIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(startEbookSubmissionBodyIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(startEbookSubmissionBodyIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "fileName": zod.string().regex(startEbookSubmissionBodyFileNameRegExp),
+  "size": zod.int().min(1).max(startEbookSubmissionBodySizeMax)
+})
+
+export const startEbookSubmissionResponseIntakeDescriptionMin = 150;
+export const startEbookSubmissionResponseIntakeDescriptionMax = 4000;
+
+export const startEbookSubmissionResponseIntakeCategoriesMax = 3;
+
+export const startEbookSubmissionResponseIntakeKeywordsMax = 7;
+
+export const startEbookSubmissionResponseIntakePriceMin = 0;
+
+
+
+export const StartEbookSubmissionResponse = zod.object({
+  "id": zod.uuid(),
+  "status": zod.enum(['uploading', 'preparing', 'checking', 'ready', 'needs_author', 'published', 'rejected']),
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(startEbookSubmissionResponseIntakeDescriptionMin).max(startEbookSubmissionResponseIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(startEbookSubmissionResponseIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(startEbookSubmissionResponseIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(startEbookSubmissionResponseIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "report": zod.record(zod.string(), zod.unknown()).nullish(),
+  "bookId": zod.string().nullish(),
+  "replacesBookId": zod.string().nullish(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional(),
+  "partBytes": zod.int().optional()
+})
+
+
+export const GetEbookSubmissionParams = zod.object({
+  "id": zod.uuid()
+})
+
+export const getEbookSubmissionResponseIntakeDescriptionMin = 150;
+export const getEbookSubmissionResponseIntakeDescriptionMax = 4000;
+
+export const getEbookSubmissionResponseIntakeCategoriesMax = 3;
+
+export const getEbookSubmissionResponseIntakeKeywordsMax = 7;
+
+export const getEbookSubmissionResponseIntakePriceMin = 0;
+
+
+
+export const GetEbookSubmissionResponse = zod.object({
+  "id": zod.uuid(),
+  "status": zod.enum(['uploading', 'preparing', 'checking', 'ready', 'needs_author', 'published', 'rejected']),
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(getEbookSubmissionResponseIntakeDescriptionMin).max(getEbookSubmissionResponseIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(getEbookSubmissionResponseIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(getEbookSubmissionResponseIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(getEbookSubmissionResponseIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "report": zod.record(zod.string(), zod.unknown()).nullish(),
+  "bookId": zod.string().nullish(),
+  "replacesBookId": zod.string().nullish(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional(),
+  "partBytes": zod.int().optional()
+})
+
+
+export const uploadEbookSubmissionPartPathPartMin = 0;
+
+
+
+export const UploadEbookSubmissionPartParams = zod.object({
+  "id": zod.uuid(),
+  "part": zod.coerce.number().int().min(uploadEbookSubmissionPartPathPartMin)
+})
+
+export const UploadEbookSubmissionPartResponse = zod.void()
+
+
+/**
+ * @summary Run the preparation engine on the uploaded EPUB
+ */
+export const PrepareEbookSubmissionParams = zod.object({
+  "id": zod.uuid()
+})
+
+export const prepareEbookSubmissionResponseIntakeDescriptionMin = 150;
+export const prepareEbookSubmissionResponseIntakeDescriptionMax = 4000;
+
+export const prepareEbookSubmissionResponseIntakeCategoriesMax = 3;
+
+export const prepareEbookSubmissionResponseIntakeKeywordsMax = 7;
+
+export const prepareEbookSubmissionResponseIntakePriceMin = 0;
+
+
+
+export const PrepareEbookSubmissionResponse = zod.object({
+  "id": zod.uuid(),
+  "status": zod.enum(['uploading', 'preparing', 'checking', 'ready', 'needs_author', 'published', 'rejected']),
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(prepareEbookSubmissionResponseIntakeDescriptionMin).max(prepareEbookSubmissionResponseIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(prepareEbookSubmissionResponseIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(prepareEbookSubmissionResponseIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(prepareEbookSubmissionResponseIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "report": zod.record(zod.string(), zod.unknown()).nullish(),
+  "bookId": zod.string().nullish(),
+  "replacesBookId": zod.string().nullish(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional(),
+  "partBytes": zod.int().optional()
+})
+
+
+/**
+ * @summary Replace the EPUB before publishing (also after a rejection); details and cover choice carry over
+ */
+export const ReuploadEbookSubmissionParams = zod.object({
+  "id": zod.uuid()
+})
+
+export const reuploadEbookSubmissionBodyIntakeDescriptionMin = 150;
+export const reuploadEbookSubmissionBodyIntakeDescriptionMax = 4000;
+
+export const reuploadEbookSubmissionBodyIntakeCategoriesMax = 3;
+
+export const reuploadEbookSubmissionBodyIntakeKeywordsMax = 7;
+
+export const reuploadEbookSubmissionBodyIntakePriceMin = 0;
+
+export const reuploadEbookSubmissionBodyFileNameRegExp = new RegExp('\\.epub$');
+export const reuploadEbookSubmissionBodySizeMax = 157286400;
+
+
+
+export const ReuploadEbookSubmissionBody = zod.object({
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(reuploadEbookSubmissionBodyIntakeDescriptionMin).max(reuploadEbookSubmissionBodyIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(reuploadEbookSubmissionBodyIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(reuploadEbookSubmissionBodyIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(reuploadEbookSubmissionBodyIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "fileName": zod.string().regex(reuploadEbookSubmissionBodyFileNameRegExp),
+  "size": zod.int().min(1).max(reuploadEbookSubmissionBodySizeMax)
+})
+
+export const reuploadEbookSubmissionResponseIntakeDescriptionMin = 150;
+export const reuploadEbookSubmissionResponseIntakeDescriptionMax = 4000;
+
+export const reuploadEbookSubmissionResponseIntakeCategoriesMax = 3;
+
+export const reuploadEbookSubmissionResponseIntakeKeywordsMax = 7;
+
+export const reuploadEbookSubmissionResponseIntakePriceMin = 0;
+
+
+
+export const ReuploadEbookSubmissionResponse = zod.object({
+  "id": zod.uuid(),
+  "status": zod.enum(['uploading', 'preparing', 'checking', 'ready', 'needs_author', 'published', 'rejected']),
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(reuploadEbookSubmissionResponseIntakeDescriptionMin).max(reuploadEbookSubmissionResponseIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(reuploadEbookSubmissionResponseIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(reuploadEbookSubmissionResponseIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(reuploadEbookSubmissionResponseIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "report": zod.record(zod.string(), zod.unknown()).nullish(),
+  "bookId": zod.string().nullish(),
+  "replacesBookId": zod.string().nullish(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional(),
+  "partBytes": zod.int().optional()
+})
+
+
+/**
+ * @summary A corrected EPUB for a published book; publishing it replaces the book under the same id
+ */
+export const StartEbookNewVersionParams = zod.object({
+  "id": zod.uuid()
+})
+
+export const startEbookNewVersionBodyIntakeDescriptionMin = 150;
+export const startEbookNewVersionBodyIntakeDescriptionMax = 4000;
+
+export const startEbookNewVersionBodyIntakeCategoriesMax = 3;
+
+export const startEbookNewVersionBodyIntakeKeywordsMax = 7;
+
+export const startEbookNewVersionBodyIntakePriceMin = 0;
+
+export const startEbookNewVersionBodyFileNameRegExp = new RegExp('\\.epub$');
+export const startEbookNewVersionBodySizeMax = 157286400;
+
+
+
+export const StartEbookNewVersionBody = zod.object({
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(startEbookNewVersionBodyIntakeDescriptionMin).max(startEbookNewVersionBodyIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(startEbookNewVersionBodyIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(startEbookNewVersionBodyIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(startEbookNewVersionBodyIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "fileName": zod.string().regex(startEbookNewVersionBodyFileNameRegExp),
+  "size": zod.int().min(1).max(startEbookNewVersionBodySizeMax)
+})
+
+export const startEbookNewVersionResponseIntakeDescriptionMin = 150;
+export const startEbookNewVersionResponseIntakeDescriptionMax = 4000;
+
+export const startEbookNewVersionResponseIntakeCategoriesMax = 3;
+
+export const startEbookNewVersionResponseIntakeKeywordsMax = 7;
+
+export const startEbookNewVersionResponseIntakePriceMin = 0;
+
+
+
+export const StartEbookNewVersionResponse = zod.object({
+  "id": zod.uuid(),
+  "status": zod.enum(['uploading', 'preparing', 'checking', 'ready', 'needs_author', 'published', 'rejected']),
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(startEbookNewVersionResponseIntakeDescriptionMin).max(startEbookNewVersionResponseIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(startEbookNewVersionResponseIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(startEbookNewVersionResponseIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(startEbookNewVersionResponseIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "report": zod.record(zod.string(), zod.unknown()).nullish(),
+  "bookId": zod.string().nullish(),
+  "replacesBookId": zod.string().nullish(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional(),
+  "partBytes": zod.int().optional()
+})
+
+
+export const UpdateEbookSubmissionDetailsParams = zod.object({
+  "id": zod.uuid()
+})
+
+export const updateEbookSubmissionDetailsBodyIntakeDescriptionMin = 150;
+export const updateEbookSubmissionDetailsBodyIntakeDescriptionMax = 4000;
+
+export const updateEbookSubmissionDetailsBodyIntakeCategoriesMax = 3;
+
+export const updateEbookSubmissionDetailsBodyIntakeKeywordsMax = 7;
+
+export const updateEbookSubmissionDetailsBodyIntakePriceMin = 0;
+
+
+
+export const UpdateEbookSubmissionDetailsBody = zod.object({
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(updateEbookSubmissionDetailsBodyIntakeDescriptionMin).max(updateEbookSubmissionDetailsBodyIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(updateEbookSubmissionDetailsBodyIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(updateEbookSubmissionDetailsBodyIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(updateEbookSubmissionDetailsBodyIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts')
+})
+
+export const updateEbookSubmissionDetailsResponseIntakeDescriptionMin = 150;
+export const updateEbookSubmissionDetailsResponseIntakeDescriptionMax = 4000;
+
+export const updateEbookSubmissionDetailsResponseIntakeCategoriesMax = 3;
+
+export const updateEbookSubmissionDetailsResponseIntakeKeywordsMax = 7;
+
+export const updateEbookSubmissionDetailsResponseIntakePriceMin = 0;
+
+
+
+export const UpdateEbookSubmissionDetailsResponse = zod.object({
+  "id": zod.uuid(),
+  "status": zod.enum(['uploading', 'preparing', 'checking', 'ready', 'needs_author', 'published', 'rejected']),
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(updateEbookSubmissionDetailsResponseIntakeDescriptionMin).max(updateEbookSubmissionDetailsResponseIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(updateEbookSubmissionDetailsResponseIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(updateEbookSubmissionDetailsResponseIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(updateEbookSubmissionDetailsResponseIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "report": zod.record(zod.string(), zod.unknown()).nullish(),
+  "bookId": zod.string().nullish(),
+  "replacesBookId": zod.string().nullish(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional(),
+  "partBytes": zod.int().optional()
+})
+
+
+/**
+ * @summary Upload a replacement front cover (JPEG or PNG, portrait, at most 4 MB)
+ */
+export const ReplaceEbookCoverParams = zod.object({
+  "id": zod.uuid()
+})
+
+export const replaceEbookCoverResponseIntakeDescriptionMin = 150;
+export const replaceEbookCoverResponseIntakeDescriptionMax = 4000;
+
+export const replaceEbookCoverResponseIntakeCategoriesMax = 3;
+
+export const replaceEbookCoverResponseIntakeKeywordsMax = 7;
+
+export const replaceEbookCoverResponseIntakePriceMin = 0;
+
+
+
+export const ReplaceEbookCoverResponse = zod.object({
+  "id": zod.uuid(),
+  "status": zod.enum(['uploading', 'preparing', 'checking', 'ready', 'needs_author', 'published', 'rejected']),
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(replaceEbookCoverResponseIntakeDescriptionMin).max(replaceEbookCoverResponseIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(replaceEbookCoverResponseIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(replaceEbookCoverResponseIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(replaceEbookCoverResponseIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "report": zod.record(zod.string(), zod.unknown()).nullish(),
+  "bookId": zod.string().nullish(),
+  "replacesBookId": zod.string().nullish(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional(),
+  "partBytes": zod.int().optional()
+})
+
+
+export const UseOriginalEbookCoverParams = zod.object({
+  "id": zod.uuid()
+})
+
+export const useOriginalEbookCoverResponseIntakeDescriptionMin = 150;
+export const useOriginalEbookCoverResponseIntakeDescriptionMax = 4000;
+
+export const useOriginalEbookCoverResponseIntakeCategoriesMax = 3;
+
+export const useOriginalEbookCoverResponseIntakeKeywordsMax = 7;
+
+export const useOriginalEbookCoverResponseIntakePriceMin = 0;
+
+
+
+export const UseOriginalEbookCoverResponse = zod.object({
+  "id": zod.uuid(),
+  "status": zod.enum(['uploading', 'preparing', 'checking', 'ready', 'needs_author', 'published', 'rejected']),
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(useOriginalEbookCoverResponseIntakeDescriptionMin).max(useOriginalEbookCoverResponseIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(useOriginalEbookCoverResponseIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(useOriginalEbookCoverResponseIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(useOriginalEbookCoverResponseIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "report": zod.record(zod.string(), zod.unknown()).nullish(),
+  "bookId": zod.string().nullish(),
+  "replacesBookId": zod.string().nullish(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional(),
+  "partBytes": zod.int().optional()
+})
+
+
+export const EnlargeEbookCoverParams = zod.object({
+  "id": zod.uuid()
+})
+
+export const enlargeEbookCoverResponseIntakeDescriptionMin = 150;
+export const enlargeEbookCoverResponseIntakeDescriptionMax = 4000;
+
+export const enlargeEbookCoverResponseIntakeCategoriesMax = 3;
+
+export const enlargeEbookCoverResponseIntakeKeywordsMax = 7;
+
+export const enlargeEbookCoverResponseIntakePriceMin = 0;
+
+
+
+export const EnlargeEbookCoverResponse = zod.object({
+  "id": zod.uuid(),
+  "status": zod.enum(['uploading', 'preparing', 'checking', 'ready', 'needs_author', 'published', 'rejected']),
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(enlargeEbookCoverResponseIntakeDescriptionMin).max(enlargeEbookCoverResponseIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(enlargeEbookCoverResponseIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(enlargeEbookCoverResponseIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(enlargeEbookCoverResponseIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "report": zod.record(zod.string(), zod.unknown()).nullish(),
+  "bookId": zod.string().nullish(),
+  "replacesBookId": zod.string().nullish(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional(),
+  "partBytes": zod.int().optional()
+})
+
+
+/**
+ * @summary Change the live price of a published book
+ */
+export const ChangeEbookPriceParams = zod.object({
+  "id": zod.uuid()
+})
+
+export const changeEbookPriceBodyPriceMin = 0;
+export const changeEbookPriceBodyPriceMax = 999;
+
+
+
+export const ChangeEbookPriceBody = zod.object({
+  "price": zod.number().min(changeEbookPriceBodyPriceMin).max(changeEbookPriceBodyPriceMax)
+})
+
+export const changeEbookPriceResponseIntakeDescriptionMin = 150;
+export const changeEbookPriceResponseIntakeDescriptionMax = 4000;
+
+export const changeEbookPriceResponseIntakeCategoriesMax = 3;
+
+export const changeEbookPriceResponseIntakeKeywordsMax = 7;
+
+export const changeEbookPriceResponseIntakePriceMin = 0;
+
+
+
+export const ChangeEbookPriceResponse = zod.object({
+  "id": zod.uuid(),
+  "status": zod.enum(['uploading', 'preparing', 'checking', 'ready', 'needs_author', 'published', 'rejected']),
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(changeEbookPriceResponseIntakeDescriptionMin).max(changeEbookPriceResponseIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(changeEbookPriceResponseIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(changeEbookPriceResponseIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(changeEbookPriceResponseIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "report": zod.record(zod.string(), zod.unknown()).nullish(),
+  "bookId": zod.string().nullish(),
+  "replacesBookId": zod.string().nullish(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional(),
+  "partBytes": zod.int().optional()
+})
+
+
+/**
+ * @summary Amazon and Lulu pages of the printed book (https on those stores only)
+ */
+export const SetEbookPrintLinksParams = zod.object({
+  "id": zod.uuid()
+})
+
+export const SetEbookPrintLinksBody = zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+})
+
+export const setEbookPrintLinksResponseIntakeDescriptionMin = 150;
+export const setEbookPrintLinksResponseIntakeDescriptionMax = 4000;
+
+export const setEbookPrintLinksResponseIntakeCategoriesMax = 3;
+
+export const setEbookPrintLinksResponseIntakeKeywordsMax = 7;
+
+export const setEbookPrintLinksResponseIntakePriceMin = 0;
+
+
+
+export const SetEbookPrintLinksResponse = zod.object({
+  "id": zod.uuid(),
+  "status": zod.enum(['uploading', 'preparing', 'checking', 'ready', 'needs_author', 'published', 'rejected']),
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(setEbookPrintLinksResponseIntakeDescriptionMin).max(setEbookPrintLinksResponseIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(setEbookPrintLinksResponseIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(setEbookPrintLinksResponseIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(setEbookPrintLinksResponseIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "report": zod.record(zod.string(), zod.unknown()).nullish(),
+  "bookId": zod.string().nullish(),
+  "replacesBookId": zod.string().nullish(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional(),
+  "partBytes": zod.int().optional()
+})
+
+
+/**
+ * @summary Amazon KDP and Lulu publication readiness package
+ */
+export const GetEbookReadinessParams = zod.object({
+  "id": zod.uuid()
+})
+
+export const getEbookReadinessResponseScoreMin = 0;
+export const getEbookReadinessResponseScoreMax = 100;
+
+
+
+export const GetEbookReadinessResponse = zod.object({
+  "score": zod.int().min(getEbookReadinessResponseScoreMin).max(getEbookReadinessResponseScoreMax),
+  "verdict": zod.string(),
+  "summary": zod.string(),
+  "issues": zod.array(zod.record(zod.string(), zod.unknown())),
+  "chapters": zod.array(zod.record(zod.string(), zod.unknown())),
+  "kdpEbook": zod.array(zod.record(zod.string(), zod.unknown())),
+  "kdpPrint": zod.array(zod.record(zod.string(), zod.unknown())),
+  "lulu": zod.array(zod.record(zod.string(), zod.unknown())),
+  "metadata": zod.record(zod.string(), zod.unknown()),
+  "description": zod.string(),
+  "copyright": zod.string(),
+  "markdown": zod.string()
+})
+
+
+/**
+ * @summary Manifest of the prepared EPUB or store cover (downloaded in parts)
+ */
+export const GetEbookSubmissionFileParams = zod.object({
+  "id": zod.uuid(),
+  "file": zod.enum(['epub', 'cover'])
+})
+
+export const GetEbookSubmissionFileResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const getEbookSubmissionFilePartPathPartMin = 0;
+
+
+
+export const GetEbookSubmissionFilePartParams = zod.object({
+  "id": zod.uuid(),
+  "file": zod.enum(['epub', 'cover']),
+  "part": zod.coerce.number().int().min(getEbookSubmissionFilePartPathPartMin)
+})
+
+export const GetEbookSubmissionFilePartResponse = zod.unknown()
+
+
+/**
+ * @summary Publish a ready submission to the store (admin)
+ */
+export const PublishEbookSubmissionParams = zod.object({
+  "id": zod.uuid()
+})
+
+export const publishEbookSubmissionResponseIntakeDescriptionMin = 150;
+export const publishEbookSubmissionResponseIntakeDescriptionMax = 4000;
+
+export const publishEbookSubmissionResponseIntakeCategoriesMax = 3;
+
+export const publishEbookSubmissionResponseIntakeKeywordsMax = 7;
+
+export const publishEbookSubmissionResponseIntakePriceMin = 0;
+
+
+
+export const PublishEbookSubmissionResponse = zod.object({
+  "id": zod.uuid(),
+  "status": zod.enum(['uploading', 'preparing', 'checking', 'ready', 'needs_author', 'published', 'rejected']),
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(publishEbookSubmissionResponseIntakeDescriptionMin).max(publishEbookSubmissionResponseIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(publishEbookSubmissionResponseIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(publishEbookSubmissionResponseIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(publishEbookSubmissionResponseIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "report": zod.record(zod.string(), zod.unknown()).nullish(),
+  "bookId": zod.string().nullish(),
+  "replacesBookId": zod.string().nullish(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional(),
+  "partBytes": zod.int().optional()
+})
+
+
+/**
+ * @summary Return a submission to its author with a reason (admin)
+ */
+export const RejectEbookSubmissionParams = zod.object({
+  "id": zod.uuid()
+})
+
+export const rejectEbookSubmissionBodyReasonMax = 1000;
+
+
+
+export const RejectEbookSubmissionBody = zod.object({
+  "reason": zod.string().max(rejectEbookSubmissionBodyReasonMax)
+})
+
+export const rejectEbookSubmissionResponseIntakeDescriptionMin = 150;
+export const rejectEbookSubmissionResponseIntakeDescriptionMax = 4000;
+
+export const rejectEbookSubmissionResponseIntakeCategoriesMax = 3;
+
+export const rejectEbookSubmissionResponseIntakeKeywordsMax = 7;
+
+export const rejectEbookSubmissionResponseIntakePriceMin = 0;
+
+
+
+export const RejectEbookSubmissionResponse = zod.object({
+  "id": zod.uuid(),
+  "status": zod.enum(['uploading', 'preparing', 'checking', 'ready', 'needs_author', 'published', 'rejected']),
+  "intake": zod.object({
+  "title": zod.string(),
+  "subtitle": zod.string().optional(),
+  "author": zod.string(),
+  "language": zod.string(),
+  "description": zod.string().min(rejectEbookSubmissionResponseIntakeDescriptionMin).max(rejectEbookSubmissionResponseIntakeDescriptionMax),
+  "categories": zod.array(zod.string()).min(1).max(rejectEbookSubmissionResponseIntakeCategoriesMax),
+  "keywords": zod.array(zod.string()).max(rejectEbookSubmissionResponseIntakeKeywordsMax),
+  "copyrightHolder": zod.string(),
+  "copyrightYear": zod.int(),
+  "ebookIsbn": zod.string().optional(),
+  "price": zod.number().min(rejectEbookSubmissionResponseIntakePriceMin),
+  "rightsConfirmed": zod.boolean(),
+  "aiContent": zod.enum(['none', 'assisted', 'generated']),
+  "wantsPrint": zod.boolean(),
+  "binding": zod.enum(['paperback', 'hardcover']).optional(),
+  "trimSize": zod.string().optional(),
+  "paper": zod.string().optional(),
+  "pageCount": zod.int().optional(),
+  "printIsbn": zod.string().optional(),
+  "backCoverBlurb": zod.string().optional(),
+  "authorBio": zod.string().optional()
+}).describe('Everything a complete eBook (and optionally a print edition) needs; see lib/bookatlas-catalog/src/publishing/requirements.ts'),
+  "report": zod.record(zod.string(), zod.unknown()).nullish(),
+  "bookId": zod.string().nullish(),
+  "replacesBookId": zod.string().nullish(),
+  "printLinks": zod.object({
+  "amazon": zod.url().optional(),
+  "lulu": zod.url().optional()
+}).optional(),
+  "partBytes": zod.int().optional()
+})
+
+
+/**
+ * @summary Store rejection messages and the rules they made blocking (admin)
+ */
+export const GetStoreFeedbackResponse = zod.record(zod.string(), zod.unknown())
+
+
+export const AddStoreFeedbackBody = zod.object({
+  "store": zod.string(),
+  "message": zod.string(),
+  "submissionId": zod.string().optional()
+})
+
+export const AddStoreFeedbackResponse = zod.record(zod.string(), zod.unknown())
 
 

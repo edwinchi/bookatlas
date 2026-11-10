@@ -8,6 +8,7 @@ import { unpackEpub } from './archive.js';
 import { imageSize } from './images.js';
 import { accessFor } from '../../auth/policy.js';
 import { epub2, frontCover } from './testFixtures.js';
+import { PNG } from 'pngjs';
 
 const intake: SubmissionIntake = {
   title: 'The Test Codex', author: 'Ada Writer', language: 'English', description: 'd'.repeat(200),
@@ -126,6 +127,26 @@ test('hardcopy links only point to Amazon and Lulu over https', () => {
     assert.throws(() => normalisePrintLink('amazon', bad), Error, bad);
   }
   assert.throws(() => normalisePrintLink('lulu', 'https://lulu.com.evil.io/x'));
+});
+
+test('book images over 4 MB are reduced in their own format so the reader can serve them', () => {
+  const noise = new PNG({ width: 1300, height: 1300 });
+  // xorshift32 noise does not compress, so the PNG really is over 4 MB.
+  let seed = 2463534242;
+  for (let i = 0; i < noise.data.length; i += 1) { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; noise.data[i] = seed & 0xff; }
+  const big = new Uint8Array(PNG.sync.write(noise));
+  assert.ok(big.byteLength > 4 * 1024 * 1024, `fixture is ${big.byteLength} bytes`);
+  const book = files(epub2(5));
+  book['images/plate.png'] = big;
+  book['content.opf'] = strToU8(strFromU8(book['content.opf']!).replace('</manifest>', '<item id="plate" href="images/plate.png" media-type="image/png"/></manifest>'));
+  book['chapter1.html'] = strToU8(strFromU8(book['chapter1.html']!).replace('</body>', '<p><img src="images/plate.png" alt="A plate"/></p></body>'));
+  const result = prepareEpub(zipSync(book), intake);
+  assert.ok(result.report.rounds.flatMap((r) => r.changes).some((c) => c.rule === 'image-weight'), JSON.stringify(result.report.rounds));
+  const plate = files(result.epub)['images/plate.png']!;
+  assert.equal(plate[0], 0x89, 'still a PNG');
+  assert.ok(plate.byteLength <= 4 * 1024 * 1024, `now ${plate.byteLength} bytes`);
+  assert.ok(!result.report.findings.some((f) => f.rule === 'image-weight'));
+  assert.equal(prepareEpub(result.epub, intake).report.rounds.length, 0, 'a second run changes nothing');
 });
 
 test('unsafe archive paths are rejected', () => {
