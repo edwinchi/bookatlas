@@ -72,3 +72,14 @@ test('a distributor feed is imported in parts and its titles are searchable, lis
   assert.ok(book, 'searchable in its mapped category');
   assert.equal(book.availability, 'listed');
 });
+
+test('the readiness check reports each dependency without exposing details', async () => {
+  const { fetch } = await getSharedTestServer();
+  const res = await fetch('/api/healthz/ready');
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('cache-control'), 'no-store');
+  const body = await res.json();
+  assert.equal(body.status, 'ok');
+  assert.deepEqual(Object.keys(body.checks).sort(), ['catalogueCounts', 'database', 'payments']);
+  for (const check of Object.values(body.checks) as { status: string }[]) assert.ok(['ok', 'off'].includes(check.status));
+});

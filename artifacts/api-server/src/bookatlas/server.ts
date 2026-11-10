@@ -18,6 +18,7 @@ import { anonymisePurchases, purchasesOf } from './payments/purchases.js';
 import { listSubmissions } from './ebookPrep/submissions.js';
 import { eraseAuthorData } from './ebookPrep/service.js';
 import { mountCatalog } from './catalog/routes.js';
+import { mountReadiness } from './health.js';
 import { parseCatalogQuery } from '@workspace/bookatlas-catalog/query';
 import { memoryCatalog, postgresCatalog } from './catalog/store.js';
 import { mountWorkforce } from './workforce/routes.js';
@@ -455,6 +456,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
       if (existing >= 0) liveCatalog[existing] = book; else liveCatalog.push(book);
     }
   });
+  mountReadiness(app);
   mountCatalog(app, catalog, () => [...GENRES.filter((g: string) => g !== 'All Genres'), ...customCategories]);
   // Before the JSON parser: the Stripe webhook is verified against its raw body.
   mountPayments(app, (bookId) => catalog.get(bookId), APP_URL);

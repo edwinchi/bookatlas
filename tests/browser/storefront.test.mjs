@@ -4,6 +4,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 const base = (process.env.BASE_URL || 'http://localhost:5173').replace(/\/+$/, '');
 let browser;
@@ -125,6 +126,20 @@ test('the site menu row opens on hover and click, and its links reach the landin
   await page.waitForFunction(() => document.activeElement?.textContent?.includes('Join early access'));
   await page.keyboard.press('Escape');
   assert.equal(await hub.getAttribute('aria-expanded'), 'false');
+});
+
+test('the storefront has no serious or critical accessibility violations (WCAG 2.2 AA)', async () => {
+  for (const mobile of [false, true]) {
+    // A context of its own: axe injects a script, which must not count as a CSP violation of the site.
+    const context = await browser.newContext(mobile ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    await page.goto(base + '/', { waitUntil: 'networkidle' });
+    await page.waitForFunction(() => !document.body.innerText.includes('Loading your Bookatlas account'), null, { timeout: 10_000 });
+    const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
+    const serious = result.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    assert.deepEqual(serious.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes[0]?.target.join(' ')}`), [], mobile ? 'mobile' : 'desktop');
+    await context.close();
+  }
 });
 
 test('the offline service worker registers', async () => {

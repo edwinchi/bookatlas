@@ -394,7 +394,7 @@ test('F7-4: service worker sends every API request to the network; only the publ
 test('F7-5: mobile bottom nav supports 5 primary destinations (Explore, Audio, AI Studio, Bookshelf, Cart)', () => {
   const navCode = readFileSync('artifacts/bookatlas/src/components/MobileBottomNav.tsx', 'utf8');
   assert.match(navCode, /aria-label="Store Explore"/);
-  assert.match(navCode, /aria-label="Audiobooks"/);
+  assert.match(navCode, /aria-label="Audio books"/);
   assert.match(navCode, /aria-label="Gemini AI Studio Hub"/);
   assert.match(navCode, /aria-label="My Bookshelf"/);
   assert.match(navCode, /aria-label=\{`Cart \(\$\{cartCount\} items\)`\}/);

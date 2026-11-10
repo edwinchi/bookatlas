@@ -169,7 +169,7 @@ export const BookCard: React.FC<BookCardProps> = ({
                 <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                 <span className="font-bold ml-1 text-slate-900 text-[11px]">{book.rating}</span>
               </div>
-              <span className="text-slate-400 text-[10px]">({book.reviewCount})</span>
+              <span className="text-slate-500 text-[10px]">({book.reviewCount})</span>
             </div>
           ) : (
             <p className="mt-1.5 text-[11px] font-semibold text-emerald-700">New · no ratings yet</p>
@@ -184,7 +184,7 @@ export const BookCard: React.FC<BookCardProps> = ({
                 {book.isSample ? <span className="text-xs font-semibold text-slate-500">Not for sale</span> : book.availability === 'listed' ? <span className="text-xs font-semibold text-indigo-700">Coming soon</span> : book.price === 0 ? 'Free' : `${currencySymbol}${book.price.toFixed(2)}`}
               </span>
               {book.originalPrice > book.price && !book.isSample && (
-                <span className="text-xs text-slate-400 line-through">
+                <span className="text-xs text-slate-500 line-through">
                   {currencySymbol}{book.originalPrice.toFixed(2)}
                 </span>
               )}

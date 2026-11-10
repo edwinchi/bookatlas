@@ -1,8 +1,8 @@
-name: Build and unit tests
+name: Build and tests
 on:
   pull_request:
+  # Every branch: work happens on feature branches, and each push should be checked.
   push:
-    branches: [main]
 permissions:
   contents: read
 jobs:
@@ -22,5 +22,10 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
       - run: pnpm test:unit
+      # In-memory data and synthetic secrets only; no credentials are needed.
+      - run: pnpm test:e2e
+      - run: pnpm test:catalog
       - run: pnpm build
+      - run: pnpm audit --prod

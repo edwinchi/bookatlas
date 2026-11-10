@@ -1,6 +1,6 @@
 export type Identity = { id: string; email: string; name: string; role: 'reader' | 'admin' };
 
-const publicGets = new Set(['/api/health', '/api/healthz', '/api/books', '/api/categories', '/api/payments/config']);
+const publicGets = new Set(['/api/health', '/api/healthz', '/api/healthz/ready', '/api/books', '/api/categories', '/api/payments/config']);
 const selfService = new Set(['/api/subscribers/unsubscribe-info', '/api/subscribers/unsubscribe']);
 const accountPaths = new Set(['/api/auth/me', '/api/users/register', '/api/account/membership', '/api/account', '/api/account/export']);
 

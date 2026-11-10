@@ -52,7 +52,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               ? 'text-indigo-600'
               : 'text-slate-500 hover:text-slate-900'
           }`}
-          aria-label="Audiobooks"
+          aria-label="Audio books"
         >
           <Headphones className={`w-5 h-5 mb-0.5 ${activeTab === 'audiobooks' ? 'stroke-[2.5]' : ''}`} />
           <span className="text-[10px] tracking-tight">Audio</span>

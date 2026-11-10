@@ -959,6 +959,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                       <ArrowUpDown className="w-3.5 h-3.5" /> Sort By:
                     </span>
                     <select
+                      aria-label="Sort by"
                       value={filters.sortBy}
                       onChange={(e) => setFilters((f) => ({ ...f, sortBy: e.target.value as any }))}
                       className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-900 font-semibold py-1.5 px-3 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-600 cursor-pointer"
@@ -1048,7 +1049,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
 
           <div className="space-y-2">
             <h4 className="font-bold text-white uppercase tracking-wider text-[11px]">Store & Formats</h4>
-            <ul className="space-y-1.5">
+            <ul className="space-y-0.5 [&>li>button]:min-h-6">
               <li><button onClick={() => setActiveTab('store')} className="hover:text-white cursor-pointer">All eBooks</button></li>
               <li><button onClick={() => setActiveTab('audiobooks')} className="hover:text-white cursor-pointer">Audiobooks</button></li>
               <li><button onClick={() => setActiveTab('bookatlasplus')} className="hover:text-white cursor-pointer">Bookatlas Plus Unlimited</button></li>
@@ -1078,7 +1079,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
 
           <div className="space-y-2">
             <h4 className="font-bold text-white uppercase tracking-wider text-[11px]">Reading Experience</h4>
-            <ul className="space-y-1.5">
+            <ul className="space-y-0.5 [&>li>button]:min-h-6">
               <li><button onClick={() => requireAiAccess('AI Book Matchmaker', 'Get personalized reading recommendations, matched by mood and theme, powered by AI.', () => setIsAIMatchmakerOpen(true))} className="hover:text-white cursor-pointer flex items-center gap-1"><Sparkles className="w-3 h-3 text-purple-400" /> AI Book Matchmaker</button></li>
               <li><button onClick={() => setActiveTab('library')} className="hover:text-white cursor-pointer">My Bookshelf & Reading Progress</button></li>
               <li><button onClick={() => setIsArchitectureGuideOpen(true)} className="hover:text-amber-400 cursor-pointer font-semibold">Bookatlas Architecture Blueprint</button></li>
@@ -1101,13 +1102,13 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
         <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-8"><div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-400">
           <p>© 2026 Atlantean Globals Services (Netherlands), KvK 89423496. All rights reserved. Bookatlas™ eBook Store & Reader.</p>
           <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
-            <a href={`${import.meta.env.BASE_URL}privacy`} className="text-slate-400 hover:text-slate-200 underline">
+            <a href={`${import.meta.env.BASE_URL}privacy`} className="inline-flex min-h-6 items-center text-slate-400 hover:text-slate-200 underline">
               Privacy Notice
             </a>
-            <a href={`${import.meta.env.BASE_URL}legal`} className="text-slate-400 hover:text-slate-200 underline">
+            <a href={`${import.meta.env.BASE_URL}legal`} className="inline-flex min-h-6 items-center text-slate-400 hover:text-slate-200 underline">
               Legal Notice
             </a>
-            <button onClick={() => setIsArchitectureGuideOpen(true)} className="hover:text-white underline cursor-pointer">
+            <button onClick={() => setIsArchitectureGuideOpen(true)} className="inline-flex min-h-6 items-center hover:text-white underline cursor-pointer">
               Technical Architecture & EPUB Specs
             </button>
             <button 

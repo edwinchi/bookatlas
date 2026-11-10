@@ -102,6 +102,7 @@ export async function handleWebhook(rawBody: Buffer, signature: string | undefin
   try {
     event = stripe().webhooks.constructEvent(rawBody, signature ?? '', secret);
   } catch {
+    logger.warn({ event: 'payments.webhook_rejected' }, 'Stripe webhook with an invalid signature');
     throw new PaymentError('Invalid Stripe signature.', 400);
   }
   switch (event.type) {
@@ -112,7 +113,10 @@ export async function handleWebhook(rawBody: Buffer, signature: string | undefin
     case 'charge.refunded': {
       const charge = event.data.object;
       const intent = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id;
-      if (charge.refunded && intent) await markRefunded(intent);
+      if (charge.refunded && intent) {
+        await markRefunded(intent);
+        logger.info({ event: 'payments.refunded', paymentIntent: intent }, 'Purchase refunded; the book is locked again');
+      }
       break;
     }
     default:

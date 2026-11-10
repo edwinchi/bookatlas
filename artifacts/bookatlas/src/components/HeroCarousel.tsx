@@ -131,7 +131,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
                 <ShoppingBag className="w-4 h-4 text-amber-300" />
                 <span>Add eBook to cart · {symbol}{currentBook.price.toFixed(2)}</span>
                 {currentBook.originalPrice > currentBook.price && (
-                  <span className="text-xs text-indigo-200 line-through opacity-80">
+                  <span className="text-xs text-indigo-100 line-through">
                     {symbol}{currentBook.originalPrice.toFixed(2)}
                   </span>
                 )}
@@ -190,16 +190,20 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
                 <ChevronLeft className="w-4 h-4" />
               </button>
 
-              <div className="flex gap-2">
+              <div className="flex">
                 {featuredBooks.map((_, idx) => (
                   <button
                     key={idx}
                     onClick={() => setCurrentIndex(idx)}
-                    className={`h-2 rounded-full transition-all cursor-pointer ${
-                      currentIndex === idx ? 'w-7 bg-amber-400' : 'w-2 bg-white/30 hover:bg-white/50'
-                    }`}
+                    className="group grid h-6 min-w-6 place-items-center cursor-pointer"
                     aria-label={`Slide ${idx + 1}`}
-                  />
+                    aria-current={currentIndex === idx ? 'true' : undefined}
+                  >
+                    {/* The dot stays small; the button gives a 24 px touch target (WCAG 2.2). */}
+                    <span className={`h-2 rounded-full transition-all ${
+                      currentIndex === idx ? 'w-7 bg-amber-400' : 'w-2 bg-white/30 group-hover:bg-white/50'
+                    }`} />
+                  </button>
                 ))}
               </div>
 
