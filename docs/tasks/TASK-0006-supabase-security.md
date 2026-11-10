@@ -6,7 +6,7 @@
 | Source brief | Owner, 2026-11-10: "complete all tasks in the .md files especially supabase security" |
 | Priority | High |
 | Approval level | 0 (review, tests, docs). Changes to grants, policies or retention would be 2 |
-| Status | ⏳ Reviewed and tested; the anon-key test waits for `SUPABASE_ANON_KEY` |
+| Status | ⏳ Reviewed, tested and fixed; the anon-key test waits for `SUPABASE_ANON_KEY` |
 | Last updated | 2026-11-10 |
 
 ## Context
@@ -43,5 +43,5 @@ Deployed with the export, image and OpenAPI changes as `bookatlas-a1cabg0yo` (`a
 
 - **Anon-key proof missing.** Add the project's publishable (anon) key to `.env.local` as `SUPABASE_ANON_KEY` and run `pnpm test:supabase`. If a table answers 200 with `[]`, its grant still exists; revoke it.
 - **Shared project.** Other apps' tables are outside this review. Their RLS state does not affect BookAtlas objects, which are closed on their own, but a leak in another app shares the same database. Run Supabase's Security Advisor (Dashboard → Advisors) for the whole project.
-- **Account deletion keeps the author's email on eBook submissions** (`data.ownerEmail`), and purchases keep the Clerk user id. Proposed: on deletion, delete unpublished submissions and their files, remove the email from published ones, and replace the purchase `user_id` with a non-identifying value (purchases stay 7 years as the order record). This is a retention change (Level 2) and needs the owner's approval.
+- ✅ **Account deletion now erases eBook and purchase data** (owner approval 2026-11-10, Level 2 retention). Unpublished submissions are deleted with all their files; published books stay on sale with the author's email removed and `owner_id` set to `erased-account`; purchases keep amount, currency and status but `user_id` becomes a random `erased-…` marker (order record, 7 years). Store feedback keeps its message without the link. `eraseAuthorData`, `anonymisePurchases`; tested in `tests/e2e/account-erasure.test.ts`.
 - **Service role key rotation.** Rotate it in Supabase if it was ever shared outside Vercel and `.env.local`.

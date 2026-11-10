@@ -80,6 +80,26 @@ export async function submissionForBook(bookId: string): Promise<Submission | nu
   return ((result.data as Submission[])[0]) ?? null;
 }
 
+/** Account erasure (TASK-0006): remove a submission that never reached the store. */
+export async function deleteSubmission(id: string) {
+  if (!bookatlasDb) { memorySubmissions.delete(id); return; }
+  // Store feedback may point at the submission; keep the message, drop the link.
+  const unlink = await bookatlasDb.from('prep_feedback').update({ submission_id: null }).eq('submission_id', id);
+  if (unlink.error) throw new PrepError('The submission could not be erased.', 503);
+  const result = await bookatlasDb.from('ebook_submissions').delete().eq('id', id);
+  if (result.error) throw new PrepError('The submission could not be erased.', 503);
+}
+
+/** Account erasure: a published book stays on sale, without its author's email or account link. */
+export async function anonymiseSubmission(row: Submission) {
+  const data = { ...row.data, ownerEmail: '' };
+  if (!bookatlasDb) { memorySubmissions.set(row.id, clone({ ...row, owner_id: ERASED_OWNER, data })); return; }
+  const result = await bookatlasDb.from('ebook_submissions').update({ owner_id: ERASED_OWNER, data, updated_at: new Date().toISOString() }).eq('id', row.id);
+  if (result.error) throw new PrepError('The submission could not be anonymised.', 503);
+}
+
+export const ERASED_OWNER = 'erased-account';
+
 /** Save with optimistic concurrency: fails if someone else saved since `row` was loaded. */
 export async function saveSubmission(row: Submission, changes: Partial<Omit<Submission, 'id' | 'owner_id' | 'data'>> & { data?: Partial<SubmissionData> }) {
   const next: Submission = {

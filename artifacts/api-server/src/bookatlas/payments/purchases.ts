@@ -77,6 +77,21 @@ export async function purchasesOf(userId: string): Promise<Omit<Purchase, 'user_
   return result.data as Omit<Purchase, 'user_id'>[];
 }
 
+/**
+ * Account erasure: the order record stays (Dutch fiscal retention, 7 years) but no longer points
+ * to a person; each erased account gets its own random marker.
+ */
+export async function anonymisePurchases(userId: string) {
+  const marker = `erased-${randomUUID()}`;
+  if (!bookatlasDb) {
+    for (const p of memory) if (p.user_id === userId) { p.user_id = marker; p.updated_at = new Date().toISOString(); }
+  } else {
+    const result = await bookatlasDb.from('purchases').update({ user_id: marker, updated_at: new Date().toISOString() }).eq('user_id', userId);
+    if (result.error) throw new PaymentError('Purchases could not be anonymised.', 503);
+  }
+  owned.delete(userId);
+}
+
 export async function hasPurchase(userId: string, bookId: string) {
   return (await purchasedBookIds(userId)).includes(bookId);
 }

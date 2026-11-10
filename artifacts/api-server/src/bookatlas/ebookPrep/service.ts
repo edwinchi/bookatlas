@@ -12,7 +12,7 @@ import { previewChapters, readerContent, sampleChapters, type ReaderContent } fr
 import { PART_BYTES, getFile, getObject, getPart, putFile, putObject, putPart, removeFile, sha256 } from './store.js';
 import {
   addFeedback, createSubmission, expiredUploads, learnedBlockingRules, listFeedback, listSubmissions,
-  loadSubmission, nextForCheck, saveSubmission, submissionForBook, type Submission, type SubmissionData,
+  anonymiseSubmission, deleteSubmission, loadSubmission, nextForCheck, saveSubmission, submissionForBook, type Submission, type SubmissionData,
 } from './submissions.js';
 
 export const MAX_CHECK_ROUNDS = 3;
@@ -377,6 +377,25 @@ export async function purgeExpired() {
     if (row.data.coverFix?.kind === 'upload') await removeFile(coverUploadKey(row.id), row.data.coverFix.file.parts);
     if (row.status === 'rejected' && row.data.prepared) await removeFile(preparedKey(row.id), row.data.prepared.parts);
     await saveSubmission(row, { data: { upload: { ...row.data.upload!, purged: true } } });
+  }
+}
+
+/**
+ * Account erasure (owner approval 2026-11-10, TASK-0006): submissions that never reached the store
+ * are deleted with their files; published books stay on sale without the author's email.
+ */
+export async function eraseAuthorData(ownerId: string) {
+  for (const row of await listSubmissions(ownerId)) {
+    if (row.status === 'published' && row.book_id) {
+      await anonymiseSubmission(row);
+      authors.delete(row.book_id);
+      continue;
+    }
+    if (row.data.upload && !row.data.upload.purged) await removeFile(uploadKey(row.id), row.data.upload.parts);
+    if (row.data.prepared) await removeFile(preparedKey(row.id), row.data.prepared.parts);
+    if (row.data.cover) await removeFile(coverKey(row.id), row.data.cover.parts);
+    if (row.data.coverFix?.kind === 'upload') await removeFile(coverUploadKey(row.id), row.data.coverFix.file.parts);
+    await deleteSubmission(row.id);
   }
 }
 

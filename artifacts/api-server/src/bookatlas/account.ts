@@ -23,8 +23,8 @@ export interface AccountStore {
   purchases(userId: string): Promise<Record<string, unknown>[]>;
   /** eBooks this account submitted for publishing (TASK-0003), without file contents. */
   submissions(userId: string): Promise<Record<string, unknown>[]>;
-  /** Removes the profile, subscriber and delivery records for this email. */
-  erase(email: string): Promise<void>;
+  /** Removes the profile, subscriber and delivery records, erases unpublished eBook submissions and anonymises purchases and published submissions. */
+  erase(email: string, userId: string): Promise<void>;
   /** Removes the sign-in account at the identity provider. */
   deleteIdentity(userId: string): Promise<void>;
 }
@@ -64,7 +64,7 @@ export function mountAccountRoutes(app: Express, store: AccountStore) {
       res.status(409).json({ error: 'Administrator accounts must be removed by another administrator.' }); return;
     }
     try {
-      await store.erase(identity.email);
+      await store.erase(identity.email, identity.id);
     } catch (err) {
       logger.error({ err, event: 'account.delete_failed', stage: 'data' }, 'Account data erasure failed');
       res.status(503).json({ error: 'Your data could not be erased right now. Nothing was deleted; please try again.' });

@@ -14,8 +14,9 @@ import { mountPublishingReadiness } from './publishing/routes.js';
 import { mountPublishingJobs } from './publishing/jobRoutes.js';
 import { mountEbookPrep } from './ebookPrep/routes.js';
 import { mountPayments } from './payments/routes.js';
-import { purchasesOf } from './payments/purchases.js';
+import { anonymisePurchases, purchasesOf } from './payments/purchases.js';
 import { listSubmissions } from './ebookPrep/submissions.js';
+import { eraseAuthorData } from './ebookPrep/service.js';
 import { mountCatalog } from './catalog/routes.js';
 import { parseCatalogQuery } from '@workspace/bookatlas-catalog/query';
 import { memoryCatalog, postgresCatalog } from './catalog/store.js';
@@ -746,7 +747,11 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
         }));
       } catch { throw new AccountStoreError('eBook submissions are unavailable.'); }
     },
-    async erase(email) {
+    async erase(email, userId) {
+      try {
+        await anonymisePurchases(userId);
+        await eraseAuthorData(userId);
+      } catch { throw new AccountStoreError('eBook and purchase records could not be erased.'); }
       if (bookatlasDb) {
         for (const [table, column] of [['publishing_messages', 'recipient'], ['subscribers', 'email'], ['registered_users', 'email']] as const) {
           const { error } = await bookatlasDb.from(table).delete().eq(column, email);
