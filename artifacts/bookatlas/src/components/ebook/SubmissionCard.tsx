@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { AlertCircle, AlertTriangle, BookCopy, CheckCircle2, Download, ImageUp, Info, Loader2, Maximize2, Pencil, RotateCcw, Send, XCircle } from 'lucide-react';
+import { AlertCircle, AlertTriangle, BookCopy, Upload, CheckCircle2, Download, ImageUp, Info, Loader2, Maximize2, Pencil, RotateCcw, Send, XCircle } from 'lucide-react';
 import type { Finding, Submission, SubmissionStatus } from './ebookApi';
 
 const STATUS: Record<SubmissionStatus, { label: string; tone: string; detail: string }> = {
@@ -8,7 +8,7 @@ const STATUS: Record<SubmissionStatus, { label: string; tone: string; detail: st
   checking: { label: 'Validating', tone: 'bg-indigo-50 text-indigo-700', detail: 'Running the official EPUBCheck validator. This takes a minute or two.' },
   ready: { label: 'Ready for review', tone: 'bg-emerald-50 text-emerald-800', detail: 'Your eBook passed every check. BookAtlas reviews it before it goes on sale.' },
   needs_author: { label: 'Needs your input', tone: 'bg-amber-50 text-amber-900', detail: 'A few things need you; everything fixable was fixed automatically.' },
-  published: { label: 'Published', tone: 'bg-emerald-600 text-white', detail: 'On sale in the BookAtlas store.' },
+  published: { label: 'Published', tone: 'bg-emerald-600 text-white', detail: 'On sale in the BookAtlas store. Made corrections? Upload a new version; this one stays on sale until the new one is published.' },
   rejected: { label: 'Not accepted', tone: 'bg-rose-50 text-rose-800', detail: '' },
 };
 
@@ -103,7 +103,10 @@ export const SubmissionCard: React.FC<{
     <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="font-serif text-lg font-bold text-slate-900">{s.intake.title}</h3>
+          <h3 className="font-serif text-lg font-bold text-slate-900">
+            {s.intake.title}
+            {s.replacesBookId && <span className="ml-2 align-middle rounded-full bg-indigo-50 px-2 py-0.5 font-sans text-[10px] font-bold uppercase tracking-wide text-indigo-700">New version</span>}
+          </h3>
           <p className="text-xs text-slate-500">
             {s.intake.author} · {s.upload?.fileName}{s.ownerEmail ? ` · ${s.ownerEmail}` : ''} · {new Date(s.createdAt).toLocaleDateString()}
           </p>
@@ -173,6 +176,11 @@ export const SubmissionCard: React.FC<{
         {s.cover && (
           <button type="button" onClick={() => run('cover', () => onDownload('cover'))} className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
             {busy === 'cover' ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Download className="h-3.5 w-3.5" aria-hidden />}Store cover (JPG)
+          </button>
+        )}
+        {s.status === 'published' && (
+          <button type="button" onClick={onEdit} className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+            <Upload className="h-3.5 w-3.5" aria-hidden />Upload a new version
           </button>
         )}
         {canEdit && (

@@ -39,6 +39,7 @@ export function view(row: Submission, who: Identity) {
     prepared: d.prepared ? { size: d.prepared.size, parts: d.prepared.parts, sha256: d.prepared.sha256 } : null,
     cover: d.cover ? { size: d.cover.size, parts: d.cover.parts } : null,
     printLinks: d.printLinks ?? {},
+    replacesBookId: d.replacesBookId ?? null,
     coverFix: d.coverFix ? (d.coverFix.kind === 'upload' ? { kind: 'upload', width: d.coverFix.width, height: d.coverFix.height } : { kind: 'enlarge' }) : null,
     epubcheck: d.epubcheck ?? null, bookId: row.book_id, rejectReason: d.rejectReason ?? null,
     ownerEmail: who.role === 'admin' ? d.ownerEmail : undefined,
@@ -56,6 +57,17 @@ function checkIntakeAndFile(intake: SubmissionIntake, fileName: string, size: nu
 
 export async function startSubmission(who: Identity, intake: SubmissionIntake, fileName: string, size: number) {
   return createSubmission(who.id, who.email, intake, checkIntakeAndFile(intake, fileName, size));
+}
+
+/**
+ * A corrected EPUB for a book that is already on sale. It becomes a new submission for the same
+ * author; the live book stays as it is until an admin publishes the new version over it.
+ */
+export async function startNewVersion(who: Identity, id: string, intake: SubmissionIntake, fileName: string, size: number) {
+  const original = owned(await loadSubmission(id), who);
+  if (original.status !== 'published' || !original.book_id) throw new PrepError('Only a published book can get a new version.', 409);
+  const created = await createSubmission(original.owner_id, original.data.ownerEmail, intake, checkIntakeAndFile(intake, fileName, size));
+  return saveSubmission(created, { data: { replacesBookId: original.book_id, printLinks: original.data.printLinks } });
 }
 
 /**
@@ -249,11 +261,13 @@ export async function recordCheck(id: string, sha: string, messages: EpubcheckMe
 const bookId = (submissionId: string) => `atlas-ebook-${submissionId.slice(0, 8)}`;
 const bookKey = (id: string, name: string) => `books/${id}/${name}`;
 
-export async function publishSubmission(id: string, onPublished: (book: Book, categories: string[]) => void) {
+export async function publishSubmission(id: string, onPublished: (book: Book, categories: string[]) => void, current?: (bookId: string) => Promise<Book | null>) {
   const row = await loadSubmission(id);
   if (row.status !== 'ready' || !row.data.prepared) throw new PrepError('Only a ready submission can be published.', 409);
   const intake = row.data.intake;
-  const target = bookId(row.id);
+  // A new version keeps the book's id, so its page, links and buyers carry over.
+  const target = row.data.replacesBookId ?? bookId(row.id);
+  const previous = row.data.replacesBookId && current ? await current(target) : null;
   const epub = await getFile(preparedKey(id), row.data.prepared);
   const content = readerContent(epub, intake.title);
   if (!content.chapters.length) throw new PrepError('No readable chapters were found in the prepared book.', 422);
@@ -276,7 +290,7 @@ export async function publishSubmission(id: string, onPublished: (book: Book, ca
     rating: 0, reviewCount: 0, format: 'ebook',
     genres: intake.categories, primaryGenre: intake.categories[0]!,
     pageCount: Math.max(1, Math.round(words / 275)),
-    publishDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+    publishDate: previous?.publishDate ?? new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
     publisher: intake.copyrightHolder.trim(), isbn: intake.ebookIsbn ? normaliseIsbn(intake.ebookIsbn) : '',
     language: intake.language, synopsis: intake.description.trim(), editorialReview: '',
     sampleChapters: sampleChapters(content.chapters), superPointsEarned: Math.round(price * 10),
@@ -329,16 +343,19 @@ export async function purgeExpired() {
 
 // --- Reader -------------------------------------------------------------------------------------
 
-const contentCache = new Map<string, { chapters: ReaderContent['chapters']; imageTypes: Record<string, string> }>();
+type CachedContent = { chapters: ReaderContent['chapters']; imageTypes: Record<string, string> };
+/** Per server instance; it expires so a new version reaches every instance within minutes. */
+const contentCache = new Map<string, { content: CachedContent; at: number }>();
+const CONTENT_TTL_MS = 5 * 60_000;
 
-export async function bookContent(id: string) {
+export async function bookContent(id: string): Promise<CachedContent> {
   if (!/^atlas-ebook-[0-9a-f]{8}$/.test(id)) throw new PrepError('Book not found.', 404);
   const cached = contentCache.get(id);
-  if (cached) return cached;
-  const parsed = JSON.parse(new TextDecoder().decode(await getObject(bookKey(id, 'content.json'))));
+  if (cached && Date.now() - cached.at < CONTENT_TTL_MS) return cached.content;
+  const parsed = JSON.parse(new TextDecoder().decode(await getObject(bookKey(id, 'content.json')))) as CachedContent;
   if (contentCache.size > 20) contentCache.delete(contentCache.keys().next().value!);
-  contentCache.set(id, parsed);
-  return parsed as { chapters: ReaderContent['chapters']; imageTypes: Record<string, string> };
+  contentCache.set(id, { content: parsed, at: Date.now() });
+  return parsed;
 }
 
 const authors = new Map<string, string | null>();

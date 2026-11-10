@@ -21,6 +21,7 @@ export interface Submission {
   cover: { size: number; parts: number } | null;
   coverFix: { kind: 'upload'; width: number; height: number } | { kind: 'enlarge' } | null;
   printLinks: { amazon?: string; lulu?: string };
+  replacesBookId: string | null;
   epubcheck: { round: number; ran: boolean; messages: unknown[]; checkedAt: string } | null;
   bookId: string | null;
   rejectReason: string | null;
@@ -76,6 +77,11 @@ export function useEbookApi() {
     get: (id: string) => json<Submission>(`/api/ebook-submissions/${id}`),
     async submit(intake: SubmissionIntake, file: File, onProgress: (done: number, total: number) => void) {
       const created = await json<Submission>('/api/ebook-submissions', 'POST', { intake, fileName: file.name, size: file.size });
+      return uploadAndPrepare(created, file, onProgress);
+    },
+    /** A corrected EPUB for a published book: a new submission that replaces it once published. */
+    async newVersion(id: string, intake: SubmissionIntake, file: File, onProgress: (done: number, total: number) => void) {
+      const created = await json<Submission>(`/api/ebook-submissions/${id}/new-version`, 'POST', { intake, fileName: file.name, size: file.size });
       return uploadAndPrepare(created, file, onProgress);
     },
     /** A corrected EPUB for a submission that is not published yet; details and cover choice carry over. */

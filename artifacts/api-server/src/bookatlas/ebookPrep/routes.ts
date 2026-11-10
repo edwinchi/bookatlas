@@ -7,7 +7,7 @@ import { PART_BYTES } from './store.js';
 import type { EpubcheckMessage } from './rules.js';
 import {
   bookCover, bookImage, checkPart, claimCheck, feedbackOverview, getFor, listFor, prepareSubmission,
-  publishSubmission, readableContent, recordCheck, recordFeedback, rejectSubmission, restartUpload, setCoverFix, setPrintLinks, startSubmission, submissionFile, updateIntake,
+  publishSubmission, readableContent, recordCheck, recordFeedback, rejectSubmission, restartUpload, setCoverFix, setPrintLinks, startNewVersion, startSubmission, submissionFile, updateIntake,
   uploadPart, view, workerConfigured,
 } from './service.js';
 import { logger } from '../../lib/logger.js';
@@ -90,6 +90,10 @@ export function mountEbookPrep(app: Express, onPublished: (book: Book, categorie
     await uploadPart(req.bookatlasIdentity!, submissionId(req), Number(req.params.part), new Uint8Array(req.body));
     res.status(204).end();
   }));
+  app.post('/api/ebook-submissions/:id/new-version', guarded(async (req, res) => {
+    const row = await startNewVersion(req.bookatlasIdentity!, submissionId(req), intakeFrom(req.body?.intake), String(req.body?.fileName ?? ''), Number(req.body?.size));
+    res.status(201).json(view(row, req.bookatlasIdentity!));
+  }));
   app.post('/api/ebook-submissions/:id/reupload', guarded(async (req, res) => {
     const row = await restartUpload(req.bookatlasIdentity!, submissionId(req), intakeFrom(req.body?.intake), String(req.body?.fileName ?? ''), Number(req.body?.size));
     res.json(view(row, req.bookatlasIdentity!));
@@ -132,7 +136,7 @@ export function mountEbookPrep(app: Express, onPublished: (book: Book, categorie
 
   // Admin only (accessFor defaults to admin)
   app.post('/api/ebook-submissions/:id/publish', guarded(async (req, res) => {
-    res.json(view(await publishSubmission(submissionId(req), onPublished), req.bookatlasIdentity!));
+    res.json(view(await publishSubmission(submissionId(req), onPublished, (id) => catalog.get(id)), req.bookatlasIdentity!));
   }));
   app.post('/api/ebook-submissions/:id/reject', guarded(async (req, res) => {
     const reason = String(req.body?.reason ?? '').trim();

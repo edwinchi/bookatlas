@@ -203,9 +203,34 @@ test('the author replaces the EPUB with a corrected one until the book is publis
     await fetch(`/api/internal/ebook-checks/${job.id}/result`, { method: 'POST', headers: { ...worker, 'content-type': 'application/json' }, body: JSON.stringify({ sha256: job.sha256, messages: [] }) });
     done = job.id === submission.id;
   }
-  assert.equal((await (await fetch(`/api/ebook-submissions/${submission.id}/publish`, json({}, 'admin'))).json()).status, 'published');
+  const published = await (await fetch(`/api/ebook-submissions/${submission.id}/publish`, json({}, 'admin'))).json();
+  assert.equal(published.status, 'published');
   const late = await fetch(`/api/ebook-submissions/${submission.id}/reupload`, json({ intake, fileName: 'late.epub', size: corrected.byteLength }));
   assert.equal(late.status, 409);
+
+  // A published book gets a new version: a new submission that replaces it under the same id.
+  const before = (await (await fetch(`/api/catalog/books/${published.bookId}`)).json()).book;
+  const second = epub2(5);
+  const version = await (await fetch(`/api/ebook-submissions/${submission.id}/new-version`, json({ intake: { ...intake, title: 'The Test Codex, Second Edition' }, fileName: 'second.epub', size: second.byteLength }))).json();
+  assert.equal(version.status, 'uploading');
+  assert.equal(version.replacesBookId, published.bookId);
+  const preparedVersion = await send(version.id, version.upload, version.partBytes, second);
+  assert.equal(preparedVersion.report.summary.errors, 0);
+  for (let done = false; !done;) {
+    const claim = await fetch('/api/internal/ebook-checks/claim', { method: 'POST', headers: worker });
+    assert.equal(claim.status, 200);
+    const job = await claim.json();
+    await fetch(`/api/internal/ebook-checks/${job.id}/result`, { method: 'POST', headers: { ...worker, 'content-type': 'application/json' }, body: JSON.stringify({ sha256: job.sha256, messages: [] }) });
+    done = job.id === version.id;
+  }
+  assert.equal((await fetch(`/api/catalog/books/${published.bookId}`).then((r) => r.json())).book.title, before.title, 'the live book is unchanged until the new version is published');
+  const republished = await (await fetch(`/api/ebook-submissions/${version.id}/publish`, json({}, 'admin'))).json();
+  assert.equal(republished.bookId, published.bookId, 'same book id');
+  const after = (await (await fetch(`/api/catalog/books/${published.bookId}`)).json()).book;
+  assert.equal(after.title, 'The Test Codex, Second Edition');
+  assert.equal(after.publishDate, before.publishDate, 'the first publication date stays');
+  const reader = await (await fetch(`/api/reader/catalog/${published.bookId}/content`, as('reader'))).json();
+  assert.equal(reader.access, 'full', 'the author still reads the whole book');
 });
 
 test('store feedback is matched to rules and makes them blocking', async () => {

@@ -21,6 +21,8 @@ export interface SubmissionData {
   coverFix?: { kind: 'upload'; file: StoredFile; width: number; height: number } | { kind: 'enlarge' };
   /** Where the printed book is sold; shown on the book page. */
   printLinks?: { amazon?: string; lulu?: string };
+  /** A new version of this published book: publishing replaces its text under the same id. */
+  replacesBookId?: string;
   version: number;
 }
 
@@ -67,11 +69,15 @@ export async function loadSubmission(id: string): Promise<Submission> {
   return result.data as Submission;
 }
 
+/** The first submission of a book: its author. Later versions share the book id. */
 export async function submissionForBook(bookId: string): Promise<Submission | null> {
-  if (!bookatlasDb) return clone([...memorySubmissions.values()].find((row) => row.book_id === bookId) ?? null);
-  const result = await bookatlasDb.from('ebook_submissions').select('*').eq('book_id', bookId).maybeSingle();
+  if (!bookatlasDb) {
+    const rows = [...memorySubmissions.values()].filter((row) => row.book_id === bookId).sort((a, b) => a.created_at.localeCompare(b.created_at));
+    return clone(rows[0] ?? null);
+  }
+  const result = await bookatlasDb.from('ebook_submissions').select('*').eq('book_id', bookId).order('created_at', { ascending: true }).limit(1);
   if (result.error) throw new PrepError('The submission could not be read.', 503);
-  return (result.data as Submission | null) ?? null;
+  return ((result.data as Submission[])[0]) ?? null;
 }
 
 /** Save with optimistic concurrency: fails if someone else saved since `row` was loaded. */

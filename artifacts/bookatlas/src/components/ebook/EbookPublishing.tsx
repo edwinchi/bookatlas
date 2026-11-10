@@ -127,7 +127,7 @@ export const EbookPublishing: React.FC = () => {
         <div className="space-y-6">
           {mode && (
             <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-              <h2 className="mb-4 flex items-center gap-2 font-serif text-xl font-bold text-slate-900"><BookUp className="h-5 w-5 text-indigo-600" aria-hidden />{mode.kind === 'new' ? 'New eBook' : `Edit ${mode.submission.intake.title}`}</h2>
+              <h2 className="mb-4 flex items-center gap-2 font-serif text-xl font-bold text-slate-900"><BookUp className="h-5 w-5 text-indigo-600" aria-hidden />{mode.kind === 'new' ? 'New eBook' : mode.submission.status === 'published' ? `New version of ${mode.submission.intake.title}` : `Edit ${mode.submission.intake.title}`}</h2>
               <SubmissionForm
                 key={mode.kind === 'edit' ? mode.submission.id : 'new'}
                 categories={categories}
@@ -135,11 +135,12 @@ export const EbookPublishing: React.FC = () => {
                 serverErrors={problem?.fields}
                 progress={progress}
                 busy={busy}
-                fileRequired={mode.kind === 'new' || mode.submission.status === 'uploading'}
+                fileRequired={mode.kind === 'new' || mode.submission.status === 'uploading' || mode.submission.status === 'published'}
                 onCancel={() => setMode(null)}
                 onSubmit={(intake, file) => {
                   const onProgress = (done: number, total: number) => setProgress({ done, total });
                   return handle(() => mode.kind === 'new' ? api.submit(intake, file!, onProgress)
+                    : mode.submission.status === 'published' ? api.newVersion(mode.submission.id, intake, file!, onProgress)
                     : file ? api.reupload(mode.submission.id, intake, file, onProgress)
                       : api.updateIntake(mode.submission.id, intake));
                 }}
