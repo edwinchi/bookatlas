@@ -27,6 +27,8 @@ interface BookDetailModalProps {
   book: Book | null;
   onClose: () => void;
   onReadSample: (book: Book) => void;
+  /** Bought by this account (TASK-0004): the whole book opens in the reader. */
+  owned?: boolean;
   onAddToCart: (book: Book) => void;
   onToggleWishlist: (book: Book) => void;
   onPlayAudioSample: (book: Book) => void;
@@ -45,6 +47,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
   book,
   onClose,
   onReadSample,
+  owned = false,
   onAddToCart,
   onToggleWishlist,
   onPlayAudioSample,
@@ -59,6 +62,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
   const prepared = !!book.hasReaderContent;
   const unrated = isGenerated || (prepared && book.reviewCount === 0);
   const readsFree = prepared && book.price === 0;
+  const opensInFull = prepared && (readsFree || owned);
   const { account, requireSignIn } = useAccount();
   const openFullBook = () => { if (account) onReadSample(book); else requireSignIn('reading the full book'); };
 
@@ -186,7 +190,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                   className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-950 text-white font-semibold text-sm rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
                 >
                   <BookOpen className="w-4 h-4 text-amber-400" />
-                  <span>{readsFree && account ? 'Open the Book' : prepared ? 'Read & Listen to the Free Preview' : 'Read Free Instant Sample'}</span>
+                  <span>{opensInFull && account ? 'Open the Book' : prepared ? 'Read & Listen to the Free Preview' : 'Read Free Instant Sample'}</span>
                 </button>
 
                 {book.audioDurationMinutes && (
@@ -329,12 +333,12 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                 {/* Buy / Cart Action Row */}
                 <div className="pt-2 flex items-center gap-3">
                   <button
-                    onClick={() => (readsFree ? openFullBook() : onAddToCart(book))}
+                    onClick={() => (opensInFull ? openFullBook() : onAddToCart(book))}
                     className="flex-1 py-3 px-5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 shadow-md transition-colors cursor-pointer"
                   >
                     <ShoppingBag className="w-4 h-4 text-amber-300" />
                     <span>
-                      {readsFree ? (account ? 'Read the Full Book Free' : 'Sign In to Read Free') : <>Buy Now for {selectedFormat === 'ebook' ? (book.price === 0 ? 'Free' : `${currencySymbol}${book.price.toFixed(2)}`) : `${currencySymbol}${(book.price + 4.99).toFixed(2)}`}</>}
+                      {owned ? 'Read the Full Book' : readsFree ? (account ? 'Read the Full Book Free' : 'Sign In to Read Free') : <>Buy Now for {selectedFormat === 'ebook' ? (book.price === 0 ? 'Free' : `${currencySymbol}${book.price.toFixed(2)}`) : `${currencySymbol}${(book.price + 4.99).toFixed(2)}`}</>}
                     </span>
                   </button>
 

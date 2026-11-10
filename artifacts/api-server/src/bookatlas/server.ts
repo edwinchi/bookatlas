@@ -13,6 +13,7 @@ import { logger } from '../lib/logger';
 import { mountPublishingReadiness } from './publishing/routes.js';
 import { mountPublishingJobs } from './publishing/jobRoutes.js';
 import { mountEbookPrep } from './ebookPrep/routes.js';
+import { mountPayments } from './payments/routes.js';
 import { mountWorkforce } from './workforce/routes.js';
 import { mountReaderTts } from './publishing/readerTts.js';
 import { clerkClient } from '@clerk/express';
@@ -441,6 +442,8 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
     }
   }
 
+  // Before the JSON parser: the Stripe webhook is verified against its raw body.
+  mountPayments(app, (bookId) => liveCatalog.find((item: { id: string }) => item.id === bookId), APP_URL);
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
   mountPublishingReadiness(app);

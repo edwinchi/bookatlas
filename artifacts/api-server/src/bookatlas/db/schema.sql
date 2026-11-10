@@ -146,6 +146,24 @@ create table if not exists public.bookatlas_prep_feedback (
   created_at timestamptz not null default now()
 );
 
+-- eBook purchases (TASK-0004): one row per book per Stripe Checkout session. Kept as the
+-- order record (Dutch fiscal retention: 7 years); a full refund sets status 'refunded'.
+create table if not exists public.bookatlas_purchases (
+  id uuid primary key,
+  user_id text not null,
+  book_id text not null,
+  checkout_session_id text not null,
+  payment_intent_id text,
+  amount_total integer not null,
+  currency text not null,
+  status text not null default 'paid' check (status in ('paid','refunded')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (checkout_session_id, book_id)
+);
+create index if not exists bookatlas_purchases_user_idx on public.bookatlas_purchases (user_id, status);
+create index if not exists bookatlas_purchases_intent_idx on public.bookatlas_purchases (payment_intent_id);
+
 -- Only the backend service role may access application tables directly.
 -- Public catalog requests still go through Bookatlas's explicit public API.
 alter table public.bookatlas_books enable row level security;
@@ -158,14 +176,15 @@ alter table public.bookatlas_publishing_messages enable row level security;
 alter table public.bookatlas_publishing_test_books enable row level security;
 alter table public.bookatlas_ebook_submissions enable row level security;
 alter table public.bookatlas_prep_feedback enable row level security;
+alter table public.bookatlas_purchases enable row level security;
 revoke all on table public.bookatlas_books, public.bookatlas_categories,
   public.bookatlas_registered_users, public.bookatlas_subscribers, public.bookatlas_campaigns,
   public.bookatlas_publishing_jobs, public.bookatlas_publishing_messages,
   public.bookatlas_publishing_test_books, public.bookatlas_ebook_submissions,
-  public.bookatlas_prep_feedback from anon, authenticated;
+  public.bookatlas_prep_feedback, public.bookatlas_purchases from anon, authenticated;
 grant select, insert, update, delete on table public.bookatlas_books, public.bookatlas_categories,
   public.bookatlas_registered_users, public.bookatlas_subscribers, public.bookatlas_campaigns,
   public.bookatlas_publishing_jobs, public.bookatlas_publishing_messages,
   public.bookatlas_publishing_test_books, public.bookatlas_ebook_submissions,
-  public.bookatlas_prep_feedback to service_role;
+  public.bookatlas_prep_feedback, public.bookatlas_purchases to service_role;
 commit;

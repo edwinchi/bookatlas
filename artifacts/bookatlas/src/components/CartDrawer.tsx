@@ -18,6 +18,7 @@ import {
   applyPromoDiscount,
   DEMO_CHECKOUT_NOTICE,
 } from '../utils/cart';
+import { usePayments } from './checkout/usePayments';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -44,6 +45,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const [promoApplied, setPromoApplied] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [demoResult, setDemoResult] = useState('');
+  const [checkoutError, setCheckoutError] = useState('');
+  // With Stripe connected the order is paid on Stripe's page, in euros with VAT included.
+  const payments = usePayments();
+  const live = payments.enabled;
 
   if (!isOpen) return null;
 
@@ -64,8 +69,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     }
   };
 
-  const handleCompleteOrder = () => {
+  const handleCompleteOrder = async () => {
     if (!onCheckout()) return;
+    setCheckoutError('');
+    if (live) {
+      setIsCheckingOut(true);
+      try {
+        const { url } = await payments.startCheckout(cart.map((item) => item.book.id));
+        window.location.assign(url);
+      } catch (error) {
+        setCheckoutError(error instanceof Error ? error.message : 'Checkout could not start. Please retry.');
+        setIsCheckingOut(false);
+      }
+      return;
+    }
     setDemoResult('');
     setIsCheckingOut(true);
     setTimeout(() => {
@@ -175,11 +192,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         {cart.length > 0 && (
           <div className="p-5 border-t border-gray-200 bg-gray-50/80 space-y-4">
             {demoResult && <p role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-950">{demoResult}</p>}
+            {checkoutError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">{checkoutError}</p>}
+            {!live && (
             <p className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[11px] text-amber-950">
               Demo checkout only — no payment is taken and this demo does not verify a digital license.
             </p>
+            )}
             
-            {/* Promo Code Form */}
+            {/* Promo Code Form (demo only; with Stripe, promotion codes are entered on the payment page) */}
+            {!live && (
             <form onSubmit={applyPromo} className="space-y-1.5">
               <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -209,6 +230,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               )}
               {promoError && <p className="text-[11px] text-red-600">{promoError}</p>}
             </form>
+            )}
 
             {/* Price Calculations */}
             <div className="space-y-1.5 text-xs text-gray-600">
@@ -232,7 +254,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <div className="pt-2 border-t border-gray-200 flex justify-between items-baseline text-sm">
                 <span className="font-bold text-gray-900">Total</span>
                 <span className="text-lg font-black text-gray-950">
-                  {currencySymbol}{total.toFixed(2)}
+                  {live ? '€' : currencySymbol}{total.toFixed(2)}
                 </span>
               </div>
 
@@ -247,7 +269,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </div>
 
             <div className="rounded-lg border border-slate-200 bg-white p-3 text-xs leading-relaxed text-slate-700">
-              No payment provider is connected. This demo will not submit an order or add books to your library.
+              {live
+                ? 'You pay securely on Stripe: card, iDEAL, Bancontact, Apple Pay, Google Pay, Klarna and more, depending on your country. Charged in euros, VAT included. Your books open as soon as the payment is confirmed.'
+                : 'No payment provider is connected. This demo will not submit an order or add books to your library.'}
             </div>
 
             {/* Checkout Action */}
@@ -259,11 +283,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               {isCheckingOut ? (
                 <span className="flex items-center gap-2">
                   <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  Running a checkout demo…
+                  {live ? 'Opening secure payment…' : 'Running a checkout demo…'}
                 </span>
               ) : (
                 <>
-                  <span>{isAuthenticated ? 'Run demo checkout' : 'Sign in to review checkout'}</span>
+                  <span>{!isAuthenticated ? 'Sign in to review checkout' : live ? `Pay €${total.toFixed(2)} securely` : 'Run demo checkout'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -271,7 +295,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
             <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-500">
               <ShieldCheck className="w-3 h-3 text-emerald-600" />
-              <span>Review your order before simulated checkout</span>
+              <span>{live ? 'Payments are processed by Stripe; BookAtlas never sees your card details' : 'Review your order before simulated checkout'}</span>
             </div>
 
           </div>

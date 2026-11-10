@@ -4,6 +4,8 @@ import type { Identity } from '../../auth/policy.js';
 import { MAX_UPLOAD_BYTES, PrepError } from './archive.js';
 import { matchStoreMessage, prepareEpub, type PrepReport } from './engine.js';
 import { decodeImage, imageSize } from './images.js';
+import { hasPurchase } from '../payments/purchases.js';
+import { logger } from '../../lib/logger.js';
 import { RULES, type EpubcheckMessage } from './rules.js';
 import { previewChapters, readerContent, sampleChapters, type ReaderContent } from './content.js';
 import { PART_BYTES, getFile, getObject, getPart, putFile, putObject, putPart, removeFile, sha256 } from './store.js';
@@ -297,13 +299,14 @@ export async function bookContent(id: string) {
 const authors = new Map<string, string | null>();
 
 /**
- * Who reads the whole book: signed-in readers of a free book, admins, and the book's author.
- * Buyers join them once real payments record purchases (TASK-0002, Discovery J); until then
- * everyone else, signed in or not, gets the preview.
+ * Who reads the whole book: signed-in readers of a free book, admins, the book's author, and its
+ * buyers (TASK-0004). Everyone else, signed in or not, gets the preview.
  */
 async function readerAccess(id: string, who: Identity | undefined, price: number | undefined): Promise<'full' | 'preview'> {
   if (!who) return 'preview';
   if (who.role === 'admin' || price === 0) return 'full';
+  // A purchases outage (or the table not created yet) shows the preview rather than an error.
+  if (await hasPurchase(who.id, id).catch((err) => { logger.warn({ err }, 'Purchase lookup failed'); return false; })) return 'full';
   if (!authors.has(id)) authors.set(id, (await submissionForBook(id))?.owner_id ?? null);
   return authors.get(id) === who.id ? 'full' : 'preview';
 }

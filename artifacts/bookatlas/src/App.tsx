@@ -29,6 +29,7 @@ import { EbookPublishing } from './components/ebook/EbookPublishing';
 import { safeReaderReturnPath } from './auth/navigation';
 import { TRANSLATIONS } from './data/translations';
 import { INITIAL_BOOKS } from './data/booksData';
+import { usePayments } from './components/checkout/usePayments';
 
 import { Book, CartItem, UserLibraryItem, FilterOptions, SubscriberTier } from './types';
 import { 
@@ -394,6 +395,62 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
     });
   };
 
+  // Payments (TASK-0004): the books this account bought, and the return from Stripe Checkout.
+  const payments = usePayments();
+  const [ownedBookIds, setOwnedBookIds] = useState<string[]>([]);
+  const [checkoutNotice, setCheckoutNotice] = useState<{ tone: 'ok' | 'info' | 'error'; text: string } | null>(null);
+  const booksRef = useRef(books);
+  booksRef.current = books;
+  useEffect(() => {
+    if (!account) { setOwnedBookIds([]); return; }
+    payments.purchases().then(setOwnedBookIds).catch(() => undefined);
+  }, [account?.id]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const outcome = params.get('checkout');
+    if (!outcome) return;
+    const clearParams = () => {
+      params.delete('checkout'); params.delete('session_id');
+      window.history.replaceState(null, '', `${window.location.pathname}${params.size ? `?${params}` : ''}${window.location.hash}`);
+    };
+    if (outcome === 'cancelled') { setCheckoutNotice({ tone: 'info', text: 'Checkout cancelled. You have not been charged.' }); clearParams(); return; }
+    const sessionId = params.get('session_id');
+    if (outcome !== 'success' || !sessionId || !account) return;
+    let cancelled = false;
+    setCheckoutNotice({ tone: 'info', text: 'Confirming your payment…' });
+    (async () => {
+      // Card payments confirm at once; some methods take a few seconds.
+      for (let attempt = 0; attempt < 15 && !cancelled; attempt += 1) {
+        try {
+          const result = await payments.status(sessionId);
+          // The catalogue may still be loading; wait for the bought books to appear in it.
+          const bought = booksRef.current.filter((b) => result.bookIds.includes(b.id));
+          if (result.paid && (bought.length === result.bookIds.length || attempt >= 5)) {
+            setOwnedBookIds((ids) => [...new Set([...ids, ...result.bookIds])]);
+            setCart((prev) => prev.filter((item) => !result.bookIds.includes(item.book.id)));
+            setLibrary((prev) => [
+              ...bought.filter((b) => !prev.some((i) => i.book.id === b.id)).map((book): UserLibraryItem => ({
+                book, format: 'ebook', progressPercent: 0, currentChapterIndex: 0, currentParagraphIndex: 0,
+                lastReadTimestamp: Date.now(), highlights: [], bookmarks: [],
+              })),
+              ...prev,
+            ]);
+            setCheckoutNotice({ tone: 'ok', text: `Payment received, thank you. ${bought.length === 1 ? `"${bought[0]!.title}" is` : 'Your books are'} in your library, ready to read.` });
+            clearParams();
+            return;
+          }
+          if (!result.paid && !result.pending) break;
+        } catch { /* retry */ }
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      if (!cancelled) {
+        setCheckoutNotice({ tone: 'error', text: 'We could not confirm your payment yet. If you were charged, your books appear in your library within a few minutes; otherwise nothing was charged.' });
+        clearParams();
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [account?.id]);
+
   const requestCheckout = () => {
     if (!account) {
       const returnTo = normalizeCartReturn('/user-portal?resume=checkout');
@@ -479,6 +536,15 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] text-[#1c1d1f] flex flex-col antialiased">
+      {checkoutNotice && (
+        <div role="status" className={`fixed top-4 left-1/2 z-[90] w-[min(36rem,calc(100%-2rem))] -translate-x-1/2 rounded-xl border px-4 py-3 text-sm shadow-lg flex items-start gap-3 ${
+          checkoutNotice.tone === 'ok' ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
+            : checkoutNotice.tone === 'error' ? 'border-amber-200 bg-amber-50 text-amber-950' : 'border-slate-200 bg-white text-slate-800'
+        }`}>
+          <p className="flex-1">{checkoutNotice.text}</p>
+          <button onClick={() => setCheckoutNotice(null)} className="text-xs font-semibold opacity-70 hover:opacity-100 cursor-pointer" aria-label="Dismiss">Close</button>
+        </div>
+      )}
       
       {/* Top Header */}
       <Header
@@ -1034,6 +1100,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
         onToggleWishlist={handleToggleWishlist}
         onPlayAudioSample={(b) => setActiveAudiobook(b)}
         isWishlisted={selectedBookForDetail ? wishlist.some((w) => w.id === selectedBookForDetail.id) : false}
+        owned={selectedBookForDetail ? ownedBookIds.includes(selectedBookForDetail.id) : false}
         currencySymbol={currencySymbol}
         hasAiAccess={hasAiAccess}
         onRequireAiAccess={requireAiAccess}

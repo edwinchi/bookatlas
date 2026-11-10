@@ -46,6 +46,8 @@ app.use(
     { prefix: "/api/gemini", limit: 30 },
     { prefix: "/api/ebook-submissions", limit: 240 },
     { prefix: "/api/internal/ebook-checks", limit: 120 },
+    { prefix: "/api/checkout", limit: 30 },
+    { prefix: "/api/stripe/webhook", limit: 600 },
   ]),
 );
 // Without a secret key Clerk throws on every request, taking the public catalog down with it.

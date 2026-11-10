@@ -1,6 +1,6 @@
 export type Identity = { id: string; email: string; name: string; role: 'reader' | 'admin' };
 
-const publicGets = new Set(['/api/health', '/api/healthz', '/api/books', '/api/categories']);
+const publicGets = new Set(['/api/health', '/api/healthz', '/api/books', '/api/categories', '/api/payments/config']);
 const selfService = new Set(['/api/subscribers/unsubscribe-info', '/api/subscribers/unsubscribe']);
 const accountPaths = new Set(['/api/auth/me', '/api/users/register', '/api/account/membership', '/api/account', '/api/account/export']);
 
@@ -23,6 +23,11 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (/^\/api\/ebook-submissions\/[^/]+\/cover$/.test(normalized) && ['PUT', 'DELETE'].includes(method)) return 'reader';
   if (/^\/api\/ebook-submissions\/[^/]+\/cover\/enlarge$/.test(normalized) && method === 'POST') return 'reader';
   if (/^\/api\/ebook-submissions\/[^/]+\/files\/(?:epub|cover)(?:\/parts\/\d+)?$/.test(normalized) && method === 'GET') return 'reader';
+  // Payments (TASK-0004): Stripe signs its webhook; buyers are signed-in readers.
+  if (normalized === '/api/stripe/webhook' && method === 'POST') return 'self-service';
+  if (normalized === '/api/checkout/sessions' && method === 'POST') return 'reader';
+  if (/^\/api\/checkout\/sessions\/[^/]+$/.test(normalized) && method === 'GET') return 'reader';
+  if (normalized === '/api/purchases' && method === 'GET') return 'reader';
   // The EPUBCheck worker authenticates with its bearer token inside the route.
   if (/^\/api\/internal\/ebook-checks\/(?:claim|[^/]+\/(?:parts\/\d+|result))$/.test(normalized)) return 'self-service';
   if ((method === 'GET' && normalized.endsWith('/unsubscribe-info')) ||
