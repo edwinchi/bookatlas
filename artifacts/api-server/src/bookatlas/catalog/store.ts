@@ -52,7 +52,7 @@ export interface CatalogStore {
 const pageOf = (query: CatalogQuery) => ({ page: query.page ?? 1, limit: query.limit ?? PAGE_SIZE });
 
 /** The local stack and tests: the in-memory catalogue the server already keeps. */
-export function memoryCatalog(books: () => Book[]): CatalogStore {
+export function memoryCatalog(books: () => Book[], save: (books: Book[]) => void = () => undefined): CatalogStore {
   return {
     async search(query) {
       const { page, limit } = pageOf(query);
@@ -71,7 +71,7 @@ export function memoryCatalog(books: () => Book[]): CatalogStore {
       const all = books();
       return { total: all.length, categories: count(all.flatMap(genresOf)), languages: count(all.map((b) => b.language)), formats: count(all.map((b) => b.format)) };
     },
-    async upsert() { /* the server's in-memory catalogue is already updated */ },
+    async upsert(list) { save(list); },
     async remove() { /* as above */ },
   };
 }

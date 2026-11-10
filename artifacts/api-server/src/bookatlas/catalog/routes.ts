@@ -1,7 +1,8 @@
-import type { Express, Request, Response } from 'express';
+import express, { type Express, type Request, type Response } from 'express';
 import { SHELVES, parseCatalogQuery, type ShelfId } from '@workspace/bookatlas-catalog/query';
 import { logger } from '../../lib/logger.js';
 import { CatalogError, type CatalogStore } from './store.js';
+import { feedToBooks } from './feeds.js';
 
 /** Public catalogue answers are the same for everyone, so Vercel's edge caches them. */
 const edgeCache = (res: Response, seconds: number) =>
@@ -22,7 +23,19 @@ function guarded(handler: (req: Request, res: Response) => Promise<void>) {
 const queryOf = (req: Request) => parseCatalogQuery(new URLSearchParams(req.url.split('?')[1] ?? ''));
 
 /** The scalable catalogue (TASK-0005): every list is a small, indexed, cached page. */
-export function mountCatalog(app: Express, catalog: CatalogStore) {
+export function mountCatalog(app: Express, catalog: CatalogStore, knownCategories: () => string[]) {
+  // Distributor feeds (admin; the access policy defaults to admin). One part of at most 4 MB per request.
+  const feed = express.text({ type: ['text/csv', 'text/plain', 'application/xml', 'text/xml'], limit: '4mb' });
+  app.post('/api/admin/catalog/import', feed, guarded(async (req, res) => {
+    const kind = req.query.format === 'onix' ? 'onix' : req.query.format === 'csv' ? 'csv' : null;
+    if (!kind) throw new CatalogError('Choose format=csv or format=onix.', 400);
+    if (typeof req.body !== 'string' || !req.body.trim()) throw new CatalogError('Send the feed as text/csv or application/xml.', 415);
+    const { books, errors } = feedToBooks(kind, req.body, new Set(knownCategories()));
+    if (books.length) await catalog.upsert(books);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ imported: books.length, errors: errors.slice(0, 100), moreErrors: Math.max(0, errors.length - 100) });
+  }));
+
   app.get('/api/catalog/search', guarded(async (req, res) => {
     edgeCache(res, 60);
     res.json(await catalog.search(queryOf(req)));

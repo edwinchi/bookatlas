@@ -106,7 +106,7 @@ export const BookCard: React.FC<BookCardProps> = ({
             </button>
           )}
 
-          {!book.isSample && <button
+          {!book.isSample && book.availability !== 'listed' && <button
             onClick={(e) => {
               e.stopPropagation();
               onAddToCart(book);
@@ -181,7 +181,7 @@ export const BookCard: React.FC<BookCardProps> = ({
           <div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-base font-extrabold text-slate-950">
-                {book.isSample ? <span className="text-xs font-semibold text-slate-500">Not for sale</span> : book.price === 0 ? 'Free' : `${currencySymbol}${book.price.toFixed(2)}`}
+                {book.isSample ? <span className="text-xs font-semibold text-slate-500">Not for sale</span> : book.availability === 'listed' ? <span className="text-xs font-semibold text-indigo-700">Coming soon</span> : book.price === 0 ? 'Free' : `${currencySymbol}${book.price.toFixed(2)}`}
               </span>
               {book.originalPrice > book.price && !book.isSample && (
                 <span className="text-xs text-slate-400 line-through">
@@ -196,7 +196,7 @@ export const BookCard: React.FC<BookCardProps> = ({
             )}
           </div>
 
-          {!book.isSample && <button
+          {!book.isSample && book.availability !== 'listed' && <button
             onClick={() => onAddToCart(book)}
             className="p-1.5 text-slate-700 hover:text-white hover:bg-indigo-600 rounded-lg transition-colors border border-slate-200 hover:border-indigo-600 cursor-pointer"
             title="Add to Cart"

@@ -56,3 +56,19 @@ test('categories, shelves and book pages come from the catalogue', async () => {
   assert.equal((await fetch('/api/catalog/books/nope-not-a-book')).status, 404);
   assert.equal((await fetch('/api/catalog/books/%3Cscript%3E')).status, 404);
 });
+
+test('a distributor feed is imported in parts and its titles are searchable, listed but not sold', async () => {
+  const { fetch } = await getSharedTestServer();
+  const csv = 'isbn,title,author,price,categories\n9780306406157,Feedwave Chronicles,Ada Writer,6.5,FIC028000\n123,Broken Row,Nobody,1,\n';
+  const res = await fetch('/api/admin/catalog/import?format=csv', { method: 'POST', headers: { 'content-type': 'text/csv', 'x-test-role': 'admin' }, body: csv });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.imported, 1);
+  assert.equal(body.errors.length, 1);
+  assert.equal((await fetch('/api/admin/catalog/import?format=pdf', { method: 'POST', headers: { 'content-type': 'text/csv', 'x-test-role': 'admin' }, body: csv })).status, 400);
+
+  const found = await search(fetch, 'q=feedwave&genre=Sci-Fi%20%26%20Fantasy');
+  const book = found.body.books.find((b) => b.id === 'isbn-9780306406157') as Card & { availability?: string };
+  assert.ok(book, 'searchable in its mapped category');
+  assert.equal(book.availability, 'listed');
+});

@@ -358,6 +358,10 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
       setCheckoutNotice({ tone: 'info', text: `"${book.title}" is a sample title to show what BookAtlas offers. It is not for sale.` });
       return;
     }
+    if (book.availability === 'listed') {
+      setCheckoutNotice({ tone: 'info', text: `"${book.title}" is coming soon to BookAtlas. Add it to your wishlist and we will show it in your library when it is available.` });
+      return;
+    }
     setCart((prev) => {
       const existing = prev.find((item) => item.book.id === book.id && item.format === format);
       if (existing) return prev;

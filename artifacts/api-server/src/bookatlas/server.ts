@@ -446,8 +446,13 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
   }
 
   // Storefront reads go to the catalogue store: Postgres in production, this process's memory locally.
-  const catalog = bookatlasDb ? postgresCatalog(bookatlasDb) : memoryCatalog(() => liveCatalog);
-  mountCatalog(app, catalog);
+  const catalog = bookatlasDb ? postgresCatalog(bookatlasDb) : memoryCatalog(() => liveCatalog, (books) => {
+    for (const book of books) {
+      const existing = liveCatalog.findIndex((item: { id: string }) => item.id === book.id);
+      if (existing >= 0) liveCatalog[existing] = book; else liveCatalog.push(book);
+    }
+  });
+  mountCatalog(app, catalog, () => [...GENRES.filter((g: string) => g !== 'All Genres'), ...customCategories]);
   // Before the JSON parser: the Stripe webhook is verified against its raw body.
   mountPayments(app, (bookId) => catalog.get(bookId), APP_URL);
   app.use(express.json({ limit: '50mb' }));

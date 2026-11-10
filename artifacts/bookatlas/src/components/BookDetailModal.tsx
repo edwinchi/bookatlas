@@ -224,6 +224,9 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                   {book.isSample && (
                     <span className="bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wide">Sample title · not for sale</span>
                   )}
+                  {book.availability === 'listed' && (
+                    <span className="bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wide">Coming soon to BookAtlas</span>
+                  )}
                   {prepared && book.isNewRelease && (
                     <span className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wide">New release</span>
                   )}

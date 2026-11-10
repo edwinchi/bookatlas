@@ -5,6 +5,7 @@ import { useAccount } from '../../auth/AuthContext';
 import { EbookApiError, saveBlob, useEbookApi, type FeedbackOverview, type Submission } from './ebookApi';
 import { SubmissionForm } from './SubmissionForm';
 import { SubmissionCard } from './SubmissionCard';
+import { FeedImport } from './FeedImport';
 import { PrintCalculator } from './PrintCalculator';
 
 const Checklist: React.FC<{ items: Requirement[] }> = ({ items }) => (
@@ -186,6 +187,7 @@ export const EbookPublishing: React.FC = () => {
             </section>
           )}
           {isAdmin && <StoreFeedback api={api} />}
+          {isAdmin && <FeedImport />}
         </aside>
       </div>
     </div>
