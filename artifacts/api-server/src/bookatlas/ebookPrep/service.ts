@@ -5,6 +5,7 @@ import { MAX_UPLOAD_BYTES, PrepError } from './archive.js';
 import { matchStoreMessage, prepareEpub, type PrepReport } from './engine.js';
 import { decodeImage, imageSize } from './images.js';
 import { hasPurchase } from '../payments/purchases.js';
+import { readinessPackage, type ReadinessPackage } from './readiness.js';
 import { logger } from '../../lib/logger.js';
 import { RULES, type EpubcheckMessage } from './rules.js';
 import { previewChapters, readerContent, sampleChapters, type ReaderContent } from './content.js';
@@ -223,6 +224,22 @@ export async function setPrintLinks(
     }
   }
   return saved;
+}
+
+const readinessCache = new Map<string, ReadinessPackage>();
+
+/** The KDP and Lulu readiness package for a prepared submission (cached per prepared file and details). */
+export async function readinessFor(who: Identity, id: string) {
+  const row = owned(await loadSubmission(id), who);
+  if (!row.data.prepared) throw new PrepError('The book has not been prepared yet.', 409);
+  const key = `${row.data.prepared.sha256}:${JSON.stringify(row.data.intake)}`;
+  const cached = readinessCache.get(key);
+  if (cached) return cached;
+  const epub = await getFile(preparedKey(id), row.data.prepared);
+  const pkg = readinessPackage(row.data.intake, row.data.report ?? null, readerContent(epub, row.data.intake.title).chapters);
+  if (readinessCache.size > 20) readinessCache.delete(readinessCache.keys().next().value!);
+  readinessCache.set(key, pkg);
+  return pkg;
 }
 
 export async function submissionFile(who: Identity, id: string, file: 'epub' | 'cover', part?: number) {

@@ -7,7 +7,7 @@ import { PART_BYTES } from './store.js';
 import type { EpubcheckMessage } from './rules.js';
 import {
   bookCover, bookImage, checkPart, claimCheck, feedbackOverview, getFor, listFor, prepareSubmission,
-  publishSubmission, readableContent, recordCheck, recordFeedback, rejectSubmission, restartUpload, setCoverFix, setPrice, setPrintLinks, startNewVersion, startSubmission, submissionFile, updateIntake,
+  publishSubmission, readableContent, recordCheck, recordFeedback, rejectSubmission, readinessFor, restartUpload, setCoverFix, setPrice, setPrintLinks, startNewVersion, startSubmission, submissionFile, updateIntake,
   uploadPart, view, workerConfigured,
 } from './service.js';
 import { logger } from '../../lib/logger.js';
@@ -114,6 +114,10 @@ export function mountEbookPrep(app: Express, onPublished: (book: Book, categorie
   }));
   app.delete('/api/ebook-submissions/:id/cover', guarded(async (req, res) => {
     res.json(view(await setCoverFix(req.bookatlasIdentity!, submissionId(req), 'original'), req.bookatlasIdentity!));
+  }));
+  app.get('/api/ebook-submissions/:id/readiness', guarded(async (req, res) => {
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json(await readinessFor(req.bookatlasIdentity!, submissionId(req)));
   }));
   app.put('/api/ebook-submissions/:id/price', guarded(async (req, res) => {
     res.json(view(await setPrice(req.bookatlasIdentity!, submissionId(req), req.body?.price, catalog), req.bookatlasIdentity!));

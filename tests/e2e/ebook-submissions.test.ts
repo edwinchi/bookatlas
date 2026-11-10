@@ -51,6 +51,11 @@ test('an author submission is prepared, checked, published and readable', async 
   assert.equal(prepared.report.summary.errors, 0);
   assert.ok(prepared.report.rounds[0].changes.some((c: { rule: string }) => c.rule === 'cover-front-only'));
 
+  const readiness = await (await fetch(`/api/ebook-submissions/${submission.id}/readiness`, as('reader'))).json();
+  assert.ok(readiness.score >= 0 && readiness.score <= 100);
+  assert.ok(readiness.chapters.some((c: { title: string }) => c.title === 'Chapter 1: Welcome'));
+  assert.match(readiness.markdown, /# KDP Metadata Package[\s\S]*# Lulu Upload Checklist|# Lulu Upload Checklist[\s\S]*# KDP Metadata Package/);
+
   // The EPUBCheck worker: token required, then claim, download, report.
   assert.equal((await fetch('/api/internal/ebook-checks/claim', { method: 'POST' })).status, 401);
   const claim = await fetch('/api/internal/ebook-checks/claim', { method: 'POST', headers: { authorization: `Bearer ${WORKER}` } });

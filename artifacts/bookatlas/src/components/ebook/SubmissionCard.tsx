@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { AlertCircle, AlertTriangle, BookCopy, Upload, CheckCircle2, Download, ImageUp, Info, Loader2, Maximize2, Pencil, RotateCcw, Send, XCircle } from 'lucide-react';
-import type { Finding, Submission, SubmissionStatus } from './ebookApi';
+import type { Finding, ReadinessPackage, Submission, SubmissionStatus } from './ebookApi';
+import { ReadinessPanel } from './ReadinessPanel';
 
 const STATUS: Record<SubmissionStatus, { label: string; tone: string; detail: string }> = {
   uploading: { label: 'Uploading', tone: 'bg-slate-100 text-slate-700', detail: 'The upload did not finish. Choose "Upload again" to send the file again.' },
@@ -114,9 +115,10 @@ export const SubmissionCard: React.FC<{
   onCover: (fix: { upload: File } | 'enlarge' | 'original') => Promise<void>;
   onPrintLinks: (links: { amazon?: string; lulu?: string }) => Promise<void>;
   onPrice: (price: number) => Promise<void>;
+  onReadiness: () => Promise<ReadinessPackage>;
   onPublish: () => Promise<void>;
   onReject: (reason: string) => Promise<void>;
-}> = ({ submission: s, isAdmin, onDownload, onEdit, onCover, onPrintLinks, onPrice, onPublish, onReject }) => {
+}> = ({ submission: s, isAdmin, onDownload, onEdit, onCover, onPrintLinks, onPrice, onReadiness, onPublish, onReject }) => {
   const [busy, setBusy] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const status = STATUS[s.status];
@@ -192,6 +194,7 @@ export const SubmissionCard: React.FC<{
         </div>
       )}
 
+      {s.prepared && s.status !== 'uploading' && <ReadinessPanel key={`${s.id}:${s.prepared.sha256 ?? ''}:${s.updatedAt ?? ''}`} title={s.intake.title} load={onReadiness} />}
       {s.status === 'published' && <PriceEditor key={s.intake.price} price={Number(s.intake.price) || 0} onSave={onPrice} />}
       {['ready', 'checking', 'needs_author', 'published'].includes(s.status) && (
         <PrintLinks key={`${s.printLinks?.amazon ?? ''}|${s.printLinks?.lulu ?? ''}`} links={s.printLinks ?? {}} onSave={onPrintLinks} />

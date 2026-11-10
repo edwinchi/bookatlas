@@ -167,5 +167,6 @@ test('access policy for submission, reader and worker routes', () => {
   assert.equal(accessFor('POST', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/new-version'), 'reader');
   assert.equal(accessFor('POST', '/api/admin/catalog/import'), 'admin');
   assert.equal(accessFor('PUT', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/price'), 'reader');
+  assert.equal(accessFor('GET', '/api/ebook-submissions/0f8b8f5e-1111-4222-8333-944455556666/readiness'), 'reader');
   assert.equal(accessFor('GET', '/api/catalog/search'), 'public');
 });

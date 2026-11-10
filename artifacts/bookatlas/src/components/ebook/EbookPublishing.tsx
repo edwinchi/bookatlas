@@ -91,6 +91,13 @@ export const EbookPublishing: React.FC = () => {
     load();
     fetch('/api/categories').then((r) => r.json()).then((d) => setCategories(d.allCategories ?? [])).catch(() => undefined);
   }, [load]);
+  // Coming back to the tab shows the current state (another tab or an admin may have changed it).
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === 'visible') load(); };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); };
+  }, [load]);
   // Validation runs in the background worker; refresh while anything is in flight.
   useEffect(() => {
     if (!submissions?.some((s) => s.status === 'checking' || s.status === 'preparing')) return;
@@ -102,7 +109,11 @@ export const EbookPublishing: React.FC = () => {
   const handle = async (task: () => Promise<Submission>) => {
     setBusy(true); setProblem(null);
     try { replace(await task()); setMode(null); }
-    catch (e) { setProblem(e instanceof EbookApiError ? { message: e.message, fields: e.fields } : { message: 'Something went wrong. Please retry.' }); }
+    catch (e) {
+      setProblem(e instanceof EbookApiError ? { message: e.message, fields: e.fields } : { message: 'Something went wrong. Please retry.' });
+      // A conflict means this page is out of date (for example, the book was published meanwhile).
+      if (e instanceof EbookApiError && e.status === 409) load();
+    }
     finally { setBusy(false); setProgress(null); }
   };
 
@@ -159,6 +170,7 @@ export const EbookPublishing: React.FC = () => {
                     onEdit={() => setMode({ kind: 'edit', submission: s })}
                     onPrintLinks={async (links) => handle(() => api.setPrintLinks(s.id, links))}
                     onPrice={async (price) => handle(() => api.setPrice(s.id, price))}
+                    onReadiness={() => api.readiness(s.id)}
                     onCover={async (fix) => handle(() => fix === 'enlarge' ? api.enlargeCover(s.id)
                       : fix === 'original' ? api.originalCover(s.id) : api.replaceCover(s.id, fix.upload))}
                     onPublish={async () => handle(() => api.publish(s.id))}

@@ -25,6 +25,7 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (/^\/api\/ebook-submissions\/[^/]+\/cover$/.test(normalized) && ['PUT', 'DELETE'].includes(method)) return 'reader';
   if (/^\/api\/ebook-submissions\/[^/]+\/cover\/enlarge$/.test(normalized) && method === 'POST') return 'reader';
   if (/^\/api\/ebook-submissions\/[^/]+\/files\/(?:epub|cover)(?:\/parts\/\d+)?$/.test(normalized) && method === 'GET') return 'reader';
+  if (/^\/api\/ebook-submissions\/[^/]+\/readiness$/.test(normalized) && method === 'GET') return 'reader';
   // Payments (TASK-0004): Stripe signs its webhook; buyers are signed-in readers.
   if (normalized === '/api/stripe/webhook' && method === 'POST') return 'self-service';
   if (normalized === '/api/checkout/sessions' && method === 'POST') return 'reader';

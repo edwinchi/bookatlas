@@ -17,7 +17,7 @@ export interface Submission {
     bytes: { before: number; after: number };
   };
   upload: { fileName: string; size: number; parts: number; purged: boolean } | null;
-  prepared: { size: number; parts: number } | null;
+  prepared: { size: number; parts: number; sha256?: string } | null;
   cover: { size: number; parts: number } | null;
   coverFix: { kind: 'upload'; width: number; height: number } | { kind: 'enlarge' } | null;
   printLinks: { amazon?: string; lulu?: string };
@@ -28,10 +28,29 @@ export interface Submission {
   ownerEmail?: string;
   partBytes: number;
   createdAt: string;
+  updatedAt?: string;
 }
 export interface FeedbackOverview {
   rules: { id: string; title: string; storeRejections: number; blocking: boolean; automaticFix: boolean }[];
   needsNewRule: { id: string; store: string; message: string; created_at: string }[];
+}
+
+type Check = 'ok' | 'review' | 'fix' | 'manual' | 'n/a';
+/** Mirrors the API's readiness package (ebookPrep/readiness.ts). */
+export interface ReadinessPackage {
+  score: number;
+  verdict: string;
+  summary: string;
+  issues: { severity: 'error' | 'warning'; text: string }[];
+  corrections: string[];
+  chapters: { title: string; words: number; paragraphs: number; images: number; editing: Check; formatting: Check; duplication: Check; factCheck: Check; imagesCheck: Check; ready: boolean; notes: string[] }[];
+  kdpEbook: { label: string; status: Check; detail: string }[];
+  kdpPrint: { label: string; status: Check; detail: string }[];
+  lulu: { label: string; status: Check; detail: string }[];
+  metadata: { title: string; subtitle?: string; author: string; contributors: string[]; language: string; categories: string[]; keywords: string[]; isbn: { ebook?: string; print?: string } };
+  description: string;
+  copyright: string;
+  markdown: string;
 }
 
 export class EbookApiError extends Error {
@@ -93,6 +112,7 @@ export function useEbookApi() {
       const image = await coverForUpload(file);
       return (await request(`/api/ebook-submissions/${id}/cover`, { method: 'PUT', headers: { 'Content-Type': image.type }, body: image })).json() as Promise<Submission>;
     },
+    readiness: (id: string) => json<ReadinessPackage>(`/api/ebook-submissions/${id}/readiness`),
     setPrice: (id: string, price: number) => json<Submission>(`/api/ebook-submissions/${id}/price`, 'PUT', { price }),
     setPrintLinks: (id: string, links: { amazon?: string; lulu?: string }) => json<Submission>(`/api/ebook-submissions/${id}/print-links`, 'PUT', links),
     enlargeCover: (id: string) => json<Submission>(`/api/ebook-submissions/${id}/cover/enlarge`, 'POST', {}),
