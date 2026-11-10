@@ -1,13 +1,16 @@
 import React from 'react';
-import { Filter, Star, Sparkles, Tag, Check, Headphones, BookOpen, Globe, Compass, Layers } from 'lucide-react';
+import { Filter, Star, Sparkles, Tag, Check, Headphones, BookOpen, X } from 'lucide-react';
 import { FilterOptions } from '../types';
-import { GENRES, AFRICAN_LITERATURE_GENRES, CONSCIOUSNESS_COMMUNITY_GENRES, GENERAL_GENRES } from '../data/booksData';
+import { CategoryBrowser } from './CategoryBrowser';
 
 interface FilterSidebarProps {
   filters: FilterOptions;
   setFilters: React.Dispatch<React.SetStateAction<FilterOptions>>;
   totalResults: number;
   languages: string[];
+  /** Titles per category from the catalogue (TASK-0005); null while loading. */
+  categoryCounts?: Record<string, number> | null;
+  catalogTotal?: number | null;
 }
 
 export const FilterSidebar: React.FC<FilterSidebarProps> = ({
@@ -15,6 +18,8 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
   setFilters,
   totalResults,
   languages,
+  categoryCounts,
+  catalogTotal,
 }) => {
   const handleGenreChange = (g: string) => {
     setFilters((prev) => ({ ...prev, genre: g }));
@@ -52,14 +57,14 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     filters.bookatlasPlusOnly || Boolean(filters.searchQuery.trim()) || Boolean(filters.language && filters.language !== 'all');
 
   return (
-    <aside className="w-full bg-white rounded-xl border border-gray-200 p-5 shadow-xs space-y-6">
+    <aside className="w-full bg-white rounded-xl border border-gray-200 p-5 shadow-xs space-y-6 lg:sticky lg:top-28 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:overscroll-contain [scrollbar-width:thin]">
       {/* Header with clear button */}
       <div className="flex items-center justify-between pb-3 border-b border-gray-100">
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-gray-700" />
           <h2 className="text-base font-bold text-gray-900">Filters</h2>
-          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
-            {totalResults} titles
+          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium tabular-nums">
+            {totalResults.toLocaleString()} titles
           </span>
         </div>
         {hasActiveFilters && (
@@ -71,6 +76,25 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
           </button>
         )}
       </div>
+
+      {hasActiveFilters && (
+        <div className="-mt-2 flex flex-wrap gap-1.5" aria-label="Active filters">
+          {[
+            filters.searchQuery.trim() && { key: 'q', label: `“${filters.searchQuery.trim()}”`, clear: () => setFilters((p) => ({ ...p, searchQuery: '' })) },
+            filters.genre !== 'All Genres' && { key: 'genre', label: filters.genre, clear: () => handleGenreChange('All Genres') },
+            filters.format !== 'all' && { key: 'format', label: filters.format === 'ebook' ? 'eBook' : 'Audio', clear: () => handleFormatChange('all') },
+            filters.priceCategory !== 'all' && { key: 'price', label: { free: 'Free', under5: 'Under 5', under10: 'Under 10', deals: 'Deals' }[filters.priceCategory as 'free'], clear: () => handlePriceChange('all') },
+            filters.minRating > 0 && { key: 'rating', label: `${filters.minRating}★ & up`, clear: () => handleRatingChange(filters.minRating) },
+            filters.bookatlasPlusOnly && { key: 'plus', label: 'Plus only', clear: () => setFilters((p) => ({ ...p, bookatlasPlusOnly: false })) },
+            filters.language && filters.language !== 'all' && { key: 'lang', label: filters.language, clear: () => setFilters((p) => ({ ...p, language: 'all' })) },
+          ].filter((chip): chip is { key: string; label: string; clear: () => void } => Boolean(chip)).map((chip) => (
+            <button key={chip.key} type="button" onClick={chip.clear} aria-label={`Remove filter ${chip.label}`}
+              className="inline-flex max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 py-0.5 pl-2.5 pr-1.5 text-[11px] font-semibold text-slate-700 transition hover:border-[#bf0000]/30 hover:bg-[#bf0000]/5 hover:text-[#8f0000] cursor-pointer">
+              <span className="truncate">{chip.label}</span><X className="h-3 w-3 shrink-0" aria-hidden />
+            </button>
+          ))}
+        </div>
+      )}
 
       <label className="block text-sm font-semibold text-slate-900">
         Language
@@ -174,98 +198,8 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
         </div>
       </div>
 
-      {/* Genres List */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">Categories & Genres</h3>
-          {filters.genre !== 'All Genres' && (
-            <button
-              onClick={() => handleGenreChange('All Genres')}
-              className="text-[11px] text-[#bf0000] hover:underline font-semibold cursor-pointer"
-            >
-              Reset
-            </button>
-          )}
-        </div>
-        
-        <div className="space-y-1 max-h-72 overflow-y-auto pr-1 text-sm">
-          {/* All Genres */}
-          <button
-            onClick={() => handleGenreChange('All Genres')}
-            className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs sm:text-sm transition-colors cursor-pointer flex items-center justify-between ${
-              filters.genre === 'All Genres'
-                ? 'bg-[#bf0000]/10 text-[#bf0000] font-bold'
-                : 'text-gray-700 hover:bg-gray-50 hover:text-gray-950 font-medium'
-            }`}
-          >
-            <span>✨ All Categories</span>
-            {filters.genre === 'All Genres' && <span className="w-1.5 h-1.5 rounded-full bg-[#bf0000]"></span>}
-          </button>
-
-          {/* African Literature Group */}
-          <div className="pt-2">
-            <div className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 rounded flex items-center gap-1 mb-1">
-              <span>🌍</span> African Literature & Diaspora
-            </div>
-            {AFRICAN_LITERATURE_GENRES.map((g) => (
-              <button
-                key={g}
-                onClick={() => handleGenreChange(g)}
-                className={`w-full text-left px-2 py-1 rounded-md text-xs transition-colors cursor-pointer flex items-center justify-between ${
-                  filters.genre === g
-                    ? 'bg-amber-100 text-amber-950 font-bold'
-                    : 'text-gray-700 hover:bg-amber-50/60 hover:text-gray-950'
-                }`}
-              >
-                <span className="truncate">{g}</span>
-                {filters.genre === g && <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>}
-              </button>
-            ))}
-          </div>
-
-          {/* Consciousness Group */}
-          <div className="pt-2">
-            <div className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 rounded flex items-center gap-1 mb-1">
-              <span>👁️</span> Consciousness & Sacred Sciences
-            </div>
-            {CONSCIOUSNESS_COMMUNITY_GENRES.map((g) => (
-              <button
-                key={g}
-                onClick={() => handleGenreChange(g)}
-                className={`w-full text-left px-2 py-1 rounded-md text-xs transition-colors cursor-pointer flex items-center justify-between ${
-                  filters.genre === g
-                    ? 'bg-emerald-100 text-emerald-950 font-bold'
-                    : 'text-gray-700 hover:bg-emerald-50/60 hover:text-gray-950'
-                }`}
-              >
-                <span className="truncate">{g}</span>
-                {filters.genre === g && <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>}
-              </button>
-            ))}
-          </div>
-
-          {/* General Genres Group */}
-          <div className="pt-2">
-            <div className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 bg-slate-100 rounded flex items-center gap-1 mb-1">
-              <span>📚</span> General & Classics
-            </div>
-            {GENERAL_GENRES.map((g) => (
-              <button
-                key={g}
-                onClick={() => handleGenreChange(g)}
-                className={`w-full text-left px-2 py-1 rounded-md text-xs transition-colors cursor-pointer flex items-center justify-between ${
-                  filters.genre === g
-                    ? 'bg-[#bf0000]/10 text-[#bf0000] font-bold'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-950'
-                }`}
-              >
-                <span className="truncate">{g}</span>
-                {filters.genre === g && <span className="w-1.5 h-1.5 rounded-full bg-[#bf0000]"></span>}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* Categories: grouped, searchable, with live counts */}
+      <CategoryBrowser value={filters.genre} onChange={handleGenreChange} counts={categoryCounts ?? null} total={catalogTotal ?? null} />
 
       {/* Star Rating Filter */}
       <div className="space-y-2 pt-2 border-t border-gray-100">

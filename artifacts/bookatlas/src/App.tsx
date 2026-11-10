@@ -909,6 +909,8 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                   setFilters={setFilters}
                   totalResults={catalogPage.total}
                   languages={(facets?.languages ?? []).map((l) => l.name).sort()}
+                  categoryCounts={facets ? Object.fromEntries(facets.categories.map((c) => [c.name, c.count])) : null}
+                  catalogTotal={facets?.total ?? null}
                 />
               </div>
 

@@ -13,7 +13,8 @@ export type StripeClient = {
 let client: StripeClient | null = null;
 export function setStripeClient(next: StripeClient | null) { client = next; }
 
-export const paymentsConfigured = () => !!process.env.STRIPE_SECRET_KEY?.trim() || !!client;
+/** Live only with both the key and the webhook secret: a paid order must always be fulfilled. */
+export const paymentsConfigured = () => !!client || (!!process.env.STRIPE_SECRET_KEY?.trim() && !!process.env.STRIPE_WEBHOOK_SECRET?.trim());
 /** Stripe Tax stays off until the owner has added the tax registrations in Stripe (STRIPE_TAX=on). */
 const taxEnabled = () => process.env.STRIPE_TAX?.trim() === 'on';
 /** iDEAL charges in euros only; Adaptive Pricing in Stripe shows other buyers their own currency. */

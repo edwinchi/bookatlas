@@ -6,7 +6,7 @@
 | Source brief | Owner, 2026-11-10: "build this site to hold at least 1.5M titles ebook and audio and to run super fast"; then "make this even more professional … especially the category section" |
 | Priority | High |
 | Approval level | **2** (architecture, schema), approved 2026-11-10. Production schema change, data writes and deploys are **3** |
-| Status | ⏳ Phase 1 (store, API, storefront) built and tested; waiting for the production schema |
+| Status | ⏳ Live; category section built; distributor import and admin studio next |
 | Last updated | 2026-11-10 |
 
 ## Owner decisions (2026-11-10)
@@ -43,7 +43,10 @@ The server loaded every book into memory and sent all of them to every browser, 
 | Tests | ✅ `tests/e2e/catalog-search.test.ts` (search with accents, filters, sort, paging without overlap, page cap, facets, shelves, book page, cache headers). `pnpm test:unit` 106/106, `pnpm test:e2e` 190/190 |
 | Load test at 1.5M titles (Postgres 16 + PostgREST v12, the production store code, 3.7 GB table) | ✅ see Load test |
 | Phase 2: distributor feed import (ONIX 3.0 / CSV), batch upsert | ⬜ |
-| Phase 3: category section redesign on facets; admin studio on the store | ⬜ |
+| Category section redesign (`CategoryBrowser`) on live counts | ✅ Grouped and collapsible, "Find a category" search, live title counts, active accent bar, categories without titles folded under "Show more", removable active-filter chips, sticky sidebar on desktop. Browser 12/12 on the local stack |
+| Production deploy of the catalogue | ✅ 2026-11-10 `bookatlas-36gskpioc` (`0d3ba93`, owner sign-off); database update run by the owner, the three live books re-saved; live search, facets, shelves and book page verified, edge cache HIT on repeat |
+| Vercel function region next to Supabase | ⏳ Function runs in `iad1`; first requests take about 1 s because every database call crosses the Atlantic. Waiting for the owner to confirm the Supabase region |
+| Phase 3: admin studio on the store | ⬜ |
 
 ## Load test (2026-11-10)
 
