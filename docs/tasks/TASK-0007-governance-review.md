@@ -20,6 +20,8 @@
 | 9 Performance | Not measured at scale | 1.5M-title load test in [TASK-0005](TASK-0005-catalogue-at-scale.md); lighter reader images in [TASK-0003](TASK-0003-ebook-preparation-pipeline.md) |
 | 11 Resilience | Stale browser caches replayed API answers | Service worker v6 ([TASK-0004](TASK-0004-stripe-payments.md) incident) |
 
+Deployed `bookatlas-10bybel4r` (`13b46ed`): `/api/healthz/ready` live with database 104 ms, category counts and payments ok; security 5/5, browser 14/14 (accessibility included).
+
 ## Remaining (needs the owner)
 
 | Item | Why it cannot be done from the repository |
