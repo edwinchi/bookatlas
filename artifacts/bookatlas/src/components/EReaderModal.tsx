@@ -204,21 +204,62 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     };
   }, []);
 
+  // Listening: the device voice reads sentence by sentence (browsers cut off long utterances),
+  // follows the text with a highlight and carries on into the next chapter until the book ends.
+  const [spokenParagraph, setSpokenParagraph] = useState<number | null>(null);
+  const speechRun = useRef(0);
+  const speechChapter = useRef<number | null>(null);
+  const chaptersRef = useRef<Chapter[]>([]);
+  chaptersRef.current = chapters;
+  const SPEECH_LANG: Record<string, string> = { English: 'en', Dutch: 'nl', French: 'fr', German: 'de', Spanish: 'es', Portuguese: 'pt', Swahili: 'sw', Yoruba: 'yo', Hausa: 'ha', Zulu: 'zu', Amharic: 'am', Arabic: 'ar' };
+
+  const stopSpeech = () => {
+    speechRun.current += 1;
+    speechChapter.current = null;
+    synthRef.current?.cancel();
+    setIsSpeaking(false);
+    setSpokenParagraph(null);
+  };
+
+  const speakFrom = (chapterIdx: number, paragraphIdx: number) => {
+    const synth = synthRef.current;
+    if (!synth) return;
+    synth.cancel();
+    const run = ++speechRun.current;
+    const sentences = (text: string) => text.match(/[^.!?…]+[.!?…]+["'”’)]*\s*|[^.!?…]+$/g)?.map((s) => s.trim()).filter(Boolean) ?? [text];
+    const step = (c: number, p: number) => {
+      if (run !== speechRun.current) return;
+      const list = chaptersRef.current;
+      const chapter = list[c];
+      if (!chapter) { stopSpeech(); return; }
+      if (p >= chapter.content.length) {
+        if (c + 1 < list.length) step(c + 1, 0); else stopSpeech();
+        return;
+      }
+      if (speechChapter.current !== c) { speechChapter.current = c; setCurrentChapterIndex(c); }
+      setSpokenParagraph(p);
+      setCurrentParagraphIndex(p);
+      const parts = sentences(chapter.content[p] ?? '');
+      const say = (i: number) => {
+        if (run !== speechRun.current) return;
+        if (i >= parts.length) { step(c, p + 1); return; }
+        const utterance = new SpeechSynthesisUtterance(parts[i]!);
+        utterance.rate = 0.95;
+        utterance.lang = SPEECH_LANG[book.language] ?? 'en';
+        utterance.onend = () => say(i + 1);
+        utterance.onerror = (e) => { if (e.error !== 'interrupted' && e.error !== 'canceled') stopSpeech(); };
+        synth.speak(utterance);
+      };
+      say(0);
+    };
+    setIsSpeaking(true);
+    step(chapterIdx, paragraphIdx);
+  };
+
   const toggleSpeech = () => {
     if (!synthRef.current) return;
-
-    if (isSpeaking) {
-      synthRef.current.cancel();
-      setIsSpeaking(false);
-    } else {
-      const textToRead = currentChapter.content.join(' ');
-      const utterance = new SpeechSynthesisUtterance(textToRead);
-      utterance.rate = 0.95;
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-      synthRef.current.speak(utterance);
-      setIsSpeaking(true);
-    }
+    if (isSpeaking) stopSpeech();
+    else speakFrom(currentChapterIndex, 0);
   };
 
   // Run AI Copilot
@@ -451,6 +492,15 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentChapterIndex, chapters.length, showSettings, showToc, showAICopilot]);
+
+  // Turning the page yourself stops the voice; listening turns pages on its own.
+  useEffect(() => {
+    if (isSpeaking && speechChapter.current !== null && currentChapterIndex !== speechChapter.current) stopSpeech();
+  }, [currentChapterIndex]);
+  useEffect(() => {
+    if (spokenParagraph === null) return;
+    document.querySelector(`[data-para="${spokenParagraph}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [spokenParagraph, currentChapterIndex]);
 
   const nextPage = () => {
     if (currentChapterIndex < chapters.length - 1) {
@@ -705,12 +755,12 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                 {currentChapter.subtitle}
               </p>
             )}
-            {inPreview && (
+            {(book.hasReaderContent || isSpeaking) && (
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
-                <span className="px-2.5 py-1 rounded-full border border-current/20 opacity-80">Free preview for everyone</span>
-                <button onClick={toggleSpeech} className="px-3 py-1 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors">
+                {inPreview && <span className="px-2.5 py-1 rounded-full border border-current/20 opacity-80">Free preview for everyone</span>}
+                <button onClick={toggleSpeech} aria-pressed={isSpeaking} className="px-3 py-1 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors">
                   {isSpeaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                  {isSpeaking ? 'Stop listening' : 'Listen to this chapter'}
+                  {isSpeaking ? 'Stop listening' : inPreview ? 'Listen to the preview' : 'Listen to the book'}
                 </button>
               </div>
             )}
@@ -750,10 +800,12 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                 <React.Fragment key={pIdx}>
                 {figures}
                 <p
+                  data-para={pIdx}
                   onClick={() => handleParagraphClick(pIdx, paragraph)}
                   className={`relative transition-all cursor-text ${
                     activeHighlightMode ? 'hover:bg-amber-100/30 cursor-pointer p-1 rounded-sm' : ''
-                  } ${highlightBg}`}
+                  } ${highlightBg} ${spokenParagraph === pIdx ? 'rounded-md bg-indigo-500/10 ring-1 ring-indigo-500/30' : ''}`}
+                  aria-current={spokenParagraph === pIdx ? 'true' : undefined}
                 >
                   {pIdx === 0 && (
                     <span className="float-left text-4xl sm:text-5xl font-bold font-serif mr-2 leading-none">

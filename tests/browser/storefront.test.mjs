@@ -142,6 +142,35 @@ test('the storefront has no serious or critical accessibility violations (WCAG 2
   }
 });
 
+test('listening reads sentence by sentence, highlights the paragraph and stops on request', async () => {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  // A fake voice: each sentence "ends" after 400 ms, so the test can stop it mid-way.
+  await context.addInitScript(() => {
+    window.__spoken = [];
+    const fake = {
+      speak(u) { window.__spoken.push(u.text); setTimeout(() => u.onend && u.onend(new Event('end')), 400); },
+      cancel() {}, pause() {}, resume() {}, getVoices: () => [], speaking: false, pending: false, paused: false,
+      addEventListener() {}, removeEventListener() {},
+    };
+    Object.defineProperty(window, 'speechSynthesis', { value: fake, configurable: true });
+  });
+  const page = await context.newPage();
+  await page.goto(base + '/', { waitUntil: 'networkidle' });
+  await page.locator('[title="Read Free Preview in Browser"]').first().click();
+  const toolbar = page.getByRole('button', { name: 'Read chapter with device voice' });
+  await toolbar.click();
+  await page.waitForFunction(() => window.__spoken.length >= 1, null, { timeout: 10_000 });
+  assert.ok(await page.locator('[data-para][aria-current="true"]').count() === 1, 'the paragraph being read is highlighted');
+  await page.getByRole('button', { name: 'Stop device read-aloud' }).click();
+  await page.getByRole('button', { name: 'Read chapter with device voice' }).waitFor();
+  const stoppedAt = await page.evaluate(() => window.__spoken.length);
+  await page.waitForTimeout(1000);
+  assert.equal(await page.evaluate(() => window.__spoken.length), stoppedAt, 'stop really stops');
+  const spoken = await page.evaluate(() => window.__spoken);
+  assert.ok(spoken.every((t) => t.length > 0 && t.length < 2000), 'speaks sentence by sentence');
+  await context.close();
+});
+
 test('the offline service worker registers', async () => {
   const page = await open('/');
   await page.reload({ waitUntil: 'networkidle' });
