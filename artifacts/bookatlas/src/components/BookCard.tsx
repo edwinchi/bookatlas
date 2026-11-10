@@ -106,7 +106,7 @@ export const BookCard: React.FC<BookCardProps> = ({
             </button>
           )}
 
-          <button
+          {!book.isSample && <button
             onClick={(e) => {
               e.stopPropagation();
               onAddToCart(book);
@@ -115,7 +115,7 @@ export const BookCard: React.FC<BookCardProps> = ({
             title="Add to Cart"
           >
             <ShoppingBag className="w-3.5 h-3.5 text-amber-300" />
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -193,13 +193,13 @@ export const BookCard: React.FC<BookCardProps> = ({
             )}
           </div>
 
-          <button
+          {!book.isSample && <button
             onClick={() => onAddToCart(book)}
             className="p-1.5 text-slate-700 hover:text-white hover:bg-indigo-600 rounded-lg transition-colors border border-slate-200 hover:border-indigo-600 cursor-pointer"
             title="Add to Cart"
           >
             <ShoppingBag className="w-4 h-4" />
-          </button>
+          </button>}
         </div>
       </div>
     </div>
