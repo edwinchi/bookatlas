@@ -384,11 +384,11 @@ test('F7-3: service worker bypasses non-GET requests for offline cache', () => {
   assert.match(swCode, /if \(request\.method !== 'GET'\) \{\s*return;\s*\}/);
 });
 
-test('F7-4: service worker employs network-first for AI, auth, and manager APIs', () => {
+test('F7-4: service worker sends every API request to the network; only the public catalogue is cached', () => {
   const swCode = readFileSync('artifacts/bookatlas/public/sw.js', 'utf8');
-  assert.match(swCode, /\/api\/ai/);
-  assert.match(swCode, /\/api\/auth/);
-  assert.match(swCode, /\/api\/manager/);
+  assert.match(swCode, /if \(url\.pathname\.startsWith\('\/api\/'\)\)/);
+  assert.match(swCode, /if \(!publicCatalogue \|\| request\.headers\.has\('Authorization'\)\) \{\s*event\.respondWith\(fetch\(request\)\);/);
+  assert.doesNotMatch(swCode, /return cachedResponse \|\| fetchPromise/, 'no cache-first answers for the API');
 });
 
 test('F7-5: mobile bottom nav supports 5 primary destinations (Explore, Audio, AI Studio, Bookshelf, Cart)', () => {

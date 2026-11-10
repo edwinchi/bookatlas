@@ -134,6 +134,22 @@ test('the offline service worker registers', async () => {
   assert.ok(registered);
 });
 
+test('the service worker never replays API answers that change: payments, prices, submissions', async () => {
+  const page = await open('/');
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.evaluate(() => Promise.all(['/api/payments/config', '/api/catalog/search?q=codex'].map((u) => fetch(u))));
+  await page.waitForTimeout(300);
+  const cached = await page.evaluate(async () => {
+    const paths = [];
+    for (const name of await caches.keys()) for (const req of await (await caches.open(name)).keys()) paths.push(new URL(req.url).pathname);
+    return paths;
+  });
+  assert.ok(!cached.some((p) => /^\/api\/(?!books$|categories$|catalog\/(?:search|facets|shelves|books\/[^/]+|covers\/[^/]+)$)/.test(p)),
+    `only the public catalogue may be cached: ${cached.filter((p) => p.startsWith('/api/')).join(', ')}`);
+  assert.equal(await page.evaluate(async () => (await (await fetch('/api/payments/config')).json()).enabled !== undefined), true);
+});
+
 test('the app shell and catalog load from the service worker cache when offline', async () => {
   const page = await open('/');
   await page.evaluate(() => navigator.serviceWorker.ready);

@@ -58,6 +58,16 @@
 | Test-mode run: real Stripe test checkout with card and iDEAL, webhook via a test endpoint | ⬜ |
 | Webhook and go-live | ✅ 2026-11-10 (owner sign-off): live endpoint `we_1UaErjRV4gYJjN7FOTpVo3Ux` → `https://booksatlas.app/api/stripe/webhook` (checkout.session.completed, checkout.session.async_payment_succeeded, charge.refunded); signing secret in Vercel as sensitive `STRIPE_WEBHOOK_SECRET`; deployed `bookatlas-nml4uta11`. Live: `/api/payments/config` enabled, unsigned and forged webhooks 400, anonymous checkout 401, security 5/5, browser 12/12. `STRIPE_TAX` unset until registrations exist |
 
+## Incident 2026-11-10: the cart stayed in demo mode after go-live
+
+| | |
+|---|---|
+| Symptom | The owner's cart showed "Demo checkout only" and €9.99 after payments went live and the price changed to €9.36; earlier the publishing page showed an already-published submission as "Ready for review" |
+| Root cause | The service worker (`public/sw.js`, v5) answered every request it did not list "cache first", including `/api/payments/config`, `/api/catalog/*` and `/api/ebook-submissions`. The first answer was replayed forever. It also stored personal answers (submissions, reader text) in the browser cache. The cart also kept the price from when a book was added |
+| Fix | v6: every `/api/` request goes to the network; only the public catalogue keeps a network-first copy for offline use, never with an Authorization header. The new cache version deletes old caches on activation. Opening the cart refreshes each book's price and title from the catalogue (checkout always charged the server price) |
+| Tests | Browser: "the service worker never replays API answers that change" (only public catalogue paths may be in the cache). F7-4 and PAIR-15 now check the network-only rule and the offline catalogue copy |
+| Prevention | New API routes are network-only by default; caching an API path requires adding it to `publicCatalogue` in `sw.js` and to the browser test |
+
 ## Follow-ups
 
 - Include purchases in the account data export and keep them (anonymised) when an account is deleted.

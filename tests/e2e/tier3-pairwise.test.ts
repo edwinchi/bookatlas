@@ -428,11 +428,12 @@ test('PAIR-14: search grounding output query seeds catalog search to find matchi
 // ----------------------------------------------------------------------------
 // Pair 15: PWA Service Worker (F7) + Catalog API (F1)
 // ----------------------------------------------------------------------------
-test('PAIR-15: service worker stale-while-revalidate strategy caches catalog books endpoint for offline reading', () => {
+test('PAIR-15: service worker keeps a network-first copy of the public catalogue for offline reading', () => {
   const swCode = readFileSync('artifacts/bookatlas/public/sw.js', 'utf8');
-  assert.match(swCode, /url\.pathname\.startsWith\('\/api\/books'\)/);
-  assert.match(swCode, /DATA_CACHE/);
-  assert.match(swCode, /caches\.open\(DATA_CACHE\)/);
+  const catalogue = /const publicCatalogue = (\/.+\/)\.test/.exec(swCode)?.[1] ?? '';
+  for (const path of ['books', 'categories', 'search|facets|shelves']) assert.ok(catalogue.includes(path), path);
+  assert.match(swCode, /caches\.open\(DATA_CACHE\)\.then\(\(cache\) => cache\.put\(request, copy\)\)/);
+  assert.match(swCode, /\.catch\(\(\) => caches\.match\(request\)\)/);
 });
 
 // ----------------------------------------------------------------------------

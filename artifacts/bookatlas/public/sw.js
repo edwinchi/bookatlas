@@ -1,5 +1,6 @@
 // Bookatlas Offline-First Service Worker
-const CACHE_VERSION = 'bookatlas-v5';
+// v6: API answers are no longer cached first (stale prices, payment settings and submissions).
+const CACHE_VERSION = 'bookatlas-v6';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DATA_CACHE = `data-${CACHE_VERSION}`;
 
@@ -43,28 +44,23 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network First for AI and mutable account/admin APIs
-  if (url.pathname.startsWith('/api/ai') || url.pathname.startsWith('/api/auth') || url.pathname.startsWith('/api/users') || url.pathname.startsWith('/api/manager')) {
+  // The API always goes to the network: prices, payments, submissions and purchases change.
+  // Only the public catalogue keeps a copy, used when the network is down. Personal answers
+  // (accounts, submissions, purchases, reader text, checkout) are never stored.
+  if (url.pathname.startsWith('/api/')) {
+    const publicCatalogue = /^\/api\/(?:books|categories|catalog\/(?:search|facets|shelves|books\/[^/]+|covers\/[^/]+))$/.test(url.pathname);
+    if (!publicCatalogue || request.headers.has('Authorization')) {
+      event.respondWith(fetch(request));
+      return;
+    }
     event.respondWith(
-      fetch(request).catch(() => caches.match(request))
-    );
-    return;
-  }
-
-  // Stale-While-Revalidate for catalog/books
-  if (url.pathname.startsWith('/api/books') || url.pathname.startsWith('/api/categories')) {
-    event.respondWith(
-      caches.open(DATA_CACHE).then(async (cache) => {
-        const cachedResponse = await cache.match(request);
-        const fetchPromise = fetch(request).then((networkResponse) => {
-          if (networkResponse.ok) {
-            cache.put(request, networkResponse.clone());
-          }
-          return networkResponse;
-        }).catch(() => cachedResponse);
-
-        return cachedResponse || fetchPromise;
-      })
+      fetch(request).then((networkResponse) => {
+        if (networkResponse.ok) {
+          const copy = networkResponse.clone();
+          caches.open(DATA_CACHE).then((cache) => cache.put(request, copy));
+        }
+        return networkResponse;
+      }).catch(() => caches.match(request))
     );
     return;
   }

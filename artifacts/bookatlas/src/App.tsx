@@ -457,6 +457,27 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
     return () => { cancelled = true; };
   }, [account?.id]);
 
+  // Opening the cart refreshes each book from the catalogue, so it shows the price checkout charges.
+  useEffect(() => {
+    if (!isCartOpen || !cart.length) return;
+    let cancelled = false;
+    Promise.all(cart.map((item) => fetch(`/api/catalog/books/${encodeURIComponent(item.book.id)}`)
+      .then((res) => (res.ok ? res.json() : null)).then((data) => (data?.book as Book | undefined) ?? null).catch(() => null)))
+      .then((fresh) => {
+        if (cancelled) return;
+        const byId = new Map(fresh.filter((b): b is Book => !!b).map((b) => [b.id, b]));
+        setCart((prev) => {
+          const changed = prev.some((item) => { const b = byId.get(item.book.id); return !!b && (b.price !== item.book.price || b.title !== item.book.title); });
+          if (!changed) return prev;
+          return prev.map((item) => {
+            const b = byId.get(item.book.id);
+            return b ? { ...item, book: { ...item.book, title: b.title, price: b.price, originalPrice: b.originalPrice, coverImage: b.coverImage, isDeal: b.isDeal } } : item;
+          });
+        });
+      });
+    return () => { cancelled = true; };
+  }, [isCartOpen]);
+
   const requestCheckout = () => {
     if (!account) {
       const returnTo = normalizeCartReturn('/user-portal?resume=checkout');
