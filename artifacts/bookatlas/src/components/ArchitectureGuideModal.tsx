@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AppModal } from './ui/app-modal';
 import { 
   X, 
   HelpCircle, 
@@ -39,7 +40,7 @@ export const ArchitectureGuideModal: React.FC<ArchitectureGuideModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+    <AppModal onClose={onClose} label={'Architecture guide'} overlayClassName="z-50 overflow-y-auto bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
       <div 
         className="relative w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -375,6 +376,6 @@ export const ArchitectureGuideModal: React.FC<ArchitectureGuideModalProps> = ({
         </div>
 
       </div>
-    </div>
+    </AppModal>
   );
 };

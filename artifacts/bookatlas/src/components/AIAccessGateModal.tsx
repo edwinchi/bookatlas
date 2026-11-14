@@ -1,4 +1,5 @@
 import React from 'react';
+import { AppModal } from './ui/app-modal';
 import { X } from 'lucide-react';
 
 interface AIAccessGateModalProps {
@@ -21,8 +22,8 @@ export const AIAccessGateModal: React.FC<AIAccessGateModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-center bg-slate-950/80 p-4 backdrop-blur-xs" role="presentation">
-      <section role="dialog" aria-modal="true" aria-labelledby="access-gate-title" className="relative w-full max-w-md space-y-4 rounded-2xl bg-white p-6 text-slate-950 shadow-2xl">
+    <AppModal onClose={onClose} label={'Membership information'} overlayClassName="z-[60] grid place-items-center bg-slate-950/80 p-4 backdrop-blur-xs">
+      <section aria-labelledby="access-gate-title" className="relative w-full max-w-md space-y-4 rounded-2xl bg-white p-6 text-slate-950 shadow-2xl">
         <button
           onClick={onClose}
           aria-label="Close membership information"
@@ -38,6 +39,6 @@ export const AIAccessGateModal: React.FC<AIAccessGateModalProps> = ({
         </div>
         <button type="button" onClick={onClose} className="min-h-12 w-full rounded-xl bg-indigo-700 px-4 font-bold text-white">Back to browsing</button>
       </section>
-    </div>
+    </AppModal>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AppModal } from './ui/app-modal';
 import {
   Sparkles,
   BookOpen,
@@ -2289,7 +2290,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
       {/* MANUAL ADD / EDIT MODAL */}
       {/* ========================================================================= */}
       {isManualModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+        <AppModal onClose={() => setIsManualModalOpen(false)} label={'Add or edit a book'} overlayClassName="z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 sm:p-8 space-y-5 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto animate-scaleUp">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <h3 className="text-lg font-serif font-bold text-slate-900">
@@ -2425,7 +2426,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </AppModal>
       )}
     </div>
   );

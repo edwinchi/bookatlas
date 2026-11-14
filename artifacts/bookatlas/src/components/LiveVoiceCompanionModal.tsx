@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { AppModal } from './ui/app-modal';
 import { 
   X, 
   Mic, 
@@ -182,7 +183,7 @@ export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionM
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
+    <AppModal onClose={onClose} label={'Live voice companion'} dismissible={false} overlayClassName="z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
       <div className="bg-slate-900 text-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-800 flex flex-col overflow-hidden">
         
         {/* Header */}
@@ -336,6 +337,6 @@ export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionM
         </div>
 
       </div>
-    </div>
+    </AppModal>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { AppModal } from './ui/app-modal';
 import { 
   Users, 
   UploadCloud, 
@@ -447,7 +448,8 @@ The Bookatlas Editorial Board`
         setActiveSubTab('analytics');
       }
     } catch (err: any) {
-      alert(`Failed to broadcast campaign: ${err.message}`);
+      // An in-app notice instead of the browser's blocking alert box.
+      onNotification?.(`Failed to broadcast campaign: ${err.message}`);
     } finally {
       setIsSendingCampaign(false);
     }
@@ -1389,7 +1391,7 @@ The Bookatlas Editorial Board`
 
       {/* Manual Add Single Contact Modal */}
       {showAddSingleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs">
+        <AppModal onClose={() => setShowAddSingleModal(false)} label={'Add a contact'} overlayClassName="z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs">
           <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full border border-slate-200 shadow-2xl space-y-4 animate-scaleUp">
             <h3 className="font-serif font-bold text-lg text-slate-900">Add Individual Contact</h3>
             <form onSubmit={handleAddSingleSubscriber} className="space-y-3">
@@ -1456,12 +1458,12 @@ The Bookatlas Editorial Board`
               </div>
             </form>
           </div>
-        </div>
+        </AppModal>
       )}
 
       {/* Confirmation Modal before Dispatch */}
       {showSendConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs">
+        <AppModal onClose={() => setShowSendConfirmModal(false)} label={'Confirm sending'} overlayClassName="z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs">
           <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full border border-slate-200 shadow-2xl space-y-4 animate-scaleUp">
             <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center mx-auto">
               <Send className="w-6 h-6" />
@@ -1500,7 +1502,7 @@ The Bookatlas Editorial Board`
               </button>
             </div>
           </div>
-        </div>
+        </AppModal>
       )}
     </div>
   );

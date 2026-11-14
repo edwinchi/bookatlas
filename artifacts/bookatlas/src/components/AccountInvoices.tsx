@@ -4,10 +4,10 @@ import { Link } from 'wouter';
 import { UtilityMenu } from './UtilityMenu';
 import { useAccount } from '../auth/AuthContext';
 import { usePayments, type InvoiceSummary, type RefundRequest } from './checkout/usePayments';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from './ui/alert-dialog';
 
 const money = (cents: number, currency: string) =>
   new Intl.NumberFormat(undefined, { style: 'currency', currency: currency.toUpperCase() }).format(cents / 100);

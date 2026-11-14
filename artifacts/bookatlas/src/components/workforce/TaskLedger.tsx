@@ -9,6 +9,9 @@ import {
   type WorkforceReviewInputAction,
 } from '@workspace/api-client-react';
 import { describeError } from '../publishing/AuthedAudioPlayer';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '../ui/alert-dialog';
 import type { PatchTask } from './AITeamWorkspace';
 
 const RECOVER_MS = 3 * 60 * 1000;
@@ -190,9 +193,23 @@ const TaskCard: React.FC<Props & { task: WorkforceTask; defaultOpen: boolean; no
                 </button>
               )}
               {!closed && (
-                <button type="button" disabled={review.isPending} onClick={() => { if (window.confirm('Cancel this assignment? No further workers can run.')) doReview('cancel'); }} data-testid={`button-cancel-${task.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-[#8a2f22] text-[#8a2f22] px-3 py-2 text-[12px] font-bold disabled:opacity-40 cursor-pointer">
+<AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button type="button" disabled={review.isPending} data-testid={`button-cancel-${task.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-[#8a2f22] text-[#8a2f22] px-3 py-2 text-[12px] font-bold disabled:opacity-40 cursor-pointer">
                   <Ban className="w-3.5 h-3.5" aria-hidden /> Cancel
                 </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="max-w-md rounded-2xl">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancel this assignment?</AlertDialogTitle>
+                      <AlertDialogDescription>No further workers can run on it. Work already done is kept.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep running</AlertDialogCancel>
+                      <AlertDialogAction className="bg-rose-600 hover:bg-rose-500" onClick={() => doReview('cancel')}>Cancel assignment</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
               <button type="button" onClick={download} data-testid={`button-download-${task.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-[#1d4f4a] text-[#1d4f4a] px-3 py-2 text-[12px] font-bold cursor-pointer">
                 <Download className="w-3.5 h-3.5" aria-hidden /> Markdown

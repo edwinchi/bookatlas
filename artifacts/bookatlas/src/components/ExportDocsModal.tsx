@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AppModal } from './ui/app-modal';
 import { 
   X, 
   FileText, 
@@ -62,7 +63,7 @@ export function ExportDocsModal({ isOpen, onClose, books }: ExportDocsModalProps
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <AppModal onClose={onClose} label={'Export documentation'} overlayClassName="z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
       {downloadError && <p role="alert" className="fixed bottom-4 left-4 right-4 z-[100] rounded-xl bg-red-50 p-4 text-sm text-red-900">{downloadError}</p>}
       <div className="bg-white text-slate-900 w-full max-w-4xl h-[90vh] max-h-[860px] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
         
@@ -268,6 +269,6 @@ export function ExportDocsModal({ isOpen, onClose, books }: ExportDocsModalProps
         </div>
 
       </div>
-    </div>
+    </AppModal>
   );
 }

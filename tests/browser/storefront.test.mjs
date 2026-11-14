@@ -47,6 +47,33 @@ test('mobile navigation, cart badge and cart drawer work together', async () => 
   assert.ok(await page.getByLabel('Close shopping cart').isVisible());
 });
 
+test('pop-ups are Radix dialogs: Escape and a click outside close them, and they are labelled', async () => {
+  const page = await open('/');
+  await page.getByRole('button', { name: /add to cart/i }).first().click();
+  const cart = page.getByRole('dialog', { name: 'Shopping cart' });
+  await cart.waitFor();
+  await page.keyboard.press('Escape');
+  await cart.waitFor({ state: 'detached' });
+  await page.getByRole('button', { name: /^Open shopping cart/ }).click();
+  await cart.waitFor();
+  // The cart slides in on the right; the backdrop on the left is outside it.
+  await page.mouse.click(20, 400);
+  await cart.waitFor({ state: 'detached' });
+
+  // A book's details: opened from its title on a card, closed with Escape, then reopened and closed by a click outside.
+  const title = page.locator('[data-testid="book-card-title"]').first();
+  const name = (await title.getAttribute('title')) ?? '';
+  await title.click();
+  const details = page.getByRole('dialog', { name });
+  await details.waitFor();
+  await page.keyboard.press('Escape');
+  await details.waitFor({ state: 'detached' });
+  await title.click();
+  await details.waitFor();
+  await page.mouse.click(5, 5);
+  await details.waitFor({ state: 'detached' });
+});
+
 test('reader display settings persist across reloads', async () => {
   const page = await open('/', { mobile: true });
   await page.locator('[title="Read Free Preview in Browser"]').first().click();

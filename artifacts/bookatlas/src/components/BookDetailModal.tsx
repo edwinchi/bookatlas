@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AppModal } from './ui/app-modal';
 import { 
   X, 
   Star, 
@@ -139,7 +140,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+    <AppModal onClose={onClose} label={book.title} overlayClassName="z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
       <div 
         className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col border border-slate-200"
         onClick={(e) => e.stopPropagation()}
@@ -751,7 +752,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
 
         </div>
       </div>
-    </div>
+    </AppModal>
   );
 };
 

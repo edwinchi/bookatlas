@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { AppModal } from './ui/app-modal';
 import { 
   X, 
   Send, 
@@ -226,7 +227,7 @@ What would you like to explore today?`,
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <AppModal onClose={onClose} label={'Gemini chat'} overlayClassName="z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white text-slate-900 w-full max-w-5xl h-[90vh] max-h-[860px] rounded-2xl shadow-2xl flex flex-col border border-slate-200 overflow-hidden">
         
         {/* Modal Top Navigation */}
@@ -455,6 +456,6 @@ What would you like to explore today?`,
         </div>
 
       </div>
-    </div>
+    </AppModal>
   );
 }

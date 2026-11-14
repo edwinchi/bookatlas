@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AppModal } from './ui/app-modal';
 import { 
   X, 
   Bot, 
@@ -65,7 +66,7 @@ export function AIStudioHub({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+    <AppModal onClose={onClose} label={'AI studio'} overlayClassName="z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="bg-slate-900 text-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-800 flex flex-col overflow-hidden">
         
         {/* Header */}
@@ -254,6 +255,6 @@ export function AIStudioHub({
         </div>}
 
       </div>
-    </div>
+    </AppModal>
   );
 }

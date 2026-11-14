@@ -1,4 +1,5 @@
 import { fetchFullBook, needsFullRecord, useCatalogFacets, useCatalogSearch, useShelves } from './hooks/useCatalog';
+import { AppModal } from './components/ui/app-modal';
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Header } from './components/Header';
 import { HeroCarousel } from './components/HeroCarousel';
@@ -1176,8 +1177,8 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
         currencySymbol={currencySymbol}
       />
       {showGuestCartMerge && account && guestCart.length > 0 && (
-        <div className="fixed inset-0 z-[80] grid place-items-center bg-slate-950/60 p-4" role="presentation">
-          <section role="dialog" aria-modal="true" aria-labelledby="guest-cart-title" className="w-full max-w-md space-y-4 rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
+        <AppModal onClose={dismissGuestCartMerge} label={'Your guest cart'} overlayClassName="z-[80] grid place-items-center bg-slate-950/60 p-4">
+          <section aria-labelledby="guest-cart-title" className="w-full max-w-md space-y-4 rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
             <h2 id="guest-cart-title" className="text-xl font-bold text-slate-950">Your guest cart</h2>
             <p className="text-sm leading-relaxed text-slate-600">
               You added {guestCart.length} book{guestCart.length === 1 ? '' : 's'} while browsing. Choose whether to merge these specific books into your reader account. Your bookshelf and saved data stay separate.
@@ -1194,7 +1195,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
             </div>
             <p className="text-xs text-slate-500">Only these new guest-cart items are offered. Older browser data is never imported.</p>
           </section>
-        </div>
+        </AppModal>
       )}
 
       {/* AI Book Matchmaker Modal */}

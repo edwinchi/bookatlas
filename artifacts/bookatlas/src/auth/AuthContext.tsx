@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { AppModal } from '../components/ui/app-modal';
 import { useClerk, useUser } from '@clerk/react';
 import { useLocation } from 'wouter';
 import { safeReaderReturnPath } from './navigation';
@@ -92,13 +93,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       },
     }}>
       {children}
-      {notice && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-5">
-        <section role="alertdialog" aria-labelledby="admin-notice-title" className="max-w-md rounded-2xl bg-white p-7 text-slate-900 shadow-xl">
+      {notice && <AppModal onClose={() => setNotice('')} label={'Account notice'} overlayClassName="z-[100] flex items-center justify-center bg-slate-950/60 p-5">
+        <section aria-labelledby="admin-notice-title" className="max-w-md rounded-2xl bg-white p-7 text-slate-900 shadow-xl">
           <h2 id="admin-notice-title" className="text-xl font-bold">Account notice</h2>
           <p className="my-4 text-sm leading-relaxed text-slate-600">{notice}</p>
           <button onClick={() => setNotice('')} className="rounded-xl bg-indigo-700 px-5 py-2.5 font-semibold text-white">Back to Bookatlas</button>
         </section>
-      </div>}
+      </AppModal>}
     </Context.Provider>
   );
 }

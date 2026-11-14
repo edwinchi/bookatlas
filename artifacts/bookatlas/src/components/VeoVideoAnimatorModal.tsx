@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AppModal } from './ui/app-modal';
 import { 
   X, 
   Film, 
@@ -120,7 +121,7 @@ export function VeoVideoAnimatorModal({ isOpen, onClose, books }: VeoVideoAnimat
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
+    <AppModal onClose={onClose} label={'Video animator'} overlayClassName="z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
       <div className="bg-slate-900 text-white w-full max-w-5xl h-[90vh] max-h-[880px] rounded-2xl shadow-2xl border border-slate-800 flex flex-col overflow-hidden">
         
         {/* Header */}
@@ -409,6 +410,6 @@ export function VeoVideoAnimatorModal({ isOpen, onClose, books }: VeoVideoAnimat
         </div>
 
       </div>
-    </div>
+    </AppModal>
   );
 }

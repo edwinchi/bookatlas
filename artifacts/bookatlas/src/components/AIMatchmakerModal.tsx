@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AppModal } from './ui/app-modal';
 import { 
   X, 
   Sparkles, 
@@ -197,7 +198,7 @@ export const AIMatchmakerModal: React.FC<AIMatchmakerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+    <AppModal onClose={onClose} label={'AI book matchmaker'} overlayClassName="z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
       <div 
         className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden my-auto max-h-[90vh] flex flex-col border border-slate-200"
         onClick={(e) => e.stopPropagation()}
@@ -366,7 +367,7 @@ export const AIMatchmakerModal: React.FC<AIMatchmakerModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </AppModal>
   );
 };
 

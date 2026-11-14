@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { 
   Search, 
   ShoppingBag, 
@@ -120,6 +121,16 @@ export const Header: React.FC<HeaderProps> = ({
     return () => window.removeEventListener('keydown', closeMenus);
   }, []);
 
+  const headerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onPointer = (event: PointerEvent) => {
+      if (!headerRef.current?.contains(event.target as Node)) setMobileMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointer);
+    return () => document.removeEventListener('pointerdown', onPointer);
+  }, [mobileMenuOpen]);
+
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
     if (activeTab !== 'store') setActiveTab('store');
@@ -166,7 +177,7 @@ export const Header: React.FC<HeaderProps> = ({
   const goToStoreHome = () => { setActiveTab('store'); setSelectedGenre('All Genres'); setSearchQuery(''); };
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-stone-200 shadow-xs">
+    <header ref={headerRef} className="sticky top-0 z-40 bg-white border-b border-stone-200 shadow-xs">
       {/* Site menu row, following the Platform Blueprint sitemap: reading first, publishing one click away */}
       <div className="hidden lg:block border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-6 flex items-center gap-4 xl:gap-6">
@@ -286,23 +297,24 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Categories selector button */}
             <div className="relative hidden xl:block">
-              <button
-                onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
-                aria-expanded={categoryDropdownOpen}
-                aria-controls="bookstore-categories"
+              <PopoverPrimitive.Root open={categoryDropdownOpen} onOpenChange={setCategoryDropdownOpen}>
+                <PopoverPrimitive.Trigger asChild>
+                  <button
                 className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-100 hover:text-white rounded-md hover:bg-white/10 transition-colors border border-transparent hover:border-white/15 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
               >
                 <Layers className="w-4 h-4 text-indigo-300" />
                 <span className="max-w-36 truncate">{selectedGenre === 'All Genres' ? 'Categories' : selectedGenre}</span>
                 <span className="text-xs text-slate-400">▾</span>
               </button>
-
-              {categoryDropdownOpen && (
-                <div 
-                  id="bookstore-categories"
-                  className="absolute left-0 top-full mt-1.5 w-80 bg-white rounded-xl shadow-2xl border border-stone-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 max-h-[480px] overflow-y-auto"
-                  onMouseLeave={() => setCategoryDropdownOpen(false)}
-                >
+                </PopoverPrimitive.Trigger>
+                <PopoverPrimitive.Portal>
+                  <PopoverPrimitive.Content
+                    id="bookstore-categories"
+                    align="start"
+                    sideOffset={6}
+                    collisionPadding={12}
+                    className="w-80 bg-white rounded-xl shadow-2xl border border-stone-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 max-h-[480px] overflow-y-auto"
+                  >
                   <div className="px-3.5 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between border-b border-slate-100 pb-2 mb-1">
                     <span>Browse Bookstore Taxonomy</span>
                     <span className="text-[10px] text-indigo-600 font-bold">{GENRES.length - 1} Active Genres</span>
@@ -402,8 +414,9 @@ export const Header: React.FC<HeaderProps> = ({
                       </button>
                     ))}
                   </div>
-                </div>
-              )}
+                </PopoverPrimitive.Content>
+                </PopoverPrimitive.Portal>
+              </PopoverPrimitive.Root>
             </div>
 
             <a href={contactHref('Start my book')} className="hidden lg:inline-flex shrink-0 whitespace-nowrap rounded-full bg-amber-400 px-3.5 py-1.5 text-xs font-bold text-slate-950 shadow-sm shadow-amber-500/20 transition-colors hover:bg-amber-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300">Start a book</a>

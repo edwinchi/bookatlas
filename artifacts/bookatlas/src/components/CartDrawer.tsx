@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AppModal } from './ui/app-modal';
 import {
   X,
   Trash2,
@@ -94,10 +95,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
+    <AppModal onClose={onClose} label={'Shopping cart'} overlayClassName="z-50 overflow-hidden bg-black/60 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
       <div 
-        role="dialog"
-        aria-modal="true"
         aria-labelledby="cart-dialog-title"
         className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-250"
         onClick={(e) => e.stopPropagation()}
@@ -311,6 +310,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         )}
 
       </div>
-    </div>
+    </AppModal>
   );
 };

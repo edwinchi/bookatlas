@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AppModal } from '../ui/app-modal';
 import {
   UploadCloud,
   CheckCircle2,
@@ -53,7 +54,7 @@ export const CSVValidationModal: React.FC<CSVValidationModalProps> = ({
     : 100;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fadeIn">
+    <AppModal onClose={onClose} label={'CSV validation'} overlayClassName="z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fadeIn">
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-scaleUp">
         {/* Modal Header */}
         <div className="p-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
@@ -415,6 +416,6 @@ export const CSVValidationModal: React.FC<CSVValidationModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </AppModal>
   );
 };

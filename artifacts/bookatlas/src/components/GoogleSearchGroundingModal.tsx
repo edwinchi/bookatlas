@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AppModal } from './ui/app-modal';
 import { 
   X, 
   Globe, 
@@ -166,7 +167,7 @@ export function GoogleSearchGroundingModal({ isOpen, onClose }: GoogleSearchGrou
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <AppModal onClose={onClose} label={'Live search'} overlayClassName="z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white text-slate-900 w-full max-w-4xl h-[88vh] max-h-[840px] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
         
         {/* Header */}
@@ -330,6 +331,6 @@ export function GoogleSearchGroundingModal({ isOpen, onClose }: GoogleSearchGrou
         </div>
 
       </div>
-    </div>
+    </AppModal>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AppModal } from './ui/app-modal';
 import { Mail, CheckCircle2, AlertCircle, RefreshCw, ArrowLeft, ShieldCheck, Heart, Volume2 } from 'lucide-react';
 
 interface UnsubscribePageModalProps {
@@ -106,7 +107,7 @@ export const UnsubscribePageModal: React.FC<UnsubscribePageModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+    <AppModal onClose={onClose} label={'Unsubscribe'} overlayClassName="z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
       <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden animate-scaleUp">
         {/* Header Ribbon */}
         <div className="bg-slate-950 px-6 py-5 text-white flex items-center justify-between border-b border-slate-800">
@@ -270,6 +271,6 @@ export const UnsubscribePageModal: React.FC<UnsubscribePageModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </AppModal>
   );
 };
