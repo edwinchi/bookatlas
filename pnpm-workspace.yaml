@@ -67,3 +67,5 @@ overrides:
   # Security: body-parser DoS via trailing compressed bytes (<2.4.0), qs stringify DoS (<=6.16.0).
   body-parser: ^2.4.0
   qs: ^6.16.1
+  # Security: fast-xml-parser quadratic CPU on unterminated stop-node tags (<=5.11.2, GHSA-474x-hrwr-fgx4).
+  fast-xml-parser: ^5.12.0
