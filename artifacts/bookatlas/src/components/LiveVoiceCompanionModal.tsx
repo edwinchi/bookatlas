@@ -34,7 +34,7 @@ export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionM
     {
       id: 'init-1',
       speaker: 'assistant',
-      text: "Hello! I am your Bookatlas Voice Companion. Ask about books, literary ideas, or recommendations. Replies are written by AI and read aloud with a voice installed on your device.",
+      text: "Hello! I am your BooksAtlas Voice Companion. Ask about books, literary ideas, or recommendations. Replies are written by AI and read aloud with a voice installed on your device.",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -143,7 +143,7 @@ export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionM
       speakText(assistantText);
     } catch (err) {
       console.error('Voice dialogue error:', err);
-      const fallbackReply = "I heard your thought. Bookatlas has thousands of remarkable eBooks and audiobooks ready in our collection!";
+      const fallbackReply = "I heard your thought. BooksAtlas has thousands of remarkable eBooks and audiobooks ready in our collection!";
       setConversation(prev => [
         ...prev,
         {
@@ -327,7 +327,7 @@ export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionM
 
         {/* Footer Guidance */}
         <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-          <span>Hands-free voice dialogue optimized for Bookatlas readers.</span>
+          <span>Hands-free voice dialogue optimized for BooksAtlas readers.</span>
           <button
             onClick={() => handleUserUtterance("What are today's top curated recommendations across Europe?")}
             className="text-violet-400 hover:text-violet-300 font-semibold cursor-pointer"

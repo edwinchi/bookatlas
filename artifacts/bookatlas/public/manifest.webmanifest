@@ -1,6 +1,6 @@
 {
-  "name": "Bookatlas — AI Knowledge Atlas & eBook Store",
-  "short_name": "Bookatlas",
+  "name": "BooksAtlas — AI Knowledge Atlas & eBook Store",
+  "short_name": "BooksAtlas",
   "description": "Discover millions of eBooks and Audiobooks, read instantly in your browser, and explore with AI companions.",
   "start_url": "./",
   "scope": "./",

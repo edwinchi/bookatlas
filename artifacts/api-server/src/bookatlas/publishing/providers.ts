@@ -56,7 +56,7 @@ async function database(): Promise<PublishingReadinessCheck[]> {
       id: 'database', label: 'Supabase persistence',
       state: unavailable.length ? 'blocked' : 'verified',
       detail: unavailable.length
-        ? `Connection configured, but required tables or columns are unavailable: ${unavailable.join(', ')}. Apply the reviewed Bookatlas schema using database-administrator access. No records were written.`
+        ? `Connection configured, but required tables or columns are unavailable: ${unavailable.join(', ')}. Apply the reviewed BooksAtlas schema using database-administrator access. No records were written.`
         : 'Required tables and columns passed read-only checks. Durable writes and job recovery still require verification.',
     }];
   } catch {

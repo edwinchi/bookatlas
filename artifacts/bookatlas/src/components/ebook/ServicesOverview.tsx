@@ -13,7 +13,7 @@ interface Service {
   badge?: string;
 }
 
-/** What BookAtlas does for an author. Only services that exist today are listed, with their real price. */
+/** What BooksAtlas does for an author. Only services that exist today are listed, with their real price. */
 export const SERVICES: Service[] = [
   {
     id: 'convert', icon: FileType2, name: 'Word and PDF to EPUB', price: 'Included', priceTone: 'included',
@@ -45,11 +45,11 @@ export const SERVICES: Service[] = [
     ],
   },
   {
-    id: 'sell', icon: Globe2, name: 'Sell worldwide, keep 80%', price: '80% to you', priceTone: 'included',
-    summary: 'Readers buy with iDEAL, cards, Apple Pay, Google Pay and more; you receive 80% of the price excluding VAT.',
+    id: 'sell', icon: Globe2, name: 'Sell worldwide, keep 67%', price: '67% to you', priceTone: 'included',
+    summary: 'Readers buy with iDEAL, cards, Apple Pay, Google Pay and more; you receive 67% of the price excluding VAT (BooksAtlas commission 33%).',
     details: [
       'Everyone can read the free preview; buyers open the whole book at once.',
-      'BookAtlas handles VAT and sends every buyer an invoice.',
+      'BooksAtlas handles VAT and sends every buyer an invoice.',
       'Refunds follow EU consumer law; buyers ask within 14 days and an administrator decides.',
     ],
   },
@@ -79,7 +79,7 @@ export function ServicesOverview() {
   return (
     <section aria-labelledby="services-title" className="space-y-4">
       <div>
-        <h2 id="services-title" className="font-serif text-xl font-bold text-slate-900">What BookAtlas does for you</h2>
+        <h2 id="services-title" className="font-serif text-xl font-bold text-slate-900">What BooksAtlas does for you</h2>
         <p className="mt-1 text-sm text-slate-600">Everything you need to publish and sell your eBook. Open a service to see what is included.</p>
       </div>
       <Accordion.Root type="multiple" className="grid gap-3 md:grid-cols-2">

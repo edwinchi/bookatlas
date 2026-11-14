@@ -36,7 +36,7 @@ const TIER_INFO: Record<SubscriberTier, { name: string; badge: string; color: st
     perk: 'Read sample chapters & receive weekly dispatches'
   },
   member_subscriber: {
-    name: 'Bookatlas Plus Member',
+    name: 'BooksAtlas Plus Member',
     badge: '✨ Plus Tier',
     color: 'bg-indigo-100 text-indigo-800 border-indigo-300',
     perk: 'Unlimited DRM-Free eReader & studio audiobook dock'

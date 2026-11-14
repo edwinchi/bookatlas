@@ -36,7 +36,7 @@ export const CategoryBrowser: React.FC<{
       { id: 'african', label: 'African Literature & Diaspora', icon: Globe, tone: 'amber', categories: [...AFRICAN_LITERATURE_GENRES] },
       { id: 'consciousness', label: 'Consciousness & Sacred Sciences', icon: Compass, tone: 'emerald', categories: [...CONSCIOUSNESS_COMMUNITY_GENRES] },
       { id: 'general', label: 'General & Classics', icon: Layers, tone: 'slate', categories: [...GENERAL_GENRES] },
-      ...(newer.length ? [{ id: 'more', label: 'New on BookAtlas', icon: Sparkles, tone: 'indigo' as Tone, categories: newer }] : []),
+      ...(newer.length ? [{ id: 'more', label: 'New on BooksAtlas', icon: Sparkles, tone: 'indigo' as Tone, categories: newer }] : []),
     ];
   }, [counts]);
 

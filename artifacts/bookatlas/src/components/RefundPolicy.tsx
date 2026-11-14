@@ -8,13 +8,13 @@ const mail = <a href={`mailto:${OPERATOR.email}`} className="font-semibold text-
 const sections: { title: string; body: ReactNode }[] = [
   {
     title: 'Try before you buy',
-    body: <p>Every Bookatlas eBook has a free preview: anyone can read and listen to it up to and including its introduction or first chapter, without an account and without paying. Please use it to decide whether a book is right for you.</p>,
+    body: <p>Every BooksAtlas eBook has a free preview: anyone can read and listen to it up to and including its introduction or first chapter, without an account and without paying. Please use it to decide whether a book is right for you.</p>,
   },
   {
     title: 'Your 14-day right of withdrawal',
     body: <>
       <p>EU consumer law gives you 14 days to withdraw from an online purchase without giving a reason (Directive 2011/83/EU, art. 9; Dutch Civil Code art. 6:230o). For digital content such as eBooks this right ends once the content is supplied, but only if you expressly asked for immediate access and acknowledged that you lose the right (art. 16(m)).</p>
-      <p className="mt-3">At checkout Bookatlas asks you to tick a box for exactly that. The time you ticked it is recorded and confirmed on your invoice (art. 8(7)). If no such consent is recorded for an order, your right of withdrawal still applies and we refund it within 14 days of purchase on request, no reason needed.</p>
+      <p className="mt-3">At checkout BooksAtlas asks you to tick a box for exactly that. The time you ticked it is recorded and confirmed on your invoice (art. 8(7)). If no such consent is recorded for an order, your right of withdrawal still applies and we refund it within 14 days of purchase on request, no reason needed.</p>
     </>,
   },
   {

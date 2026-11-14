@@ -89,7 +89,7 @@ const STEPS: Step[] = [
   },
   {
     title: 'Readers find you everywhere',
-    body: 'Your eBook goes on sale in the BookAtlas store worldwide, and your book page sends paperback readers straight to your print listing.',
+    body: 'Your eBook goes on sale in the BooksAtlas store worldwide, and your book page sends paperback readers straight to your print listing.',
     icon: Store,
     Visual: SellVisual,
   },

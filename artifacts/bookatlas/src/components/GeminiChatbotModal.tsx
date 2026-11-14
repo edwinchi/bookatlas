@@ -34,7 +34,7 @@ export const PERSONAS: ChatPersona[] = [
     name: 'Dr. Lysander Voss',
     roleTitle: 'Senior Literary Scholar & Critic',
     description: 'Deep analytical critiques, thematic symbolism, historical contexts, and Spinozist philosophy.',
-    systemInstruction: `You are Dr. Lysander Voss, Senior Literary Scholar & Editorial Fellow at Bookatlas (Atlantean Globals Services, Zwolle).
+    systemInstruction: `You are Dr. Lysander Voss, Senior Literary Scholar & Editorial Fellow at BooksAtlas (Atlantean Globals Services, Zwolle).
 Provide erudite, deeply perceptive literary analyses, unpack subtle motifs, explore historical European and global traditions, and evaluate prose craft with intellectual rigor.`,
     recommendedModel: 'gemini-3.1-pro-preview',
     avatarIcon: 'GraduationCap',
@@ -50,7 +50,7 @@ Provide erudite, deeply perceptive literary analyses, unpack subtle motifs, expl
     name: 'Anouk van der Meer',
     roleTitle: 'Dutch & European Classics Curator',
     description: 'Specialist in Dutch Golden Age narratives, Baltic literature, and modern European translations.',
-    systemInstruction: `You are Anouk van der Meer, Head of European Literary Curation at Bookatlas in Zwolle.
+    systemInstruction: `You are Anouk van der Meer, Head of European Literary Curation at BooksAtlas in Zwolle.
 Guide readers through curated European fiction, Dutch classics, translated award-winners, and hidden gems across the European continent with warmth and cultural flair.`,
     recommendedModel: 'gemini-3.5-flash',
     avatarIcon: 'Compass',
@@ -66,7 +66,7 @@ Guide readers through curated European fiction, Dutch classics, translated award
     name: 'Elena Vance',
     roleTitle: 'Creative Novelist & Writing Mentor',
     description: 'Character arcs, sensory world-building, pacing breakdowns, and dialogue crafting.',
-    systemInstruction: `You are Elena Vance, bestselling novelist and creative writing mentor at Bookatlas.
+    systemInstruction: `You are Elena Vance, bestselling novelist and creative writing mentor at BooksAtlas.
 Help writers and avid readers deconstruct plot architecture, craft believable character wounds, tighten narrative tension, and write evocative scene openings.`,
     recommendedModel: 'gemini-3.1-pro-preview',
     avatarIcon: 'Feather',
@@ -82,7 +82,7 @@ Help writers and avid readers deconstruct plot architecture, craft believable ch
     name: 'Atlas Flash',
     roleTitle: 'Executive Speed Summarizer',
     description: 'Rapid 60-second book briefings, key takeaways, and flash literary trivia.',
-    systemInstruction: `You are Atlas Flash, high-velocity reading intelligence engine for Bookatlas.
+    systemInstruction: `You are Atlas Flash, high-velocity reading intelligence engine for BooksAtlas.
 Deliver ultra-concise, structured, punchy summaries, bulleted core principles, and quick book comparisons with maximum clarity and speed.`,
     recommendedModel: 'gemini-3.1-flash-lite',
     avatarIcon: 'Zap',
@@ -112,7 +112,7 @@ export function GeminiChatbotModal({
     {
       id: 'welcome-1',
       role: 'model',
-      content: `Welcome to the **Bookatlas AI Literary Studio**! I am **${PERSONAS[0].name}**, your ${PERSONAS[0].roleTitle}. 
+      content: `Welcome to the **BooksAtlas AI Literary Studio**! I am **${PERSONAS[0].name}**, your ${PERSONAS[0].roleTitle}. 
 
 Whether you seek deep literary analysis with **gemini-3.1-pro-preview**, balanced European recommendations with **gemini-3.5-flash**, or rapid executive summaries with **gemini-3.1-flash-lite**, I am here to guide your reading journey. 
 
@@ -198,7 +198,7 @@ What would you like to explore today?`,
         {
           id: `err-${Date.now()}`,
           role: 'model',
-          content: `I am currently synchronizing with the Bookatlas literary archives. ${selectedPersona.name} recommends checking out our featured European Classics and Speculative Masterpieces in the main store!`,
+          content: `I am currently synchronizing with the BooksAtlas literary archives. ${selectedPersona.name} recommends checking out our featured European Classics and Speculative Masterpieces in the main store!`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           modelUsed: selectedModel
         }
@@ -239,7 +239,7 @@ What would you like to explore today?`,
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">
-                  Bookatlas Gemini AI Literary Companion
+                  BooksAtlas Gemini AI Literary Companion
                 </h2>
                 <span className="bg-indigo-500/20 text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-400/30 flex items-center gap-1">
                   <Sparkles className="w-2.5 h-2.5" /> Multi-Turn

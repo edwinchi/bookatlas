@@ -8,7 +8,7 @@ const definitions = [
   ['ux', 'UX Agent', 'Product', 'Assess usability, accessibility, and public-reader/admin boundaries.', 'Journey review and accessible interaction recommendations.'],
   ['frontend', 'Frontend Agent', 'Engineering', 'Propose maintainable responsive frontend implementation.', 'Component plan, client contracts, and edge cases.'],
   ['backend', 'Backend Agent', 'Engineering', 'Propose reliable server interfaces and domain logic.', 'API implementation plan and failure handling.'],
-  ['database', 'Database Agent', 'Engineering', 'Review Bookatlas data design without changing any database.', 'Additive schema proposals; preserve unrelated projects and records.'],
+  ['database', 'Database Agent', 'Engineering', 'Review BooksAtlas data design without changing any database.', 'Additive schema proposals; preserve unrelated projects and records.'],
   ['devops', 'DevOps Agent', 'Engineering', 'Assess deployment, observability, resilience, and recovery.', 'Operational checklist and reversible rollout plan.'],
   ['security', 'Security Agent', 'Trust', 'Assess authentication, authorization, privacy, and abuse.', 'Prioritized threat findings with mitigations, not a certification.'],
   ['research', 'Research Agent', 'Product', 'Analyze supplied evidence and identify knowledge gaps.', 'Evidence summary distinguishing sources, assumptions, and unanswered questions.'],

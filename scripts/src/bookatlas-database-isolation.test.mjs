@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { BOOKATLAS_TABLES, bookatlasTable } from '../../artifacts/api-server/src/bookatlas/db/tables.ts';
 
-test('every allowed persistence table is Bookatlas-prefixed', () => {
+test('every allowed persistence table is BooksAtlas-prefixed', () => {
   for (const [logical, physical] of Object.entries(BOOKATLAS_TABLES)) {
     assert.equal(bookatlasTable(logical), `bookatlas_${logical}`);
     assert.equal(physical, `bookatlas_${logical}`);

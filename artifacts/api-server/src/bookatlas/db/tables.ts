@@ -18,6 +18,6 @@ export const BOOKATLAS_TABLES = Object.freeze({
 export type BookatlasTable = keyof typeof BOOKATLAS_TABLES;
 
 export function bookatlasTable(table: BookatlasTable): string {
-  if (!Object.hasOwn(BOOKATLAS_TABLES, table)) throw new Error('Unknown Bookatlas table');
+  if (!Object.hasOwn(BOOKATLAS_TABLES, table)) throw new Error('Unknown BooksAtlas table');
   return BOOKATLAS_TABLES[table];
 }

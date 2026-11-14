@@ -185,7 +185,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={goToStoreHome}
             className="shrink-0 py-2 group focus-visible:outline-2 focus-visible:outline-indigo-600 cursor-pointer"
           >
-            <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="Bookatlas" width={319} height={96} className="h-10 w-auto transition-opacity group-hover:opacity-85 xl:h-11" />
+            <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="BooksAtlas" width={319} height={96} className="h-10 w-auto transition-opacity group-hover:opacity-85 xl:h-11" />
           </button>
           <nav aria-label="Site" className="flex items-center gap-0.5">
             <HeaderNavMenu label="Store" groups={[
@@ -193,7 +193,7 @@ export const Header: React.FC<HeaderProps> = ({
                 { label: 'All eBooks', description: 'Browse the whole catalogue', icon: BookOpen, onSelect: () => onNavigateSection('bookstore') },
                 { label: 'Audiobooks', description: 'Listen in your browser', icon: Headphones, onSelect: () => setActiveTab('audiobooks') },
                 { label: 'Deals under €4.99', description: 'Discounted and free eBooks', icon: Tag, onSelect: () => setActiveTab('deals') },
-                { label: 'Bookatlas Plus', description: 'Unlimited reading and listening', icon: Compass, onSelect: () => setActiveTab('bookatlasplus') },
+                { label: 'BooksAtlas Plus', description: 'Unlimited reading and listening', icon: Compass, onSelect: () => setActiveTab('bookatlasplus') },
               ] },
               { heading: 'Reading tools', items: [
                 { label: 'AI Book Matchmaker', description: 'Find your next book by mood', icon: Sparkles, onSelect: onOpenAIMatchmaker },
@@ -204,7 +204,7 @@ export const Header: React.FC<HeaderProps> = ({
             <HeaderNavMenu label="Publish" groups={[
               { items: [
                 { label: 'Create and self-publish', description: 'From manuscript to bookshelf in four steps', icon: PenTool, onSelect: () => onNavigateSection('how-it-works') },
-                { label: 'eBook publishing', description: 'Sell worldwide and keep 80%', icon: Globe2, onSelect: () => onNavigateSection('pricing') },
+                { label: 'eBook publishing', description: 'Sell worldwide and keep 67%', icon: Globe2, onSelect: () => onNavigateSection('pricing') },
                 { label: 'Print-ready files', description: 'For Amazon KDP and Lulu, from €99', icon: Ruler, onSelect: () => onNavigateSection('pricing') },
                 { label: 'Pricing and royalties', description: 'Compare Standard and Author Pro', icon: Calculator, onSelect: () => onNavigateSection('earnings') },
                 { label: 'Upload your eBook', description: 'EPUB checked and made store-ready', icon: Upload, onSelect: () => onNavigateSection('publish') },
@@ -227,17 +227,17 @@ export const Header: React.FC<HeaderProps> = ({
               ] },
             ]} />
             <HeaderNavMenu label="Resources" groups={[{ items: [
-              { label: 'Publishing guide', description: 'How BookAtlas works, step by step', icon: ListOrdered, onSelect: () => onNavigateSection('how-it-works') },
+              { label: 'Publishing guide', description: 'How BooksAtlas works, step by step', icon: ListOrdered, onSelect: () => onNavigateSection('how-it-works') },
               { label: 'Who it is for', description: 'Authors, educators and publishers', icon: GraduationCap, onSelect: () => onNavigateSection('solutions') },
               { label: 'Book pages', description: 'One link for every edition', icon: Link2, onSelect: () => onNavigateSection('book-pages') },
               { label: 'EPUB and technical specs', description: 'Formats, reader and platform details', icon: FileText, onSelect: onOpenArchitectureGuide },
-              { label: 'Help', description: 'Email the BookAtlas team', icon: HelpCircle, href: contactHref('Help with BookAtlas') },
+              { label: 'Help', description: 'Email the BooksAtlas team', icon: HelpCircle, href: contactHref('Help with BooksAtlas') },
             ] }]} />
             <HeaderNavMenu label="About" groups={[
               { items: [
-                { label: 'About BookAtlas', description: `${OPERATOR.name}, Zwolle, the Netherlands`, icon: Building2, onSelect: () => onNavigateSection('about') },
+                { label: 'About BooksAtlas', description: `${OPERATOR.name}, Zwolle, the Netherlands`, icon: Building2, onSelect: () => onNavigateSection('about') },
                 { label: 'Our promise', description: 'What authors can count on', icon: BadgeCheck, onSelect: () => onNavigateSection('promise') },
-                { label: 'Contact us', description: OPERATOR.email, icon: Mail, href: contactHref('Question for BookAtlas') },
+                { label: 'Contact us', description: OPERATOR.email, icon: Mail, href: contactHref('Question for BooksAtlas') },
               ] },
               { items: [
                 { label: 'Privacy notice', icon: ShieldCheck, href: `${import.meta.env.BASE_URL}privacy` },
@@ -292,7 +292,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={goToStoreHome}
               className="flex min-w-0 items-center gap-1.5 sm:gap-2.5 text-left group focus-visible:outline-2 focus-visible:outline-indigo-600 cursor-pointer lg:hidden"
             >
-              <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="Bookatlas" width={319} height={96} className="h-9 w-auto shrink-0 sm:h-10 transition-opacity group-hover:opacity-85" />
+              <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="BooksAtlas" width={319} height={96} className="h-9 w-auto shrink-0 sm:h-10 transition-opacity group-hover:opacity-85" />
             </button>
 
             {/* Categories selector button */}
@@ -546,7 +546,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
       </div>
 
-      {/* Sub Navigation Bar (eBooks, Audiobooks, Bookatlas Plus, Deals, Manager) */}
+      {/* Sub Navigation Bar (eBooks, Audiobooks, BooksAtlas Plus, Deals, Manager) */}
       <nav className="bg-white border-t border-slate-100 hidden lg:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between text-sm">
           <div className="flex min-w-0 items-center space-x-1 overflow-x-auto scrollbar-none py-0.5">
@@ -703,7 +703,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => { setActiveTab('bookatlasplus'); setMobileMenuOpen(false); }}
             className="min-h-12 w-full text-left py-2 font-medium text-indigo-700 flex items-center gap-2"
           >
-            <Compass className="w-4 h-4" /> Bookatlas Plus (Unlimited Reads)
+            <Compass className="w-4 h-4" /> BooksAtlas Plus (Unlimited Reads)
           </button>
           <button
             onClick={() => { setActiveTab('deals'); setMobileMenuOpen(false); }}
@@ -730,13 +730,13 @@ export const Header: React.FC<HeaderProps> = ({
             <Headphones className="w-4 h-4" /> Live Voice companion
           </button>
           <div className="border-t border-slate-100 pt-2">
-            <p className="px-1 pb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">Publish with BookAtlas</p>
+            <p className="px-1 pb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">Publish with BooksAtlas</p>
             {([
               ['Who it’s for', 'solutions', PenTool],
               ['Services and pricing', 'pricing', Ruler],
               ['How it works', 'how-it-works', ListOrdered],
               ['Earnings calculator', 'earnings', Calculator],
-              ['About BookAtlas', 'about', Building2],
+              ['About BooksAtlas', 'about', Building2],
               ['Bookstore', 'bookstore', BookOpen],
             ] as const).map(([label, id, Icon]) => (
               <button

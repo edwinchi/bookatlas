@@ -63,18 +63,18 @@ const SERVICES = [
   {
     icon: Globe2,
     name: 'eBook store',
-    price: '80%',
+    price: '67%',
     unit: 'of every sale is yours',
-    body: 'Sell your eBook on BookAtlas to readers worldwide, including every country in Africa. No upfront cost.',
+    body: 'Sell your eBook on BooksAtlas to readers worldwide, including every country in Africa. No upfront cost.',
     cta: 'Sell your eBook',
-    href: contact('Sell my eBook on BookAtlas'),
+    href: contact('Sell my eBook on BooksAtlas'),
   },
   {
     icon: Crown,
     name: 'Author Pro',
     price: '€9.99',
     unit: 'a month',
-    body: 'Keep 90% of every eBook sale instead of 80%. Worth it from a handful of sales a month.',
+    body: 'Keep 77% of every eBook sale instead of 67%. Worth it from a handful of sales a month.',
     cta: 'Estimate my earnings',
     target: 'earnings',
   },
@@ -161,7 +161,7 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
           </Reveal>
           <Reveal delay={160}>
             <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
-              BookAtlas turns your manuscript into print-ready files for Amazon KDP and Lulu, then sells your eBook to readers
+              BooksAtlas turns your manuscript into print-ready files for Amazon KDP and Lulu, then sells your eBook to readers
               around the world, from Amsterdam to Accra to Auckland.
             </p>
           </Reveal>
@@ -174,7 +174,7 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
             </button>
           </Reveal>
           <Reveal delay={320}>
-            <p className="mt-5 text-xs text-slate-400">Print-ready packages from €99 · Keep 80% of every eBook sale</p>
+            <p className="mt-5 text-xs text-slate-400">Print-ready packages from €99 · Keep 67% of every eBook sale</p>
           </Reveal>
         </div>
 
@@ -245,7 +245,7 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
               <Eyebrow light>Book pages</Eyebrow>
               <h2 id="landing-book-page" className="font-serif text-3xl font-bold sm:text-4xl">One link for every edition</h2>
               <p className="max-w-md text-sm leading-relaxed text-indigo-100 sm:text-base">
-                Every title gets its own BookAtlas page. Readers buy the eBook right there, or follow the link to your paperback
+                Every title gets its own BooksAtlas page. Readers buy the eBook right there, or follow the link to your paperback
                 on Amazon or Lulu. Share it in your newsletter, your bio or your email signature.
               </p>
               <p className="max-w-md text-xs text-indigo-200/80">Paperback links may earn us a referral fee. We always say so on the page.</p>
@@ -320,7 +320,7 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
               <div className="space-y-3">
                 <h3 className="font-serif text-lg font-bold">Registered in the Netherlands</h3>
                 <p className="text-sm leading-relaxed text-slate-600">
-                  BookAtlas is run by {OPERATOR.name} in {OPERATOR.locality.replace(/^\d{4} [A-Z]{2} /, '')} (KvK {OPERATOR.kvk}). We follow the
+                  BooksAtlas is run by {OPERATOR.name} in {OPERATOR.locality.replace(/^\d{4} [A-Z]{2} /, '')} (KvK {OPERATOR.kvk}). We follow the
                   EU General Data Protection Regulation: you can see, export or delete your account data at any time.
                 </p>
                 <a href={`${base}privacy`} className="inline-flex items-center gap-1 text-sm font-bold text-indigo-700 hover:text-indigo-900">Read our privacy notice <ArrowRight className="h-4 w-4" /></a>

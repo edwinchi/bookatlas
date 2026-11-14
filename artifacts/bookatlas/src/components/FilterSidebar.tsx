@@ -105,7 +105,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
           {languages.map(language => <option key={language} value={language}>{language}</option>)}
         </select>
       </label>
-      {/* Bookatlas Plus Toggle */}
+      {/* BooksAtlas Plus Toggle */}
       <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200/80 rounded-xl p-3.5">
         <label className="flex items-start gap-3 cursor-pointer">
           <input
@@ -116,7 +116,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
           />
           <div>
             <div className="flex items-center gap-1.5 font-bold text-slate-900 text-sm">
-              <span className="text-indigo-700 font-extrabold">Bookatlas</span>
+              <span className="text-indigo-700 font-extrabold">BooksAtlas</span>
               <span>Plus Only</span>
               <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
             </div>

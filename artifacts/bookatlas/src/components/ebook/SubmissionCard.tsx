@@ -7,9 +7,9 @@ const STATUS: Record<SubmissionStatus, { label: string; tone: string; detail: st
   uploading: { label: 'Uploading', tone: 'bg-slate-100 text-slate-700', detail: 'The upload did not finish. Choose "Upload again" to send the file again.' },
   preparing: { label: 'Preparing', tone: 'bg-indigo-50 text-indigo-700', detail: 'Fixing and checking your eBook.' },
   checking: { label: 'Validating', tone: 'bg-indigo-50 text-indigo-700', detail: 'Running the official EPUBCheck validator. This takes a minute or two.' },
-  ready: { label: 'Ready for review', tone: 'bg-emerald-50 text-emerald-800', detail: 'Your eBook passed every check. BookAtlas reviews it before it goes on sale.' },
+  ready: { label: 'Ready for review', tone: 'bg-emerald-50 text-emerald-800', detail: 'Your eBook passed every check. BooksAtlas reviews it before it goes on sale.' },
   needs_author: { label: 'Needs your input', tone: 'bg-amber-50 text-amber-900', detail: 'A few things need you; everything fixable was fixed automatically.' },
-  published: { label: 'Published', tone: 'bg-emerald-600 text-white', detail: 'On sale in the BookAtlas store. Made corrections? Upload a new version; this one stays on sale until the new one is published.' },
+  published: { label: 'Published', tone: 'bg-emerald-600 text-white', detail: 'On sale in the BooksAtlas store. Made corrections? Upload a new version; this one stays on sale until the new one is published.' },
   rejected: { label: 'Not accepted', tone: 'bg-rose-50 text-rose-800', detail: '' },
 };
 
@@ -47,7 +47,7 @@ const PriceEditor: React.FC<{ price: number; onSave: (price: number) => Promise<
   );
 };
 
-/** Amazon and Lulu pages of the printed book; shown on the BookAtlas book page, also after publishing. */
+/** Amazon and Lulu pages of the printed book; shown on the BooksAtlas book page, also after publishing. */
 const PrintLinks: React.FC<{ links: { amazon?: string; lulu?: string }; onSave: (links: { amazon?: string; lulu?: string }) => Promise<void> }> = ({ links, onSave }) => {
   const [amazon, setAmazon] = useState(links.amazon ?? '');
   const [lulu, setLulu] = useState(links.lulu ?? '');
@@ -57,7 +57,7 @@ const PrintLinks: React.FC<{ links: { amazon?: string; lulu?: string }; onSave: 
   return (
     <section className="mt-4 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
       <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600"><BookCopy className="h-3.5 w-3.5" aria-hidden />Printed book</h4>
-      <p className="mt-1 text-xs text-slate-600">Selling the paperback or hardcover on Amazon or Lulu? Add the book's page and readers see "Also in print" on BookAtlas.</p>
+      <p className="mt-1 text-xs text-slate-600">Selling the paperback or hardcover on Amazon or Lulu? Add the book's page and readers see "Also in print" on BooksAtlas.</p>
       <form className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto]" onSubmit={async (e) => {
         e.preventDefault(); setState('saving');
         try { await onSave({ amazon: amazon.trim(), lulu: lulu.trim() }); setState('saved'); } catch { setState('idle'); }

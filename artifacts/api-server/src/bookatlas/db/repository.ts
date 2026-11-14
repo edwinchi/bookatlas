@@ -1,4 +1,4 @@
-// All legacy repository operations now target the dedicated Bookatlas namespace.
+// All legacy repository operations now target the dedicated BooksAtlas namespace.
 import { bookatlasDb as supabase } from './supabaseClient.js';
 import { logger } from '../../lib/logger';
 import type { Book } from '@workspace/bookatlas-catalog/types';

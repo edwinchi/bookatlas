@@ -62,7 +62,7 @@ export function mountPayments(app: Express, findBook: (id: string) => Promise<Bo
     res.setHeader('Cache-Control', 'private, no-store');
     res.json({ bookIds: await purchasedBookIds(req.bookatlasIdentity!.id) });
   }));
-  // Invoices (owner decision 2026-11-14: BookAtlas handles VAT). Buyers see only their own.
+  // Invoices (owner decision 2026-11-14: BooksAtlas handles VAT). Buyers see only their own.
   app.get('/api/invoices', guarded(async (req, res) => {
     res.setHeader('Cache-Control', 'private, no-store');
     let invoices = await invoicesOf(req.bookatlasIdentity!.id);

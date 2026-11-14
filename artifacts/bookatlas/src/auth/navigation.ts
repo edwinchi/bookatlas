@@ -1,6 +1,6 @@
 const privateReturnPaths = new Set(['/user-portal', '/checkout']);
 
-/** Accept only same-origin Bookatlas destinations that have a rendered route. */
+/** Accept only same-origin BooksAtlas destinations that have a rendered route. */
 export function safeReaderReturnPath(
   candidate: string | null | undefined,
   origin = 'https://bookatlas.invalid',

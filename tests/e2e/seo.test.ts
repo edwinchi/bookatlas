@@ -35,12 +35,32 @@ test('every book has an address whose page head carries its title, preview tags 
   // A hostile title can never break out of the tags or the JSON-LD script.
   assert.ok(!html.includes('<script>alert(1)</script>'));
   assert.ok(html.includes('&lt;/script&gt;'));
-  const ld = JSON.parse(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)![1]!);
+  // Every page carries the BooksAtlas organisation; book pages add the Book.
+  const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]!));
+  assert.ok(blocks.some((b) => b['@graph']?.some((n: { '@type': string; name: string }) => n['@type'] === 'Organization' && n.name === 'BooksAtlas')), 'the brand organisation is present');
+  const ld = blocks.find((b) => b['@type'] === 'Book');
   assert.equal(ld['@type'], 'Book');
   assert.equal(ld.name, HOSTILE);
   assert.equal(ld.isbn, '9780306406157');
   assert.equal(ld.offers, undefined, 'listed titles without a book file are not offered for sale');
   assert.equal(ld.aggregateRating, undefined, 'no rating without real reviews');
+  // The same facts in plain HTML for crawlers and AI assistants that do not run JavaScript.
+  const noscript = /<noscript>([\s\S]*?)<\/noscript>/.exec(html)![1]!;
+  assert.ok(noscript.includes('by Ada Writer') && noscript.includes('&lt;/script&gt;'), 'the book, escaped');
+  assert.ok(!noscript.includes('Publish with BooksAtlas'), 'the homepage summary is replaced by the book');
+});
+
+test('llms-full.txt lists the real books for AI assistants; IndexNow submission is admin-only', async () => {
+  const { fetch } = await getSharedTestServer();
+  const res = await fetch('/llms-full.txt');
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type') ?? '', /text\/plain/);
+  const text = await res.text();
+  assert.match(text, /## Books on BooksAtlas/);
+  assert.ok(text.includes('/books/isbn-9780306406157'), 'imported titles are listed');
+  assert.equal((await fetch('/api/manager/seo/indexnow', { method: 'POST', headers: { 'x-test-role': 'reader' } })).status, 403);
+  const submitted = await (await fetch('/api/manager/seo/indexnow', { method: 'POST', headers: { 'x-test-role': 'admin' } })).json();
+  assert.equal(submitted.submitted, 0, 'nothing is sent from a non-https test address');
 });
 
 test('unknown books answer 404 with noindex; demo titles are noindex and left out of the sitemap', async () => {

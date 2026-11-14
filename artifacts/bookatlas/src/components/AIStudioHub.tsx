@@ -78,7 +78,7 @@ export function AIStudioHub({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                  Bookatlas AI Studio & Multi-Modal Hub
+                  BooksAtlas AI Studio & Multi-Modal Hub
                 </h2>
                 <span className="bg-indigo-500/20 text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-400/30">
                   Google Gemini Ecosystem

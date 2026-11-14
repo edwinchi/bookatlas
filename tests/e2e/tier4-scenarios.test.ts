@@ -295,7 +295,7 @@ test('SCENARIO-4: Autonomous Workforce Delegation: role discovery, team presets,
   const taskInput = {
     idempotencyKey: '00000000-0000-4000-8000-000000000050',
     objective: 'Perform comprehensive E2E test coverage audit and security verification.',
-    context: 'Bookatlas multi-tier architecture with React 19, Express 5, and Supabase isolation.',
+    context: 'BooksAtlas multi-tier architecture with React 19, Express 5, and Supabase isolation.',
     workerIds: ['cto', 'qa'],
     budgetUsd: 0.50,
   };
@@ -404,7 +404,7 @@ test('SCENARIO-6: Offline Storefront & PWA Cart Simulation: manifest validation,
   // Step 1: PWA Web Manifest Verification
   const manifestRaw = readFileSync('artifacts/bookatlas/public/manifest.webmanifest', 'utf8');
   const manifest = JSON.parse(manifestRaw);
-  assert.equal(manifest.name, 'Bookatlas — AI Knowledge Atlas & eBook Store');
+  assert.equal(manifest.name, 'BooksAtlas — AI Knowledge Atlas & eBook Store');
   assert.equal(manifest.display, 'standalone');
   assert.equal(manifest.orientation, 'portrait-primary');
   assert.ok(manifest.icons.length >= 2);

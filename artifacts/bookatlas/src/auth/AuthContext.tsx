@@ -97,7 +97,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         <section aria-labelledby="admin-notice-title" className="max-w-md rounded-2xl bg-white p-7 text-slate-900 shadow-xl">
           <h2 id="admin-notice-title" className="text-xl font-bold">Account notice</h2>
           <p className="my-4 text-sm leading-relaxed text-slate-600">{notice}</p>
-          <button onClick={() => setNotice('')} className="rounded-xl bg-indigo-700 px-5 py-2.5 font-semibold text-white">Back to Bookatlas</button>
+          <button onClick={() => setNotice('')} className="rounded-xl bg-indigo-700 px-5 py-2.5 font-semibold text-white">Back to BooksAtlas</button>
         </section>
       </AppModal>}
     </Context.Provider>
@@ -124,7 +124,7 @@ export function useAccountList<T>(name: string) {
   useEffect(() => {
     if (key) {
       try { localStorage.setItem(key, JSON.stringify(items)); }
-      catch { console.error('Bookatlas could not save browser data. Storage may be full or disabled.'); }
+      catch { console.error('BooksAtlas could not save browser data. Storage may be full or disabled.'); }
     }
   }, [key, items]);
   return [items, setItems] as const;

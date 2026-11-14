@@ -21,7 +21,7 @@ const BOOKATLAS_FUNCTIONS = new Set(['bookatlas_catalog_facets', 'bookatlas_refr
 export const bookatlasDb = persistenceClient ? {
   from: (table: BookatlasTable) => persistenceClient.from(bookatlasTable(table)),
   rpc: (fn: string) => {
-    if (!BOOKATLAS_FUNCTIONS.has(fn)) throw new Error('Unknown Bookatlas function');
+    if (!BOOKATLAS_FUNCTIONS.has(fn)) throw new Error('Unknown BooksAtlas function');
     return persistenceClient.rpc(fn);
   },
 } : null;

@@ -1,5 +1,5 @@
 /**
- * VAT on BookAtlas eBook sales (owner decision 2026-11-14: BookAtlas, not Stripe, handles tax).
+ * VAT on BooksAtlas eBook sales (owner decision 2026-11-14: BooksAtlas, not Stripe, handles tax).
  *
  * Prices are VAT-inclusive consumer prices. The seller is established in the Netherlands. Below the EU-wide
  * €10,000 threshold for cross-border distance sales of electronic services (VAT Directive art. 59c), Dutch VAT

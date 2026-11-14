@@ -106,7 +106,7 @@ export interface FilterOptions {
   priceCategory: 'all' | 'free' | 'under5' | 'under10' | 'deals';
   minRating: number;
   sortBy: 'featured' | 'bestseller' | 'rating' | 'priceAsc' | 'priceDesc' | 'newest';
-  bookatlasPlusOnly: boolean; // Bookatlas Plus
+  bookatlasPlusOnly: boolean; // BooksAtlas Plus
   language?: string;
 }
 

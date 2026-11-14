@@ -122,7 +122,7 @@ export const BookCard: React.FC<BookCardProps> = ({
       {/* Book Metadata & Info */}
       <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
         <div>
-          {/* Format & Bookatlas Plus Pill */}
+          {/* Format & BooksAtlas Plus Pill */}
           <div className="flex items-center justify-between text-[11px] font-medium text-slate-500 mb-1">
             <span className="flex items-center gap-1 text-slate-600">
               {book.format === 'audiobook' ? (

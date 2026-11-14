@@ -48,7 +48,7 @@ export const AccountPrivacy: React.FC = () => {
       <div className="space-y-4">
           <div>
             <p className="text-[11px] leading-relaxed text-slate-600">
-              Download a copy of everything Bookatlas holds about {account.email}, or permanently delete your account. See the <a href={`${import.meta.env.BASE_URL}privacy`} className="font-semibold text-indigo-700 underline">Privacy Notice</a>.
+              Download a copy of everything BooksAtlas holds about {account.email}, or permanently delete your account. See the <a href={`${import.meta.env.BASE_URL}privacy`} className="font-semibold text-indigo-700 underline">Privacy Notice</a>.
             </p>
           </div>
 

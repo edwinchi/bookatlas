@@ -35,7 +35,7 @@ export function filterCatalog(books: Book[], filters: FilterOptions, activeTab: 
         if (filters.format === 'audiobook' && book.format !== 'audiobook' && book.format !== 'bundle') return false;
       }
 
-      // Bookatlas Plus Only filter
+      // BooksAtlas Plus Only filter
       if (filters.bookatlasPlusOnly && !book.isBookatlasPlus) {
         return false;
       }

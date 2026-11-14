@@ -278,7 +278,7 @@ test('PAIR-7: reader library book excerpt feeds AI copilot summarize action', ()
 test('PAIR-8: workforce task assignment maps strictly to bookatlas_ scoped persistence tables', () => {
   const validTask = {
     idempotencyKey: '00000000-0000-4000-8000-000000000020',
-    objective: 'Audit and harden Bookatlas access policies and API security.',
+    objective: 'Audit and harden BooksAtlas access policies and API security.',
     workerIds: ['cto', 'security'],
     budgetUsd: 0.50,
   };
@@ -286,14 +286,14 @@ test('PAIR-8: workforce task assignment maps strictly to bookatlas_ scoped persi
   assert.ok(CreateWorkforceTaskBody.safeParse(validTask).success);
   assert.equal(validTask.workerIds.length, 2);
 
-  // Verify database tables assigned for platform persistence are Bookatlas-prefixed
+  // Verify database tables assigned for platform persistence are BooksAtlas-prefixed
   const registeredTables = (['publishing_jobs', 'publishing_messages', 'registered_users'] as const)
     .map(t => bookatlasTable(t));
   assert.deepEqual(registeredTables, ['bookatlas_publishing_jobs', 'bookatlas_publishing_messages', 'bookatlas_registered_users']);
   assert.ok(registeredTables.every(t => t.startsWith('bookatlas_')));
 
   // Verify unregistered workforce entity names cannot bypass database namespace controls
-  assert.throws(() => bookatlasTable('workforce_tasks' as any), /Unknown Bookatlas table/);
+  assert.throws(() => bookatlasTable('workforce_tasks' as any), /Unknown BooksAtlas table/);
 });
 
 // ----------------------------------------------------------------------------

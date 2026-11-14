@@ -167,7 +167,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           title: 'Chapter 1',
           content: [
             book.synopsis,
-            'This is a preview edition provided by Bookatlas eBook Store (Atlantean Globals Services). To read the complete work, purchase the full eBook or start a Bookatlas Plus trial.'
+            'This is a preview edition provided by BooksAtlas eBook Store (Atlantean Globals Services). To read the complete work, purchase the full eBook or start a BooksAtlas Plus trial.'
           ]
         }
       ]);
@@ -693,7 +693,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
           <div className="hidden md:flex flex-col">
             <span className="text-xs font-bold truncate max-w-xs">{book.title}</span>
-            <span className="text-[11px] opacity-75">{book.author} · Bookatlas</span>
+            <span className="text-[11px] opacity-75">{book.author} · BooksAtlas</span>
           </div>
         </div>
 
@@ -894,7 +894,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           {inPreview && currentChapterIndex === chapters.length - 1 && (book.price === 0 ? !account && (
             <div className="mt-14 p-6 rounded-2xl border border-current/20 bg-current/5 text-center space-y-3">
               <h4 className="font-bold text-base">Read the whole of {book.title} free</h4>
-              <p className="text-xs sm:text-sm opacity-80 max-w-md mx-auto">Sign in with a free BookAtlas account to continue past this preview.</p>
+              <p className="text-xs sm:text-sm opacity-80 max-w-md mx-auto">Sign in with a free BooksAtlas account to continue past this preview.</p>
               <button onClick={() => requireSignIn('reading the full book')} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-colors cursor-pointer">
                 Sign in to keep reading
               </button>
@@ -915,7 +915,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           <div className="mt-14 p-6 rounded-2xl border border-current/20 bg-current/5 text-center space-y-3">
             <h4 className="font-bold text-base">Enjoying this excerpt of {book.title}?</h4>
             <p className="text-xs sm:text-sm opacity-80 max-w-md mx-auto">
-              Get instant full access to all {book.pageCount} pages, offline downloads, and automatic reading progress syncing across your Bookatlas eReaders and mobile apps.
+              Get instant full access to all {book.pageCount} pages, offline downloads, and automatic reading progress syncing across your BooksAtlas eReaders and mobile apps.
             </p>
             <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
               <button
@@ -934,7 +934,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                   onClick={onClose}
                   className="px-4 py-2.5 bg-white/20 hover:bg-white/30 border border-current/20 font-semibold text-xs sm:text-sm rounded-xl transition-colors cursor-pointer"
                 >
-                  Read on Bookatlas Plus (Free Trial)
+                  Read on BooksAtlas Plus (Free Trial)
                 </button>
               )}
             </div>

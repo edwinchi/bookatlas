@@ -10,7 +10,7 @@ interface AIAccessGateModalProps {
 }
 
 // Shown instead of an AI feature when the browsing reader isn't at least a
-// Bookatlas Plus Member — reuses TierAccessGate purely for its locked-state
+// BooksAtlas Plus Member — reuses TierAccessGate purely for its locked-state
 // card (this modal is only ever mounted when access is already known to be
 // denied, so TierAccessGate's own children/hasAccess branch never fires).
 export const AIAccessGateModal: React.FC<AIAccessGateModalProps> = ({
@@ -31,7 +31,7 @@ export const AIAccessGateModal: React.FC<AIAccessGateModalProps> = ({
         >
           <X className="w-4 h-4" />
         </button>
-        <p className="text-xs font-bold uppercase tracking-wider text-indigo-700">Bookatlas Plus membership required</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-indigo-700">BooksAtlas Plus membership required</p>
         <h2 id="access-gate-title" className="pr-8 text-2xl font-bold">{featureTitle}</h2>
         <p className="text-sm leading-relaxed text-slate-700">{featureDescription}</p>
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950">

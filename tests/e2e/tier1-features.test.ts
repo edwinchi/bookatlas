@@ -368,7 +368,7 @@ test('F6-5: guest cart merge deduplicates against existing account items by book
 test('F7-1: web app manifest defines standalone display and valid metadata', () => {
   const manifestRaw = readFileSync('artifacts/bookatlas/public/manifest.webmanifest', 'utf8');
   const manifest = JSON.parse(manifestRaw);
-  assert.equal(manifest.short_name, 'Bookatlas');
+  assert.equal(manifest.short_name, 'BooksAtlas');
   assert.equal(manifest.display, 'standalone');
   assert.ok(Array.isArray(manifest.icons) && manifest.icons.length > 0);
 });
@@ -877,7 +877,7 @@ test('F15-4: automation log entry includes timestamp, action type, and badge', (
 
 test('F15-5: platform documentation export schema defines compliance and architecture metadata', () => {
   const exportDoc = {
-    platformName: 'Bookatlas Enterprise Digital Bookstore',
+    platformName: 'BooksAtlas Enterprise Digital Bookstore',
     company: {
       name: 'Atlantean Globals Services',
       compliance: 'GDPR / DRM / EPUB3 / ISO-27001 Certified Standards',

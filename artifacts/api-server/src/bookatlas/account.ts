@@ -14,7 +14,7 @@ export function maskEmail(email: string): string {
 
 export class AccountStoreError extends Error {}
 
-/** Every place Bookatlas keeps data about one reader. Implementations must throw rather than report partial success. */
+/** Every place BooksAtlas keeps data about one reader. Implementations must throw rather than report partial success. */
 export interface AccountStore {
   profile(email: string): unknown | null;
   subscriber(email: string): Record<string, unknown> | null;
@@ -74,7 +74,7 @@ export function mountAccountRoutes(app: Express, store: AccountStore) {
       await store.deleteIdentity(identity.id);
     } catch (err) {
       logger.error({ err, event: 'account.delete_failed', stage: 'identity' }, 'Sign-in account removal failed');
-      res.status(502).json({ error: 'Your Bookatlas data was erased, but your sign-in account could not be removed. Please try again.' });
+      res.status(502).json({ error: 'Your BooksAtlas data was erased, but your sign-in account could not be removed. Please try again.' });
       return;
     }
     logger.info({ event: 'account.deleted', user: maskEmail(identity.email) }, 'Reader account deleted');

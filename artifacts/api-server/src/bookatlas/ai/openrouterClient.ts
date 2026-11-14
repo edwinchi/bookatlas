@@ -127,7 +127,7 @@ async function generateWithOpenRouterInner(opts: GenerateOptions, cacheKey: stri
         Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
-        'X-Title': 'Bookatlas',
+        'X-Title': 'BooksAtlas',
       },
       body: JSON.stringify(body),
       signal: controller.signal,

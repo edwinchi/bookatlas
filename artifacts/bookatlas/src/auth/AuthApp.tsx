@@ -124,10 +124,10 @@ function Store({ portal = false, resumeCheckout = false }: { portal?: boolean; r
     return () => clearTimeout(timer);
   }, [isLoaded]);
   const authUnavailable = clerkStatus === 'error' || (authSlow && !isLoaded);
-  if (!authUnavailable && (!isLoaded || (isSignedIn && loading))) return <div className="flex min-h-screen items-center justify-center text-indigo-950" role="status">Loading your Bookatlas account…</div>;
+  if (!authUnavailable && (!isLoaded || (isSignedIn && loading))) return <div className="flex min-h-screen items-center justify-center text-indigo-950" role="status">Loading your BooksAtlas account…</div>;
   if (portal && !isSignedIn) return <Redirect to="/" />;
   if (isSignedIn && (!account || error)) return <main className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center gap-5 p-6 text-center">
-    <img src={`${basePath}/logo-192.webp`} alt="Bookatlas" width={638} height={192} className="h-12 w-auto max-w-full" />
+    <img src={`${basePath}/logo-192.webp`} alt="BooksAtlas" width={638} height={192} className="h-12 w-auto max-w-full" />
     <h1 className="text-2xl font-bold">We couldn’t verify your account</h1>
     <p className="text-slate-600">{error || 'Please finish verifying your email address, then try again.'}</p>
     <button onClick={refresh} className="rounded-xl bg-indigo-700 px-5 py-3 font-bold text-white">Try again</button>
@@ -155,7 +155,7 @@ function SignupConsentStep({ onAccept }: { onAccept: () => void }) {
     className="mx-auto w-[440px] max-w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8"
   >
     <h2 className="font-serif text-xl font-bold text-slate-950">Before you create your account</h2>
-    <p className="mt-2 text-sm leading-relaxed text-slate-600">Bookatlas accounts are for readers aged 16 or older. Marketing emails stay off unless you opt in later.</p>
+    <p className="mt-2 text-sm leading-relaxed text-slate-600">BooksAtlas accounts are for readers aged 16 or older. Marketing emails stay off unless you opt in later.</p>
     <label className="mt-5 flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
       <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} required className="mt-0.5 h-5 w-5 shrink-0 accent-indigo-700" />
       <span>I am 16 or older and I have read the <a href={`${basePath}/privacy`} target="_blank" rel="noreferrer" className="font-semibold text-indigo-700 underline">Privacy Notice</a>.</span>
@@ -179,16 +179,16 @@ function AuthPage({ signup = false }: { signup?: boolean }) {
     checkout: 'Sign in to continue to your saved cart. We will return you to review checkout; nothing will be purchased automatically.',
     membership: 'Sign in to manage your membership.',
     preferences: 'Sign in to manage your reading preferences.',
-    ai: 'Sign in to continue to this AI service. Bookatlas Plus membership is also required for personalized AI features.',
+    ai: 'Sign in to continue to this AI service. BooksAtlas Plus membership is also required for personalized AI features.',
     admin: 'Sign in with your administrator account. Reader accounts will be denied access to this private workspace.',
   };
   const destination = readerReturnUrl(returnTo, window.location.origin, basePath);
   const preservedIntent = `?${new URLSearchParams({ feature: feature || '', returnTo }).toString()}`;
   return <main className="min-h-[100dvh] bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 px-4 py-10">
     <div className="mx-auto mb-8 max-w-md text-center text-white">
-      <Link href={returnTo} className="inline-flex min-h-11 items-center text-sm text-indigo-100 underline underline-offset-4">← Cancel and return to Bookatlas</Link>
-      <h1 className="mt-7 font-serif text-3xl font-bold">{signup ? 'A bookshelf of your own.' : 'Continue with Bookatlas'}</h1>
-      <p className="mt-3 text-sm leading-relaxed text-indigo-100">{feature && descriptions[feature] ? descriptions[feature] : signup ? 'Create your Bookatlas account to save your wishlist, build your library, and pick up where you left off.' : 'Sign in to continue. You can still browse the bookstore without an account.'}</p>
+      <Link href={returnTo} className="inline-flex min-h-11 items-center text-sm text-indigo-100 underline underline-offset-4">← Cancel and return to BooksAtlas</Link>
+      <h1 className="mt-7 font-serif text-3xl font-bold">{signup ? 'A bookshelf of your own.' : 'Continue with BooksAtlas'}</h1>
+      <p className="mt-3 text-sm leading-relaxed text-indigo-100">{feature && descriptions[feature] ? descriptions[feature] : signup ? 'Create your BooksAtlas account to save your wishlist, build your library, and pick up where you left off.' : 'Sign in to continue. You can still browse the bookstore without an account.'}</p>
     </div>
     {signup && !consented ? <SignupConsentStep onAccept={() => setConsented(true)} /> : signup ? <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in${preservedIntent}`} forceRedirectUrl={destination} /> :
       <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up${preservedIntent}`} forceRedirectUrl={destination} />}
@@ -206,8 +206,8 @@ function ProviderWithRoutes() {
     signInFallbackRedirectUrl={`${basePath}/`}
     signUpFallbackRedirectUrl={`${basePath}/`}
     localization={{
-      signIn: { start: { title: 'Welcome back to Bookatlas', subtitle: 'Sign in to access your bookshelf' } },
-      signUp: { start: { title: 'Join Bookatlas', subtitle: 'Create your personal reading account' } },
+      signIn: { start: { title: 'Welcome back to BooksAtlas', subtitle: 'Sign in to access your bookshelf' } },
+      signUp: { start: { title: 'Join BooksAtlas', subtitle: 'Create your personal reading account' } },
     }}
     routerPush={(to) => setLocation(stripBase(to))}
     routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
@@ -224,7 +224,7 @@ function ProviderWithRoutes() {
         <Route path="/admin"><Store /></Route>
         <Route path="/books/:id"><Store /></Route>
         <Route path="/"><Store /></Route>
-        <Route><main className="p-10 text-center"><h1 className="text-2xl font-bold">Page not found</h1><Link href="/">Return to Bookatlas</Link></main></Route>
+        <Route><main className="p-10 text-center"><h1 className="text-2xl font-bold">Page not found</h1><Link href="/">Return to BooksAtlas</Link></main></Route>
       </Switch>
     </AccountProvider>
   </ClerkProvider>;

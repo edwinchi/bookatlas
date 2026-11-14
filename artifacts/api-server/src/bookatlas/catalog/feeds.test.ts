@@ -8,7 +8,7 @@ test('CSV fields may hold commas, quotes and line breaks', () => {
   assert.deepEqual(parseCsv('a,b\n"x, y","say ""hi""\nthere"\r\n\n'), [['a', 'b'], ['x, y', 'say "hi"\nthere']]);
 });
 
-test('BISAC and Thema subjects map to BookAtlas categories', () => {
+test('BISAC and Thema subjects map to BooksAtlas categories', () => {
   assert.equal(mapCategory('FIC028000', known), 'Sci-Fi & Fantasy');
   assert.equal(mapCategory('FIC022010', known), 'Mystery & Suspense');
   assert.equal(mapCategory('HIS037000', known), 'Non-Fiction & Essays');

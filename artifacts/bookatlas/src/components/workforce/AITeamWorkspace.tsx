@@ -87,7 +87,7 @@ export const AITeamWorkspace: React.FC = () => {
         <div className="absolute inset-0 opacity-[0.07] pointer-events-none bg-[repeating-linear-gradient(0deg,#fff_0,#fff_1px,transparent_1px,transparent_28px)]" aria-hidden />
         <div className="relative flex flex-col lg:flex-row lg:items-end justify-between gap-6">
           <div className="max-w-2xl">
-            <p className="font-mono text-[11px] tracking-[0.22em] uppercase text-[#e7b866]">Bookatlas / Back office / Desk 07</p>
+            <p className="font-mono text-[11px] tracking-[0.22em] uppercase text-[#e7b866]">BooksAtlas / Back office / Desk 07</p>
             <h2 id="aiteam-title" className="mt-2 font-serif text-3xl sm:text-4xl font-bold tracking-tight">The AI Team ledger</h2>
             <p className="mt-3 text-sm leading-relaxed text-[#cfe0d9]">
               Brief specialist roles, approve each paid draft by hand, and review written reports. Workers write recommendations only. Nothing here executes, publishes, emails, or spends beyond the cap you set.

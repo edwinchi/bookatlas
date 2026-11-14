@@ -54,7 +54,7 @@ test('every workforce read, mutation, and nested report operation is administrat
 test('the API contract requires per-worker spending consent and a bounded task budget', () => {
   const input = {
     idempotencyKey: '36dff024-f9af-4163-9881-358791ed1eea',
-    objective: 'Review this synthetic Bookatlas MVP brief.',
+    objective: 'Review this synthetic BooksAtlas MVP brief.',
     workerIds: ['product', 'qa'], budgetUsd: 0.25,
   };
   assert.ok(CreateWorkforceTaskBody.safeParse(input).success);

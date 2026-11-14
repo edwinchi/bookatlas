@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { accessFor, authorizationStatus, isCrossSiteMutation } from './policy';
 
-test('allows anonymous GET access only for the public Bookatlas catalog', () => {
+test('allows anonymous GET access only for the public BooksAtlas catalog', () => {
   assert.equal(accessFor('GET', '/api/books'), 'public');
   assert.equal(accessFor('GET', '/api/categories'), 'public');
   assert.equal(accessFor('GET', '/api/auth/me'), 'reader');

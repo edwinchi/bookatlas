@@ -163,7 +163,7 @@ export const CSVValidationModal: React.FC<CSVValidationModalProps> = ({
                 <Sparkles className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                 <div>
                   <strong className="block font-bold mb-0.5">High-Performance CSV Column Matcher</strong>
-                  Map the columns from your uploaded CSV to the Bookatlas subscriber profile fields. The system handles 100,000+ records with duplicate deduplication and RFC-5322 compliance.
+                  Map the columns from your uploaded CSV to the BooksAtlas subscriber profile fields. The system handles 100,000+ records with duplicate deduplication and RFC-5322 compliance.
                 </div>
               </div>
 
@@ -260,7 +260,7 @@ export const CSVValidationModal: React.FC<CSVValidationModalProps> = ({
                     className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="free_reader">📖 Free Reader Tier</option>
-                    <option value="member_subscriber">✨ Bookatlas Plus Member</option>
+                    <option value="member_subscriber">✨ BooksAtlas Plus Member</option>
                     <option value="vip_patron">👑 VIP Patron Circle (40% discount perk)</option>
                   </select>
                 </div>

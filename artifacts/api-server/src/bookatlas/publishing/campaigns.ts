@@ -141,12 +141,12 @@ export async function tickCampaignWorker() {
       const suppression = await provider('GET', `/suppressions/${encodeURIComponent(message.recipient)}`);
       if (suppression.ok) { status = 'suppressed'; throw new PublishingError('Provider reports this recipient as suppressed.'); }
       if (suppression.status !== 404) throw new PublishingError('Provider suppression checks are unavailable.');
-      let text = `New Bookatlas publication: ${job.data.config.title}\nBy ${job.data.config.author}\n`;
+      let text = `New BooksAtlas publication: ${job.data.config.title}\nBy ${job.data.config.author}\n`;
       if (process.env.BOOKATLAS_PUBLIC_URL) text += `\nBrowse: ${process.env.BOOKATLAS_PUBLIC_URL}\n`;
       const headers: Record<string, string> = {};
       if (message.kind === 'reader') {
         const link = `${process.env.BOOKATLAS_PUBLIC_URL!.replace(/\/$/, '')}/api/reader-unsubscribe?token=${unsubscribeToken(message.recipient)}`;
-        text += `\nYou opted in to Bookatlas reading updates. Unsubscribe: ${link}\n`;
+        text += `\nYou opted in to BooksAtlas reading updates. Unsubscribe: ${link}\n`;
         headers['List-Unsubscribe'] = `<${link}>`;
       }
       // A timeout after this point is ambiguous and may already have sent.

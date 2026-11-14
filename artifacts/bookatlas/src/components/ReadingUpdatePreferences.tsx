@@ -53,7 +53,7 @@ export const ReadingUpdatePreferences: React.FC = () => {
       <div className="space-y-3">
           <div>
             <p className="text-[11px] leading-relaxed text-slate-600">
-              Optional. Browsing and reading stay open to everyone either way. If you opt in, Bookatlas may email {account.email} about newly published books. You can opt out here at any time.
+              Optional. Browsing and reading stay open to everyone either way. If you opt in, BooksAtlas may email {account.email} about newly published books. You can opt out here at any time.
             </p>
           </div>
 

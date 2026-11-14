@@ -186,7 +186,7 @@ export const AIMatchmakerModal: React.FC<AIMatchmakerModalProps> = ({
         results.push({
           book: b,
           matchScore: 92 - i * 4,
-          matchReason: 'Curated trending favorite by Bookatlas editors.',
+          matchReason: 'Curated trending favorite by BooksAtlas editors.',
           keyHighlights: b.tags.slice(0, 3)
         });
       });
@@ -214,7 +214,7 @@ export const AIMatchmakerModal: React.FC<AIMatchmakerModalProps> = ({
 
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-300 mb-2">
             <Bot className="w-4 h-4 text-amber-400 animate-pulse" />
-            <span>Bookatlas Gemini AI Discovery Engine</span>
+            <span>BooksAtlas Gemini AI Discovery Engine</span>
           </div>
 
           <h2 className="text-xl sm:text-3xl font-serif font-extrabold text-white">

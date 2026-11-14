@@ -8,7 +8,7 @@ const sections: { title: string; body: ReactNode }[] = [
   {
     title: 'Who is responsible',
     body: <>
-      <p>Bookatlas is operated by {OPERATOR.name}, registered in the Netherlands, which is the controller of the personal data described here. You can contact us about your data at:</p>
+      <p>BooksAtlas is operated by {OPERATOR.name}, registered in the Netherlands, which is the controller of the personal data described here. You can contact us about your data at:</p>
       <OperatorAddress />
     </>,
   },
@@ -54,7 +54,7 @@ const sections: { title: string; body: ReactNode }[] = [
   },
   {
     title: 'Age',
-    body: <p>Bookatlas accounts are for people aged 16 or older.</p>,
+    body: <p>BooksAtlas accounts are for people aged 16 or older.</p>,
   },
   {
     title: 'Changes to this notice',

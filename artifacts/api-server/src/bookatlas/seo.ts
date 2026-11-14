@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { Express, Response } from 'express';
+import type { Express, Request, Response } from 'express';
+import { waitUntil } from '@vercel/functions';
 import type { Book } from '@workspace/bookatlas-catalog/types';
 import { logger } from '../lib/logger.js';
 import type { CatalogStore } from './catalog/store.js';
@@ -13,7 +14,7 @@ import type { CatalogStore } from './catalog/store.js';
  */
 
 export const SITEMAP_CHUNK = 10_000;
-const SITE_NAME = 'Bookatlas';
+const SITE_NAME = 'BooksAtlas';
 
 let shell: { html: string; at: number } | null = null;
 /** The built index.html: next to the function on Vercel, otherwise fetched from the site itself. */
@@ -92,6 +93,22 @@ export function bookHead(book: Book, appUrl: string) {
   return { title, description, url, image, jsonLd, html: tags.join('\n    ') };
 }
 
+/** The book's facts as plain HTML, for crawlers and assistants that do not run JavaScript. */
+export function bookBody(book: Book, appUrl: string) {
+  const url = `${appUrl}/books/${encodeURIComponent(book.id)}`;
+  const forSale = !!book.hasReaderContent && book.price > 0;
+  return `<noscript>
+      <main>
+        <h1>${esc(book.title)}${book.subtitle ? `: ${esc(book.subtitle)}` : ''}</h1>
+        <p>by ${esc(book.author)}${book.narrator ? `, narrated by ${esc(book.narrator)}` : ''} · ${esc(book.language)}${book.genres?.length ? ` · ${esc(book.genres.join(', '))}` : ''}</p>
+        <p>${esc(plain(book.synopsis, 2000))}</p>
+        <p>${forSale ? `eBook €${book.price.toFixed(2)} on ${SITE_NAME}; read a free preview in your browser.` : `Read a free preview on ${SITE_NAME}.`}</p>
+        <p><a href="${esc(url)}">${esc(book.title)} on ${SITE_NAME}</a> · <a href="${appUrl}/">${SITE_NAME} eBook store</a></p>
+      </main>
+    </noscript>`;
+}
+export const injectBody = (shellHtml: string, body: string) => shellHtml.replace(/<noscript>[\s\S]*?<\/noscript>/i, body);
+
 /** Replace the shell's generic title and description with the book's head tags. */
 export function injectHead(shellHtml: string, head: string) {
   const stripped = shellHtml
@@ -111,6 +128,27 @@ const xml = (res: Response, body: string) => {
 
 const STATIC_PAGES = ['/', '/privacy', '/legal', '/refunds'];
 
+/**
+ * IndexNow tells Bing (which ChatGPT search and Copilot use), Yandex and others about new or changed pages at
+ * once. The key is public by design and served from /<key>.txt.
+ */
+export const INDEXNOW_KEY = process.env.INDEXNOW_KEY?.trim() || '4342dfb7a77c0a5b1d4ad41aae5e23ec';
+export async function submitIndexNow(urls: string[], appUrl: string) {
+  const host = new URL(appUrl).host;
+  if (!urls.length || !appUrl.startsWith('https://')) return { submitted: 0, status: 0 };
+  const res = await fetch('https://api.indexnow.org/indexnow', {
+    method: 'POST', headers: { 'content-type': 'application/json; charset=utf-8' },
+    body: JSON.stringify({ host, key: INDEXNOW_KEY, keyLocation: `${appUrl}/${INDEXNOW_KEY}.txt`, urlList: urls.slice(0, 10_000) }),
+  });
+  return { submitted: Math.min(urls.length, 10_000), status: res.status };
+}
+/** Announce a newly published or changed book; never delays or fails the request that triggered it. */
+export function announceBook(bookId: string, appUrl: string) {
+  waitUntil(submitIndexNow([`${appUrl}/books/${encodeURIComponent(bookId)}`, `${appUrl}/sitemap.xml`], appUrl)
+    .then((r) => logger.info({ event: 'seo.indexnow', bookId, status: r.status }, 'Book announced to IndexNow'))
+    .catch((err) => logger.warn({ err, event: 'seo.indexnow_failed', bookId }, 'IndexNow announcement failed')));
+}
+
 export function mountSeo(app: Express, catalog: CatalogStore, appUrl: string) {
   app.get('/books/:id', async (req, res) => {
     const id = String(req.params.id);
@@ -124,10 +162,51 @@ export function mountSeo(app: Express, catalog: CatalogStore, appUrl: string) {
         return;
       }
       res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600');
-      res.send(injectHead(html, bookHead(book, appUrl).html));
+      res.send(injectBody(injectHead(html, bookHead(book, appUrl).html), bookBody(book, appUrl)));
     } catch (err) {
       logger.error({ err, event: 'seo.book_page_failed', id }, 'Book page could not be rendered');
-      res.status(503).send('Bookatlas is temporarily unavailable. Please try again.');
+      res.status(503).send('BooksAtlas is temporarily unavailable. Please try again.');
+    }
+  });
+
+  // llms.txt with every real book listed, for AI assistants (llms.txt itself is a static file).
+  app.get('/llms-full.txt', async (_req, res) => {
+    try {
+      const intro = (await fetch(`${appUrl}/llms.txt`).then((r) => (r.ok ? r.text() : '')).catch(() => '')) || `# ${SITE_NAME}\n`;
+      const lines: string[] = [];
+      for (let chunk = 0; chunk < 3 && lines.length < 5_000; chunk += 1) {
+        const rows = (await catalog.sitemapChunk(chunk, 2_000)).filter((r) => !r.sample);
+        if (!rows.length) break;
+        for (const row of rows) {
+          const book = await catalog.get(row.id);
+          if (!book) continue;
+          const forSale = !!book.hasReaderContent && book.price > 0;
+          lines.push(`- [${book.title}${book.subtitle ? `: ${book.subtitle}` : ''}](${appUrl}/books/${encodeURIComponent(book.id)}) by ${book.author}${forSale ? ` · eBook €${book.price.toFixed(2)}` : ''}${book.genres?.length ? ` · ${book.genres.slice(0, 3).join(', ')}` : ''}: ${plain(book.synopsis, 300)}`);
+        }
+      }
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
+      res.send(`${intro.trim()}\n\n## Books on ${SITE_NAME}\n\n${lines.join('\n') || '(The catalogue is being prepared.)'}\n`);
+    } catch (err) {
+      logger.error({ err, event: 'seo.llms_failed' }, 'llms-full.txt failed');
+      res.status(503).send('Temporarily unavailable.');
+    }
+  });
+
+  // Administrators: submit every page and book to IndexNow (after launch or a large import).
+  app.post('/api/manager/seo/indexnow', async (req: Request, res) => {
+    if (req.bookatlasIdentity?.role !== 'admin') { res.status(403).json({ error: 'Administrator access is required.' }); return; }
+    try {
+      const urls = [...STATIC_PAGES.map((p) => `${appUrl}${p}`), `${appUrl}/llms.txt`];
+      for (let chunk = 0; urls.length < 10_000; chunk += 1) {
+        const rows = (await catalog.sitemapChunk(chunk, SITEMAP_CHUNK)).filter((r) => !r.sample);
+        if (!rows.length) break;
+        urls.push(...rows.map((r) => `${appUrl}/books/${encodeURIComponent(r.id)}`));
+      }
+      res.json(await submitIndexNow(urls, appUrl));
+    } catch (err) {
+      logger.error({ err, event: 'seo.indexnow_failed' }, 'IndexNow submission failed');
+      res.status(503).json({ error: 'IndexNow submission failed. Please retry.' });
     }
   });
 
@@ -147,7 +226,7 @@ export function mountSeo(app: Express, catalog: CatalogStore, appUrl: string) {
     const file = String(req.params.file);
     try {
       if (file === 'pages.xml') {
-        xml(res, `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${STATIC_PAGES.map((p) => `  <url><loc>${appUrl}${p}</loc></url>`).join('\n')}\n</urlset>`);
+        xml(res, `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...STATIC_PAGES, '/llms.txt', '/llms-full.txt'].map((p) => `  <url><loc>${appUrl}${p}</loc></url>`).join('\n')}\n</urlset>`);
         return;
       }
       const m = /^books-(\d{1,4})\.xml$/.exec(file);

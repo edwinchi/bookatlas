@@ -153,7 +153,7 @@ export function mountPublishingJobs(app: Express, onPublished: (book: Book) => v
     unsubscribeEmail(token);
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Content-Security-Policy', "default-src 'none'; form-action 'self'; base-uri 'none'");
-    res.type('html').send(`<!doctype html><html lang="en"><meta charset="utf-8"><title>Bookatlas email preferences</title><h1>Stop Bookatlas marketing emails</h1><p>Confirm below. You do not need an account or password.</p><form method="post"><input type="hidden" name="token" value="${token}"><button>Unsubscribe</button></form></html>`);
+    res.type('html').send(`<!doctype html><html lang="en"><meta charset="utf-8"><title>BooksAtlas email preferences</title><h1>Stop BooksAtlas marketing emails</h1><p>Confirm below. You do not need an account or password.</p><form method="post"><input type="hidden" name="token" value="${token}"><button>Unsubscribe</button></form></html>`);
   }));
   app.post('/api/reader-unsubscribe', guarded(async (req, res) => {
     const email = unsubscribeEmail(String(req.body?.token ?? ''));
@@ -162,7 +162,7 @@ export function mountPublishingJobs(app: Express, onPublished: (book: Book) => v
     }).eq('email', email);
     if (result.error) throw new PublishingError('Could not save your preference. Please retry.', 503);
     res.setHeader('Cache-Control', 'no-store');
-    res.type('html').send('<!doctype html><html lang="en"><meta charset="utf-8"><title>Unsubscribed</title><h1>You are unsubscribed</h1><p>Bookatlas will no longer send you marketing emails.</p></html>');
+    res.type('html').send('<!doctype html><html lang="en"><meta charset="utf-8"><title>Unsubscribed</title><h1>You are unsubscribed</h1><p>BooksAtlas will no longer send you marketing emails.</p></html>');
   }));
   if (process.env.BOOKATLAS_PUBLISHING_ENABLED === 'true') {
     startPublishingWorker();

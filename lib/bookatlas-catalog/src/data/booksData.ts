@@ -81,7 +81,7 @@ export const INITIAL_BOOKS: Book[] = [
     synopsis: 'Deep in the Bandiagara Escarpment of Mali, the sacred Po Tolo star calendar begins radiating an anomalous tachyonic signal. Nommo, an elder sonic engineer and hereditary griot, uncovers the forgotten solar ark constructed by the ancient Dogon stargazers—a vessel powered by acoustic harmonics calibrated to the resonant frequency of the African continent.',
     editorialReview: '“A monumental achievement in speculative Afrofuturism. Mwangi fuses deep ancestral oral tradition with theoretical astrophysics in prose so radiant it vibrates in your chest.” — The Pan-African Literary Review',
     superPointsEarned: 150,
-    tags: ['Afrofuturism', 'Dogon Astronomy', 'Sirius B', 'Sci-Fi', 'Bookatlas Plus', 'Bestseller'],
+    tags: ['Afrofuturism', 'Dogon Astronomy', 'Sirius B', 'Sci-Fi', 'BooksAtlas Plus', 'Bestseller'],
     awards: ['African Speculative Fiction Award Winner 2026', 'Nebula Award Finalist'],
     readingTimeHours: 8.0,
     aiVibe: 'Transcendent, cosmic, and fiercely ancestral',
@@ -565,7 +565,7 @@ export const INITIAL_BOOKS: Book[] = [
     reviews: []
   },
 
-  // 1. Sci-Fi & Fantasy (Original Bookatlas Classics)
+  // 1. Sci-Fi & Fantasy (Original BooksAtlas Classics)
   {
     id: 'atlas-001',
     title: 'The Cartographer of Silent Stars',
@@ -595,7 +595,7 @@ export const INITIAL_BOOKS: Book[] = [
     synopsis: 'On the salt plains of Oakhaven, the stellar beacons have started dimming one by one. Kaelen, an apprentice astrolabe engineer who lost her sight to an eclipse, discovers that the constellations are not dying—they are being systematically rewritten by a ghost armada from beyond the perimeter.',
     editorialReview: '“A breathless triumph of world-building and celestial wonder. Rostova writes with the poetic precision of Ted Chiang and the vast emotional scale of Ursula K. Le Guin.” — The European Literary Review',
     superPointsEarned: 140,
-    tags: ['Space Opera', 'Astrophysics', 'Bookatlas Plus', 'Bestseller'],
+    tags: ['Space Opera', 'Astrophysics', 'BooksAtlas Plus', 'Bestseller'],
     awards: ['Hugo Award Nominee 2025', 'European Speculative Fiction Prize'],
     readingTimeHours: 7.5,
     aiVibe: 'Vast, celestial, and deeply poetic',
@@ -632,7 +632,7 @@ export const INITIAL_BOOKS: Book[] = [
         rating: 5,
         date: '2 weeks ago',
         title: 'Absolute masterpiece of modern science fiction',
-        comment: 'I finished this in two sittings. The depiction of astral navigation and the depth of Kaelen’s character had me weeping by chapter 15. The eReader formatting on Bookatlas with Literata font is perfection.',
+        comment: 'I finished this in two sittings. The depiction of astral navigation and the depth of Kaelen’s character had me weeping by chapter 15. The eReader formatting on BooksAtlas with Literata font is perfection.',
         verifiedPurchase: true,
         upvotes: 42
       }

@@ -141,7 +141,7 @@ export function ExportDocsModal({ isOpen, onClose, books }: ExportDocsModalProps
                 <Building2 className="w-3.5 h-3.5" /> Atlantean Globals Services (Netherlands)
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                Bookatlas™ Enterprise Architecture & AI Operations Report
+                BooksAtlas™ Enterprise Architecture & AI Operations Report
               </h1>
               <p className="text-sm text-slate-500 max-w-2xl mx-auto">
                 Comprehensive Engineering Specification, DRM-Compliant In-Browser eReader, Single-Manager Autopilot Suite, and Google Gemini Multi-Modal Model Integrations.
@@ -155,7 +155,7 @@ export function ExportDocsModal({ isOpen, onClose, books }: ExportDocsModalProps
                 1. Executive Summary & Corporate Ownership
               </h3>
               <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
-                Bookatlas is the world-class digital eBook Store, audiobook distributor, and browser-native EPUB3 reading engine operated by <strong>Atlantean Globals Services</strong>, registered in Zwolle, the Netherlands (KvK 89423496). The application empowers readers with over 1.5 million titles, Bookatlas Plus subscription reading (€9.99/mo), and fully autonomous AI agents that run on a high-throughput single-port full-stack architecture.
+                BooksAtlas is the world-class digital eBook Store, audiobook distributor, and browser-native EPUB3 reading engine operated by <strong>Atlantean Globals Services</strong>, registered in Zwolle, the Netherlands (KvK 89423496). The application empowers readers with over 1.5 million titles, BooksAtlas Plus subscription reading (€9.99/mo), and fully autonomous AI agents that run on a high-throughput single-port full-stack architecture.
               </p>
             </div>
 
@@ -233,7 +233,7 @@ export function ExportDocsModal({ isOpen, onClose, books }: ExportDocsModalProps
                       <th className="p-2.5">Author</th>
                       <th className="p-2.5">Genre</th>
                       <th className="p-2.5">Price</th>
-                      <th className="p-2.5">Bookatlas Plus</th>
+                      <th className="p-2.5">BooksAtlas Plus</th>
                       <th className="p-2.5">Rating</th>
                     </tr>
                   </thead>

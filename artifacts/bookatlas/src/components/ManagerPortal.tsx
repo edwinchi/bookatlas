@@ -514,8 +514,8 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
         publisher: editingBook.publisher || 'Atlantean Publishing House (Zwolle)',
         isbn: `978-9-023-${Math.floor(10000 + Math.random() * 90000)}`,
         language: 'English',
-        synopsis: editingBook.synopsis || 'An original narrative published on Bookatlas.',
-        editorialReview: '“An exceptional literary work.” — Bookatlas Review',
+        synopsis: editingBook.synopsis || 'An original narrative published on BooksAtlas.',
+        editorialReview: '“An exceptional literary work.” — BooksAtlas Review',
         superPointsEarned: Math.round((Number(editingBook.price) || 9.99) * 10),
         tags: ['New Release', editingBook.primaryGenre || 'General'],
         sampleChapters: [
@@ -595,7 +595,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
             </div>
             
             <h1 className="text-2xl sm:text-3xl font-serif font-bold text-white tracking-tight">
-              Bookatlas Master Operations Studio
+              BooksAtlas Master Operations Studio
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl">
               Centralized single-manager backend by <span className="text-indigo-300 font-semibold">Atlantean Globals Services (Netherlands)</span>. Automate catalog generation for every category, dynamic pricing, and marketing broadcasts with Gemini 3.7.
@@ -927,7 +927,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                   Publisher Category Manager & Catalog Taxonomy
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Dynamically create, index, and organize categories across the entire Bookatlas digital bookstore and AI ingestion engine.
+                  Dynamically create, index, and organize categories across the entire BooksAtlas digital bookstore and AI ingestion engine.
                 </p>
               </div>
 
@@ -1378,7 +1378,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  Automatic Bookatlas Plus catalog eligibility
+                  Automatic BooksAtlas Plus catalog eligibility
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
@@ -1838,9 +1838,9 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                   <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
                     Subscription Growth
                   </span>
-                  <h3 className="font-bold text-sm text-slate-900 mt-2">Bookatlas Plus Expansion</h3>
+                  <h3 className="font-bold text-sm text-slate-900 mt-2">BooksAtlas Plus Expansion</h3>
                   <p className="text-xs text-slate-600 mt-1">
-                    Enables Bookatlas Plus unlimited reading on all titles priced ≤ $14.99 to maximize membership retention.
+                    Enables BooksAtlas Plus unlimited reading on all titles priced ≤ $14.99 to maximize membership retention.
                   </p>
                 </div>
                 <button
@@ -2009,7 +2009,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                 Autonomous Store Engine & Audit Trail
               </h2>
               <p className="text-xs text-slate-500">
-                Continuous real-time events executed by Bookatlas backend agents.
+                Continuous real-time events executed by BooksAtlas backend agents.
               </p>
             </div>
             <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold flex items-center gap-1.5 w-fit">
@@ -2062,7 +2062,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                   Administrator Identity & Passcode Management
                 </h2>
                 <p className="text-xs text-slate-300 max-w-2xl">
-                  Manage the cryptographic PIN and credentials required to access the Bookatlas Operations Studio, AI video pipelines, and proprietary documentation exports.
+                  Manage the cryptographic PIN and credentials required to access the BooksAtlas Operations Studio, AI video pipelines, and proprietary documentation exports.
                 </p>
               </div>
 
@@ -2394,7 +2394,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                     onChange={(e) => setEditingBook((prev) => ({ ...prev, isBookatlasPlus: e.target.checked }))}
                     className="w-4 h-4 text-indigo-600 rounded-sm"
                   />
-                  Include in Bookatlas Plus Unlimited
+                  Include in BooksAtlas Plus Unlimited
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer font-semibold">

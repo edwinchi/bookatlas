@@ -6,9 +6,9 @@ export const LEGAL_NOTICE_VERSION = '2026-11-08';
 
 const sections: { title: string; body: ReactNode }[] = [
   {
-    title: 'Who operates Bookatlas',
+    title: 'Who operates BooksAtlas',
     body: <>
-      <p>Bookatlas, its eBook store and in-browser reader are operated by:</p>
+      <p>BooksAtlas, its eBook store and in-browser reader are operated by:</p>
       <OperatorAddress />
     </>,
   },
@@ -22,7 +22,7 @@ const sections: { title: string; body: ReactNode }[] = [
   },
   {
     title: 'Books and content',
-    body: <p>Book texts, covers, audio samples and the Bookatlas name and design are protected by copyright and other intellectual property rights of {OPERATOR.name}, its authors or licensors. Purchases and samples are for your personal, non-commercial reading. You may not copy, redistribute or resell them unless the law allows it.</p>,
+    body: <p>Book texts, covers, audio samples and the BooksAtlas name and design are protected by copyright and other intellectual property rights of {OPERATOR.name}, its authors or licensors. Purchases and samples are for your personal, non-commercial reading. You may not copy, redistribute or resell them unless the law allows it.</p>,
   },
   {
     title: 'AI features',

@@ -51,7 +51,7 @@ before(async () => {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
   if (!setupError) await setupClerkTestingToken({ context });
   page = await context.newPage();
-  // Only BookAtlas's own policy counts: the bot-protection challenge frame reports against Cloudflare's policy.
+  // Only BooksAtlas's own policy counts: the bot-protection challenge frame reports against Cloudflare's policy.
   await page.exposeFunction('reportCspViolation', (v) => cspViolations.push(v));
   await page.addInitScript(() => {
     if (window !== window.top) return;

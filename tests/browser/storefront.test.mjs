@@ -20,7 +20,7 @@ async function open(path, { mobile = false } = {}) {
   page.on('pageerror', err => pageErrors.push(err.message));
   await page.goto(base + path, { waitUntil: 'networkidle' });
   // The store must leave the loading screen within the sign-in timeout (6 s) even if sign-in never loads.
-  await page.waitForFunction(() => !document.body.innerText.includes('Loading your Bookatlas account'), null, { timeout: 10_000 });
+  await page.waitForFunction(() => !document.body.innerText.includes('Loading your BooksAtlas account'), null, { timeout: 10_000 });
   return page;
 }
 
@@ -29,7 +29,7 @@ after(async () => { await browser?.close(); });
 
 test('the public storefront renders for guests even when sign-in is unavailable', async () => {
   const page = await open('/');
-  assert.equal(await page.getByText('Loading your Bookatlas account').isVisible(), false);
+  assert.equal(await page.getByText('Loading your BooksAtlas account').isVisible(), false);
   assert.ok(await page.getByRole('button', { name: /add to cart/i }).first().isVisible());
 });
 
@@ -178,7 +178,7 @@ test('the storefront has no serious or critical accessibility violations (WCAG 2
     const context = await browser.newContext(mobile ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
     await page.goto(base + '/', { waitUntil: 'networkidle' });
-    await page.waitForFunction(() => !document.body.innerText.includes('Loading your Bookatlas account'), null, { timeout: 10_000 });
+    await page.waitForFunction(() => !document.body.innerText.includes('Loading your BooksAtlas account'), null, { timeout: 10_000 });
     const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
     const serious = result.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
     assert.deepEqual(serious.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes[0]?.target.join(' ')}`), [], mobile ? 'mobile' : 'desktop');

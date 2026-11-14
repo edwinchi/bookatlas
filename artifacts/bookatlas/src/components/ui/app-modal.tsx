@@ -3,7 +3,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { cn } from '../../lib/utils';
 
 /**
- * The app's modal shell on Radix Dialog. Every BookAtlas pop-up keeps its own styled window and passes the
+ * The app's modal shell on Radix Dialog. Every BooksAtlas pop-up keeps its own styled window and passes the
  * backdrop classes it had before; Radix adds what hand-made overlays missed: a click or tap outside the window
  * and Escape close it, focus is trapped inside and returned afterwards, the page behind stops scrolling and is
  * hidden from screen readers, and the window is labelled.

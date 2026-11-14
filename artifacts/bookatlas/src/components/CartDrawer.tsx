@@ -262,7 +262,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               {totalSuperPoints > 0 && (
                 <div className="bg-emerald-50 text-emerald-800 p-2 rounded-lg text-[11px] flex items-center justify-between font-medium">
                   <span className="flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-emerald-600" /> Bookatlas Reader Club Points
+                    <Sparkles className="w-3 h-3 text-emerald-600" /> BooksAtlas Reader Club Points
                   </span>
                   <span className="font-bold">+{totalSuperPoints} points earned</span>
                 </div>
@@ -303,7 +303,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
             <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-500">
               <ShieldCheck className="w-3 h-3 text-emerald-600" />
-              <span>{live ? 'Payments are processed by Stripe; BookAtlas never sees your card details' : 'Review your order before simulated checkout'}</span>
+              <span>{live ? 'Payments are processed by Stripe; BooksAtlas never sees your card details' : 'Review your order before simulated checkout'}</span>
             </div>
 
           </div>

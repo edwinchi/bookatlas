@@ -1,7 +1,7 @@
 // Supabase security checks against the real project (owner request 2026-11-10).
 // Needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY; with SUPABASE_ANON_KEY (the project's public
 // key, which other apps on this shared project ship in browsers) it also proves that key reaches
-// nothing of BookAtlas. Run: pnpm test:supabase (reads .env.local).
+// nothing of BooksAtlas. Run: pnpm test:supabase (reads .env.local).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -42,7 +42,7 @@ test('the eBook bucket is private: no file is served through a public link', { s
   }
 });
 
-test('the public anon key reads, writes and runs nothing of BookAtlas', { skip: (!configured || !anon) && 'set SUPABASE_ANON_KEY in .env.local to run' }, async () => {
+test('the public anon key reads, writes and runs nothing of BooksAtlas', { skip: (!configured || !anon) && 'set SUPABASE_ANON_KEY in .env.local to run' }, async () => {
   const leaks = [];
   for (const object of [...TABLES, ...VIEWS]) {
     const res = await fetch(`${url}/rest/v1/${object}?select=*&limit=1`, { headers: as(anon) });

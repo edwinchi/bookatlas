@@ -183,14 +183,14 @@ export const EditorialCuratorBlock: React.FC<{
         </button>
       </div>
 
-      {/* Editorial 4: Bookatlas Plus Unlimited */}
+      {/* Editorial 4: BooksAtlas Plus Unlimited */}
       <div className="bg-gradient-to-br from-purple-500/10 via-purple-100/40 to-white p-5 rounded-2xl border border-purple-200/80 flex flex-col justify-between space-y-4">
         <div className="space-y-2">
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-800 bg-purple-200/60 px-2.5 py-0.5 rounded-full">
             Subscription Freedom
           </span>
           <h3 className="text-base font-serif font-extrabold text-slate-900">
-            Bookatlas Plus: 1.5M Titles
+            BooksAtlas Plus: 1.5M Titles
           </h3>
           <p className="text-xs text-slate-600 leading-relaxed">
             Unlimited reading & listening across all screens and e-Ink devices with full offline eReader support.

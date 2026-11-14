@@ -547,7 +547,7 @@ const imageWeight: Rule = {
   storeMessages: [/image.*(too large|file size|exceeds)/i],
   check(ctx) {
     const heavy = heavyImages(ctx);
-    return heavy.length ? [finding('image-weight', 'warning', `${heavy.length} image${heavy.length > 1 ? 's are' : ' is'} over 4 MB; they load slowly and cannot be shown in the BookAtlas reader.`, true)] : [];
+    return heavy.length ? [finding('image-weight', 'warning', `${heavy.length} image${heavy.length > 1 ? 's are' : ' is'} over 4 MB; they load slowly and cannot be shown in the BooksAtlas reader.`, true)] : [];
   },
   fix(ctx) {
     const heavy = heavyImages(ctx);

@@ -5,7 +5,7 @@ import { logger } from '../../lib/logger.js';
 import { PaymentError, markRefunded, purchasedBookIds, purchasesOf, recordPaid } from './purchases.js';
 import { invoicesOf, issueInvoice, markInvoiceRefunded } from './invoices.js';
 
-/** The parts of the Stripe client BookAtlas uses; tests substitute a fake. */
+/** The parts of the Stripe client BooksAtlas uses; tests substitute a fake. */
 export type StripeClient = {
   checkout: { sessions: Pick<Stripe['checkout']['sessions'], 'create' | 'retrieve' | 'listLineItems'> };
   refunds?: Pick<Stripe['refunds'], 'create'>;
@@ -19,7 +19,7 @@ export function setStripeClient(next: StripeClient | null) { client = next; }
 export const paymentsConfigured = () => !!client || (!!process.env.STRIPE_SECRET_KEY?.trim() && !!process.env.STRIPE_WEBHOOK_SECRET?.trim());
 /** Stripe Tax stays off until the owner has added the tax registrations in Stripe (STRIPE_TAX=on). */
 const taxEnabled = () => process.env.STRIPE_TAX?.trim() === 'on';
-/** Stripe tax code "Digital Books - downloaded - non subscription - with permanent rights", set by BookAtlas on every eBook. */
+/** Stripe tax code "Digital Books - downloaded - non subscription - with permanent rights", set by BooksAtlas on every eBook. */
 export const EBOOK_TAX_CODE = 'txcd_10302000';
 /** iDEAL charges in euros only; Adaptive Pricing in Stripe shows other buyers their own currency. */
 const CURRENCY = 'eur';
@@ -35,7 +35,7 @@ function stripe(): StripeClient {
   return client;
 }
 
-/** Only real BookAtlas eBooks with a prepared file are sold; the demo catalogue is not. */
+/** Only real BooksAtlas eBooks with a prepared file are sold; the demo catalogue is not. */
 const sellable = (book: Book | null | undefined): book is Book => !!book?.hasReaderContent && book.price > 0;
 
 export async function createCheckout(who: Identity, requested: unknown, findBook: (id: string) => Promise<Book | null | undefined>, appUrl: string, withdrawalWaiver?: unknown) {
@@ -75,7 +75,7 @@ export async function createCheckout(who: Identity, requested: unknown, findBook
       },
     })),
     automatic_tax: { enabled: taxEnabled() },
-    // BookAtlas, not Stripe, is the seller and sets VAT-inclusive prices. The Stripe account enables Managed
+    // BooksAtlas, not Stripe, is the seller and sets VAT-inclusive prices. The Stripe account enables Managed
     // Payments (Stripe as merchant of record) by default, which refuses automatic_tax[enabled]=false.
     managed_payments: { enabled: false },
     // Digital content opens at once: the buyer agrees that the 14-day withdrawal right ends when access starts.
@@ -121,7 +121,7 @@ async function fulfil(session: Stripe.Checkout.Session) {
     }] : [];
   });
   await recordPaid(lines);
-  // VAT is worked out by BookAtlas from the buyer's country (Stripe Managed Payments is off).
+  // VAT is worked out by BooksAtlas from the buyer's country (Stripe Managed Payments is off).
   const titles = new Map(items.data.map((item) => {
     const product = item.price?.product;
     const bookId = product && typeof product === 'object' && 'metadata' in product ? product.metadata?.bookId : undefined;
@@ -219,7 +219,7 @@ export async function backfillInvoices(userId: string) {
 
 /**
  * Checkout for the natural audiobook add-on (TASK-0008): a service at a VAT-inclusive price (21% Dutch VAT,
- * applied by BookAtlas). The price comes from the server's quote; the browser only names the order.
+ * applied by BooksAtlas). The price comes from the server's quote; the browser only names the order.
  */
 export async function createNarrationCheckout(who: Identity, order: { narrationId: string; bookId: string; title: string; voice: string; priceCents: number }, appUrl: string) {
   const session = await stripe().checkout.sessions.create({

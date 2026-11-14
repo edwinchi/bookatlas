@@ -73,14 +73,14 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
     bannerHeadline: '✨ Discover This Week’s Masterpiece',
     preheader: 'Instant eReader delivery + exclusive subscriber privilege.',
     greetingStyle: 'Dear {{subscriber_name}},',
-    introText: 'We are delighted to bring you our latest curated release from the Bookatlas Zwolle archive. Crafted for inquiring minds who cherish authentic philosophy, indigenous epistemologies, and speculative literature.',
+    introText: 'We are delighted to bring you our latest curated release from the BooksAtlas Zwolle archive. Crafted for inquiring minds who cherish authentic philosophy, indigenous epistemologies, and speculative literature.',
     featuredBookId: books[0]?.id || '',
     discountBadgeText: 'Exclusive Subscriber Privilege',
     discountCode: '{{user_discount_code}}',
     highlightStats: true,
-    ctaText: 'Open in Bookatlas eReader',
+    ctaText: 'Open in BooksAtlas eReader',
     ctaLink: 'https://bookatlas.app/reader/{{book_recommendation_id}}',
-    footerNote: 'You received this literary dispatch because you are subscribed to Bookatlas Zwolle. You can update your reading preferences or unsubscribe anytime with 1-click.'
+    footerNote: 'You received this literary dispatch because you are subscribed to BooksAtlas Zwolle. You can update your reading preferences or unsubscribe anytime with 1-click.'
   });
 
   const featuredBook = books.find(b => b.id === templateConfig.featuredBookId) || books[0] || {
@@ -112,7 +112,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
         highlightStats: true,
         ctaText: 'Read in eReader Now',
         ctaLink: 'https://bookatlas.app/reader',
-        footerNote: 'Bookatlas Publishing Group • 8031 DJ Zwolle • The Netherlands'
+        footerNote: 'BooksAtlas Publishing Group • 8031 DJ Zwolle • The Netherlands'
       });
     } else if (preset === 'vip_discount') {
       setTemplateConfig({
@@ -122,7 +122,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
         bannerHeadline: '👑 Exclusive VIP Patron Circle Reward',
         preheader: 'Your monthly 40% privilege code is now active across the entire bookstore.',
         greetingStyle: 'Honored {{subscriber_name}},',
-        introText: 'Thank you for supporting independent philosophical and speculative literature on Bookatlas. As part of your {{tier_badge}} status, your exclusive 40% storewide perk is active.',
+        introText: 'Thank you for supporting independent philosophical and speculative literature on BooksAtlas. As part of your {{tier_badge}} status, your exclusive 40% storewide perk is active.',
         featuredBookId: books[1]?.id || books[0]?.id || '',
         discountBadgeText: '40% Off All Formats & Bundles',
         discountCode: '{{user_discount_code}}',
@@ -146,7 +146,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
         highlightStats: true,
         ctaText: 'Explore Sunday Curated List',
         ctaLink: 'https://bookatlas.app/curated',
-        footerNote: 'Curated with care by the Bookatlas Editorial Board, Zwolle.'
+        footerNote: 'Curated with care by the BooksAtlas Editorial Board, Zwolle.'
       });
     } else if (preset === 'reading_streak') {
       setTemplateConfig({
@@ -156,14 +156,14 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
         bannerHeadline: '🔥 You Hit a Reading Milestone!',
         preheader: 'You have read {{reading_stats_pages}} pages with a {{reading_stats_streak}}-day streak!',
         greetingStyle: 'Bravo {{subscriber_name}}!',
-        introText: 'Your dedication to deep literature is inspiring. You are in the top 5% of active readers on Bookatlas this month with {{reading_stats_pages}} pages finished.',
+        introText: 'Your dedication to deep literature is inspiring. You are in the top 5% of active readers on BooksAtlas this month with {{reading_stats_pages}} pages finished.',
         featuredBookId: books[0]?.id || '',
         discountBadgeText: 'Milestone Reward: €5 Free Credit',
         discountCode: 'STREAKREWARD5',
         highlightStats: true,
         ctaText: 'Continue Your Streak in eReader',
         ctaLink: 'https://bookatlas.app/reader',
-        footerNote: 'Keep reading every day to earn Bookatlas Super Points and unlock complimentary titles.'
+        footerNote: 'Keep reading every day to earn BooksAtlas Super Points and unlock complimentary titles.'
       });
     } else if (preset === 'audiobook_premiere') {
       setTemplateConfig({
@@ -180,7 +180,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
         highlightStats: false,
         ctaText: 'Listen to Narration Dock',
         ctaLink: 'https://bookatlas.app/listen',
-        footerNote: 'Full DRM-Free studio audio files available for Bookatlas subscribers.'
+        footerNote: 'Full DRM-Free studio audio files available for BooksAtlas subscribers.'
       });
     }
   };
@@ -190,8 +190,8 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
     if (!text) return '';
     const tierLabels: Record<SubscriberTier, string> = {
       vip_patron: 'VIP Patron Circle (40% Tier)',
-      member_subscriber: 'Bookatlas Plus Member',
-      free_reader: 'Bookatlas Reader'
+      member_subscriber: 'BooksAtlas Plus Member',
+      free_reader: 'BooksAtlas Reader'
     };
     const discountMap: Record<SubscriberTier, string> = {
       vip_patron: 'ATLAS-VIP40-9281',
@@ -556,7 +556,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
               {/* Email Client Header Bar */}
               <div className="bg-slate-50 border-b border-slate-200 p-3.5 text-xs space-y-1">
                 <div className="flex items-center justify-between text-[11px] text-slate-500">
-                  <span>From: <strong className="text-slate-800">Bookatlas Publishing (Zwolle)</strong> &lt;dispatch@bookatlas.app&gt;</span>
+                  <span>From: <strong className="text-slate-800">BooksAtlas Publishing (Zwolle)</strong> &lt;dispatch@bookatlas.app&gt;</span>
                   <span className="font-mono text-[10px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md font-bold">Preview Render</span>
                 </div>
                 <div className="text-slate-800 font-bold text-sm">
@@ -575,7 +575,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
                   style={{ backgroundColor: templateConfig.themeColor }}
                 >
                   <div className="text-[11px] uppercase tracking-widest font-bold opacity-85">
-                    Bookatlas Zwolle Literary Archive
+                    BooksAtlas Zwolle Literary Archive
                   </div>
                   <h1 className="text-xl sm:text-2xl font-serif font-bold text-white tracking-tight">
                     {interpolatePlaceholders(templateConfig.bannerHeadline)}

@@ -60,7 +60,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
               </span>
               {(currentBook.isBookatlasPlus) && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-950/80 text-indigo-200 border border-indigo-700/50">
-                  <Sparkles className="w-3 h-3 text-amber-300" /> Bookatlas Plus Unlimited
+                  <Sparkles className="w-3 h-3 text-amber-300" /> BooksAtlas Plus Unlimited
                 </span>
               )}
               {currentBook.awards && currentBook.awards.length > 0 && (
@@ -231,7 +231,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
           onClick={onExploreBookatlasPlus}
           className="text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 cursor-pointer"
         >
-          <span>Explore Bookatlas Plus Plans</span>
+          <span>Explore BooksAtlas Plus Plans</span>
           <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>

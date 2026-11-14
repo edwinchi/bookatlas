@@ -15,7 +15,7 @@ import { mountPublishingReadiness } from './publishing/routes.js';
 import { mountPublishingJobs } from './publishing/jobRoutes.js';
 import { mountEbookPrep } from './ebookPrep/routes.js';
 import { mountPayments } from './payments/routes.js';
-import { mountSeo } from './seo.js';
+import { announceBook, mountSeo } from './seo.js';
 import { mountNarration } from './narration/routes.js';
 import { createAiGate, localSuggestion, MAX_EXCERPT, metadataPrompt, sanitizeSuggestion } from './ai/bookMetadata.js';
 import { anonymisePurchases, purchasesOf } from './payments/purchases.js';
@@ -286,8 +286,8 @@ subscriberCampaigns.push({
   title: 'Autumn Literary Salon: Golden Age Masterpieces',
   subject: '✨ Exclusive: The Star-Cartographer of Amsterdam is Now Live',
   previewText: 'Instant eReader delivery + 40% VIP Patron Perk unlocked.',
-  senderName: 'Bookatlas Editorial (Zwolle)',
-  content: 'Dear {{subscriber_name}},\n\nWe are delighted to bring you our latest archival publication: {{book_recommendation_title}} by {{book_recommendation_author}}.\n\nAs a valued {{tier_badge}}, your private perk code is {{user_discount_code}}.\n\nKeep your reading streak going! Current milestone: {{reading_stats_streak}} days.\n\nHappy reading,\nThe Bookatlas Curators',
+  senderName: 'BooksAtlas Editorial (Zwolle)',
+  content: 'Dear {{subscriber_name}},\n\nWe are delighted to bring you our latest archival publication: {{book_recommendation_title}} by {{book_recommendation_author}}.\n\nAs a valued {{tier_badge}}, your private perk code is {{user_discount_code}}.\n\nKeep your reading streak going! Current milestone: {{reading_stats_streak}} days.\n\nHappy reading,\nThe BooksAtlas Curators',
   bookTitle: 'The Star-Cartographer of Amsterdam',
   bookAuthor: 'Hendrik van der Meer',
   bookCoverUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=700&q=80',
@@ -482,6 +482,8 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
     if (!customCategories.includes(book.primaryGenre)) customCategories.push(book.primaryGenre);
   });
   mountEbookPrep(app, (book, categories) => {
+    // Tell search engines (IndexNow: Bing, which ChatGPT search and Copilot use) about the new book at once.
+    announceBook(book.id, APP_URL);
     const existing = liveCatalog.findIndex((item: { id: string }) => item.id === book.id);
     if (existing >= 0) liveCatalog[existing] = book;
     else liveCatalog.unshift(book);
@@ -615,7 +617,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
   app.get('/api/health', (req, res) => {
     res.json({
       status: 'ok',
-      service: 'Bookatlas Core Commerce & AI Engine',
+      service: 'BooksAtlas Core Commerce & AI Engine',
       company: 'Atlantean Globals Services (Netherlands)',
       timestamp: new Date().toISOString(),
       aiConfigured: Boolean(process.env.GEMINI_API_KEY),
@@ -726,7 +728,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
           booksRead: 0
         };
         registeredUsers.push(user);
-        addLog('marketing_blast', `New Reader Registered: ${maskEmail(cleanEmail)}`, 'Unlocked lifetime access pass to Bookatlas catalog and reader.', 'Reader Gate');
+        addLog('marketing_blast', `New Reader Registered: ${maskEmail(cleanEmail)}`, 'Unlocked lifetime access pass to BooksAtlas catalog and reader.', 'Reader Gate');
       } else {
         user.lastActive = Date.now();
       }
@@ -1346,7 +1348,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
         title, 
         subject, 
         previewText, 
-        senderName = 'Bookatlas Publishing Group (Zwolle)', 
+        senderName = 'BooksAtlas Publishing Group (Zwolle)', 
         content, 
         bookTitle, 
         bookCoverUrl,
@@ -1451,7 +1453,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
         id: campaignId,
         title: title || subject,
         subject,
-        previewText: previewText || 'Special release from Bookatlas Digital Bookstore',
+        previewText: previewText || 'Special release from BooksAtlas Digital Bookstore',
         senderName,
         content,
         bookTitle: bookTitle || targetBook?.title,
@@ -1519,7 +1521,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
             .replace(/\{\{user_discount_code\}\}/g, sub.userDiscountCode || discountCode)
             .replace(/\{\{reading_stats_streak\}\}/g, String(sub.readingStreakDays || 7))
             .replace(/\{\{reading_stats_pages\}\}/g, String(sub.pagesReadTotal || 450))
-            .replace(/\{\{tier_badge\}\}/g, sub.tier === 'vip_patron' ? 'VIP Patron Circle' : (sub.tier === 'member_subscriber' ? 'Bookatlas Plus Member' : 'Reader Pass'))
+            .replace(/\{\{tier_badge\}\}/g, sub.tier === 'vip_patron' ? 'VIP Patron Circle' : (sub.tier === 'member_subscriber' ? 'BooksAtlas Plus Member' : 'Reader Pass'))
             .replace(/\{\{1_click_unsubscribe_url\}\}/g, `${APP_URL}/?action=unsubscribe&email=${encodeURIComponent(sub.email)}&token=${generateUnsubToken(sub.email)}`);
 
           emailDispatches.unshift({
@@ -1624,7 +1626,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
           category: 'Editorial Announcement',
           defaultSubject: '✨ Spotlight Release: {{book_recommendation_title}} is Now Live',
           defaultPreview: 'Read sample chapters or stream Studio Audio narration now.',
-          defaultBody: 'Dear {{subscriber_name}},\n\nWe are delighted to bring you our newest masterwork: {{book_recommendation_title}} by {{book_recommendation_author}}.\n\nAs a valued {{tier_badge}}, enjoy private early access and your perk code: {{user_discount_code}}.\n\nKeep your reading streak alive (current streak: {{reading_stats_streak}} days)!\n\nWarm regards,\nThe Bookatlas Editorial Curators'
+          defaultBody: 'Dear {{subscriber_name}},\n\nWe are delighted to bring you our newest masterwork: {{book_recommendation_title}} by {{book_recommendation_author}}.\n\nAs a valued {{tier_badge}}, enjoy private early access and your perk code: {{user_discount_code}}.\n\nKeep your reading streak alive (current streak: {{reading_stats_streak}} days)!\n\nWarm regards,\nThe BooksAtlas Editorial Curators'
         },
         {
           id: 'vip_discount',
@@ -1638,7 +1640,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
           id: 'weekly_digest',
           name: 'Weekly Philosophy & Deep Thought Digest',
           category: 'Curated Newsletter',
-          defaultSubject: '🌌 This Week on Bookatlas: Ancient Knowledge & Modern Thought',
+          defaultSubject: '🌌 This Week on BooksAtlas: Ancient Knowledge & Modern Thought',
           defaultPreview: 'Curated excerpts, Spinozist ethics, and European literature trends.',
           defaultBody: 'Dear {{subscriber_name}},\n\nThis week, our curators explore the convergence of consciousness, ancient Nilotic wisdom, and European classic literature.\n\nFeatured Title of the Week: {{book_recommendation_title}} by {{book_recommendation_author}}.\n\nUnlock instant in-browser reading today with code {{user_discount_code}}.'
         },
@@ -1779,7 +1781,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
         addLog('marketing_blast', `Reader Resubscribed: ${maskEmail(cleanEmail)}`, 'User re-activated email newsletter notifications.', 'Subscription Center');
         res.json({
           success: true,
-          message: `You have successfully re-subscribed to Bookatlas updates!`,
+          message: `You have successfully re-subscribed to BooksAtlas updates!`,
           status: 'subscribed',
           email: sub.email
         });
@@ -1792,7 +1794,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
         
         res.json({
           success: true,
-          message: `You have been successfully unsubscribed from all Bookatlas marketing emails. You can re-subscribe anytime.`,
+          message: `You have been successfully unsubscribed from all BooksAtlas marketing emails. You can re-subscribe anytime.`,
           status: 'unsubscribed',
           email: sub.email,
           unsubscribedAt: sub.unsubscribedAt
@@ -1858,7 +1860,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
   app.post('/api/subscribers/ai-compose', async (req, res) => {
     const { topic, bookTitle, tone = 'compelling, warm, and intellectual', discountCode = 'BOOKATLAS25', targetGenre, targetTier = 'all' } = req.body;
     try {
-      const prompt = `You are the Master Marketing Director and Literary Publicist for Bookatlas Digital Bookstore in Zwolle.
+      const prompt = `You are the Master Marketing Director and Literary Publicist for BooksAtlas Digital Bookstore in Zwolle.
 Write a high-converting, elegant email campaign for our audience of book lovers, philosophy scholars, and global readers.
 Context:
 - Book / Topic: "${bookTitle || topic || 'Curated Weekly Masterpieces & New Releases'}"
@@ -1920,7 +1922,7 @@ Return ONLY a clean JSON object with this exact schema:
       const lang = targetLanguage || 'English';
 
       if (ai) {
-        const prompt = `You are the master multimodal publishing AI for Bookatlas (Atlantean Globals Services).
+        const prompt = `You are the master multimodal publishing AI for BooksAtlas (Atlantean Globals Services).
 A manuscript/document has been uploaded with the following inputs:
 - File Name: "${fileName || 'uploaded_document.txt'}"
 - Author/Entity: "${authorName || 'Atlantean Scholar'}"
@@ -1989,7 +1991,7 @@ Return a valid JSON object matching this schema:
     "body": "Detailed formal publication letter with ISBN verification, DRM packaging, and retail positioning."
   },
   "userCampaign": {
-    "subject": "✨ NEW RELEASE: Discover the Newly Published Masterpiece on Bookatlas",
+    "subject": "✨ NEW RELEASE: Discover the Newly Published Masterpiece on BooksAtlas",
     "previewText": "Exclusive eBook + Audiobook release now live across all eReaders and apps.",
     "emailBody": "Engaging, beautifully formatted announcement newsletter for readers.",
     "socialHooks": [
@@ -2057,7 +2059,7 @@ Return a valid JSON object matching this schema:
           publisherEmail: {
             to: publisherEmail || 'publisher@atlanteanglobals.nl',
             subject: `OFFICIAL PUBLICATION NOTICE: "${bookTitle}" Ingested & Distributed`,
-            body: `Dear Publisher,\n\nWe are pleased to confirm that the manuscript "${bookTitle}" has been successfully ingested, DRM-packaged into EPUB3 and Studio Audio formats, and published under category "${targetCategory}".\n\nDistribution status: LIVE across Bookatlas Storefront.`
+            body: `Dear Publisher,\n\nWe are pleased to confirm that the manuscript "${bookTitle}" has been successfully ingested, DRM-packaged into EPUB3 and Studio Audio formats, and published under category "${targetCategory}".\n\nDistribution status: LIVE across BooksAtlas Storefront.`
           },
           userCampaign: {
             subject: `✨ NEW RELEASE: "${bookTitle}" is Now Available in the Bookstore!`,
@@ -2256,7 +2258,7 @@ Return a valid JSON object matching this schema:
 
     liveCatalog[index] = updated;
     void db.upsertBookInDb(updated);
-    addLog('inventory_sync', `Updated Book: "${updated.title}"`, `Price: $${updated.price} | Bookatlas Plus: ${updated.isBookatlasPlus ? 'Yes' : 'No'}`);
+    addLog('inventory_sync', `Updated Book: "${updated.title}"`, `Price: $${updated.price} | BooksAtlas Plus: ${updated.isBookatlasPlus ? 'Yes' : 'No'}`);
 
     res.json({
       success: true,
@@ -2312,7 +2314,7 @@ Return a valid JSON object matching this schema:
         return originalBook;
       }
 
-      const prompt = `You are a master novelist, publisher, and chief editorial curator at Bookatlas (owned by Atlantean Globals Services, Netherlands).
+      const prompt = `You are a master novelist, publisher, and chief editorial curator at BooksAtlas (owned by Atlantean Globals Services, Netherlands).
 Generate a completely ORIGINAL, published-grade bestseller book in the category: "${targetCategory}".
 Tone/Style: "${tone || 'Immersive, literary, rich with atmosphere, and page-turning'}"
 Specific themes or user prompt: "${customPrompt || themes || 'Original European and global narrative with deep intellectual depth'}"
@@ -2338,12 +2340,12 @@ Return ONLY valid JSON matching this schema:
   "format": "ebook",
   "pageCount": 384,
   "audioDurationMinutes": 620,
-  "publisher": "Atlantean Imprint / Bookatlas Editions",
+  "publisher": "Atlantean Imprint / BooksAtlas Editions",
   "isbn": "978-9-023-99120-4",
   "language": "English",
   "synopsis": "A compelling 3-4 sentence blurb describing the core conflict, characters, and high stakes.",
   "editorialReview": "A glowing praise quote from a prestigious publication like The Times Literary Supplement or European Review.",
-  "tags": ["Tag1", "Tag2", "Tag3", "Bookatlas Plus"],
+  "tags": ["Tag1", "Tag2", "Tag3", "BooksAtlas Plus"],
   "aiVibe": "3-5 word atmospheric vibe description",
   "readingTimeHours": 6.5,
   "sampleChapters": [
@@ -2480,7 +2482,7 @@ Return ONLY valid JSON matching this schema:
             updatedCount++;
           }
         });
-        addLog('deal_rotation', 'Bookatlas Plus Catalog Expansion', `Enabled Plus Unlimited reading for ${updatedCount} titles.`, 'Subscription');
+        addLog('deal_rotation', 'BooksAtlas Plus Catalog Expansion', `Enabled Plus Unlimited reading for ${updatedCount} titles.`, 'Subscription');
       } else {
         // Smart Dynamic Yield
         liveCatalog.forEach((b: any) => {
@@ -2508,11 +2510,11 @@ Return ONLY valid JSON matching this schema:
     return {
       bookTitle: book.title,
       emailNewsletterSubject: `✨ Unveiling "${book.title}" — The Masterpiece You Cannot Miss This Weekend`,
-      emailBody: `Dear Bookatlas Readers,\n\nWe are delighted to bring you "${book.title}" by ${book.author}.\n\n"${book.synopsis}"\n\nNow available with instant eReader delivery and Studio Audio preview on Bookatlas Plus.\n\nHappy Reading,\nThe Bookatlas Editorial Team (Zwolle)`,
+      emailBody: `Dear BooksAtlas Readers,\n\nWe are delighted to bring you "${book.title}" by ${book.author}.\n\n"${book.synopsis}"\n\nNow available with instant eReader delivery and Studio Audio preview on BooksAtlas Plus.\n\nHappy Reading,\nThe BooksAtlas Editorial Team (Zwolle)`,
       socialMediaThread: [
         `🧵 1/4 If you love ${book.primaryGenre}, you need to read "${book.title}" by ${book.author} immediately. Here is why: 👇`,
         `2/4 🌌 The atmosphere is unmatched: "${book.synopsis?.slice(0, 140)}..."`,
-        `3/4 🎧 Also featuring narration by ${book.narrator || 'world-class voice artists'}. Read or listen now on Bookatlas!`,
+        `3/4 🎧 Also featuring narration by ${book.narrator || 'world-class voice artists'}. Read or listen now on BooksAtlas!`,
         `4/4 Read free sample chapters directly in your browser: https://bookatlas.eu/book/${book.id}`
       ],
       bookClubDiscussionQuestions: [
@@ -2789,7 +2791,7 @@ Return a valid JSON object:
     try {
       const { userPrompt, candidateBooks, userPreferences } = req.body;
 
-      const prompt = `You are the chief literary curator at Bookatlas (by Atlantean Globals Services, Netherlands).
+      const prompt = `You are the chief literary curator at BooksAtlas (by Atlantean Globals Services, Netherlands).
 A reader has requested: "${userPrompt}"
 Reader profile preferences: ${JSON.stringify(userPreferences || {})}
 Here is the available catalog candidate dataset:
@@ -2820,7 +2822,7 @@ Return ONLY a valid JSON array matching this exact format:
       const text = await generateAiText({
         messages: [{ role: 'user', text: prompt }],
         jsonMode: true,
-        systemInstruction: 'You are an award-winning literary expert and AI recommendation engine for Bookatlas eBook Store.',
+        systemInstruction: 'You are an award-winning literary expert and AI recommendation engine for BooksAtlas eBook Store.',
       });
 
       if (!text) {
@@ -2857,7 +2859,7 @@ Return ONLY a valid JSON array matching this exact format:
     try {
       const { action, text, bookTitle, author, chapterTitle, context } = req.body;
 
-      const systemPrompt = `You are Bookatlas AI Reading Copilot, embedded directly within the Bookatlas eReader.
+      const systemPrompt = `You are BooksAtlas AI Reading Copilot, embedded directly within the BooksAtlas eReader.
 Book: "${bookTitle}" by ${author}
 Chapter: "${chapterTitle || 'Current Chapter'}"
 Current Context: "${context || ''}"`;
@@ -3002,7 +3004,7 @@ Return a structured JSON object:
     try {
       const { term, passageContext, bookTitle, author, genre } = req.body;
 
-      const prompt = `You are the Bookatlas Metaphysical & Literary Scholar.
+      const prompt = `You are the BooksAtlas Metaphysical & Literary Scholar.
 Provide a deep-dive conceptual breakdown for the term/concept: "${term}"
 Book Context: "${bookTitle}" by ${author} (${genre || 'Literature & Philosophy'})
 Surrounding Passage: "${passageContext || ''}"
@@ -3160,7 +3162,7 @@ Return a valid JSON object:
         text: m.content || '',
       }));
 
-      const defaultSystem = `You are the Bookatlas AI Literary Companion, created by Atlantean Globals Services (Netherlands).
+      const defaultSystem = `You are the BooksAtlas AI Literary Companion, created by Atlantean Globals Services (Netherlands).
 You are deeply knowledgeable in world literature, European classics, speculative fiction, thriller mysteries, publishing trends, and creative writing.
 Be articulate, insightful, engaging, and provide rich recommendations, historical context, and thoughtful analysis.`;
 
@@ -3279,7 +3281,7 @@ Provide clear headings and concise bullet points.`;
     try {
       const { userUtterance, conversationHistory, voicePersona } = req.body;
 
-      const systemPrompt = `You are "Zephyr", the real-time Voice Companion for Bookatlas (Atlantean Globals Services, Netherlands).
+      const systemPrompt = `You are "Zephyr", the real-time Voice Companion for BooksAtlas (Atlantean Globals Services, Netherlands).
 You are speaking out loud to a reader through an interactive voice stream.
 Rules for voice responses:
 1. Speak in a warm, charismatic, concise, and natural conversational cadence.
@@ -3303,7 +3305,7 @@ Rules for voice responses:
         res.json({
           success: true,
           source: 'local_voice_synthesis',
-          spokenText: `Welcome to Bookatlas! I'm your voice companion. I'd love to recommend our top Amsterdam picks or help you explore new releases in sci-fi, European classics, or audiobooks. What are you in the mood to read today?`,
+          spokenText: `Welcome to BooksAtlas! I'm your voice companion. I'd love to recommend our top Amsterdam picks or help you explore new releases in sci-fi, European classics, or audiobooks. What are you in the mood to read today?`,
           voicePersona: voicePersona || 'Zephyr',
         });
         return;
@@ -3320,7 +3322,7 @@ Rules for voice responses:
       res.json({
         success: true,
         source: 'fallback',
-        spokenText: `I heard your thought. At Bookatlas, we have curated over 1.5 million titles. Let me guide you to something truly captivating right now!`,
+        spokenText: `I heard your thought. At BooksAtlas, we have curated over 1.5 million titles. Let me guide you to something truly captivating right now!`,
       });
     }
   });
@@ -3365,7 +3367,7 @@ Rules for voice responses:
         // Call Veo Video Generation
         const operation = await ai.models.generateVideos({
           model: 'veo-3.1-lite-generate-preview',
-          prompt: `Cinematic book trailer motion: ${prompt || 'Slow elegant camera push-in on book illustration with volumetric lighting, atmospheric haze, subtle dust motes and dramatic motion graphics'}. Book title: ${bookTitle || 'Bookatlas Release'}.`,
+          prompt: `Cinematic book trailer motion: ${prompt || 'Slow elegant camera push-in on book illustration with volumetric lighting, atmospheric haze, subtle dust motes and dramatic motion graphics'}. Book title: ${bookTitle || 'BooksAtlas Release'}.`,
           config: {
             numberOfVideos: 1,
             resolution: resolution === '1080p' ? '1080p' : '720p',
@@ -3438,7 +3440,7 @@ Rules for voice responses:
   app.get('/api/export/documentation-data', (req, res) => {
     res.json({
       success: true,
-      platformName: 'Bookatlas Enterprise Digital Bookstore & In-Browser eReader',
+      platformName: 'BooksAtlas Enterprise Digital Bookstore & In-Browser eReader',
       company: {
         name: 'Atlantean Globals Services',
         registrationCountry: 'The Netherlands',
@@ -3492,7 +3494,7 @@ function generateOriginalBookProcedural(category: string, tone?: string, customT
       cover: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=700&q=80',
       narrator: 'Dominic Armato',
       price: 13.99,
-      tags: ['Quantum Physics', 'Space Exploration', 'Bookatlas Plus']
+      tags: ['Quantum Physics', 'Space Exploration', 'BooksAtlas Plus']
     },
     'Mystery & Suspense': {
       title: 'The Keizersgracht Cipher',
@@ -3544,7 +3546,7 @@ function generateOriginalBookProcedural(category: string, tone?: string, customT
     cover: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=700&q=80',
     narrator: 'Stephen Fry',
     price: 9.99,
-    tags: [category, 'Bookatlas Original', 'Bestseller']
+    tags: [category, 'BooksAtlas Original', 'Bestseller']
   };
 
   return {
@@ -3570,7 +3572,7 @@ function generateOriginalBookProcedural(category: string, tone?: string, customT
     pageCount: 340 + (timeId % 150),
     audioDurationMinutes: 520,
     publishDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-    publisher: 'Atlantean Imprint / Bookatlas Editions',
+    publisher: 'Atlantean Imprint / BooksAtlas Editions',
     isbn: `978-9-023-${Math.floor(10000 + Math.random() * 90000)}-1`,
     language: 'English',
     synopsis: chosen.synopsis,
@@ -3685,18 +3687,18 @@ function getFallbackSummary(book: any) {
 function generateFallbackChatResponse(userMessage: string, systemInstruction?: string): string {
   const msg = userMessage.toLowerCase();
   if (msg.includes('recommend') || msg.includes('suggest') || msg.includes('book')) {
-    return `Based on our curated catalog at Bookatlas, I highly recommend exploring **"The Star-Cartographer of Amsterdam"** by Hendrik van der Meer for rich historical Golden Age depth, or **"Axiom of the Void"** if you seek mind-expanding quantum science fiction. Both are available with instant eReader delivery and Bookatlas Plus unlimited access!`;
+    return `Based on our curated catalog at BooksAtlas, I highly recommend exploring **"The Star-Cartographer of Amsterdam"** by Hendrik van der Meer for rich historical Golden Age depth, or **"Axiom of the Void"** if you seek mind-expanding quantum science fiction. Both are available with instant eReader delivery and BooksAtlas Plus unlimited access!`;
   }
   if (msg.includes('dutch') || msg.includes('amsterdam') || msg.includes('europe')) {
     return `Amsterdam has a centuries-old publishing lineage dating back to the 17th century printing revolution on the Keizersgracht. In our Dutch & European Classics collection, you will discover both historical masterpieces and cutting-edge contemporary translations exploring the canals, philosophical enlightenment (Spinoza, Descartes), and modern European identity.`;
   }
   if (msg.includes('audiobook') || msg.includes('narrat') || msg.includes('voice')) {
-    return `Audiobooks at Bookatlas are mastered with immersive dynamic range and recorded by celebrated narrators like Dominic Armato, Lars Mikkelsen, and Emma Thompson. You can preview voice samples on any title directly from our horizontal product carousels.`;
+    return `Audiobooks at BooksAtlas are mastered with immersive dynamic range and recorded by celebrated narrators like Dominic Armato, Lars Mikkelsen, and Emma Thompson. You can preview voice samples on any title directly from our horizontal product carousels.`;
   }
   if (msg.includes('write') || msg.includes('novel') || msg.includes('character') || msg.includes('plot')) {
     return `In literary craft, great narrative momentum stems from the friction between a character's internal wound and their external stakes. Consider grounding your opening chapter in sensory details (weather, ambient sound, physical objects) before escalating the moral dilemma.`;
   }
-  return `Thank you for your question. At Bookatlas (by Atlantean Globals Services, Netherlands), our mission is to unite discerning readers with the world's most compelling eBooks and Audiobooks. Feel free to ask for deep thematic critiques, genre comparisons, or personalized reading roadmaps!`;
+  return `Thank you for your question. At BooksAtlas (by Atlantean Globals Services, Netherlands), our mission is to unite discerning readers with the world's most compelling eBooks and Audiobooks. Feel free to ask for deep thematic critiques, genre comparisons, or personalized reading roadmaps!`;
 }
 
 function generateFallbackSearchGrounding(query: string) {

@@ -379,7 +379,7 @@ export function mountReaderTts(app: import('express').Express) {
     res.setHeader('Cache-Control', 'private, no-store');
     const identity = req.bookatlasIdentity;
     if (!identity?.id || !['reader', 'admin'].includes(identity.role)) {
-      res.status(identity ? 403 : 401).json({ error: 'Sign in with a verified Bookatlas account to request narration.' });
+      res.status(identity ? 403 : 401).json({ error: 'Sign in with a verified BooksAtlas account to request narration.' });
       return;
     }
     const parsed = CreateReaderNarrationBody.strict().safeParse(req.body);

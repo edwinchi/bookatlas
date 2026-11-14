@@ -70,7 +70,7 @@ const sectionItems = [
   ['Resources', 'Publishing guide', 'how-it-works'],
   ['Resources', 'Who it is for', 'solutions'],
   ['Resources', 'Book pages', 'book-pages'],
-  ['About', 'About BookAtlas', 'about'],
+  ['About', 'About BooksAtlas', 'about'],
   ['About', 'Our promise', 'promise'],
 ];
 {
@@ -92,7 +92,7 @@ const sectionItems = [
   await page.close();
 }
 for (const [menu, item, check] of [
-  ['Store', 'Audiobooks', 'tab'], ['Store', 'Deals under €4.99', 'tab'], ['Store', 'Bookatlas Plus', 'tab'],
+  ['Store', 'Audiobooks', 'tab'], ['Store', 'Deals under €4.99', 'tab'], ['Store', 'BooksAtlas Plus', 'tab'],
   ['Store', 'AI Book Matchmaker', 'signin'], ['Store', 'AI Studio', 'signin'], ['Store', 'Live Voice companion', 'signin'],
   ['Resources', 'EPUB and technical specs', 'dialog'],
 ]) {

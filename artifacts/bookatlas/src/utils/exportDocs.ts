@@ -60,7 +60,7 @@ export async function downloadWordDocument(books: Book[]) {
           new Paragraph({
             children: [
               new TextRun({
-                text: 'Bookatlas is an ultra-fast, modern digital bookstore, full-featured in-browser EPUB3 eReader, and autonomous single-manager publishing studio engineered by Atlantean Globals Services, registered and headquartered in Zwolle, Netherlands. The platform delivers an unmatched digital reading and listening experience, pairing curated European and international literature with autonomous AI agents powered by the Google Gemini ecosystem.',
+                text: 'BooksAtlas is an ultra-fast, modern digital bookstore, full-featured in-browser EPUB3 eReader, and autonomous single-manager publishing studio engineered by Atlantean Globals Services, registered and headquartered in Zwolle, Netherlands. The platform delivers an unmatched digital reading and listening experience, pairing curated European and international literature with autonomous AI agents powered by the Google Gemini ecosystem.',
               }),
             ],
             spacing: { after: 200 },
@@ -70,7 +70,7 @@ export async function downloadWordDocument(books: Book[]) {
               new TextRun({ text: '• Headquarters: ', bold: true }),
               new TextRun('8031 DJ Zwolle, Netherlands\n'),
               new TextRun({ text: '• Core Offering: ', bold: true }),
-              new TextRun('Over 1.5M digital eBooks, Studio Audiobooks, and Bookatlas Plus unlimited reading subscription at €9.99/month\n'),
+              new TextRun('Over 1.5M digital eBooks, Studio Audiobooks, and BooksAtlas Plus unlimited reading subscription at €9.99/month\n'),
               new TextRun({ text: '• Single Manager Autopilot: ', bold: true }),
               new TextRun('Autonomous catalog management, algorithmic dynamic pricing, flash sales (-40%), and multi-channel marketing campaigns.'),
             ],
@@ -150,7 +150,7 @@ export async function downloadWordDocument(books: Book[]) {
               new TextRun({ text: '• Live Inventory Control: ', bold: true }),
               new TextRun('Full CRUD capabilities to add, edit, delete, preview, and update prices across all 15 genres in real time\n'),
               new TextRun({ text: '• Dynamic Yield & Flash Sales: ', bold: true }),
-              new TextRun('1-click batch pricing strategies including Weekend Flash Sales (-40%), Bookatlas Plus Catalog Expansion, and Bestseller badge algorithms\n'),
+              new TextRun('1-click batch pricing strategies including Weekend Flash Sales (-40%), BooksAtlas Plus Catalog Expansion, and Bestseller badge algorithms\n'),
               new TextRun({ text: '• AI Multi-Channel Campaign Kit: ', bold: true }),
               new TextRun('Generates email newsletters, 4-part social media threads, and book club guides for any book\n'),
               new TextRun({ text: '• Real-Time Audit Trail: ', bold: true }),
@@ -174,7 +174,7 @@ export async function downloadWordDocument(books: Book[]) {
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Author', bold: true })] })] }),
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Category', bold: true })] })] }),
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Price (€)', bold: true })] })] }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Bookatlas Plus', bold: true })] })] }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'BooksAtlas Plus', bold: true })] })] }),
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Rating', bold: true })] })] }),
                 ],
               }),
@@ -271,7 +271,7 @@ export async function downloadPDFDocument(books: Book[]) {
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9.5);
-  const summaryText = `Bookatlas is an enterprise-grade digital bookstore, in-browser EPUB3 eReader, and autonomous single-manager publishing studio engineered by Atlantean Globals Services in Zwolle, Netherlands. It integrates over 1.5M digital titles, audiobooks, and Bookatlas Plus unlimited subscriptions with cutting-edge Gemini AI models.`;
+  const summaryText = `BooksAtlas is an enterprise-grade digital bookstore, in-browser EPUB3 eReader, and autonomous single-manager publishing studio engineered by Atlantean Globals Services in Zwolle, Netherlands. It integrates over 1.5M digital titles, audiobooks, and BooksAtlas Plus unlimited subscriptions with cutting-edge Gemini AI models.`;
   const splitSummary = doc.splitTextToSize(summaryText, pageWidth - 30);
   doc.text(splitSummary, 15, y);
   y += splitSummary.length * 5 + 4;
@@ -328,7 +328,7 @@ export async function downloadPDFDocument(books: Book[]) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9.5);
   const managerPoints = [
-    '• Real-Time Catalog CRUD: Instant creation, price updates, Bookatlas Plus toggles, and metadata edits.',
+    '• Real-Time Catalog CRUD: Instant creation, price updates, BooksAtlas Plus toggles, and metadata edits.',
     '• Dynamic Yield & Flash Sales: 1-click batch discounting (-40%) and subscriber catalog expansion.',
     '• AI Multi-Channel Campaign Studio: Automated generation of email newsletters, social threads, and book club questions.',
     '• Live Audit Trail: Timestamped log of all autonomous publishing events, price optimizations, and inventory syncs.'

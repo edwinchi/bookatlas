@@ -39,7 +39,7 @@ export function parseCsv(text: string): string[][] {
   return rows;
 }
 
-/** BISAC subject prefixes (US trade) and Thema codes (international) to BookAtlas categories. */
+/** BISAC subject prefixes (US trade) and Thema codes (international) to BooksAtlas categories. */
 const BISAC: [RegExp, string][] = [
   [/^FIC0(28|09)/, 'Sci-Fi & Fantasy'], [/^FIC022/, 'Mystery & Suspense'], [/^FIC031/, 'Thriller & Crime'],
   [/^FIC027/, 'Romance & Contemporary'], [/^FIC014/, 'Historical Fiction'], [/^FIC/, 'Fiction & Literature'],

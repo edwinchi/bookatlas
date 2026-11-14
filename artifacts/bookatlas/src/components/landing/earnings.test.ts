@@ -2,12 +2,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { betterPlan, monthlyEarnings, proPaysMoreFrom } from './earnings';
 
-test('standard keeps 80% of eBook sales with no monthly fee', () => {
-  assert.deepEqual(monthlyEarnings(9.99, 10, 'standard'), { sales: 99.9, commission: 19.98, fee: 0, net: 79.92 });
+test('standard keeps 67% of eBook sales with no monthly fee', () => {
+  assert.deepEqual(monthlyEarnings(9.99, 10, 'standard'), { sales: 99.9, commission: 32.97, fee: 0, net: 66.93 });
 });
 
-test('Author Pro keeps 90% of sales less the €9.99 monthly fee', () => {
-  assert.deepEqual(monthlyEarnings(9.99, 10, 'pro'), { sales: 99.9, commission: 9.99, fee: 9.99, net: 79.92 });
+test('Author Pro keeps 77% of sales less the €9.99 monthly fee', () => {
+  assert.deepEqual(monthlyEarnings(9.99, 10, 'pro'), { sales: 99.9, commission: 22.98, fee: 9.99, net: 66.93 });
 });
 
 test('Pro pays more once the 10-point saving exceeds the fee', () => {

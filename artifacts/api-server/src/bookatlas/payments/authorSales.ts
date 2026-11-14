@@ -5,11 +5,12 @@ import type { Invoice } from './invoices.js';
 
 /**
  * Author sales dashboard (cycle 3, 2026-11-14). An author sees the sales of the books they published:
- * units, refunds, revenue with and without VAT and their share. Pricing R1: the author receives 80% of the
+ * units, refunds, revenue with and without VAT and their share. Pricing R1 (revised 2026-11-14): the author receives 67% of the
  * net eBook price (excluding VAT). Payment fees are not deducted yet, so the share is labelled an estimate.
  * Buyers are never identified to authors; only the country is shown.
  */
-export const AUTHOR_SHARE = 0.8;
+/** Owner decision 2026-11-14: BooksAtlas takes a 33% commission on every sale; the author keeps 67%. */
+export const AUTHOR_SHARE = 0.67;
 const MONTHS = 12;
 
 type Sale = { at: string; bookId: string; title: string; country: string | null; gross: number; vat: number; net: number; refunded: boolean };
@@ -68,7 +69,7 @@ export async function authorSales(userId: string, memoryInvoices: () => Invoice[
   return {
     currency: 'EUR',
     authorShare: AUTHOR_SHARE,
-    shareNote: 'Your share is 80% of the price excluding VAT. Payment fees are not deducted yet, so this is an estimate until payouts start.',
+    shareNote: 'Your share is 67% of the price excluding VAT (BooksAtlas commission 33%). Payment fees are not deducted yet, so this is an estimate until payouts start.',
     totals: {
       last30Days: window(30),
       last12Months: window(365),

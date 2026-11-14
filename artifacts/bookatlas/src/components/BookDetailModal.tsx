@@ -219,14 +219,14 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                   )}
                   {(book.isBookatlasPlus) && (
                     <span className="bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold px-2.5 py-0.5 rounded-md flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-amber-500" /> Bookatlas Plus Eligible
+                      <Sparkles className="w-3 h-3 text-amber-500" /> BooksAtlas Plus Eligible
                     </span>
                   )}
                   {book.isSample && (
                     <span className="bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wide">Sample title · not for sale</span>
                   )}
                   {book.availability === 'listed' && (
-                    <span className="bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wide">Coming soon to BookAtlas</span>
+                    <span className="bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wide">Coming soon to BooksAtlas</span>
                   )}
                   {prepared && book.isNewRelease && (
                     <span className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wide">New release</span>
@@ -266,7 +266,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
 
                 {/* Star rating summary */}
                 {unrated ? (
-                  <p className="mt-3 text-xs text-slate-500">{isGenerated ? 'Generated from an uploaded source and reviewed by a Bookatlas editor. No reader ratings yet.' : 'New on Bookatlas. No reader ratings yet.'}</p>
+                  <p className="mt-3 text-xs text-slate-500">{isGenerated ? 'Generated from an uploaded source and reviewed by a BooksAtlas editor. No reader ratings yet.' : 'New on BooksAtlas. No reader ratings yet.'}</p>
                 ) : (
                 <div className="flex items-center gap-2 mt-3">
                   <div className="flex items-center text-amber-400">
@@ -313,7 +313,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                         {book.price === 0 ? 'Free' : `${currencySymbol}${book.price.toFixed(2)}`}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-1">{isGenerated ? 'EPUB, reader sign-in required' : prepared ? <>EPUB • about {book.pageCount} pages{readsFree ? ' • free with a Bookatlas account' : ''}</> : <>EPUB & PDF • {book.pageCount} pages</>}</p>
+                    <p className="text-[11px] text-slate-500 mt-1">{isGenerated ? 'EPUB, reader sign-in required' : prepared ? <>EPUB • about {book.pageCount} pages{readsFree ? ' • free with a BooksAtlas account' : ''}</> : <>EPUB & PDF • {book.pageCount} pages</>}</p>
                   </button>
 
                   {!(prepared && !book.audioDurationMinutes) && <button
@@ -385,7 +385,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                 {(book.isBookatlasPlus) && (
                   <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-2.5 flex items-center justify-between text-xs">
                     <span className="text-slate-700 font-medium">
-                      Or read for <span className="font-bold text-indigo-700">{currencySymbol}0.00</span> with Bookatlas Plus
+                      Or read for <span className="font-bold text-indigo-700">{currencySymbol}0.00</span> with BooksAtlas Plus
                     </span>
                     <button className="text-indigo-700 font-bold hover:underline cursor-pointer">
                       Start 30-Day Free Trial →
@@ -503,7 +503,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                 {book.editorialReview && (
                   <div className="p-4 bg-amber-50/70 border-l-4 border-amber-600 rounded-r-xl">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 mb-1">
-                      Bookatlas Editorial Review
+                      BooksAtlas Editorial Review
                     </h4>
                     <p className="text-sm italic text-slate-800 font-serif">
                       {book.editorialReview}
@@ -690,7 +690,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                       rating: 5,
                       date: '3 weeks ago',
                       title: 'Captivating and impossible to put down!',
-                      comment: 'The world-building and character progression kept me up until 3 AM reading on my Bookatlas eReader. Highly recommended!',
+                      comment: 'The world-building and character progression kept me up until 3 AM reading on my BooksAtlas eReader. Highly recommended!',
                       verifiedPurchase: true,
                       upvotes: 24,
                     }
@@ -744,7 +744,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                 <h3 className="font-bold text-base text-slate-950">{book.author}</h3>
                 <p className="text-sm text-slate-700 leading-relaxed">{book.authorBio}</p>
                 <div className="pt-2 text-xs text-indigo-600 font-semibold">
-                  <span>More titles by {book.author} available on Bookatlas eBook Store</span>
+                  <span>More titles by {book.author} available on BooksAtlas eBook Store</span>
                 </div>
               </div>
             )}

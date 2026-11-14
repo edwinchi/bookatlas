@@ -112,23 +112,23 @@ export const SubscriberManagerHub: React.FC<SubscriberManagerHubProps> = ({
   const [campaignTitle, setCampaignTitle] = useState('Weekend Literary Dispatch & New Releases');
   const [isABTesting, setIsABTesting] = useState(false);
   const [abSplitPercent, setAbSplitPercent] = useState(50);
-  const [campaignSubjectA, setCampaignSubjectA] = useState('✨ Discover New Philosophical Masterpieces on Bookatlas');
+  const [campaignSubjectA, setCampaignSubjectA] = useState('✨ Discover New Philosophical Masterpieces on BooksAtlas');
   const [campaignSubjectB, setCampaignSubjectB] = useState('👑 Exclusive Literary Access: 25% Off New Curated Editions');
   const [campaignPreviewA, setCampaignPreviewA] = useState('Instant eReader delivery + exclusive 25% subscriber privilege.');
   const [campaignPreviewB, setCampaignPreviewB] = useState('Explore our latest Zwolle archive publication with audio narration.');
-  const [campaignSenderName, setCampaignSenderName] = useState('Bookatlas Publishing Group (Zwolle)');
+  const [campaignSenderName, setCampaignSenderName] = useState('BooksAtlas Publishing Group (Zwolle)');
   const [selectedBookId, setSelectedBookId] = useState<string>(books[0]?.id || '');
   const [campaignContent, setCampaignContent] = useState(
 `Dear {{subscriber_name}},
 
-We are delighted to bring you our latest curated release from the Bookatlas Zwolle archive. Crafted for inquiring minds who cherish authentic philosophy, indigenous epistemologies, and speculative literature.
+We are delighted to bring you our latest curated release from the BooksAtlas Zwolle archive. Crafted for inquiring minds who cherish authentic philosophy, indigenous epistemologies, and speculative literature.
 
 This edition features complete in-browser DRM-free reading, custom typography presets (Literata, Sepia, Night mode), and full studio audiobook narration.
 
 Use your subscriber access privilege code {{user_discount_code}} at checkout to enjoy your exclusive discount on this week's featured titles.
 
 Happy reading,
-The Bookatlas Editorial Board`
+The BooksAtlas Editorial Board`
   );
   const [campaignCtaText, setCampaignCtaText] = useState('Explore Title in Reader');
   const [campaignTargetFilter, setCampaignTargetFilter] = useState<'all_active' | 'vip' | 'members_only' | 'free_tier' | 'custom_tags'>('all_active');
@@ -818,7 +818,7 @@ The Bookatlas Editorial Board`
                 Standard CSV Schema Reference
               </h4>
               <p className="text-xs text-slate-500">
-                Download the official Bookatlas CSV template with columns for Email, Name, Subscriber Tier, Tags, Reading Interests, and Perk Codes.
+                Download the official BooksAtlas CSV template with columns for Email, Name, Subscriber Tier, Tags, Reading Interests, and Perk Codes.
               </p>
               <button
                 type="button"
@@ -982,7 +982,7 @@ The Bookatlas Editorial Board`
                 >
                   <option value="all_active">🌍 All Active Subscribed ({stats.subscribedCount.toLocaleString()})</option>
                   <option value="vip">👑 VIP Patron Circle Only (40% Tier)</option>
-                  <option value="members_only">✨ Bookatlas Plus Members Only</option>
+                  <option value="members_only">✨ BooksAtlas Plus Members Only</option>
                   <option value="free_tier">📖 Free Readers Only</option>
                   <option value="custom_tags">🏷️ Specific Tag Segment</option>
                 </select>
@@ -1100,7 +1100,7 @@ The Bookatlas Editorial Board`
                 )}
 
                 <div className="border-t border-slate-100 pt-3 text-[10px] text-slate-400 text-center space-y-1">
-                  <div>Bookatlas Publishing Group • 8031 DJ Zwolle</div>
+                  <div>BooksAtlas Publishing Group • 8031 DJ Zwolle</div>
                   <div className="text-indigo-600 font-bold">1-Click Instant Unsubscribe</div>
                 </div>
               </div>
@@ -1219,7 +1219,7 @@ The Bookatlas Editorial Board`
               >
                 <option value="all">All Subscriber Tiers</option>
                 <option value="vip_patron">👑 VIP Patron Circle (40% Perk)</option>
-                <option value="member_subscriber">✨ Bookatlas Plus Members</option>
+                <option value="member_subscriber">✨ BooksAtlas Plus Members</option>
                 <option value="free_reader">📖 Free Readers</option>
               </select>
             </div>
@@ -1426,7 +1426,7 @@ The Bookatlas Editorial Board`
                   className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="free_reader">📖 Free Reader</option>
-                  <option value="member_subscriber">✨ Bookatlas Plus Member</option>
+                  <option value="member_subscriber">✨ BooksAtlas Plus Member</option>
                   <option value="vip_patron">👑 VIP Patron Circle (40% Perk)</option>
                 </select>
               </div>

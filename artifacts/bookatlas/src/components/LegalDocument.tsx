@@ -23,7 +23,7 @@ export function OperatorAddress() {
 export function LegalDocument({ title, version, sections }: { title: string; version: string; sections: { title: string; body: ReactNode }[] }) {
   return <main className="min-h-[100dvh] bg-slate-50 px-4 py-10 sm:py-14">
     <article className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-10">
-      <Link href="/" className="inline-flex min-h-11 items-center text-sm font-semibold text-indigo-700 underline underline-offset-4">← Back to Bookatlas</Link>
+      <Link href="/" className="inline-flex min-h-11 items-center text-sm font-semibold text-indigo-700 underline underline-offset-4">← Back to BooksAtlas</Link>
       <h1 className="mt-4 font-serif text-3xl font-extrabold text-slate-950">{title}</h1>
       <p className="mt-2 text-sm text-slate-500">Version {version}</p>
       <div className="mt-8 space-y-7 text-sm leading-relaxed text-slate-700">

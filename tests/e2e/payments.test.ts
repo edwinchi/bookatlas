@@ -106,16 +106,16 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
     { currency: 'eur', amount: 499, tax: 'inclusive' }, 'the server sets the price, in euros, VAT included',
   );
   assert.equal(params.payment_method_types, undefined, 'payment methods come from the Stripe dashboard (iDEAL, cards, wallets…)');
-  // BookAtlas sets the tax: Stripe Managed Payments (the account default) is turned off for its checkouts.
+  // BooksAtlas sets the tax: Stripe Managed Payments (the account default) is turned off for its checkouts.
   assert.equal(params.line_items[0].price_data.product_data.tax_code, 'txcd_10302000', 'eBooks carry the Stripe digital-book tax code');
-  assert.deepEqual(params.managed_payments, { enabled: false }, 'BookAtlas, not Stripe, is the seller of record');
+  assert.deepEqual(params.managed_payments, { enabled: false }, 'BooksAtlas, not Stripe, is the seller of record');
   assert.deepEqual(params.automatic_tax, { enabled: false }, 'Stripe Tax stays off unless STRIPE_TAX=on');
 
   const forged = await fetch('/api/stripe/webhook', { method: 'POST', headers: { 'content-type': 'application/json', 'stripe-signature': 't=1,v1=forged' }, body: '{}' });
   assert.equal(forged.status, 400);
   assert.equal(await access(), 'preview');
 
-  assert.equal(params.metadata.app, 'bookatlas', 'BookAtlas checkouts are tagged');
+  assert.equal(params.metadata.app, 'bookatlas', 'BooksAtlas checkouts are tagged');
   // Another site on the same Stripe account: its paid session reaches this webhook and is ignored.
   const foreign = signedEvent('checkout.session.completed', { ...sessions.get(id)!, status: 'complete', payment_status: 'paid', metadata: { bookIds: bookId } });
   assert.equal((await fetch('/api/stripe/webhook', { method: 'POST', headers: { 'content-type': 'application/json', 'stripe-signature': foreign.header }, body: foreign.payload })).status, 200);
@@ -133,7 +133,7 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
   assert.equal((await fetch(`/api/checkout/sessions/${id}`, as('admin'))).status, 404, 'another account cannot read this checkout');
   assert.equal((await fetch('/api/checkout/sessions', json({ bookIds: [bookId], withdrawalWaiver: true }))).status, 409, 'already owned');
 
-  // BookAtlas issues one invoice per paid checkout, with Dutch 9% VAT for an EU buyer below the threshold.
+  // BooksAtlas issues one invoice per paid checkout, with Dutch 9% VAT for an EU buyer below the threshold.
   const invoices = (await (await fetch('/api/invoices', as('reader'))).json()).invoices;
   assert.equal(invoices.length, 1, 'a retried webhook and the success page issue one invoice');
   assert.deepEqual({ gross: invoices[0].grossCents, vat: invoices[0].vatCents, status: invoices[0].status, title: invoices[0].books[0].title },
@@ -155,7 +155,7 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
   const sales = await (await fetch('/api/author/sales', as('admin'))).json();
   const sold = sales.books.find((b: { bookId: string }) => b.bookId === bookId);
   assert.deepEqual({ units: sold.units, gross: sold.grossCents, net: sold.netCents, share: sold.shareCents, refunds: sold.refunds },
-    { units: 1, gross: 499, net: 458, share: 366, refunds: 0 }, 'the author receives 80% of the price excluding VAT');
+    { units: 1, gross: 499, net: 458, share: 307, refunds: 0 }, 'the author receives 67% of the price excluding VAT (33% commission)');
   assert.equal(sales.monthly.length, 12);
   assert.equal(sales.monthly.at(-1).units >= 1, true, 'this month shows the sale');
   assert.equal(sales.recent[0].country, 'DE');

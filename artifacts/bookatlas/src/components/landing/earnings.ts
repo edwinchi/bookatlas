@@ -2,8 +2,9 @@
 // Amounts are before VAT and payment-provider fees.
 
 export const PLANS = {
-  standard: { label: 'Standard', commission: 0.2, monthlyFee: 0 },
-  pro: { label: 'Author Pro', commission: 0.1, monthlyFee: 9.99 },
+  // Owner decision 2026-11-14: 33% commission; Pro keeps its 10-point advantage.
+  standard: { label: 'Standard', commission: 0.33, monthlyFee: 0 },
+  pro: { label: 'Author Pro', commission: 0.23, monthlyFee: 9.99 },
 } as const;
 
 export type PlanId = keyof typeof PLANS;

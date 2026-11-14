@@ -95,7 +95,7 @@ export const UnsubscribePageModal: React.FC<UnsubscribePageModalProps> = ({
       const data = await res.json();
       if (data.success) {
         setStatus('subscribed');
-        setFeedbackMessage(isNl ? 'Welkom terug! U bent opnieuw geabonneerd op Bookatlas.' : 'Welcome back! You have successfully re-subscribed to Bookatlas.');
+        setFeedbackMessage(isNl ? 'Welkom terug! U bent opnieuw geabonneerd op BooksAtlas.' : 'Welcome back! You have successfully re-subscribed to BooksAtlas.');
       }
     } catch (err) {
       // fallback
@@ -120,7 +120,7 @@ export const UnsubscribePageModal: React.FC<UnsubscribePageModalProps> = ({
                 {isNl ? 'E-mail Voorkeuren & Uitschrijven' : 'Email Preferences & 1-Click Opt-Out'}
               </h3>
               <p className="text-[11px] text-slate-400 font-sans">
-                Bookatlas Publishing Group &bull; 8031 DJ Zwolle
+                BooksAtlas Publishing Group &bull; 8031 DJ Zwolle
               </p>
             </div>
           </div>
@@ -146,7 +146,7 @@ export const UnsubscribePageModal: React.FC<UnsubscribePageModalProps> = ({
                 </h4>
                 <p className="text-xs text-slate-600 mt-2 max-w-md mx-auto leading-relaxed">
                   {isNl 
-                    ? `Het adres (${email}) ontvangt geen marketingbulletins of nieuwe boekuitgaven meer van Bookatlas. Uw account blijft actief voor eReader-aankopen.`
+                    ? `Het adres (${email}) ontvangt geen marketingbulletins of nieuwe boekuitgaven meer van BooksAtlas. Uw account blijft actief voor eReader-aankopen.`
                     : `Your email address (${email}) has been removed from all marketing broadcasts and book launch announcements. Your account access remains intact.`}
                 </p>
               </div>
@@ -176,7 +176,7 @@ export const UnsubscribePageModal: React.FC<UnsubscribePageModalProps> = ({
               </div>
               <div>
                 <h4 className="text-xl font-bold text-slate-900 font-serif">
-                  {isNl ? 'Welkom terug bij Bookatlas!' : 'Welcome back to Bookatlas!'}
+                  {isNl ? 'Welkom terug bij BooksAtlas!' : 'Welcome back to BooksAtlas!'}
                 </h4>
                 <p className="text-xs text-slate-600 mt-2 max-w-md mx-auto leading-relaxed">
                   {isNl 

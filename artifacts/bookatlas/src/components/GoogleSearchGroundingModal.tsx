@@ -52,7 +52,7 @@ function getLocalSearchGrounding(queryText: string): SearchGroundingResult {
   if (q.includes('cpnb') || q.includes('dutch') || q.includes('bestseller') || q.includes('netherlands')) {
     return {
       query: queryText,
-      answer: `### 🌐 European & Dutch Bestseller Radar 2026 (Live Grounded Report)\n\n• **CPNB Bestseller 60 Highlights**: Strong velocity across Dutch literary fiction, translated European thrillers, and non-fiction memoirs exploring historical European identity and modern society.\n• **Top Trending Titles**:\n  - *The Star-Cartographer of Amsterdam* by Hendrik van der Meer — Acclaimed Golden Age historical fiction detailing maritime astronomy and canal secret societies.\n  - *Axiom of the Void* by Kaelen Vance — Bestselling speculative quantum thriller ranking across UK, Dutch, and German charts.\n  - *The Keizersgracht Cipher* by Laurens van Dijk — Fast-paced art heist and archival investigative thriller.\n• **Format Momentum**: Digital eReader downloads and Bookatlas Plus unlimited subscriptions represent over 42% of first-week unit velocity in Western Europe.\n• **Market Sentiment**: Readers are favoring high-concept novels blending intellectual rigor with propulsive, page-turning chapter pacing.`,
+      answer: `### 🌐 European & Dutch Bestseller Radar 2026 (Live Grounded Report)\n\n• **CPNB Bestseller 60 Highlights**: Strong velocity across Dutch literary fiction, translated European thrillers, and non-fiction memoirs exploring historical European identity and modern society.\n• **Top Trending Titles**:\n  - *The Star-Cartographer of Amsterdam* by Hendrik van der Meer — Acclaimed Golden Age historical fiction detailing maritime astronomy and canal secret societies.\n  - *Axiom of the Void* by Kaelen Vance — Bestselling speculative quantum thriller ranking across UK, Dutch, and German charts.\n  - *The Keizersgracht Cipher* by Laurens van Dijk — Fast-paced art heist and archival investigative thriller.\n• **Format Momentum**: Digital eReader downloads and BooksAtlas Plus unlimited subscriptions represent over 42% of first-week unit velocity in Western Europe.\n• **Market Sentiment**: Readers are favoring high-concept novels blending intellectual rigor with propulsive, page-turning chapter pacing.`,
       sources: [
         { title: 'CPNB Bestseller 60 (Official Dutch Book Market)', url: 'https://www.debestseller60.nl', snippet: 'Official weekly sales charts across Dutch bookstores and digital retail platforms.' },
         { title: 'The European Review of Books (Amsterdam)', url: 'https://europeanreviewofbooks.com', snippet: 'Essays, fiction, and reviews spanning cultural and intellectual life across Europe.' },
@@ -87,7 +87,7 @@ function getLocalSearchGrounding(queryText: string): SearchGroundingResult {
         { title: 'Variety Literary Adaptations Radar', url: 'https://variety.com', snippet: 'Breaking news on book rights options, production deals, and casting.' },
         { title: 'Deadline Hollywood Book Deal Tracker', url: 'https://deadline.com', snippet: 'Tracking novel acquisitions by major global studios and European production hubs.' }
       ],
-      searchQueries: ['Sci-fi novel screen adaptation news', 'European book to film streaming options 2026', 'Bookatlas bestselling rights'],
+      searchQueries: ['Sci-fi novel screen adaptation news', 'European book to film streaming options 2026', 'BooksAtlas bestselling rights'],
       timestamp: new Date().toISOString(),
       model: 'gemini-3.5-flash'
     };

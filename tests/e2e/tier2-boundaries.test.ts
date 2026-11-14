@@ -363,10 +363,10 @@ test('F8-B5: AI copilot with empty text snippet handles analysis without throwin
 // ----------------------------------------------------------------------------
 test('F9-B1: chatbot fallback handles empty user prompt gracefully', () => {
   const generateFallbackChatResponse = (msg: string) => {
-    if (!msg || !msg.trim()) return 'Welcome to Bookatlas! How can I assist your reading journey today?';
+    if (!msg || !msg.trim()) return 'Welcome to BooksAtlas! How can I assist your reading journey today?';
     return 'Detailed response';
   };
-  assert.equal(generateFallbackChatResponse(''), 'Welcome to Bookatlas! How can I assist your reading journey today?');
+  assert.equal(generateFallbackChatResponse(''), 'Welcome to BooksAtlas! How can I assist your reading journey today?');
 });
 
 test('F9-B2: search grounding fallback returns literary radar data on empty query', () => {
@@ -404,7 +404,7 @@ test('F9-B4: live voice dialogue with empty conversation history responds with w
   assert.equal(res.status, 200);
   const data = await res.json();
   assert.equal(data.success, true);
-  assert.match(data.spokenText, /Welcome to Bookatlas/i);
+  assert.match(data.spokenText, /Welcome to BooksAtlas/i);
 });
 
 test('F9-B5: veo video generator with unknown aspect ratio safely defaults to 16:9', async () => {

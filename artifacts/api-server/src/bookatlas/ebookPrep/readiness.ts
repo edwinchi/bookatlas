@@ -31,7 +31,7 @@ export interface ReadinessPackage {
   markdown: string;
 }
 
-/** BookAtlas categories as the subject paths KDP and Lulu ask for (BISAC-style). Suggestions, not guarantees. */
+/** BooksAtlas categories as the subject paths KDP and Lulu ask for (BISAC-style). Suggestions, not guarantees. */
 const STORE_CATEGORIES: Record<string, string[]> = {
   'Spiritual Healing & Alignment': ['Body, Mind & Spirit > Healing > Energy', 'Body, Mind & Spirit > Spiritualism'],
   'Mind Mastery & Quantum Awakening': ['Body, Mind & Spirit > Mindfulness & Meditation', 'Body, Mind & Spirit > New Thought'],
@@ -202,7 +202,7 @@ export function readinessPackage(intake: SubmissionIntake, report: PrepReport | 
   const table = (items: ChecklistItem[]) => items.map((i) => `- [${i.status === 'ok' ? 'x' : ' '}] **${i.label}** — ${mark[i.status]}. ${i.detail}`).join('\n');
   const markdown = [
     `# ${intake.title.toUpperCase()}`, '', '## Amazon KDP & Lulu Publication Readiness Package', '',
-    `Prepared by BookAtlas on ${new Date().toISOString().slice(0, 10)}.`, '',
+    `Prepared by BooksAtlas on ${new Date().toISOString().slice(0, 10)}.`, '',
     '# Executive Summary', '', summary, '',
     '# Publication Readiness Score', '', `**${score}/100 — ${verdict}**`, '',
     '# Major Issues Requiring Correction', '', issues.length ? issues.map((i) => `- ${i.severity === 'error' ? '❌' : '⚠️'} ${i.text}`).join('\n') : '- None.', '',

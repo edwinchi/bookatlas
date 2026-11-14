@@ -41,7 +41,7 @@ export class NarrationError extends Error {
 const ACTIVE: NarrationStatus[] = ['awaiting_payment', 'paid', 'approved', 'running', 'done'];
 const LEASE_MS = 90_000;
 const MAX_ATTEMPTS = 3;
-const SAMPLE_TEXT = 'Welcome to your audiobook on BookAtlas. This is how your book will sound, read in full, chapter by chapter, with every paragraph highlighted as you listen.';
+const SAMPLE_TEXT = 'Welcome to your audiobook on BooksAtlas. This is how your book will sound, read in full, chapter by chapter, with every paragraph highlighted as you listen.';
 
 // ---------------------------------------------------------------------------------------------- storage
 

@@ -55,7 +55,7 @@ export const ArchitectureGuideModal: React.FC<ArchitectureGuideModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-amber-400">Technical Blueprint</span>
-                <span className="text-xs text-slate-400">• Bookatlas & Atlantean Globals Architecture</span>
+                <span className="text-xs text-slate-400">• BooksAtlas & Atlantean Globals Architecture</span>
               </div>
               <h2 className="text-lg sm:text-xl font-bold text-white">
                 How to Build an Enterprise eBook & Audiobook Platform
@@ -116,10 +116,10 @@ export const ArchitectureGuideModal: React.FC<ArchitectureGuideModalProps> = ({
               <div className="space-y-6">
                 <div>
                   <h3 className="text-xl font-bold text-gray-950">
-                    High-Level System Architecture of Bookatlas.com
+                    High-Level System Architecture of BooksAtlas.com
                   </h3>
                   <p className="text-sm text-gray-600 mt-1 leading-relaxed">
-                    Building an enterprise digital bookstore and reading ecosystem requires orchestrating five major pillars: an editorial discovery storefront, an in-browser reflowable reader with Gemini AI Co-Pilot, DRM/content ingestion pipeline, recurring subscriptions (Bookatlas Plus), and cross-device sync.
+                    Building an enterprise digital bookstore and reading ecosystem requires orchestrating five major pillars: an editorial discovery storefront, an in-browser reflowable reader with Gemini AI Co-Pilot, DRM/content ingestion pipeline, recurring subscriptions (BooksAtlas Plus), and cross-device sync.
                   </p>
                 </div>
 
@@ -186,7 +186,7 @@ export const ArchitectureGuideModal: React.FC<ArchitectureGuideModalProps> = ({
                     In-Browser eReader & AI Rendering Architecture
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    How enterprise eReaders like Bookatlas render reflowable EPUB3 files in modern web browsers.
+                    How enterprise eReaders like BooksAtlas render reflowable EPUB3 files in modern web browsers.
                   </p>
                 </div>
 
@@ -212,7 +212,7 @@ export const ArchitectureGuideModal: React.FC<ArchitectureGuideModalProps> = ({
                       2. Canonical Fragment Identifiers (EPUB CFI)
                     </h4>
                     <p>
-                      Because screen sizes and font settings change, page numbers like "Page 42" are not fixed. Bookatlas uses <strong>EPUB CFI</strong> strings (e.g. <code className="bg-gray-200 px-1 py-0.5 rounded-sm font-mono text-[11px]">epubcfi(/6/4[chap01]!/4/2/10/1:0)</code>) to pinpoint the exact DOM node and character offset where the user stopped reading.
+                      Because screen sizes and font settings change, page numbers like "Page 42" are not fixed. BooksAtlas uses <strong>EPUB CFI</strong> strings (e.g. <code className="bg-gray-200 px-1 py-0.5 rounded-sm font-mono text-[11px]">epubcfi(/6/4[chap01]!/4/2/10/1:0)</code>) to pinpoint the exact DOM node and character offset where the user stopped reading.
                     </p>
                   </div>
 
@@ -310,20 +310,20 @@ export const ArchitectureGuideModal: React.FC<ArchitectureGuideModalProps> = ({
                     E-Commerce, Subscriptions & Loyalty Points
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    Handling one-off purchases, recurring memberships (Bookatlas Plus), and Reader Club points.
+                    Handling one-off purchases, recurring memberships (BooksAtlas Plus), and Reader Club points.
                   </p>
                 </div>
 
                 <div className="space-y-3 text-xs text-gray-700">
                   <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                    <h4 className="font-bold text-sm text-gray-900 mb-1">Bookatlas Plus Unlimited Subscription Model</h4>
+                    <h4 className="font-bold text-sm text-gray-900 mb-1">BooksAtlas Plus Unlimited Subscription Model</h4>
                     <p>
                       Users pay a fixed monthly subscription ($9.99/mo). Royalty payouts to authors/publishers are calculated from a global subscriber pool based on validated page reads (tracked by CFI progress beacons).
                     </p>
                   </div>
 
                   <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                    <h4 className="font-bold text-sm text-gray-900 mb-1">Bookatlas Reader Club Points Integration</h4>
+                    <h4 className="font-bold text-sm text-gray-900 mb-1">BooksAtlas Reader Club Points Integration</h4>
                     <p>
                       Users earn 10-20 points per dollar spent. Points can be redeemed at checkout for instant order discounts, driving cross-ecosystem retention.
                     </p>
@@ -339,7 +339,7 @@ export const ArchitectureGuideModal: React.FC<ArchitectureGuideModalProps> = ({
                     Cross-Device Reading Sync (Hardware & Mobile)
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    How Bookatlas synchronizes reading position between e-Ink eReaders (Bookatlas Clara, Libra), iPhone, Android, and Web browsers.
+                    How BooksAtlas synchronizes reading position between e-Ink eReaders (BooksAtlas Clara, Libra), iPhone, Android, and Web browsers.
                   </p>
                 </div>
 

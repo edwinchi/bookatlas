@@ -321,7 +321,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
   useEffect(() => {
     if (!selectedBookForDetail) return;
     const before = document.title;
-    document.title = `${selectedBookForDetail.title} by ${selectedBookForDetail.author} | Bookatlas`;
+    document.title = `${selectedBookForDetail.title} by ${selectedBookForDetail.author} | BooksAtlas`;
     return () => { document.title = before; };
   }, [selectedBookForDetail?.id]);
   const [activeReadingBook, setActiveReadingBook] = useState<{ book: Book; chapterIndex: number; paragraphIndex: number } | null>(null);
@@ -343,7 +343,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
     if (!account || !pendingReaderService) return;
     if (!hasAiAccess) {
       setAiAccessGate({
-        featureTitle: 'Bookatlas Plus membership required',
+        featureTitle: 'BooksAtlas Plus membership required',
         featureDescription: 'Personalized AI features require an active membership. Signing in alone does not grant membership.',
       });
       return;
@@ -400,11 +400,11 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
   // Cart & Wishlist Actions
   const handleAddToCart = (book: Book, format: 'ebook' | 'audiobook' = 'ebook') => {
     if (book.isSample) {
-      setCheckoutNotice({ tone: 'info', text: `"${book.title}" is a sample title to show what BookAtlas offers. It is not for sale.` });
+      setCheckoutNotice({ tone: 'info', text: `"${book.title}" is a sample title to show what BooksAtlas offers. It is not for sale.` });
       return;
     }
     if (book.availability === 'listed') {
-      setCheckoutNotice({ tone: 'info', text: `"${book.title}" is coming soon to BookAtlas. Add it to your wishlist and we will show it in your library when it is available.` });
+      setCheckoutNotice({ tone: 'info', text: `"${book.title}" is coming soon to BooksAtlas. Add it to your wishlist and we will show it in your library when it is available.` });
       return;
     }
     setCart((prev) => {
@@ -718,7 +718,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
 
               <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
                 <button
-                  onClick={() => openAdminAuthForFeature('Bookatlas Master Operations Studio', () => setActiveTab('manager'))}
+                  onClick={() => openAdminAuthForFeature('BooksAtlas Master Operations Studio', () => setActiveTab('manager'))}
                   className="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Unlock className="w-4 h-4" />
@@ -759,12 +759,12 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
             onExploreStore={() => setActiveTab('store')}
           />
         ) : (
-          /* Store View (eBooks, Audiobooks, Bookatlas Plus, Deals) */
+          /* Store View (eBooks, Audiobooks, BooksAtlas Plus, Deals) */
           <>
             {isFrontPage && (
               <div id="bookstore" className="scroll-mt-36 lg:scroll-mt-44 pt-6 text-center space-y-2">
                 <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-indigo-600">Bookstore</p>
-                <h2 className="text-3xl sm:text-4xl font-serif font-bold text-slate-900">The BookAtlas bookstore</h2>
+                <h2 className="text-3xl sm:text-4xl font-serif font-bold text-slate-900">The BooksAtlas bookstore</h2>
                 <p className="text-sm text-slate-600">eBooks and audiobooks you can read and listen to right in your browser.</p>
               </div>
             )}
@@ -785,7 +785,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
               <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 text-white rounded-2xl p-6 sm:p-8 shadow-lg flex flex-col md:flex-row items-center justify-between gap-6 border border-indigo-400/20">
                 <div className="space-y-2 max-w-xl">
                   <span className="text-xs font-bold uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full flex items-center gap-1 w-fit text-amber-300">
-                    <Sparkles className="w-3.5 h-3.5" /> Bookatlas Plus Unlimited
+                    <Sparkles className="w-3.5 h-3.5" /> BooksAtlas Plus Unlimited
                   </span>
                   <h1 className="text-2xl sm:text-3xl font-serif font-extrabold text-white">
                     Read & Listen All You Want for €9.99/Month
@@ -897,9 +897,9 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                   currencySymbol={currencySymbol}
                 />
 
-                {/* Carousel 2: Bookatlas Plus Unlimited */}
+                {/* Carousel 2: BooksAtlas Plus Unlimited */}
                 <HorizontalProductCarousel
-                  title="Bookatlas Plus: Unlimited Reading & Listening"
+                  title="BooksAtlas Plus: Unlimited Reading & Listening"
                   subtitle="Explore 1.5M+ eBooks and Audiobooks included in your subscription"
                   badge="Included in Plus"
                   icon={<Sparkles className="w-5 h-5 text-indigo-600" />}
@@ -1100,7 +1100,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
         <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           
           <div className="space-y-3">
-            <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="Bookatlas" width={319} height={96} loading="lazy" className="h-12 w-auto drop-shadow-[0_0_10px_rgba(250,204,21,0.45)]" />
+            <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="BooksAtlas" width={319} height={96} loading="lazy" className="h-12 w-auto drop-shadow-[0_0_10px_rgba(250,204,21,0.45)]" />
             <p className="text-slate-400 leading-relaxed text-[11px]">
               The premier eBook Store and in-browser eReader by Atlantean Globals Services, registered in the Netherlands. Discover millions of curated eBooks, Audiobooks, and AI reading companions.
             </p>
@@ -1111,7 +1111,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
             <ul className="space-y-0.5 [&>li>button]:min-h-6">
               <li><button onClick={() => setActiveTab('store')} className="hover:text-white cursor-pointer">All eBooks</button></li>
               <li><button onClick={() => setActiveTab('audiobooks')} className="hover:text-white cursor-pointer">Audiobooks</button></li>
-              <li><button onClick={() => setActiveTab('bookatlasplus')} className="hover:text-white cursor-pointer">Bookatlas Plus Unlimited</button></li>
+              <li><button onClick={() => setActiveTab('bookatlasplus')} className="hover:text-white cursor-pointer">BooksAtlas Plus Unlimited</button></li>
               <li><button onClick={() => setActiveTab('deals')} className="hover:text-white cursor-pointer">Daily Deals Under €4.99</button></li>
               <li>
                 <button 
@@ -1119,7 +1119,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                     if (isAdminAuthenticated) {
                       setActiveTab('manager');
                     } else {
-                      openAdminAuthForFeature('Bookatlas Master Operations Studio', () => setActiveTab('manager'));
+                      openAdminAuthForFeature('BooksAtlas Master Operations Studio', () => setActiveTab('manager'));
                     }
                   }} 
                   className="text-amber-400 hover:text-amber-300 font-bold cursor-pointer flex items-center gap-1"
@@ -1141,7 +1141,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
             <ul className="space-y-0.5 [&>li>button]:min-h-6">
               <li><button onClick={() => requireAiAccess('AI Book Matchmaker', 'Get personalized reading recommendations, matched by mood and theme, powered by AI.', () => setIsAIMatchmakerOpen(true))} className="hover:text-white cursor-pointer flex items-center gap-1"><Sparkles className="w-3 h-3 text-purple-400" /> AI Book Matchmaker</button></li>
               <li><button onClick={() => setActiveTab('library')} className="hover:text-white cursor-pointer">My Bookshelf & Reading Progress</button></li>
-              <li><button onClick={() => setIsArchitectureGuideOpen(true)} className="hover:text-amber-400 cursor-pointer font-semibold">Bookatlas Architecture Blueprint</button></li>
+              <li><button onClick={() => setIsArchitectureGuideOpen(true)} className="hover:text-amber-400 cursor-pointer font-semibold">BooksAtlas Architecture Blueprint</button></li>
             </ul>
           </div>
 
@@ -1159,7 +1159,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-8"><div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-400">
-          <p>© 2026 Atlantean Globals Services (Netherlands), KvK 89423496. All rights reserved. Bookatlas™ eBook Store & Reader.</p>
+          <p>© 2026 Atlantean Globals Services (Netherlands), KvK 89423496. All rights reserved. BooksAtlas™ eBook Store & Reader.</p>
           <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
             <a href={`${import.meta.env.BASE_URL}privacy`} className="inline-flex min-h-6 items-center text-slate-400 hover:text-slate-200 underline">
               Privacy Notice

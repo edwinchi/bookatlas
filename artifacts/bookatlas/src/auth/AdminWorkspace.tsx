@@ -9,7 +9,7 @@ function AdminSignIn() {
   return <main className="grid min-h-[100dvh] place-items-center bg-slate-950 p-6 text-center text-white">
     <section className="max-w-md space-y-4">
       <h1 className="text-3xl font-bold">Administrator sign-in</h1>
-      <p className="text-slate-300">Sign in with your verified Bookatlas administrator account to open the private workspace.</p>
+      <p className="text-slate-300">Sign in with your verified BooksAtlas administrator account to open the private workspace.</p>
       <Link href="/sign-in?feature=admin&returnTo=%2Fadmin" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-indigo-600 px-5 font-bold text-white">Sign in as administrator</Link>
       <p><Link href="/" className="text-sm underline underline-offset-4">Return to the public bookstore</Link></p>
     </section>
@@ -78,7 +78,7 @@ function AdminPortal() {
 
   return <div className="min-h-[100dvh] bg-slate-950">
     <header className="sticky top-0 z-40 flex min-h-14 flex-wrap items-center justify-between gap-3 border-b border-indigo-900 bg-slate-950 px-4 py-2 text-white">
-      <p className="text-sm font-bold"><span className="text-amber-300">Private workspace</span> · Bookatlas administration</p>
+      <p className="text-sm font-bold"><span className="text-amber-300">Private workspace</span> · BooksAtlas administration</p>
       <Link href="/" className="inline-flex min-h-11 items-center rounded-lg border border-slate-600 px-4 text-sm font-semibold hover:bg-slate-800">Return to public bookstore</Link>
     </header>
     <main className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-8">

@@ -3,7 +3,7 @@ import * as ProgressPrimitive from '@radix-ui/react-progress';
 import { BookOpenCheck, CheckCircle2, Download, FileText, Info, Loader2, UploadCloud, X } from 'lucide-react';
 import type { ConvertedManuscript } from './convert/convert';
 
-/** Radix progress bar in the BookAtlas palette, with its percentage announced to screen readers. */
+/** Radix progress bar in the BooksAtlas palette, with its percentage announced to screen readers. */
 export function ProgressBar({ value, label }: { value: number; label: string }) {
   const pct = Math.max(0, Math.min(100, Math.round(value)));
   return (

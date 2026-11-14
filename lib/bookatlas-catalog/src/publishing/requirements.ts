@@ -17,7 +17,7 @@ export interface Requirement {
   detail: string;
   /** Intake field the author fills in; absent when the requirement concerns a file. */
   field?: keyof EbookIntake | keyof PrintIntake;
-  /** True when BookAtlas checks or fixes it automatically after upload. */
+  /** True when BooksAtlas checks or fixes it automatically after upload. */
   automatic?: boolean;
 }
 
