@@ -31,6 +31,13 @@ create table if not exists public.bookatlas_invoices (
   refund_decided_by text,
   check (amount_gross = amount_net + amount_vat)
 );
+-- If the table was created by an earlier version of this file, add the columns it lacks.
+alter table public.bookatlas_invoices add column if not exists withdrawal_waiver_at timestamptz;
+alter table public.bookatlas_invoices add column if not exists refund_requested_at timestamptz;
+alter table public.bookatlas_invoices add column if not exists refund_reason text check (char_length(refund_reason) <= 1000);
+alter table public.bookatlas_invoices add column if not exists refund_decision text check (refund_decision in ('approved','declined'));
+alter table public.bookatlas_invoices add column if not exists refund_decided_at timestamptz;
+alter table public.bookatlas_invoices add column if not exists refund_decided_by text;
 create index if not exists bookatlas_invoices_user_idx on public.bookatlas_invoices (user_id, seq desc);
 create index if not exists bookatlas_invoices_intent_idx on public.bookatlas_invoices (payment_intent_id);
 create index if not exists bookatlas_invoices_issued_idx on public.bookatlas_invoices (issued_at);

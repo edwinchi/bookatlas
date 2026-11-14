@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ShieldCheck, ChevronDown, Download, RefreshCw, Trash2 } from 'lucide-react';
+import { ShieldCheck, Download, RefreshCw, Trash2 } from 'lucide-react';
+import { UtilityMenu } from './UtilityMenu';
 import { exportOwnAccount, useDeleteOwnAccount } from '@workspace/api-client-react';
 import { useClerk } from '@clerk/react';
 import { useAccount } from '../auth/AuthContext';
@@ -43,26 +44,10 @@ export const AccountPrivacy: React.FC = () => {
   };
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-controls="account-privacy-panel"
-        className="inline-flex items-center gap-1 font-bold underline-offset-4 hover:underline cursor-pointer"
-      >
-        <ShieldCheck className="w-3.5 h-3.5" aria-hidden />Privacy &amp; data
-        <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
-      </button>
-      {open && (
-        <section
-          id="account-privacy-panel"
-          aria-labelledby="account-privacy-title"
-          className="absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-indigo-100 bg-white p-4 text-left shadow-xl space-y-4"
-        >
+    <UtilityMenu icon={ShieldCheck} label="Privacy & data" title="Your data" open={open} onOpenChange={setOpen}>
+      <div className="space-y-4">
           <div>
-            <h2 id="account-privacy-title" className="text-sm font-serif font-bold text-slate-950">Your data</h2>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+            <p className="text-[11px] leading-relaxed text-slate-600">
               Download a copy of everything Bookatlas holds about {account.email}, or permanently delete your account. See the <a href={`${import.meta.env.BASE_URL}privacy`} className="font-semibold text-indigo-700 underline">Privacy Notice</a>.
             </p>
           </div>
@@ -104,8 +89,7 @@ export const AccountPrivacy: React.FC = () => {
             </button>
           </div>}
           {message && <p role="alert" className="text-[11px] font-semibold text-rose-700">{message}</p>}
-        </section>
-      )}
-    </div>
+      </div>
+    </UtilityMenu>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Mail, RefreshCw, AlertCircle, ChevronDown } from 'lucide-react';
+import { Mail, RefreshCw, AlertCircle } from 'lucide-react';
+import { UtilityMenu } from './UtilityMenu';
 import {
   useGetReadingUpdatePreference,
   getGetReadingUpdatePreferenceQueryKey,
@@ -48,26 +49,10 @@ export const ReadingUpdatePreferences: React.FC = () => {
   const subscribed = pref.data?.subscribed === true;
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-controls="reading-updates-panel"
-        className="inline-flex items-center gap-1 font-bold underline-offset-4 hover:underline cursor-pointer"
-      >
-        <Mail className="w-3.5 h-3.5" aria-hidden />Reading updates
-        <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
-      </button>
-      {open && (
-        <section
-          id="reading-updates-panel"
-          aria-labelledby="reading-updates-title"
-          className="absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-indigo-100 bg-white p-4 text-left shadow-xl space-y-3"
-        >
+    <UtilityMenu icon={Mail} label="Reading updates" title="New-release emails" open={open} onOpenChange={setOpen}>
+      <div className="space-y-3">
           <div>
-            <h2 id="reading-updates-title" className="text-sm font-serif font-bold text-slate-950">New-release emails</h2>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+            <p className="text-[11px] leading-relaxed text-slate-600">
               Optional. Browsing and reading stay open to everyone either way. If you opt in, Bookatlas may email {account.email} about newly published books. You can opt out here at any time.
             </p>
           </div>
@@ -107,8 +92,7 @@ export const ReadingUpdatePreferences: React.FC = () => {
             )}
             {saveError && <p role="alert" className="mt-2 text-[11px] font-semibold text-rose-700">{saveError}</p>}
           </div>
-        </section>
-      )}
-    </div>
+      </div>
+    </UtilityMenu>
   );
 };

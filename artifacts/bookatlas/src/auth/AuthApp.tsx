@@ -13,7 +13,9 @@ import { LegalNotice } from '../components/LegalNotice';
 import { PrivacyNotice } from '../components/PrivacyNotice';
 import { RefundPolicy } from '../components/RefundPolicy';
 import { readSignupConsent, saveSignupConsent } from './signupConsent';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { BookOpen, Crown, LayoutDashboard, LifeBuoy, LogIn, LogOut, UserPlus, type LucideIcon } from 'lucide-react';
+import { utilityPill } from '../components/UtilityMenu';
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || publishableKeyFromHost(
   window.location.hostname,
@@ -59,21 +61,52 @@ const appearance = {
 
 const AUTH_LOAD_TIMEOUT_MS = 6000;
 
-// Utility row above the site header: account status on the left, account links on the right.
-const utilityLink = 'inline-flex min-h-9 items-center font-medium text-slate-600 hover:text-slate-950';
+// Utility row above the site header: account status on the left, account links and menus on the right.
+function SessionLink({ href, icon: Icon, children }: { href: string; icon: LucideIcon; children: React.ReactNode }) {
+  const [location] = useLocation();
+  const active = location === href || location.startsWith(`${href}/`);
+  return <Link href={href} aria-current={active ? 'page' : undefined}
+    className={`${utilityPill} ${active ? 'bg-white text-indigo-700 ring-indigo-200 shadow-sm' : ''}`}>
+    <Icon className="h-3.5 w-3.5" aria-hidden />{children}
+  </Link>;
+}
 
 function SessionBar({ authUnavailable = false }: { authUnavailable?: boolean }) {
   const { account, signOut } = useAccount();
-  return <div className="border-b border-slate-200 bg-slate-100 px-4 sm:px-6">
-    <div className="mx-auto flex min-h-9 max-w-7xl flex-wrap items-center justify-between gap-x-5 gap-y-1 py-1 text-xs text-slate-600 sm:py-0">
+  const initial = (account?.name?.trim() || account?.email || '?').charAt(0).toUpperCase();
+  return <div className="border-b border-slate-200/80 bg-gradient-to-r from-slate-50 via-white to-indigo-50/70 px-3 sm:px-6">
+    <div className="mx-auto flex min-h-11 max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-1.5 py-1.5 text-xs text-slate-600">
       {authUnavailable
         ? <span role="status" className="inline-flex items-center gap-2 text-slate-700"><span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />Sign-in is temporarily unavailable. You can keep browsing the bookstore as a guest.</span>
-        : <span role="status">{account ? `Signed in as ${account.email}${account.role === 'admin' ? ' · Administrator' : ''}` : 'Your next chapter starts here.'}</span>}
-      <div className="ml-auto flex flex-wrap items-center gap-x-5 gap-y-1">
-        {authUnavailable ? <a href="mailto:getintouch@apps-pilot.nl?subject=Help%20with%20BookAtlas" className={utilityLink}>Help</a>
-          : account ? <><Link href="/user-portal" className={utilityLink}>My Bookshelf</Link>{account.role === 'admin' && <Link href="/admin" className={utilityLink}>Admin workspace</Link>}<ReadingUpdatePreferences /><AccountInvoices /><AccountPrivacy /><button onClick={signOut} className={`${utilityLink} cursor-pointer`}>Sign out</button></>
-          : <><Link href="/sign-in" className={utilityLink}>Sign in</Link><Link href="/sign-up" className={utilityLink}>Create account</Link></>}
-      </div>
+        : account
+          ? <div role="status" className="flex min-w-0 items-center gap-2.5">
+            <span aria-hidden className="relative grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-[11px] font-bold text-white shadow-sm ring-2 ring-white">
+              {initial}
+              <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+            </span>
+            <span className="min-w-0 leading-tight">
+              <span className="block text-[10px] uppercase tracking-wider text-slate-400">Signed in</span>
+              <span className="block max-w-[14rem] truncate font-semibold text-slate-800" title={account.email}>{account.email}</span>
+            </span>
+            {account.role === 'admin' && <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 ring-1 ring-amber-200"><Crown className="h-3 w-3" aria-hidden />Admin</span>}
+          </div>
+          : <span role="status" className="font-medium text-slate-700">Your next chapter starts here.</span>}
+      <nav aria-label="Account" className="ml-auto flex flex-wrap items-center gap-1 rounded-full bg-slate-100/70 p-1 ring-1 ring-slate-200/70">
+        {authUnavailable ? <a href="mailto:getintouch@apps-pilot.nl?subject=Help%20with%20BookAtlas" className={utilityPill}><LifeBuoy className="h-3.5 w-3.5" aria-hidden />Help</a>
+          : account ? <>
+            <SessionLink href="/user-portal" icon={BookOpen}>My Bookshelf</SessionLink>
+            {account.role === 'admin' && <SessionLink href="/admin" icon={LayoutDashboard}>Admin</SessionLink>}
+            <ReadingUpdatePreferences />
+            <AccountInvoices />
+            <AccountPrivacy />
+            <span aria-hidden className="mx-0.5 h-5 w-px bg-slate-300/80" />
+            <button type="button" onClick={signOut} className={`${utilityPill} hover:!text-rose-700 hover:!ring-rose-200`}><LogOut className="h-3.5 w-3.5" aria-hidden />Sign out</button>
+          </>
+          : <>
+            <Link href="/sign-in" className={utilityPill}><LogIn className="h-3.5 w-3.5" aria-hidden />Sign in</Link>
+            <Link href="/sign-up" className="inline-flex h-8 items-center gap-1.5 rounded-full bg-indigo-600 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"><UserPlus className="h-3.5 w-3.5" aria-hidden />Create account</Link>
+          </>}
+      </nav>
     </div>
   </div>;
 }

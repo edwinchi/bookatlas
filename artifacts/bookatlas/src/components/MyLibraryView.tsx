@@ -22,11 +22,13 @@ import {
   WifiOff,
   Layers,
   ArrowRight,
+  Receipt,
   TrendingUp,
   Award
 } from 'lucide-react';
 import { UserLibraryItem, Book } from '../types';
 import { exportUserLibraryPDF } from '../utils/exportLibraryPdf';
+import { OrdersPanel, ORDERS_SECTION_ID } from './AccountInvoices';
 import { TRANSLATIONS } from '../data/translations';
 
 interface MyLibraryViewProps {
@@ -129,6 +131,15 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
 
   const filteredItems = getFilteredItems();
 
+  // Arriving from "Orders & invoices" in the account bar (/user-portal#orders-and-invoices).
+  useEffect(() => {
+    if (window.location.hash === `#${ORDERS_SECTION_ID}`) {
+      const t = window.setTimeout(() => document.getElementById(ORDERS_SECTION_ID)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+      return () => window.clearTimeout(t);
+    }
+    return undefined;
+  }, []);
+
   return (
     <div className="space-y-8 animate-fadeIn">
       
@@ -194,6 +205,12 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
 
             {/* Action Bar: Export PDF & Offline Toggle */}
             <div className="flex flex-wrap items-center gap-3 pt-2">
+              <a href={`#${ORDERS_SECTION_ID}`}
+                onClick={(e) => { e.preventDefault(); document.getElementById(ORDERS_SECTION_ID)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); history.replaceState(null, '', `#${ORDERS_SECTION_ID}`); }}
+                className="px-4 py-2.5 bg-white/10 hover:bg-white/15 text-white border border-white/15 font-bold text-xs rounded-xl transition-all flex items-center gap-2 cursor-pointer">
+                <Receipt className="w-4 h-4" aria-hidden />
+                <span>Orders &amp; invoices</span>
+              </a>
               <button
                 onClick={handleExportPDF}
                 disabled={isExportingPdf}
@@ -265,6 +282,19 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
 
         </div>
       </div>
+
+      {/* Purchases: the same orders as "Orders & invoices" in the account bar */}
+      <section id={ORDERS_SECTION_ID} aria-labelledby="shelf-orders-title" className="scroll-mt-24 rounded-3xl border border-slate-200 bg-gradient-to-br from-white to-indigo-50/40 p-5 sm:p-6 shadow-sm">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="shelf-orders-title" className="flex items-center gap-2 font-serif text-xl font-extrabold text-slate-950">
+              <Receipt className="h-5 w-5 text-indigo-600" aria-hidden />Orders &amp; invoices
+            </h2>
+            <p className="mt-1 text-xs text-slate-600">Bought eBooks open in full on every device you sign in on. Download VAT invoices and request a refund within 14 days. <a href={`${import.meta.env.BASE_URL}refunds`} className="font-semibold text-indigo-700 underline">Refund Policy</a></p>
+          </div>
+        </div>
+        <OrdersPanel active wide />
+      </section>
 
       {/* Library Navigation & Filters */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
