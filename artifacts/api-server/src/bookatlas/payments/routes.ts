@@ -3,7 +3,8 @@ import type { Book } from '@workspace/bookatlas-catalog/types';
 import { logger } from '../../lib/logger.js';
 import { backfillInvoices, checkoutStatus, createCheckout, handleWebhook, paymentsConfigured, refundPayment } from './checkout.js';
 import { PaymentError, purchasedBookIds } from './purchases.js';
-import { REFUND_WINDOW_DAYS, invoiceBySeq, invoiceForUser, invoiceNumber, invoicesOf, recordRefundDecision, refundRequests, refundState, refundableUntil, renderInvoiceHtml, requestRefund, sellerDetails, vatSummary, type Invoice } from './invoices.js';
+import { authorSales } from './authorSales.js';
+import { memoryInvoices, REFUND_WINDOW_DAYS, invoiceBySeq, invoiceForUser, invoiceNumber, invoicesOf, recordRefundDecision, refundRequests, refundState, refundableUntil, renderInvoiceHtml, requestRefund, sellerDetails, vatSummary, type Invoice } from './invoices.js';
 
 function guarded(handler: (req: Request, res: Response) => Promise<void>) {
   return async (req: Request, res: Response) => {
@@ -95,6 +96,13 @@ export function mountPayments(app: Express, findBook: (id: string) => Promise<Bo
     }
     await recordRefundDecision(invoice.seq, decision, req.bookatlasIdentity!.id);
     res.json(summary(await invoiceBySeq(invoice.seq)));
+  }));
+  // Author sales dashboard: only the signed-in author's own published books.
+  app.get('/api/author/sales', guarded(async (req, res) => {
+    res.setHeader('Cache-Control', 'private, no-store');
+    // The access policy already requires a signed-in reader; checked here too.
+    if (!req.bookatlasIdentity) throw new PaymentError('Please sign in with a verified email address.', 401);
+    res.json(await authorSales(req.bookatlasIdentity.id, memoryInvoices));
   }));
   app.get('/api/manager/vat-summary', guarded(async (req, res) => {
     requireAdmin(req);

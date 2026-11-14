@@ -151,6 +151,19 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
   assert.equal(summary.threshold.state, 'ok');
   assert.ok(summary.threshold.netThisYearCents >= 458, 'a sale to Germany counts towards the cross-border threshold');
 
+  // The author (here the administrator who published the book) sees the sale; the buyer sees no one else's sales.
+  const sales = await (await fetch('/api/author/sales', as('admin'))).json();
+  const sold = sales.books.find((b: { bookId: string }) => b.bookId === bookId);
+  assert.deepEqual({ units: sold.units, gross: sold.grossCents, net: sold.netCents, share: sold.shareCents, refunds: sold.refunds },
+    { units: 1, gross: 499, net: 458, share: 366, refunds: 0 }, 'the author receives 80% of the price excluding VAT');
+  assert.equal(sales.monthly.length, 12);
+  assert.equal(sales.monthly.at(-1).units >= 1, true, 'this month shows the sale');
+  assert.equal(sales.recent[0].country, 'DE');
+  assert.ok(!JSON.stringify(sales).includes('reader@example.com') && !JSON.stringify(sales).includes('Rea Der'), 'authors never see who bought');
+  const buyerView = await (await fetch('/api/author/sales', as('reader'))).json();
+  assert.ok(!buyerView.books.some((b: { bookId: string }) => b.bookId === bookId), 'only the author of a book sees its sales');
+  assert.equal((await fetch('/api/author/sales', as('unauthenticated'))).status, 401);
+
   // The buyer asks for a refund within 14 days; an administrator approves it, which refunds through Stripe.
   assert.ok(html.includes('art. 16(m)'), 'the invoice confirms the withdrawal waiver on a durable medium (art. 8(7))');
   assert.equal(invoices[0].refund.state, 'available');
@@ -175,6 +188,8 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
   assert.equal(await access(), 'preview');
   assert.equal((await (await fetch('/api/invoices', as('reader'))).json()).invoices[0].status, 'refunded', 'a full refund marks the invoice refunded');
   assert.match(await (await fetch(`/api/invoices/${invoices[0].seq}`, as('reader'))).text(), /Refunded in full/);
+  const afterRefund = (await (await fetch('/api/author/sales', as('admin'))).json()).books.find((b: { bookId: string }) => b.bookId === bookId);
+  assert.deepEqual({ units: afterRefund.units, refunds: afterRefund.refunds, share: afterRefund.shareCents }, { units: 0, refunds: 1, share: 0 }, 'a refunded sale earns nothing');
 
   // The reader's data export lists the purchase (GDPR access), refund included.
   const exported = await (await fetch('/api/account/export', as('reader'))).json();

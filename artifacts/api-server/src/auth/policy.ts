@@ -31,6 +31,7 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (normalized === '/api/checkout/sessions' && method === 'POST') return 'reader';
   if (/^\/api\/checkout\/sessions\/[^/]+$/.test(normalized) && method === 'GET') return 'reader';
   if (normalized === '/api/purchases' && method === 'GET') return 'reader';
+  if (normalized === '/api/author/sales' && method === 'GET') return 'reader';
   if (method === 'GET' && /^\/api\/invoices(?:\/\d+)?$/.test(normalized)) return 'reader';
   if (method === 'POST' && /^\/api\/invoices\/\d+\/refund-request$/.test(normalized)) return 'reader';
   // The EPUBCheck worker authenticates with its bearer token inside the route.

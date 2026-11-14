@@ -30,6 +30,17 @@ export interface Submission {
   createdAt: string;
   updatedAt?: string;
 }
+/** Mirrors GET /api/author/sales (payments/authorSales.ts); amounts in euro cents. */
+export interface SalesWindow { units: number; grossCents: number; shareCents: number; refunds: number }
+export interface AuthorSales {
+  currency: string;
+  authorShare: number;
+  shareNote: string;
+  totals: { last30Days: SalesWindow; last12Months: SalesWindow; allTime: SalesWindow };
+  monthly: { month: string; units: number; netCents: number; shareCents: number }[];
+  books: { bookId: string; title: string; units: number; refunds: number; grossCents: number; vatCents: number; netCents: number; shareCents: number; lastSaleAt: string | null }[];
+  recent: { at: string; bookId: string; title: string; country: string | null; grossCents: number; shareCents: number; refunded: boolean }[];
+}
 export interface FeedbackOverview {
   rules: { id: string; title: string; storeRejections: number; blocking: boolean; automaticFix: boolean }[];
   needsNewRule: { id: string; store: string; message: string; created_at: string }[];
@@ -92,6 +103,7 @@ export function useEbookApi() {
   };
 
   return {
+    authorSales: () => json<AuthorSales>('/api/author/sales'),
     list: () => json<{ submissions: Submission[] }>('/api/ebook-submissions').then((r) => r.submissions),
     get: (id: string) => json<Submission>(`/api/ebook-submissions/${id}`),
     async submit(intake: SubmissionIntake, file: File, onProgress: (done: number, total: number) => void) {

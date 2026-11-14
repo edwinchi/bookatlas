@@ -3,6 +3,7 @@ import { BookUp, CheckCircle2, ClipboardList, Loader2, Plus, Sparkles } from 'lu
 import { EBOOK_REQUIREMENTS, PRINT_REQUIREMENTS, AMAZON_PRINT_REQUIREMENTS, type PaperId, type Requirement, type TrimSizeId } from '@workspace/bookatlas-catalog/publishing';
 import { useAccount } from '../../auth/AuthContext';
 import { EbookApiError, saveBlob, useEbookApi, type FeedbackOverview, type Submission } from './ebookApi';
+import { AuthorSalesDashboard } from './AuthorSalesDashboard';
 import { SubmissionForm } from './SubmissionForm';
 import { SubmissionCard } from './SubmissionCard';
 import { FeedImport } from './FeedImport';
@@ -159,6 +160,9 @@ export const EbookPublishing: React.FC = () => {
               />
             </section>
           )}
+
+          {/* Sales of the signed-in author's own published books (cycle 3). */}
+          {submissions?.some((s) => s.status === 'published') && <AuthorSalesDashboard api={api} />}
 
           <section className="space-y-4">
             <h2 className="font-serif text-xl font-bold text-slate-900">{isAdmin ? 'All submissions' : 'Your eBooks'}</h2>

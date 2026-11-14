@@ -44,6 +44,8 @@ export interface InvoiceInput {
 }
 
 const memory: Invoice[] = [];
+/** The in-memory store (local stack and tests); Supabase is used when configured. */
+export const memoryInvoices = () => memory;
 const COLUMNS = 'seq,checkout_session_id,payment_intent_id,user_id,buyer_email,buyer_name,buyer_country,vat_scheme,vat_rate_bp,currency,amount_gross,amount_net,amount_vat,lines,status,issued_at,refunded_at,withdrawal_waiver_at,refund_requested_at,refund_reason,refund_decision,refund_decided_at,refund_decided_by';
 
 export const invoiceNumber = (invoice: Pick<Invoice, 'seq' | 'issued_at'>) =>
