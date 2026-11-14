@@ -15,6 +15,7 @@
 | N2 | Who pays | **Author add-on**: the author orders and pays; an administrator approves before any Gemini spending |
 | N3 | Voice | **Author chooses per book** after hearing a short sample: Sulafat (warm, female) or Charon (informative, male) |
 | N4 | Price | Revised 2026-11-14 to **length-based**: €24.99 incl. 21% VAT up to 60,000 narrated words (about 220 pages), +€3.99 per extra 10,000 (80,000 words €32.97, 96,000 €40.95, 110,000 €44.94). Narration is a service: Dutch VAT 21%, not the 9% e-book rate. Margin after VAT, Stripe and Gemini: about €13–18 for 80,000–110,000 words |
+| N7 | Free tiers | Owner 2026-11-15: **Google Cloud TTS Chirp 3 HD free tier first** (1,000,000 characters a month; BooksAtlas uses up to 950,000), same Sulafat/Charon voices, English, Dutch, French, German, Spanish and Portuguese; then paid Gemini. Gemini TTS has no free tier. Free segments cost nothing against the approved budget. Needs `GOOGLE_TTS_API_KEY` (Cloud Text-to-Speech API enabled on a project with billing) |
 | N6 | Code and tables | **Not read aloud**: one spoken cue per code listing or table run; their words are not charged. Diagrams and screenshots are not narrated |
 | N5 | Order | Narration first, then reader reviews, ratings and author pages |
 

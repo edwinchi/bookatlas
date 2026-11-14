@@ -24,7 +24,7 @@ import {
  */
 
 export type NarrationStatus = 'awaiting_payment' | 'paid' | 'approved' | 'running' | 'done' | 'failed' | 'declined' | 'refunded';
-export interface SegmentState extends Segment { seconds?: number; bytes?: number; attempts?: number }
+export interface SegmentState extends Segment { seconds?: number; bytes?: number; attempts?: number; provider?: 'chirp-free' | 'gemini' }
 export interface Narration {
   id: string; book_id: string; owner_id: string; title: string; voice: NarrationVoice; status: NarrationStatus;
   price_cents: number; words: number; estimate_micros: number; spent_micros: number;
@@ -136,12 +136,79 @@ function provider(): NarrationProvider {
 const outputTokensFor = (chars: number) => Math.ceil((chars / 6 / 2.5) * 25 * 1.6) + 512;
 const costMicros = (seconds: number, chars: number) => Math.ceil(seconds * 25 * 18 + (chars / 4) * 1);
 
-async function speakToMp3(text: string, voice: NarrationVoice) {
+// ------------------------------------------------------------------------- free tier: Google Cloud TTS Chirp 3 HD
+
+/**
+ * Owner request 2026-11-15: use free tiers where possible. Google Cloud Text-to-Speech gives 1,000,000 Chirp 3 HD
+ * characters a month free; the same Sulafat and Charon voices exist there. Each month the first ~950,000
+ * characters (a margin below the free tier) are narrated with Chirp at no cost, then paid Gemini takes over.
+ * Google Cloud terms: customer content is not used to train Google's models.
+ */
+export const CHIRP_FREE_CHARS = 950_000;
+const CHIRP_LOCALES: Record<string, string> = { English: 'en-US', Dutch: 'nl-NL', French: 'fr-FR', German: 'de-DE', Spanish: 'es-ES', Portuguese: 'pt-BR' };
+const usageKey = (month: string) => `narrations/usage/${month}.json`;
+const thisMonth = () => new Date().toISOString().slice(0, 7);
+
+export async function chirpCharsUsed(month = thisMonth()): Promise<number> {
+  try { return Number(JSON.parse(new TextDecoder().decode(await getObject(usageKey(month)))).chars) || 0; } catch { return 0; }
+}
+async function addChirpChars(chars: number, month = thisMonth()) {
+  const used = await chirpCharsUsed(month);
+  await putObject(usageKey(month), new TextEncoder().encode(JSON.stringify({ chars: used + chars, updatedAt: new Date().toISOString() })), 'application/json');
+}
+
+export interface FreeTierProvider {
+  speak(text: string, voice: NarrationVoice, locale: string): Promise<{ audio: Uint8Array; mimeType: string }>;
+}
+let freeOverride: FreeTierProvider | null | undefined;
+export function setFreeTierProvider(p: FreeTierProvider | null | undefined) { freeOverride = p; }
+
+function freeTier(): FreeTierProvider | null {
+  if (freeOverride !== undefined) return freeOverride;
+  const key = process.env.GOOGLE_TTS_API_KEY?.trim();
+  if (!key) return null;
+  return {
+    async speak(text, voice, locale) {
+      const res = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(key)}`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ input: { text }, voice: { languageCode: locale, name: `${locale}-Chirp3-HD-${voice}` }, audioConfig: { audioEncoding: 'LINEAR16', sampleRateHertz: 24_000 } }),
+        signal: AbortSignal.timeout(45_000),
+      });
+      if (!res.ok) throw new NarrationError(`Chirp returned ${res.status}.`, 503);
+      const data = await res.json() as { audioContent?: string };
+      if (!data.audioContent) throw new NarrationError('Chirp returned no audio.', 503);
+      return { audio: new Uint8Array(Buffer.from(data.audioContent, 'base64')), mimeType: 'audio/wav' };
+    },
+  };
+}
+
+/** Free Chirp while this month's free characters last and the language is supported; paid Gemini otherwise. */
+async function speakToMp3(text: string, voice: NarrationVoice, language = 'English') {
+  const locale = CHIRP_LOCALES[language];
+  const free = freeTier();
+  if (free && locale && (await chirpCharsUsed()) + text.length <= CHIRP_FREE_CHARS) {
+    try {
+      const { audio, mimeType } = await free.speak(text, voice, locale);
+      const { pcm, sampleRate } = toPcm16(audio, mimeType);
+      const seconds = pcmSeconds(pcm, sampleRate);
+      if (seconds >= 0.5) {
+        await addChirpChars(text.length);
+        return { mp3: pcm16ToMp3(pcm, sampleRate), seconds, provider: 'chirp-free' as const };
+      }
+    } catch (err) {
+      logger.warn({ err, event: 'narration.free_tier_failed' }, 'Free Chirp narration failed; using Gemini');
+    }
+  }
   const { audio, mimeType } = await provider().speak(text, voice, outputTokensFor(text.length));
   const { pcm, sampleRate } = toPcm16(audio, mimeType);
   const seconds = pcmSeconds(pcm, sampleRate);
   if (seconds < 0.5) throw new NarrationError('Gemini returned an empty recording.', 503);
-  return { mp3: pcm16ToMp3(pcm, sampleRate), seconds };
+  return { mp3: pcm16ToMp3(pcm, sampleRate), seconds, provider: 'gemini' as const };
+}
+const languages = new Map<string, string>();
+async function bookLanguage(bookId: string) {
+  if (!languages.has(bookId)) languages.set(bookId, (await submissionForBook(bookId))?.data.intake.language ?? 'English');
+  return languages.get(bookId)!;
 }
 
 // ---------------------------------------------------------------------------------------------- author
@@ -217,7 +284,7 @@ export async function decide(admin: Identity, id: string, decision: 'approve' | 
   const at = new Date().toISOString();
   if (decision === 'approve') {
     if (n.status !== 'paid') throw new NarrationError('Only paid orders can be approved.', 409);
-    provider(); // fails clearly when Gemini is not configured, before anything changes
+    if (!freeTier()) provider(); // fails clearly when neither the free tier nor Gemini is configured
     await update(id, { status: 'approved', decided_by: admin.id, decided_at: at, error: null });
   } else if (decision === 'resume') {
     if (n.status !== 'failed' && n.status !== 'running') throw new NarrationError('Only a stopped narration can be resumed.', 409);
@@ -249,12 +316,13 @@ export async function step(id?: string): Promise<{ id: string | null; more: bool
       return { id: n.id, more: false };
     }
     try {
-      const { mp3, seconds } = await speakToMp3(text, n.voice);
+      const { mp3, seconds, provider: used } = await speakToMp3(text, n.voice, await bookLanguage(n.book_id));
       await putObject(segKey(n.id, n.done), mp3, 'audio/mpeg');
-      const segments = n.segments.map((s, i) => (i === n.done ? { ...s, seconds: Math.round(seconds * 100) / 100, bytes: mp3.length } : s));
+      const segments = n.segments.map((s, i) => (i === n.done ? { ...s, seconds: Math.round(seconds * 100) / 100, bytes: mp3.length, provider: used } : s));
       const done = n.done + 1;
       await update(n.id, {
-        segments, done, seconds: n.seconds + seconds, spent_micros: n.spent_micros + costMicros(seconds, text.length),
+        // Free-tier segments cost nothing; only Gemini segments count against the approved budget.
+        segments, done, seconds: n.seconds + seconds, spent_micros: n.spent_micros + (used === 'gemini' ? costMicros(seconds, text.length) : 0),
         status: done >= n.total ? 'done' : 'running', lease_until: null, lease_token: null,
       });
       if (done >= n.total) logger.info({ event: 'narration.done', narration: n.id, book: n.book_id }, 'Narration complete');

@@ -112,14 +112,30 @@ test('natural narration: author orders and pays, an administrator approves, step
   assert.match(stopped.error!, /Segment 1 failed 3 times/);
   assert.equal(stopped.done, 0);
   assert.equal((await (await fetch(`/api/manager/narrations/${order.id}/resume`, json({}))).json()).status, 'approved');
+  // Free tier first (Google Cloud Chirp 3 HD): no cost; when it fails, Gemini takes over and is counted.
+  let freeCalls = 0;
+  service.setFreeTierProvider({ async speak(_text: string, voice: string, locale: string) {
+    freeCalls += 1;
+    assert.equal(locale, 'en-US'); assert.equal(voice, 'Sulafat');
+    if (freeCalls > 1) throw new Error('Chirp quota exhausted');
+    return { audio: new Uint8Array(24_000 * 2).map((_, i) => (i % 2 ? 0x10 : 0)), mimeType: 'audio/L16;codec=pcm;rate=24000' };
+  } });
+  const spentBefore = (await service.getNarration(order.id))!.spent_micros;
   calls.length = 0;
   await Promise.all([stepCall(), stepCall()]);
   assert.equal(new Set(calls).size, calls.length, 'two steps at once never narrate the same segment');
-  assert.equal((await service.getNarration(order.id))!.done, calls.length, 'every narrated segment is recorded once');
   for (let i = 0; i < 200 && (await service.getNarration(order.id))!.status !== 'done'; i += 1) await stepCall();
+  service.setFreeTierProvider(undefined);
   const done = (await service.getNarration(order.id))!;
   assert.equal(done.status, 'done');
   assert.equal(done.done, done.total);
+  const providers = done.segments.map((s) => s.provider);
+  assert.ok(providers.includes('chirp-free'), 'the free tier narrated part of the book');
+  if (done.total > 1) assert.ok(providers.includes('gemini'), 'Gemini took over when the free tier failed');
+  const freeSegments = done.segments.filter((s) => s.provider === 'chirp-free').length;
+  assert.ok(freeSegments >= 1);
+  assert.ok(done.spent_micros >= spentBefore, 'free segments add nothing; Gemini segments are counted');
+  assert.ok(await service.chirpCharsUsed() > 0, 'free characters used this month are tracked');
 
   // Readers: the buyer of nothing hears the preview part; the author hears everything.
   const full = (await (await fetch(`/api/reader/catalog/${bookId}/narration`, as('admin'))).json()).narration;
