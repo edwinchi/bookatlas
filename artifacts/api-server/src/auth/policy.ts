@@ -15,6 +15,9 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (method === 'GET' && /^\/api\/catalog\/covers\/[^/]+$/.test(normalized)) return 'public';
   // The scalable catalogue (TASK-0005): search, categories, shelves and book pages are public.
   if (method === 'GET' && /^\/api\/catalog\/(?:search|facets|shelves|books\/[^/]+)$/.test(normalized)) return 'public';
+  // Reviews and author pages (TASK-0009): reading is public; writing needs a signed-in reader.
+  if (method === 'GET' && /^\/api\/catalog\/(?:books\/[^/]+\/reviews|authors\/[a-z0-9-]+)$/.test(normalized)) return 'public';
+  if (/^\/api\/reviews\/books\/[^/]+(?:\/mine)?$/.test(normalized) && ['GET', 'PUT', 'DELETE'].includes(method)) return 'reader';
   // Everyone may read a prepared book's preview; the route decides who gets the whole book.
   if (method === 'GET' && /^\/api\/reader\/catalog\/[^/]+\/(?:content|images\/[^/]+)$/.test(normalized)) return 'self-service';
   if (normalized === '/api/ebook-submissions' && ['GET', 'POST'].includes(method)) return 'reader';

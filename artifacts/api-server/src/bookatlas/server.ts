@@ -17,6 +17,7 @@ import { mountEbookPrep } from './ebookPrep/routes.js';
 import { mountPayments } from './payments/routes.js';
 import { announceBook, mountSeo } from './seo.js';
 import { mountNarration } from './narration/routes.js';
+import { mountReviews } from './reviews/routes.js';
 import { createAiGate, localSuggestion, MAX_EXCERPT, metadataPrompt, sanitizeSuggestion } from './ai/bookMetadata.js';
 import { anonymisePurchases, purchasesOf } from './payments/purchases.js';
 import { anonymiseInvoices, invoiceNumber, invoicesOf } from './payments/invoices.js';
@@ -472,6 +473,8 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
   mountSeo(app, catalog, APP_URL);
   // Natural audiobook narration (TASK-0008).
   mountNarration(app, (bookId) => catalog.get(bookId), APP_URL);
+  // Reader reviews, ratings and author pages (TASK-0009).
+  mountReviews(app, catalog);
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
   mountPublishingReadiness(app);
