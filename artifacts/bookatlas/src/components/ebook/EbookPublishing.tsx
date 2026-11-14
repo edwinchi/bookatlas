@@ -121,9 +121,9 @@ export const EbookPublishing: React.FC = () => {
     <div className="space-y-8">
       <header className="rounded-3xl bg-gradient-to-br from-indigo-950 via-indigo-900 to-slate-900 p-6 text-white sm:p-10">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-300">Publish your eBook</p>
-        <h1 className="mt-3 font-serif text-3xl font-bold sm:text-4xl">Upload your EPUB. We make it store-ready.</h1>
+        <h1 className="mt-3 font-serif text-3xl font-bold sm:text-4xl">Upload your EPUB, Word or PDF. We make it store-ready.</h1>
         <p className="mt-3 max-w-2xl text-sm text-indigo-100">
-          Tell us about your book and upload the EPUB. BookAtlas fixes what stores reject (covers with a back panel, copyright mismatches,
+          Tell us about your book and upload your manuscript. Word and PDF files are converted to EPUB right in your browser, with the cover taken from your book. BookAtlas fixes what stores reject (covers with a back panel, copyright mismatches,
           old EPUB versions, restricted fonts), validates it with the official EPUBCheck, and puts it on sale once reviewed.
         </p>
         {!mode && (

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Upload, Loader2 } from 'lucide-react';
 import { LANGUAGES, validateIntake, type SubmissionIntake } from '@workspace/bookatlas-catalog/publishing';
 import { PrintCalculator } from './PrintCalculator';
+import { ManuscriptPicker, ProgressBar } from './ManuscriptPicker';
+import type { ConvertedManuscript } from './convert/convert';
 
 const EMPTY: SubmissionIntake = {
   title: '', subtitle: '', author: '', language: 'English', description: '', categories: [], keywords: [],
@@ -29,6 +31,11 @@ export const SubmissionForm: React.FC<{
 }> = ({ categories, initial, serverErrors, progress, busy, fileRequired = !initial, onSubmit, onCancel }) => {
   const [intake, setIntake] = useState<SubmissionIntake>(initial ?? EMPTY);
   const [file, setFile] = useState<File | null>(null);
+  // A Word or PDF manuscript is converted here; the EPUB is packaged at submit with the form's latest details.
+  const [manuscript, setManuscript] = useState<ConvertedManuscript | null>(null);
+  const [converting, setConverting] = useState<{ fraction: number; label: string } | null>(null);
+  const [convertError, setConvertError] = useState('');
+  const convertRun = React.useRef(0);
   const [newCategory, setNewCategory] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => { if (serverErrors) setErrors(serverErrors); }, [serverErrors]);
@@ -38,13 +45,52 @@ export const SubmissionForm: React.FC<{
     ? intake.categories.filter((c) => c !== name) : [...intake.categories, name].slice(0, 3));
   const error = (key: string) => errors[key] && <p className="mt-1 text-xs text-rose-700" role="alert">{errors[key]}</p>;
 
-  const submit = (e: React.FormEvent) => {
+  const epubMeta = () => ({
+    title: intake.title.trim(), subtitle: intake.subtitle?.trim() || undefined, author: intake.author.trim(), language: intake.language,
+    description: intake.description.trim(), categories: intake.categories, copyrightHolder: intake.copyrightHolder.trim() || intake.author.trim(),
+    copyrightYear: intake.copyrightYear, isbn: intake.ebookIsbn?.trim() || undefined,
+  });
+
+  const pickFile = async (picked: File) => {
+    setConvertError(''); setManuscript(null);
+    setErrors((e) => { const { file: _f, ...rest } = e; return rest; });
+    setFile(picked);
+    const { convertibleKind, readManuscript } = await import('./convert/convert');
+    if (!convertibleKind(picked)) {
+      if (!/\.epub$/i.test(picked.name) && picked.type !== 'application/epub+zip') { setFile(null); setConvertError('Choose an EPUB, Word (.docx) or PDF file.'); }
+      return;
+    }
+    const run = ++convertRun.current;
+    setConverting({ fraction: 0, label: 'Starting the conversion…' });
+    try {
+      const result = await readManuscript(picked, intake.copyrightYear, (fraction, label) => { if (run === convertRun.current) setConverting({ fraction, label }); });
+      if (run === convertRun.current) setManuscript(result);
+    } catch (err) {
+      if (run === convertRun.current) { setFile(null); setConvertError(err instanceof Error ? err.message : 'The file could not be converted.'); }
+    } finally {
+      if (run === convertRun.current) setConverting(null);
+    }
+  };
+  const clearFile = () => { convertRun.current += 1; setFile(null); setManuscript(null); setConverting(null); setConvertError(''); };
+  const downloadEpub = async () => {
+    if (!manuscript) return;
+    const { packageEpub } = await import('./convert/convert');
+    const epub = packageEpub(manuscript, epubMeta());
+    const url = URL.createObjectURL(epub);
+    Object.assign(document.createElement('a'), { href: url, download: epub.name }).click();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  };
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (converting) return;
     const found = validateIntake(intake);
-    if (fileRequired && !file) found.file = initial ? 'The last upload did not finish. Choose your EPUB file again.' : 'Choose your EPUB file.';
+    if (fileRequired && !file) found.file = initial ? 'The last upload did not finish. Choose your file again.' : 'Choose your manuscript: an EPUB, Word or PDF file.';
     setErrors(found);
     if (Object.keys(found).length) return;
-    onSubmit(intake, file);
+    // Package the converted manuscript with the details as they are now (title, author, copyright, ISBN).
+    const upload = manuscript ? (await import('./convert/convert')).packageEpub(manuscript, epubMeta()) : file;
+    onSubmit(intake, upload);
   };
 
   return (
@@ -138,27 +184,27 @@ export const SubmissionForm: React.FC<{
       </fieldset>
 
       <fieldset className="space-y-2">
-        <legend className="font-serif text-lg font-bold text-slate-900">{initial && !fileRequired ? 'Replace the EPUB (optional)' : 'Your EPUB'}</legend>
-        <input type="file" accept=".epub,application/epub+zip" onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-indigo-700" />
+        <legend className="font-serif text-lg font-bold text-slate-900">{initial && !fileRequired ? 'Replace the manuscript (optional)' : 'Your manuscript'}</legend>
         <p className="text-xs text-slate-500">
-          {initial
-            ? 'Made corrections? Upload the new file. Your details and cover choice are kept, and the book is prepared and checked again. Leave this empty to keep the current file.'
-            : 'Up to 150 MB. A full print-wrap cover is cropped to its front automatically.'}
+          An EPUB is used as it is. A Word or PDF file is converted to EPUB on your device: chapters from your headings, the cover from the first picture or page, and your details from this form.
+          {!initial && ' A full print-wrap cover is cropped to its front automatically.'}
         </p>
+        <ManuscriptPicker file={file} manuscript={manuscript} converting={converting} error={convertError} required={fileRequired}
+          replacing={!!initial && !fileRequired} onPick={(f) => void pickFile(f)} onClear={clearFile} onDownload={() => void downloadEpub()} />
         {error('file')}
       </fieldset>
 
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" disabled={busy} className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60">
+        <button type="submit" disabled={busy || !!converting} className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Upload className="h-4 w-4" aria-hidden />}
           {!initial || file ? 'Upload and prepare' : 'Save and prepare again'}
         </button>
         {onCancel && <button type="button" onClick={onCancel} className="text-sm font-semibold text-slate-600 hover:text-slate-900">Cancel</button>}
         {progress && (
-          <span className="text-xs text-slate-600" aria-live="polite">
-            {progress.done < progress.total ? `Uploading part ${progress.done + 1} of ${progress.total}…` : 'Uploaded. Preparing your eBook…'}
-          </span>
+          <div className="w-full sm:w-80">
+            <ProgressBar value={progress.total ? (progress.done / progress.total) * 100 : 0}
+              label={progress.done < progress.total ? `Uploading part ${progress.done + 1} of ${progress.total}…` : 'Uploaded. Preparing your eBook…'} />
+          </div>
         )}
       </div>
     </form>

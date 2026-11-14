@@ -53,6 +53,10 @@ Counts refresh at most once a minute after catalogue writes. Force it: `select p
 
 `/api/healthz/ready` shows `database` timings. Repeat pages are edge-cached (`x-vercel-cache: HIT`). Over about 100 ms per query: check that the TASK-0005 indexes exist (`\di bookatlas_books*`) and run `analyze public.bookatlas_books;`.
 
+### Word and PDF manuscripts (2026-11-14)
+
+Authors may upload an EPUB, Word (.docx) or PDF. Word and PDF are converted to EPUB 3 in the author's browser (`components/ebook/convert/`), with progress shown, before anything is uploaded; the EPUB then goes through the normal pipeline. Word: chapters from Heading 1/2, the first picture is the cover, pictures kept, typed contents list replaced. PDF: text reflowed into paragraphs and headings (running heads and page numbers removed), a first page that is a picture becomes the cover (white margins trimmed, 2560 px tall); pictures inside a PDF are not carried over. A copyright page is added from the form only when the book has none; a copyright-year mismatch is shown to the author. Scanned PDFs without text are refused with a clear message.
+
 ### An author's upload fails
 
 The card shows the reason. "Upload again" restarts it. Files over 150 MB are refused; parts are 4 MB.
