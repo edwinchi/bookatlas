@@ -19,6 +19,7 @@ const sections: { title: string; body: ReactNode }[] = [
       <li><strong>Reader profile:</strong> when you joined, when you were last active, your reading streak and books read.</li>
       <li><strong>Sign-up confirmations:</strong> that you confirmed you are 16 or older and which version of this notice you read, with the time.</li>
       <li><strong>Email preferences:</strong> only if you opt in to reading updates, the time and source of that consent, plus delivery status of emails we send you.</li>
+      <li><strong>Orders:</strong> when you buy an eBook, which books you bought, the amount, VAT, your name, email address and country as Stripe reports them, the invoice and any refund request with its reason. Card details are handled by Stripe and never reach us.</li>
       <li><strong>On your device only:</strong> your cart, wishlist, reading progress and reader settings are stored in your browser, not on our servers.</li>
     </ul>,
   },
@@ -36,13 +37,13 @@ const sections: { title: string; body: ReactNode }[] = [
   {
     title: 'Who processes it for us',
     body: <>
-      <p>Clerk (sign-in and email verification), Supabase (database hosting), Vercel (application hosting), Resend (email delivery, only if you opt in), and AI providers (OpenRouter, Google Gemini) for text you choose to submit to AI features. Pages load fonts from Google Fonts and cover images from Unsplash, which receive your IP address. We do not sell your personal data, use advertising trackers or run third-party analytics.</p>
+      <p>Clerk (sign-in and email verification), Stripe (payments and refunds), Supabase (database hosting), Vercel (application hosting), Resend (email delivery, only if you opt in), and AI providers (OpenRouter, Google Gemini) for text you choose to submit to AI features. Pages load fonts from Google Fonts and cover images from Unsplash, which receive your IP address. We do not sell your personal data, use advertising trackers or run third-party analytics.</p>
       <p className="mt-3">Some of these providers are based in the United States. Transfers outside the European Economic Area rely on the safeguards the GDPR requires, such as the EU–US Data Privacy Framework or the European Commission's standard contractual clauses.</p>
     </>,
   },
   {
     title: 'How long we keep it',
-    body: <p>We keep your account data until you delete your account. Deleting your account immediately erases your reader profile, email preferences, email delivery records and your sign-in account. Data held only in your browser stays until you clear it.</p>,
+    body: <p>Orders and invoices are kept for 7 years, as Dutch tax law requires; if you delete your account they no longer show your name or email address. We keep your account data until you delete your account. Deleting your account immediately erases your reader profile, email preferences, email delivery records and your sign-in account. Data held only in your browser stays until you clear it.</p>,
   },
   {
     title: 'Your rights',

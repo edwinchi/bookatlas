@@ -11,6 +11,7 @@ import { AccountPrivacy } from '../components/AccountPrivacy';
 import { AccountInvoices } from '../components/AccountInvoices';
 import { LegalNotice } from '../components/LegalNotice';
 import { PrivacyNotice } from '../components/PrivacyNotice';
+import { RefundPolicy } from '../components/RefundPolicy';
 import { readSignupConsent, saveSignupConsent } from './signupConsent';
 import { useEffect, useState } from 'react';
 
@@ -184,6 +185,7 @@ function ProviderWithRoutes() {
         <Route path="/sign-up/*?"><AuthPage signup /></Route>
         <Route path="/privacy"><PrivacyNotice /></Route>
         <Route path="/legal"><LegalNotice /></Route>
+        <Route path="/refunds"><RefundPolicy /></Route>
         <Route path="/user-portal"><Store portal resumeCheckout={new URLSearchParams(window.location.search).get('resume') === 'checkout'} /></Route>
         <Route path="/checkout"><Store resumeCheckout /></Route>
         <Route path="/admin"><Store /></Route>

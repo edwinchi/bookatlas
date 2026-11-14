@@ -2,12 +2,13 @@ import Stripe from 'stripe';
 import type { Book } from '@workspace/bookatlas-catalog/types';
 import type { Identity } from '../../auth/policy.js';
 import { logger } from '../../lib/logger.js';
-import { PaymentError, markRefunded, purchasedBookIds, recordPaid } from './purchases.js';
-import { issueInvoice, markInvoiceRefunded } from './invoices.js';
+import { PaymentError, markRefunded, purchasedBookIds, purchasesOf, recordPaid } from './purchases.js';
+import { invoicesOf, issueInvoice, markInvoiceRefunded } from './invoices.js';
 
 /** The parts of the Stripe client BookAtlas uses; tests substitute a fake. */
 export type StripeClient = {
   checkout: { sessions: Pick<Stripe['checkout']['sessions'], 'create' | 'retrieve' | 'listLineItems'> };
+  refunds?: Pick<Stripe['refunds'], 'create'>;
   webhooks: Pick<Stripe['webhooks'], 'constructEvent'>;
 };
 
@@ -37,7 +38,11 @@ function stripe(): StripeClient {
 /** Only real BookAtlas eBooks with a prepared file are sold; the demo catalogue is not. */
 const sellable = (book: Book | null | undefined): book is Book => !!book?.hasReaderContent && book.price > 0;
 
-export async function createCheckout(who: Identity, requested: unknown, findBook: (id: string) => Promise<Book | null | undefined>, appUrl: string) {
+export async function createCheckout(who: Identity, requested: unknown, findBook: (id: string) => Promise<Book | null | undefined>, appUrl: string, withdrawalWaiver?: unknown) {
+  // Directive 2011/83/EU art. 16(m): digital content may open at once only with the buyer's express consent
+  // and acknowledgement that the 14-day withdrawal right is lost; the cart asks for both.
+  if (withdrawalWaiver !== true) throw new PaymentError('Please confirm that your eBooks may open immediately and that you then lose the 14-day right of withdrawal.');
+  const waiverAt = new Date().toISOString();
   const ids = [...new Set(Array.isArray(requested) ? requested.map(String) : [])];
   if (!ids.length || ids.length > MAX_BOOKS) throw new PaymentError(`Choose between 1 and ${MAX_BOOKS} books.`);
   const books = await Promise.all(ids.map((id) => findBook(id)));
@@ -73,8 +78,10 @@ export async function createCheckout(who: Identity, requested: unknown, findBook
     // BookAtlas, not Stripe, is the seller and sets VAT-inclusive prices. The Stripe account enables Managed
     // Payments (Stripe as merchant of record) by default, which refuses automatic_tax[enabled]=false.
     managed_payments: { enabled: false },
+    // Digital content opens at once: the buyer agrees that the 14-day withdrawal right ends when access starts.
+    custom_text: { submit: { message: `You asked for immediate access to your eBooks and confirmed that you lose the 14-day right of withdrawal once they open. Faulty books are always refunded: ${appUrl}/refunds` } },
     allow_promotion_codes: true,
-    metadata: { app: APP_TAG, userId: who.id, bookIds: ids.join(',') },
+    metadata: { app: APP_TAG, userId: who.id, bookIds: ids.join(','), withdrawalWaiverAt: waiverAt },
     payment_intent_data: { metadata: { app: APP_TAG, userId: who.id, bookIds: ids.join(',') } },
     success_url: `${appUrl}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl}/?checkout=cancelled`,
@@ -113,6 +120,7 @@ async function fulfil(session: Stripe.Checkout.Session) {
       buyerEmail: session.customer_details?.email ?? session.customer_email ?? null,
       buyerName: session.customer_details?.name ?? null,
       buyerCountry: session.customer_details?.address?.country ?? null,
+      withdrawalWaiverAt: session.metadata?.withdrawalWaiverAt ?? null,
       currency: session.currency ?? CURRENCY,
       lines: lines.map((l) => ({ bookId: l.book_id, title: titles.get(l.book_id) || l.book_id, gross: l.amount_total })),
     });
@@ -165,4 +173,30 @@ export async function checkoutStatus(who: Identity, sessionId: string) {
     pending: !paid && session.status === 'complete',
     bookIds: (session.metadata?.bookIds ?? '').split(',').filter(Boolean),
   };
+}
+
+/** Full refund of one order, started by an administrator; the charge.refunded webhook then locks the book. */
+export async function refundPayment(paymentIntentId: string, invoiceSeq: number) {
+  const refunds = stripe().refunds;
+  if (!refunds) throw new PaymentError('Refunds are not available.', 503);
+  return refunds.create({ payment_intent: paymentIntentId, reason: 'requested_by_customer', metadata: { app: APP_TAG, invoice: String(invoiceSeq) } });
+}
+
+/**
+ * Orders paid before invoices existed (or whose invoice failed) get one when the buyer opens their orders.
+ * They carry no recorded withdrawal waiver, so the statutory 14-day withdrawal right applies to them.
+ */
+export async function backfillInvoices(userId: string) {
+  const [purchases, invoices] = await Promise.all([purchasesOf(userId), invoicesOf(userId)]);
+  const invoiced = new Set(invoices.map((i) => i.checkout_session_id));
+  const missing = [...new Set(purchases.filter((p) => !invoiced.has(p.checkout_session_id)).map((p) => p.checkout_session_id))].slice(0, 10);
+  for (const id of missing) {
+    try {
+      const session = await stripe().checkout.sessions.retrieve(id);
+      if (session.client_reference_id === userId) await fulfil(session);
+    } catch (err) {
+      logger.warn({ err, event: 'payments.invoice_backfill_failed', session: id }, 'Invoice backfill failed');
+    }
+  }
+  return missing.length;
 }

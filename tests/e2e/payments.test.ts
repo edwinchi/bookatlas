@@ -15,6 +15,7 @@ import { stripeWebhooks } from '../../artifacts/api-server/src/bookatlas/payment
 const realWebhooks = stripeWebhooks;
 const sessions = new Map<string, Record<string, any>>();
 const created: Record<string, any>[] = [];
+const refunded: Record<string, any>[] = [];
 const fake = {
   checkout: {
     sessions: {
@@ -33,6 +34,7 @@ const fake = {
       }),
     },
   },
+  refunds: { create: async (params: Record<string, any>) => { refunded.push(params); return { id: `re_test_${refunded.length}`, status: 'pending' }; } },
   webhooks: realWebhooks,
 } as unknown as StripeClient;
 // Import the way the server does (ES module), so the fake reaches the same module instance.
@@ -86,10 +88,12 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
   const access = async () => (await (await fetch(`/api/reader/catalog/${bookId}/content`, as('reader'))).json()).access;
   assert.equal(await access(), 'preview');
 
-  const demo = await fetch('/api/checkout/sessions', json({ bookIds: ['atlas-001'] }));
+  const noWaiver = await fetch('/api/checkout/sessions', json({ bookIds: [bookId] }));
+  assert.equal(noWaiver.status, 400, 'checkout needs consent to immediate access and loss of the withdrawal right (2011/83/EU art. 16(m))');
+  const demo = await fetch('/api/checkout/sessions', json({ bookIds: ['atlas-001'], withdrawalWaiver: true }));
   assert.equal(demo.status, 422, 'demo catalogue titles are not sold');
 
-  const checkout = await fetch('/api/checkout/sessions', json({ bookIds: [bookId, bookId] }));
+  const checkout = await fetch('/api/checkout/sessions', json({ bookIds: [bookId, bookId], withdrawalWaiver: true }));
   assert.equal(checkout.status, 201);
   const { url, id } = await checkout.json();
   assert.match(url, /^https:\/\/checkout\.stripe\.com\//);
@@ -127,7 +131,7 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
   assert.deepEqual((await (await fetch('/api/purchases', as('reader'))).json()).bookIds, [bookId], 'a retried webhook stores the purchase once');
   assert.deepEqual(await (await fetch(`/api/checkout/sessions/${id}`, as('reader'))).json(), { paid: true, pending: false, bookIds: [bookId] });
   assert.equal((await fetch(`/api/checkout/sessions/${id}`, as('admin'))).status, 404, 'another account cannot read this checkout');
-  assert.equal((await fetch('/api/checkout/sessions', json({ bookIds: [bookId] }))).status, 409, 'already owned');
+  assert.equal((await fetch('/api/checkout/sessions', json({ bookIds: [bookId], withdrawalWaiver: true }))).status, 409, 'already owned');
 
   // BookAtlas issues one invoice per paid checkout, with Dutch 9% VAT for an EU buyer below the threshold.
   const invoices = (await (await fetch('/api/invoices', as('reader'))).json()).invoices;
@@ -146,6 +150,25 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
   const summary = await (await fetch('/api/manager/vat-summary', as('admin'))).json();
   assert.equal(summary.threshold.state, 'ok');
   assert.ok(summary.threshold.netThisYearCents >= 458, 'a sale to Germany counts towards the cross-border threshold');
+
+  // The buyer asks for a refund within 14 days; an administrator approves it, which refunds through Stripe.
+  assert.ok(html.includes('art. 16(m)'), 'the invoice confirms the withdrawal waiver on a durable medium (art. 8(7))');
+  assert.equal(invoices[0].refund.state, 'available');
+  assert.equal(invoices[0].refund.statutoryWithdrawal, false);
+  assert.equal((await fetch(`/api/invoices/${invoices[0].seq}/refund-request`, json({ reason: 'short' }))).status, 400, 'with a waiver, a reason is needed');
+  const asked = await fetch(`/api/invoices/${invoices[0].seq}/refund-request`, json({ reason: 'I bought this by mistake and only read the preview.' }));
+  assert.equal(asked.status, 202);
+  assert.equal((await asked.json()).refund.state, 'requested');
+  assert.equal((await fetch(`/api/invoices/${invoices[0].seq}/refund-request`, json({ reason: 'I bought this by mistake, asking again.' }))).status, 409, 'one request per order');
+  assert.equal((await fetch(`/api/invoices/${invoices[0].seq}/refund-request`, json({ reason: 'Someone else asking for my order.' }, 'admin'))).status, 404, 'only the buyer can ask');
+  assert.equal((await fetch('/api/manager/refund-requests', as('reader'))).status, 403);
+  const queue = (await (await fetch('/api/manager/refund-requests', as('admin'))).json()).requests;
+  assert.equal(queue[0].reason, 'I bought this by mistake and only read the preview.');
+  assert.equal((await fetch(`/api/manager/refund-requests/${invoices[0].seq}/approve`, json({}, 'reader'))).status, 403);
+  const approved = await fetch(`/api/manager/refund-requests/${invoices[0].seq}/approve`, json({}, 'admin'));
+  assert.equal(approved.status, 200);
+  assert.deepEqual({ pi: refunded[0]!.payment_intent, reason: refunded[0]!.reason }, { pi: sessions.get(id)!.payment_intent, reason: 'requested_by_customer' });
+  assert.equal(await access(), 'full', 'the book locks when Stripe confirms the refund, not before');
 
   const refund = signedEvent('charge.refunded', { id: 'ch_test_1', object: 'charge', refunded: true, payment_intent: sessions.get(id)!.payment_intent });
   assert.equal((await fetch('/api/stripe/webhook', { method: 'POST', headers: { 'content-type': 'application/json', 'stripe-signature': refund.header }, body: refund.payload })).status, 200);

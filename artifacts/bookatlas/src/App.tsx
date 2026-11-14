@@ -1108,6 +1108,9 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
             <a href={`${import.meta.env.BASE_URL}legal`} className="inline-flex min-h-6 items-center text-slate-400 hover:text-slate-200 underline">
               Legal Notice
             </a>
+            <a href={`${import.meta.env.BASE_URL}refunds`} className="inline-flex min-h-6 items-center text-slate-400 hover:text-slate-200 underline">
+              Refund Policy
+            </a>
             <button onClick={() => setIsArchitectureGuideOpen(true)} className="inline-flex min-h-6 items-center hover:text-white underline cursor-pointer">
               Technical Architecture & EPUB Specs
             </button>

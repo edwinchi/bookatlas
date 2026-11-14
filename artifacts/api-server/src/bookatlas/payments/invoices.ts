@@ -21,6 +21,12 @@ export interface Invoice {
   status: 'issued' | 'refunded';
   issued_at: string;
   refunded_at: string | null;
+  withdrawal_waiver_at: string | null;
+  refund_requested_at: string | null;
+  refund_reason: string | null;
+  refund_decision: 'approved' | 'declined' | null;
+  refund_decided_at: string | null;
+  refund_decided_by: string | null;
 }
 
 export interface InvoiceLine { bookId: string; title: string; gross: number; net: number; vat: number }
@@ -32,12 +38,13 @@ export interface InvoiceInput {
   buyerEmail: string | null;
   buyerName: string | null;
   buyerCountry: string | null;
+  withdrawalWaiverAt?: string | null;
   currency: string;
   lines: { bookId: string; title: string; gross: number }[];
 }
 
 const memory: Invoice[] = [];
-const COLUMNS = 'seq,checkout_session_id,payment_intent_id,user_id,buyer_email,buyer_name,buyer_country,vat_scheme,vat_rate_bp,currency,amount_gross,amount_net,amount_vat,lines,status,issued_at,refunded_at';
+const COLUMNS = 'seq,checkout_session_id,payment_intent_id,user_id,buyer_email,buyer_name,buyer_country,vat_scheme,vat_rate_bp,currency,amount_gross,amount_net,amount_vat,lines,status,issued_at,refunded_at,withdrawal_waiver_at,refund_requested_at,refund_reason,refund_decision,refund_decided_at,refund_decided_by';
 
 export const invoiceNumber = (invoice: Pick<Invoice, 'seq' | 'issued_at'>) =>
   `BA-${new Date(invoice.issued_at).getUTCFullYear()}-${String(invoice.seq).padStart(6, '0')}`;
@@ -52,6 +59,8 @@ export async function issueInvoice(input: InvoiceInput): Promise<Invoice> {
     amount_gross: vat.gross, amount_net: vat.net, amount_vat: vat.vat,
     lines: input.lines.map((l, i) => ({ bookId: l.bookId, title: l.title, gross: vat.lines[i]!.gross, net: vat.lines[i]!.net, vat: vat.lines[i]!.vat })),
     status: 'issued' as const, issued_at: new Date().toISOString(), refunded_at: null,
+    withdrawal_waiver_at: input.withdrawalWaiverAt && !Number.isNaN(Date.parse(input.withdrawalWaiverAt)) ? input.withdrawalWaiverAt : null,
+    refund_requested_at: null, refund_reason: null, refund_decision: null, refund_decided_at: null, refund_decided_by: null,
   };
   if (!bookatlasDb) {
     const existing = memory.find((i) => i.checkout_session_id === input.checkoutSessionId);
@@ -95,6 +104,59 @@ export async function invoiceForUser(userId: string, seq: number): Promise<Invoi
   // Someone else's invoice is reported as missing, never as forbidden.
   if (!invoice || invoice.user_id !== userId) throw new PaymentError('Unknown invoice.', 404);
   return invoice;
+}
+
+/**
+ * Refund policy (owner request 2026-11-14): a buyer may ask for a refund within 14 days of purchase, with a
+ * reason. An administrator decides, so "buy, read, refund" can be declined: the whole book opens at once,
+ * and the buyer agreed at checkout that the 14-day withdrawal right ends when access starts.
+ */
+export const REFUND_WINDOW_DAYS = 14;
+export const refundableUntil = (invoice: Pick<Invoice, 'issued_at'>) =>
+  new Date(new Date(invoice.issued_at).getTime() + REFUND_WINDOW_DAYS * 86_400_000).toISOString();
+
+export function refundState(invoice: Invoice, now = new Date()) {
+  if (invoice.status === 'refunded') return 'refunded' as const;
+  if (invoice.refund_decision === 'declined') return 'declined' as const;
+  if (invoice.refund_requested_at) return 'requested' as const;
+  return now.toISOString() <= refundableUntil(invoice) ? 'available' as const : 'expired' as const;
+}
+
+async function updateInvoice(seq: number, patch: Partial<Invoice>) {
+  if (!bookatlasDb) { Object.assign(memory.find((i) => i.seq === seq)!, patch); return; }
+  const result = await bookatlasDb.from('invoices').update(patch).eq('seq', seq);
+  if (result.error) throw new PaymentError('The refund request could not be saved.', 503);
+}
+
+export async function requestRefund(userId: string, seq: number, reason: unknown) {
+  const invoice = await invoiceForUser(userId, seq);
+  const text = typeof reason === 'string' ? reason.trim() : '';
+  if (text.length > 1000 || (invoice.withdrawal_waiver_at && text.length < 10)) throw new PaymentError('Please tell us in a sentence or two (10 to 1000 characters) why you want a refund.');
+  const state = refundState(invoice);
+  if (state === 'expired') throw new PaymentError(`Refunds can be requested up to ${REFUND_WINDOW_DAYS} days after purchase.`, 409);
+  if (state !== 'available') throw new PaymentError('A refund was already requested for this order.', 409);
+  await updateInvoice(seq, { refund_requested_at: new Date().toISOString(), refund_reason: text || 'Withdrawal within 14 days (no reason required).' });
+}
+
+export async function refundRequests(): Promise<Invoice[]> {
+  if (!bookatlasDb) return memory.filter((i) => i.refund_requested_at).sort((a, b) => b.seq - a.seq);
+  const result = await bookatlasDb.from('invoices').select(COLUMNS).not('refund_requested_at', 'is', null).order('refund_requested_at', { ascending: false }).limit(200);
+  if (result.error) throw new PaymentError('Refund requests could not be read.', 503);
+  return result.data as unknown as Invoice[];
+}
+
+export async function invoiceBySeq(seq: number): Promise<Invoice> {
+  const invoice = !bookatlasDb ? memory.find((i) => i.seq === seq)
+    : await bookatlasDb.from('invoices').select(COLUMNS).eq('seq', seq).maybeSingle().then((r) => {
+      if (r.error) throw new PaymentError('The invoice could not be read.', 503);
+      return r.data as unknown as Invoice | null;
+    });
+  if (!invoice) throw new PaymentError('Unknown invoice.', 404);
+  return invoice;
+}
+
+export async function recordRefundDecision(seq: number, decision: 'approved' | 'declined', adminId: string) {
+  await updateInvoice(seq, { refund_decision: decision, refund_decided_at: new Date().toISOString(), refund_decided_by: adminId });
 }
 
 /** Account erasure: the invoice stays for the tax authorities but no longer names the buyer. */
@@ -143,8 +205,10 @@ export function sellerDetails() {
   const seller = {
     name: env('SELLER_LEGAL_NAME') ?? 'Atlantean Globals Services',
     // Vercel variables are one line: a literal \n in SELLER_ADDRESS starts a new line.
-    address: env('SELLER_ADDRESS')?.replace(/\\n/g, '\n') ?? null,
-    kvk: env('SELLER_KVK'), vatId: env('SELLER_VAT_ID'), email: env('SELLER_EMAIL'),
+    // Defaults are the operator's public registration (as on the Legal Notice); env variables override.
+    address: env('SELLER_ADDRESS')?.replace(/\\n/g, '\n') ?? '8031 DJ Zwolle\nThe Netherlands',
+    kvk: env('SELLER_KVK') ?? '89423496', vatId: env('SELLER_VAT_ID') ?? 'NL004725111B38',
+    email: env('SELLER_EMAIL') ?? 'getintouch@apps-pilot.nl',
   };
   return { ...seller, complete: !!(seller.address && seller.kvk && seller.vatId) };
 }
@@ -176,6 +240,9 @@ ${invoice.status === 'refunded' ? `<p class="flag refund">Refunded in full on ${
 ${seller.complete ? '' : '<p class="flag">The seller\'s registration details are being completed; a full VAT invoice is available on request.</p>'}
 <table><thead><tr><th>Item</th><th class="n">Net</th><th class="n">VAT</th><th class="n">VAT amount</th><th class="n">Total</th></tr></thead><tbody>${rows}</tbody>
 <tfoot><tr><td>Total</td><td class="n">${money(invoice.amount_net, invoice.currency)}</td><td></td><td class="n">${money(invoice.amount_vat, invoice.currency)}</td><td class="n">${money(invoice.amount_gross, invoice.currency)}</td></tr></tfoot></table>
+<p class="muted">${invoice.withdrawal_waiver_at
+    ? `On ${esc(new Date(invoice.withdrawal_waiver_at).toLocaleString('en-GB', { timeZone: 'Europe/Amsterdam' }))} you asked for immediate access to this digital content and acknowledged that you lose the 14-day right of withdrawal once it opens (Directive 2011/83/EU, art. 16(m)). Faulty or not-as-described books are refunded (Directive 2019/770). Refunds can be requested for 14 days under our Refund Policy.`
+    : 'You may withdraw from this purchase within 14 days without giving a reason (Directive 2011/83/EU, art. 9); request a refund under Orders &amp; invoices.'}</p>
 <p class="muted">${esc(VAT_NOTE[invoice.vat_scheme])} Paid by card or local payment method via Stripe. Stripe checkout ${esc(invoice.checkout_session_id.slice(0, 16))}….</p>
 <p class="noprint muted">To keep a PDF copy, use your browser's Print and choose "Save as PDF".</p></body></html>`;
 }

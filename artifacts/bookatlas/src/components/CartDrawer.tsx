@@ -46,6 +46,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [demoResult, setDemoResult] = useState('');
   const [checkoutError, setCheckoutError] = useState('');
+  // EU Consumer Rights Directive art. 16(m): immediate access needs express consent and acknowledgement.
+  const [waiver, setWaiver] = useState(false);
   // With Stripe connected the order is paid on Stripe's page, in euros with VAT included.
   const payments = usePayments();
   const live = payments.enabled;
@@ -75,7 +77,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     if (live) {
       setIsCheckingOut(true);
       try {
-        const { url } = await payments.startCheckout(cart.map((item) => item.book.id));
+        const { url } = await payments.startCheckout(cart.map((item) => item.book.id), waiver);
         window.location.assign(url);
       } catch (error) {
         setCheckoutError(error instanceof Error ? error.message : 'Checkout could not start. Please retry.');
@@ -274,10 +276,17 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 : 'No payment provider is connected. This demo will not submit an order or add books to your library.'}
             </div>
 
+            {live && isAuthenticated && (
+              <label className="flex items-start gap-2 rounded-lg border border-indigo-100 bg-indigo-50/50 p-3 text-xs leading-relaxed text-slate-800 cursor-pointer">
+                <input type="checkbox" checked={waiver} onChange={(e) => setWaiver(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-indigo-600" />
+                <span>I want my eBooks to open immediately after payment, and I understand that I then lose my 14-day right of withdrawal. Faulty books are always refunded; see the <a href={`${import.meta.env.BASE_URL}refunds`} target="_blank" rel="noreferrer" className="font-semibold text-indigo-700 underline">Refund Policy</a>.</span>
+              </label>
+            )}
+
             {/* Checkout Action */}
             <button
               onClick={handleCompleteOrder}
-              disabled={isCheckingOut}
+              disabled={isCheckingOut || (live && isAuthenticated && !waiver)}
               className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-75"
             >
               {isCheckingOut ? (

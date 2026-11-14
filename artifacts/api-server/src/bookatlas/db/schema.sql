@@ -241,11 +241,21 @@ create table if not exists public.bookatlas_invoices (
   status text not null default 'issued' check (status in ('issued','refunded')),
   issued_at timestamptz not null default now(),
   refunded_at timestamptz,
+  -- When the buyer expressly asked for immediate access and acknowledged losing the 14-day right of
+  -- withdrawal (Directive 2011/83/EU art. 16(m)); null means the withdrawal right still applies.
+  withdrawal_waiver_at timestamptz,
+  -- Buyer refund requests (14 days after purchase), decided by an administrator.
+  refund_requested_at timestamptz,
+  refund_reason text check (char_length(refund_reason) <= 1000),
+  refund_decision text check (refund_decision in ('approved','declined')),
+  refund_decided_at timestamptz,
+  refund_decided_by text,
   check (amount_gross = amount_net + amount_vat)
 );
 create index if not exists bookatlas_invoices_user_idx on public.bookatlas_invoices (user_id, seq desc);
 create index if not exists bookatlas_invoices_intent_idx on public.bookatlas_invoices (payment_intent_id);
 create index if not exists bookatlas_invoices_issued_idx on public.bookatlas_invoices (issued_at);
+create index if not exists bookatlas_invoices_refund_idx on public.bookatlas_invoices (refund_requested_at) where refund_requested_at is not null;
 
 -- Only the backend service role may access application tables directly.
 -- Public catalog requests still go through Bookatlas's explicit public API.
