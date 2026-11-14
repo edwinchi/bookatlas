@@ -1,3 +1,4 @@
+import { coverProps } from '../../utils/coverImage';
 import React, { useState } from 'react';
 import { Pause, Play } from 'lucide-react';
 import { Book } from '../../types';
@@ -25,7 +26,7 @@ export const CoverMarquee: React.FC<CoverMarqueeProps> = ({ books, onOpenBook })
         className="group/cover block cursor-pointer rounded-md focus-visible:outline-2 focus-visible:outline-amber-300"
       >
         <img
-          src={book.coverImage}
+          {...coverProps(book.coverImage, 160)}
           alt=""
           loading="lazy"
           decoding="async"

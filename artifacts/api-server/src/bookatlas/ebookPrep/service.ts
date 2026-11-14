@@ -3,7 +3,7 @@ import { normaliseIsbn, normalisePrintLink, validateIntake, type SubmissionIntak
 import type { Identity } from '../../auth/policy.js';
 import { MAX_UPLOAD_BYTES, PrepError } from './archive.js';
 import { matchStoreMessage, prepareEpub, type PrepReport } from './engine.js';
-import { decodeImage, imageSize } from './images.js';
+import { decodeImage, downscale, encodeJpeg, imageSize } from './images.js';
 import { hasPurchase } from '../payments/purchases.js';
 import { readinessPackage, type ReadinessPackage } from './readiness.js';
 import { logger } from '../../lib/logger.js';
@@ -315,7 +315,12 @@ export async function publishSubmission(id: string, onPublished: (book: Book, ca
   }
   const imageTypes = Object.fromEntries(content.images.map((img) => [img.name, img.contentType]));
   await putObject(bookKey(target, 'content.json'), new TextEncoder().encode(JSON.stringify({ chapters: content.chapters, imageTypes })), 'application/json');
-  if (row.data.cover) await putObject(bookKey(target, 'cover.jpg'), await getFile(coverKey(id), row.data.cover), 'image/jpeg');
+  if (row.data.cover) {
+    await putObject(bookKey(target, 'cover.jpg'), await getFile(coverKey(id), row.data.cover), 'image/jpeg');
+    // A new cover replaces the display sizes made from the old one (rebuilt on the next request).
+    await Promise.all(COVER_WIDTHS.map((w) => putObject(bookKey(target, `cover-w${w}.jpg`), new Uint8Array(0), 'image/jpeg').catch(() => undefined)));
+    coverRenditions.clear();
+  }
   contentCache.delete(target);
 
   const words = content.chapters.reduce((n, c) => n + c.content.reduce((m, p) => m + p.split(/\s+/).length, 0), 0);
@@ -451,4 +456,34 @@ export async function bookImage(id: string, name: string, who: Identity | undefi
 export async function bookCover(id: string) {
   if (!/^atlas-ebook-[0-9a-f]{8}$/.test(id)) throw new PrepError('Cover not found.', 404);
   return getObject(bookKey(id, 'cover.jpg'));
+}
+
+/** Display sizes of every cover: store cards (360, 720 for sharp screens) and book pages (1200). */
+export const COVER_WIDTHS = [360, 720, 1200] as const;
+const coverRenditions = new Map<string, Promise<Uint8Array>>();
+
+/**
+ * A cover at a display width, made once with area-averaged downscaling and light sharpening (crisper than
+ * letting the browser shrink a 2,560-pixel cover 7 times) and kept in storage. An empty stored file means
+ * "rebuild" (written when a new version replaces the cover).
+ */
+export function bookCoverRendition(id: string, width: number): Promise<Uint8Array> {
+  if (!/^atlas-ebook-[0-9a-f]{8}$/.test(id) || !(COVER_WIDTHS as readonly number[]).includes(width)) return Promise.reject(new PrepError('Cover not found.', 404));
+  const key = `${id}:${width}`;
+  if (!coverRenditions.has(key)) {
+    const made = (async () => {
+      const stored = await getObject(bookKey(id, `cover-w${width}.jpg`)).catch(() => null);
+      if (stored && stored.length > 0) return stored;
+      const original = await getObject(bookKey(id, 'cover.jpg'));
+      const raster = decodeImage(original);
+      if (raster.width <= width) return original;
+      const jpegBytes = encodeJpeg(downscale(raster, width), 86);
+      await putObject(bookKey(id, `cover-w${width}.jpg`), jpegBytes, 'image/jpeg').catch(() => undefined);
+      return jpegBytes;
+    })();
+    made.catch(() => coverRenditions.delete(key));
+    if (coverRenditions.size > 200) coverRenditions.delete(coverRenditions.keys().next().value!);
+    coverRenditions.set(key, made);
+  }
+  return coverRenditions.get(key)!;
 }

@@ -71,6 +71,12 @@ test('natural narration: author orders and pays, an administrator approves, step
   const bookId = await publishBook(fetch);
 
   assert.equal((await fetch(`/api/narration/books/${bookId}`, as('reader'))).status, 404, 'only the book\'s author sees the offer');
+  // Covers are served in display sizes (area-averaged, sharpened) for crisp store cards.
+  const small = await fetch(`/api/catalog/covers/${bookId}-w360.jpg`);
+  assert.equal(small.status, 200);
+  const { imageSize } = await import('../../artifacts/api-server/src/bookatlas/ebookPrep/images.ts');
+  assert.ok((imageSize(new Uint8Array(await small.arrayBuffer()))?.width ?? 0) <= 360, 'the card size is at most 360 pixels wide');
+  assert.equal((await fetch(`/api/catalog/covers/${bookId}-w999.jpg`)).status, 404, 'only the defined sizes');
   const q = await (await fetch(`/api/narration/books/${bookId}`, as('admin'))).json();
   assert.equal(q.priceCents, 2499);
   assert.deepEqual(q.voices, ['Sulafat', 'Charon']);

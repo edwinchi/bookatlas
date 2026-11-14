@@ -1,3 +1,4 @@
+import { coverProps } from '../../utils/coverImage';
 import React, { useState } from 'react';
 import {
   Sparkles,
@@ -618,7 +619,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
                 {/* Featured Book Recommendation Card */}
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row gap-5 items-center sm:items-start">
                   <img
-                    src={featuredBook.coverImage}
+                    {...coverProps(featuredBook.coverImage, 200)}
                     alt={featuredBook.title}
                     className="w-28 h-40 object-cover rounded-xl shadow-md shrink-0 border border-slate-200"
                   />

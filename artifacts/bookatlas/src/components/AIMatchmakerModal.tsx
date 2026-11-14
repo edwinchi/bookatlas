@@ -1,3 +1,4 @@
+import { coverProps } from '../utils/coverImage';
 import React, { useState } from 'react';
 import { AppModal } from './ui/app-modal';
 import { 
@@ -293,7 +294,7 @@ export const AIMatchmakerModal: React.FC<AIMatchmakerModalProps> = ({
                 >
                   <div className="flex gap-4 items-center">
                     <img
-                      src={book.coverImage}
+                      {...coverProps(book.coverImage, 120)}
                       alt={book.title}
                       onClick={() => onOpenBookDetail(book)}
                       className="w-16 aspect-[2/3] object-cover rounded-lg shadow-sm cursor-pointer hover:scale-105 transition-transform"

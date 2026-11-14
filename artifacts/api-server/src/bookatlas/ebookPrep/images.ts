@@ -141,3 +141,51 @@ export function findFrontPanel(r: Raster, print?: { trimSize?: TrimSizeId; paper
   const half = Math.floor(r.width / 2);
   return { x: r.width - half, y: 0, width: half, height: r.height, method: 'right-half' };
 }
+
+/**
+ * High-quality downscale for display renditions (store cards, book pages): each target pixel is the exact
+ * area-weighted average of the source pixels it covers (no aliasing, unlike bilinear sampling at large
+ * ratios), then a light unsharp mask restores the edge contrast lost by averaging, so small cover text
+ * stays crisp.
+ */
+export function downscale(raster: Raster, width: number, sharpen = 0.35): Raster {
+  if (width >= raster.width) return raster;
+  const height = Math.max(1, Math.round((raster.height * width) / raster.width));
+  const sx = raster.width / width, sy = raster.height / height;
+  const out = new Float32Array(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    const y0 = y * sy, y1 = y0 + sy;
+    for (let x = 0; x < width; x += 1) {
+      const x0 = x * sx, x1 = x0 + sx;
+      let r = 0, g = 0, b = 0, a = 0, total = 0;
+      for (let yy = Math.floor(y0); yy < Math.min(raster.height, Math.ceil(y1)); yy += 1) {
+        const wy = Math.min(yy + 1, y1) - Math.max(yy, y0);
+        for (let xx = Math.floor(x0); xx < Math.min(raster.width, Math.ceil(x1)); xx += 1) {
+          const w = wy * (Math.min(xx + 1, x1) - Math.max(xx, x0));
+          const i = (yy * raster.width + xx) * 4;
+          r += raster.data[i]! * w; g += raster.data[i + 1]! * w; b += raster.data[i + 2]! * w; a += raster.data[i + 3]! * w; total += w;
+        }
+      }
+      const o = (y * width + x) * 4;
+      out[o] = r / total; out[o + 1] = g / total; out[o + 2] = b / total; out[o + 3] = a / total;
+    }
+  }
+  const data = new Uint8Array(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const o = (y * width + x) * 4;
+      for (let k = 0; k < 3; k += 1) {
+        // 3x3 box blur of the neighbourhood; the difference is added back (unsharp mask).
+        let sum = 0, n = 0;
+        for (let dy = -1; dy <= 1; dy += 1) for (let dx = -1; dx <= 1; dx += 1) {
+          const yy = y + dy, xx = x + dx;
+          if (yy >= 0 && yy < height && xx >= 0 && xx < width) { sum += out[(yy * width + xx) * 4 + k]!; n += 1; }
+        }
+        const v = out[o + k]! + sharpen * (out[o + k]! - sum / n);
+        data[o + k] = v < 0 ? 0 : v > 255 ? 255 : Math.round(v);
+      }
+      data[o + 3] = Math.round(out[o + 3]!);
+    }
+  }
+  return { width, height, data };
+}

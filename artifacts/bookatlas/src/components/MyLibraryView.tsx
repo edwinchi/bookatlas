@@ -1,3 +1,4 @@
+import { coverProps } from '../utils/coverImage';
 import { libraryStats } from '../libraryStats';
 import React, { useState, useEffect } from 'react';
 import { useAccount } from '../auth/AuthContext';
@@ -384,7 +385,7 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
                     className="aspect-[2/3] w-full rounded-xl overflow-hidden mb-3 bg-slate-100 cursor-pointer relative group"
                   >
                     <img 
-                      src={book.coverImage} 
+                      {...coverProps(book.coverImage, 160)} 
                       alt={book.title} 
                       referrerPolicy="no-referrer" 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -454,7 +455,7 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
                     className="w-24 h-36 flex-shrink-0 rounded-xl overflow-hidden bg-slate-100 cursor-pointer shadow-sm relative group"
                   >
                     <img
-                      src={item.book.coverImage}
+                      {...coverProps(item.book.coverImage, 160)}
                       alt={item.book.title}
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"

@@ -1,3 +1,4 @@
+import { coverProps } from '../utils/coverImage';
 import React, { useState, useEffect } from 'react';
 import { AppModal } from './ui/app-modal';
 import {
@@ -1105,7 +1106,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
                             <img
-                              src={b.coverImage}
+                              {...coverProps(b.coverImage, 80)}
                               alt={b.title}
                               className="w-10 h-14 object-cover rounded-md shadow-2xs shrink-0"
                             />

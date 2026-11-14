@@ -1,3 +1,4 @@
+import { coverProps } from '../utils/coverImage';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Play, 
@@ -92,7 +93,7 @@ export const AudiobookPlayerDock: React.FC<AudiobookPlayerDockProps> = ({
           >
             <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-md overflow-hidden shrink-0 shadow-md border border-white/20">
               <img
-                src={book.coverImage}
+                {...coverProps(book.coverImage, 64)}
                 alt={book.title}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                 referrerPolicy="no-referrer"

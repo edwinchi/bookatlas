@@ -1,3 +1,4 @@
+import { coverProps } from '../utils/coverImage';
 import React from 'react';
 import { Sparkles, BookOpen, ShoppingBag, Award, Star, Compass, ArrowRight } from 'lucide-react';
 import { Book } from '../types';
@@ -31,7 +32,7 @@ export const PromotionalFeatureBanner: React.FC<FeaturedPromotionProps> = ({
             className="relative cursor-pointer group w-44 sm:w-52 aspect-[3/4] rounded-xl overflow-hidden shadow-2xl transition-transform duration-300 group-hover:scale-105"
           >
             <img
-              src={featuredBook.coverImage}
+              {...coverProps(featuredBook.coverImage, 300)}
               alt={featuredBook.title}
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"

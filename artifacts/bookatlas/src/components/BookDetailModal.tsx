@@ -1,3 +1,4 @@
+import { coverProps } from '../utils/coverImage';
 import React, { useState } from 'react';
 import { AppModal } from './ui/app-modal';
 import { 
@@ -170,7 +171,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
             <div className="md:col-span-4 flex flex-col items-center">
               <div className="relative w-44 sm:w-56 aspect-[2/3] rounded-r-xl rounded-l-xs overflow-hidden shadow-xl border-r-2 border-t border-b border-slate-200 group">
                 <img
-                  src={book.coverImage}
+                  {...coverProps(book.coverImage, 380)}
                   alt={book.title}
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"

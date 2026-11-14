@@ -1,3 +1,4 @@
+import { coverProps } from '../utils/coverImage';
 import React, { useState, useEffect, useRef } from 'react';
 import { AppModal } from './ui/app-modal';
 import { 
@@ -1087,7 +1088,7 @@ The BooksAtlas Editorial Board`
                 {selectedBook && (
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex gap-3 items-center">
                     <img
-                      src={selectedBook.coverImage}
+                      {...coverProps(selectedBook.coverImage, 200)}
                       alt={selectedBook.title}
                       className="w-12 h-16 object-cover rounded-md shadow-xs shrink-0"
                     />

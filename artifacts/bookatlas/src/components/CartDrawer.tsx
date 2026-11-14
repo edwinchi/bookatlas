@@ -1,3 +1,4 @@
+import { coverProps } from '../utils/coverImage';
 import React, { useState } from 'react';
 import { AppModal } from './ui/app-modal';
 import {
@@ -145,7 +146,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 className="flex gap-3.5 p-3 rounded-xl border border-gray-200 bg-white shadow-2xs hover:border-gray-300 transition-colors"
               >
                 <img
-                  src={item.book.coverImage}
+                  {...coverProps(item.book.coverImage, 80)}
                   alt={item.book.title}
                   className="w-16 aspect-[2/3] object-cover rounded-md shadow-xs border border-gray-200"
                   referrerPolicy="no-referrer"

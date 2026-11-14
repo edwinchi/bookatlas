@@ -1,3 +1,4 @@
+import { coverProps } from '../utils/coverImage';
 import React, { useState } from 'react';
 import { AppModal } from './ui/app-modal';
 import { 
@@ -179,7 +180,7 @@ export function VeoVideoAnimatorModal({ isOpen, onClose, books }: VeoVideoAnimat
                         isSelected ? 'border-pink-500 ring-2 ring-pink-500/30 scale-105' : 'border-slate-700 opacity-70 hover:opacity-100'
                       }`}
                     >
-                      <img src={b.coverImage} alt={b.title} className="w-full h-full object-cover" />
+                      <img {...coverProps(b.coverImage, 120)} alt={b.title} className="w-full h-full object-cover" />
                       {isSelected && (
                         <div className="absolute top-1 right-1 bg-pink-600 text-white rounded-full p-0.5 shadow-sm">
                           <Check className="w-2.5 h-2.5" />

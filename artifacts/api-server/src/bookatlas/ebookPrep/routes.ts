@@ -6,7 +6,7 @@ import { PrepError } from './archive.js';
 import { PART_BYTES } from './store.js';
 import type { EpubcheckMessage } from './rules.js';
 import {
-  bookCover, bookImage, checkPart, claimCheck, feedbackOverview, getFor, listFor, prepareSubmission,
+  bookCover, bookCoverRendition, bookImage, checkPart, claimCheck, feedbackOverview, getFor, listFor, prepareSubmission,
   publishSubmission, readableContent, recordCheck, recordFeedback, rejectSubmission, readinessFor, restartUpload, setCoverFix, setPrice, setPrintLinks, startNewVersion, startSubmission, submissionFile, updateIntake,
   uploadPart, view, workerConfigured,
 } from './service.js';
@@ -197,8 +197,10 @@ export function mountEbookPrep(app: Express, onPublished: (book: Book, categorie
     sendBytes(res, image.bytes, image.contentType, 'private, max-age=3600');
   }));
   app.get('/api/catalog/covers/:file', guarded(async (req, res) => {
-    const id = /^(atlas-ebook-[0-9a-f]{8})\.jpg$/.exec(String(req.params.file))?.[1];
-    if (!id) throw new PrepError('Cover not found.', 404);
-    sendBytes(res, await bookCover(id), 'image/jpeg', 'public, max-age=86400');
+    // atlas-ebook-<id>.jpg is the full cover; atlas-ebook-<id>-w360.jpg (or -w720, -w1200) a display size.
+    const m = /^(atlas-ebook-[0-9a-f]{8})(?:-w(\d{3,4}))?\.jpg$/.exec(String(req.params.file));
+    if (!m) throw new PrepError('Cover not found.', 404);
+    const bytes = m[2] ? await bookCoverRendition(m[1]!, Number(m[2])) : await bookCover(m[1]!);
+    sendBytes(res, bytes, 'image/jpeg', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400');
   }));
 }

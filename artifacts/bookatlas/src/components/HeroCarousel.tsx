@@ -1,3 +1,4 @@
+import { coverProps } from '../utils/coverImage';
 import React, { useState, useEffect } from 'react';
 import { BookOpen, ShoppingBag, Sparkles, ChevronRight, ChevronLeft, ShieldCheck, Flame, Star, Award } from 'lucide-react';
 import { Book } from '../types';
@@ -156,7 +157,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
               {/* Spine shadow and 3D depth effect */}
               <div className="relative w-52 sm:w-64 aspect-[2/3] rounded-r-xl rounded-l-xs overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.85)] border-r-2 border-t border-b border-slate-700/60">
                 <img
-                  src={currentBook.coverImage}
+                  {...coverProps(currentBook.coverImage, 320)}
                   alt={currentBook.title}
                   className="w-full h-full object-cover group-hover:brightness-105 transition-all"
                   referrerPolicy="no-referrer"

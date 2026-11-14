@@ -1,3 +1,4 @@
+import { coverProps } from '../utils/coverImage';
 import React from 'react';
 import { Star, BookOpen, ShoppingBag, Heart, Headphones, Sparkles } from 'lucide-react';
 import { Book } from '../types';
@@ -34,7 +35,7 @@ export const BookCard: React.FC<BookCardProps> = ({
       {/* Cover Image Container */}
       <div className="relative aspect-[3/4] bg-stone-100 overflow-hidden cursor-pointer">
         <img
-          src={book.coverImage}
+          {...coverProps(book.coverImage, 240)}
           alt={book.title}
           onClick={() => onOpenDetail(book)}
           className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"

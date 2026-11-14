@@ -1,3 +1,4 @@
+import { coverProps } from '../../utils/coverImage';
 import React, { useRef } from 'react';
 import {
   Accessibility, ArrowRight, ArrowUpRight, BadgeEuro, BookOpenCheck, Building2, Calculator, Crown, Globe2, GraduationCap,
@@ -264,7 +265,7 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
                 </div>
                 <div className="flex gap-4">
                   {sample
-                    ? <img src={sample.coverImage} alt="" loading="lazy" className="aspect-[2/3] w-24 shrink-0 rounded-md object-cover shadow-lg" />
+                    ? <img {...coverProps(sample.coverImage, 200)} alt="" loading="lazy" className="aspect-[2/3] w-24 shrink-0 rounded-md object-cover shadow-lg" />
                     : <div className="aspect-[2/3] w-24 shrink-0 rounded-md bg-gradient-to-br from-indigo-900 to-slate-950" />}
                   <div className="min-w-0 flex-1 space-y-2">
                     <p className="truncate font-serif text-base font-bold">{sample?.title ?? 'Your title'}</p>
