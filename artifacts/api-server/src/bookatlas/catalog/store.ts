@@ -47,6 +47,9 @@ export interface CatalogStore {
   facets(): Promise<Facets>;
   upsert(books: Book[]): Promise<void>;
   remove(id: string): Promise<void>;
+  /** Sitemap support: how many titles exist, and one stable chunk of ids with their last change. */
+  sitemapCount(): Promise<number>;
+  sitemapChunk(chunk: number, size: number): Promise<{ id: string; updatedAt: string | null; sample: boolean }[]>;
 }
 
 const pageOf = (query: CatalogQuery) => ({ page: query.page ?? 1, limit: query.limit ?? PAGE_SIZE });
@@ -73,6 +76,11 @@ export function memoryCatalog(books: () => Book[], save: (books: Book[]) => void
     },
     async upsert(list) { save(list); },
     async remove() { /* as above */ },
+    async sitemapCount() { return books().length; },
+    async sitemapChunk(chunk, size) {
+      return [...books()].sort((a, b) => a.id.localeCompare(b.id)).slice(chunk * size, (chunk + 1) * size)
+        .map((b) => ({ id: b.id, updatedAt: b.publishDate || null, sample: !!b.isSample }));
+    },
   };
 }
 
@@ -160,6 +168,18 @@ export function postgresCatalog(db: NonNullable<typeof bookatlasDb>): CatalogSto
       const { error } = await db.from('books').delete().eq('id', id);
       if (error) throw new CatalogError('The book could not be removed.');
       refreshFacets();
+    },
+    async sitemapCount() {
+      const { count, error } = await db.from('books').select('id', { count: 'planned', head: true });
+      if (error) throw new CatalogError('The catalogue is temporarily unavailable.');
+      return count ?? 0;
+    },
+    async sitemapChunk(chunk, size) {
+      // Ordered by the primary key, so every chunk is stable between crawls.
+      const { data, error } = await db.from('books').select('id,updated_at,is_sample').order('id', { ascending: true }).range(chunk * size, (chunk + 1) * size - 1);
+      if (error) throw new CatalogError('The catalogue is temporarily unavailable.');
+      return (data as { id: string; updated_at: string | null; is_sample: boolean | null }[])
+        .map((r) => ({ id: r.id, updatedAt: r.updated_at, sample: !!r.is_sample }));
     },
   };
 }

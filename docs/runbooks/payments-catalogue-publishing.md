@@ -73,6 +73,13 @@ BookAtlas, not Stripe, handles VAT: Stripe Managed Payments is turned off on eac
 - **Threshold:** `GET /api/manager/vat-summary` (admin) shows net cross-border EU sales this and last year, VAT by country, and `threshold.state` (`ok`, `warning` from 80%, `over`). At `warning`, register for OSS and switch to per-country rates (code change in `payments/vat.ts`, rates confirmed by the accountant).
 - **Refunds:** a full refund marks the invoice *refunded*; whether a separate credit note is needed is for the accountant.
 
+## Search engines and link previews (cycle 2, 2026-11-14)
+
+- Every book has its own address, `/books/<id>`. Vercel sends it to the API (`seo.ts`), which serves the app with that book's title, description, canonical URL, Open Graph and Twitter preview tags and schema.org `Book` data; the app then opens the book. Unknown ids answer 404 with `noindex`; demo titles (`isSample`) carry `noindex`.
+- `/sitemap.xml` is an index: `/sitemaps/pages.xml` (home, privacy, legal, refunds) and `/sitemaps/books-<n>.xml`, 10,000 titles each, demo titles left out. `robots.txt` points to it.
+- After the first deploy: add `https://booksatlas.app/sitemap.xml` in Google Search Console (Sitemaps) and check a book in the URL Inspection tool. Preview a shared link with the Facebook Sharing Debugger or LinkedIn Post Inspector.
+- Log event `seo.book_page_failed` / `seo.sitemap_failed`: the database or the app shell was unavailable.
+
 ## Secrets
 
 | Secret | Where | Rotate |

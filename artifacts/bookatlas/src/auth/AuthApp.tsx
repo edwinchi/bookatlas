@@ -222,6 +222,7 @@ function ProviderWithRoutes() {
         <Route path="/user-portal"><Store portal resumeCheckout={new URLSearchParams(window.location.search).get('resume') === 'checkout'} /></Route>
         <Route path="/checkout"><Store resumeCheckout /></Route>
         <Route path="/admin"><Store /></Route>
+        <Route path="/books/:id"><Store /></Route>
         <Route path="/"><Store /></Route>
         <Route><main className="p-10 text-center"><h1 className="text-2xl font-bold">Page not found</h1><Link href="/">Return to Bookatlas</Link></main></Route>
       </Switch>

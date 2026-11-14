@@ -110,6 +110,14 @@ function LoadMoreSentinel({ loading, onLoadMore }: { loading: boolean; onLoadMor
   );
 }
 
+/** The book id in /books/<id>, if the address is a book page. */
+const bookIdFromPath = () => {
+  const path = window.location.pathname.slice(import.meta.env.BASE_URL.length - 1);
+  const m = /^\/books\/([^/]+)\/?$/.exec(path);
+  return m ? decodeURIComponent(m[1]!) : null;
+};
+const bookPath = (id: string) => `${import.meta.env.BASE_URL}books/${encodeURIComponent(id)}`;
+
 export default function App({ initialTab = 'store', initialLibraryTab = 'reading', resumeCheckout = false, pendingReaderService }: {
   initialTab?: ReaderTab;
   initialLibraryTab?: 'reading' | 'wishlist';
@@ -273,13 +281,49 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
 
   // Active Modals & Views
   const [selectedBookForDetail, setDetailBook] = useState<Book | null>(null);
-  // Lists hold cards; the book page shows the card at once and swaps in the whole record.
-  const setSelectedBookForDetail = useCallback((book: Book | null) => {
+  // Every book has its own address, /books/<id> (SEO cycle 2): opening a book puts it in the address bar,
+  // closing it or pressing Back restores the page before, and opening the address opens the book.
+  const bookPushedRef = useRef(false);
+  const setSelectedBookForDetail = useCallback((book: Book | null, fromAddress = false) => {
     setDetailBook(book);
     if (book && needsFullRecord(book)) {
       fetchFullBook(book.id).then((full) => { if (full) setDetailBook((current) => (current?.id === full.id ? full : current)); }).catch(() => undefined);
     }
+    if (fromAddress) return;
+    const onBookAddress = bookIdFromPath() !== null;
+    if (book && bookIdFromPath() !== book.id) {
+      if (onBookAddress) window.history.replaceState(null, '', bookPath(book.id));
+      else { window.history.pushState(null, '', bookPath(book.id)); bookPushedRef.current = true; }
+    } else if (!book && onBookAddress) {
+      if (bookPushedRef.current) window.history.back();
+      else window.history.replaceState(null, '', import.meta.env.BASE_URL);
+      bookPushedRef.current = false;
+    }
   }, []);
+  useEffect(() => {
+    // Arriving on /books/<id>, and the Back and Forward buttons.
+    const sync = () => {
+      const id = bookIdFromPath();
+      if (!id) { bookPushedRef.current = false; setDetailBook(null); return; }
+      setDetailBook((current) => {
+        if (current?.id === id) return current;
+        fetchFullBook(id).then((full) => {
+          if (full) setDetailBook(full);
+          else window.history.replaceState(null, '', import.meta.env.BASE_URL);
+        }).catch(() => undefined);
+        return current;
+      });
+    };
+    sync();
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, []);
+  useEffect(() => {
+    if (!selectedBookForDetail) return;
+    const before = document.title;
+    document.title = `${selectedBookForDetail.title} by ${selectedBookForDetail.author} | Bookatlas`;
+    return () => { document.title = before; };
+  }, [selectedBookForDetail?.id]);
   const [activeReadingBook, setActiveReadingBook] = useState<{ book: Book; chapterIndex: number; paragraphIndex: number } | null>(null);
   const [activeAudiobook, setActiveAudiobook] = useState<Book | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);

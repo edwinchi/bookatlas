@@ -8,12 +8,24 @@
   "functions": {
     "api/index.mjs": {
       "maxDuration": 60,
-      "includeFiles": "artifacts/api-server/dist/**"
+      "includeFiles": "{artifacts/api-server/dist/**,artifacts/bookatlas/dist/public/index.html}"
     }
   },
   "rewrites": [
     {
       "source": "/api/(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/books/:id",
+      "destination": "/api"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api"
+    },
+    {
+      "source": "/sitemaps/:file",
       "destination": "/api"
     },
     {

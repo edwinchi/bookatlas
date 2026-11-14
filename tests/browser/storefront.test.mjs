@@ -74,6 +74,23 @@ test('pop-ups are Radix dialogs: Escape and a click outside close them, and they
   await details.waitFor({ state: 'detached' });
 });
 
+test('every book has its own address: opening a book shows it, closing restores it, and a direct link opens it', async () => {
+  const page = await open('/');
+  const title = page.locator('[data-testid="book-card-title"]').first();
+  const name = (await title.getAttribute('title')) ?? '';
+  await title.click();
+  await page.getByRole('dialog', { name }).waitFor();
+  const url = new URL(page.url());
+  assert.match(url.pathname, /^\/books\/[^/]+$/);
+  assert.ok((await page.title()).includes(name), 'the tab title names the open book');
+  await page.keyboard.press('Escape');
+  await page.waitForURL((u) => u.pathname === '/');
+
+  const direct = await open(url.pathname);
+  await direct.getByRole('dialog', { name }).waitFor();
+  await direct.goBack().catch(() => undefined);
+});
+
 test('reader display settings persist across reloads', async () => {
   const page = await open('/', { mobile: true });
   await page.locator('[title="Read Free Preview in Browser"]').first().click();

@@ -1,2 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /user-portal
+Disallow: /checkout
+Disallow: /sign-in
+Disallow: /sign-up
+
+Sitemap: https://booksatlas.app/sitemap.xml

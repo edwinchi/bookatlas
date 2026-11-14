@@ -15,6 +15,7 @@ import { mountPublishingReadiness } from './publishing/routes.js';
 import { mountPublishingJobs } from './publishing/jobRoutes.js';
 import { mountEbookPrep } from './ebookPrep/routes.js';
 import { mountPayments } from './payments/routes.js';
+import { mountSeo } from './seo.js';
 import { anonymisePurchases, purchasesOf } from './payments/purchases.js';
 import { anonymiseInvoices, invoiceNumber, invoicesOf } from './payments/invoices.js';
 import { listSubmissions } from './ebookPrep/submissions.js';
@@ -462,6 +463,8 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
   mountCatalog(app, catalog, () => [...GENRES.filter((g: string) => g !== 'All Genres'), ...customCategories]);
   // Before the JSON parser: the Stripe webhook is verified against its raw body.
   mountPayments(app, (bookId) => catalog.get(bookId), APP_URL);
+  // Book addresses, link previews and the sitemap (outside /api, public).
+  mountSeo(app, catalog, APP_URL);
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
   mountPublishingReadiness(app);
