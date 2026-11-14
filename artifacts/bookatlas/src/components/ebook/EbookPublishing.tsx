@@ -143,6 +143,7 @@ export const EbookPublishing: React.FC = () => {
               <h2 className="mb-4 flex items-center gap-2 font-serif text-xl font-bold text-slate-900"><BookUp className="h-5 w-5 text-indigo-600" aria-hidden />{mode.kind === 'new' ? 'New eBook' : mode.submission.status === 'published' ? `New version of ${mode.submission.intake.title}` : `Edit ${mode.submission.intake.title}`}</h2>
               <SubmissionForm
                 key={mode.kind === 'edit' ? mode.submission.id : 'new'}
+                suggest={(body) => api.suggestMetadata(body)}
                 categories={categories}
                 initial={mode.kind === 'edit' ? mode.submission.intake : undefined}
                 serverErrors={problem?.fields}

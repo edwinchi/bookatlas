@@ -31,6 +31,8 @@ export interface GenerateOptions {
   messages: AiMessage[];
   jsonMode?: boolean;
   temperature?: number;
+  /** False turns off "thinking" on reasoning models, for quick structured answers (form filling). */
+  reasoning?: boolean;
 }
 
 // Short-lived response cache so re-clicking a "Generate" button (or two
@@ -43,6 +45,7 @@ function cacheKeyFor(opts: GenerateOptions): string {
     s: opts.systemInstruction || '',
     m: opts.messages,
     j: !!opts.jsonMode,
+    r: opts.reasoning ?? null,
   });
   return crypto.createHash('sha256').update(raw).digest('hex');
 }
@@ -112,6 +115,8 @@ async function generateWithOpenRouterInner(opts: GenerateOptions, cacheKey: stri
     if (opts.jsonMode) {
       body.response_format = { type: 'json_object' };
     }
+    // Free reasoning models can spend the whole answer budget thinking and return no content.
+    if (opts.reasoning === false) body.reasoning = { enabled: false };
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25000);

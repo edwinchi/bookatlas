@@ -16,6 +16,7 @@ import { mountPublishingJobs } from './publishing/jobRoutes.js';
 import { mountEbookPrep } from './ebookPrep/routes.js';
 import { mountPayments } from './payments/routes.js';
 import { mountSeo } from './seo.js';
+import { createAiGate, localSuggestion, MAX_EXCERPT, metadataPrompt, sanitizeSuggestion } from './ai/bookMetadata.js';
 import { anonymisePurchases, purchasesOf } from './payments/purchases.js';
 import { anonymiseInvoices, invoiceNumber, invoicesOf } from './payments/invoices.js';
 import { listSubmissions } from './ebookPrep/submissions.js';
@@ -29,6 +30,9 @@ import { mountReaderTts } from './publishing/readerTts.js';
 import { clerkClient } from '@clerk/express';
 import { SyncReaderProfileBody } from '@workspace/api-zod';
 import { AccountStoreError, PRIVACY_NOTICE_VERSION, maskEmail, mountAccountRoutes } from './account.js';
+
+/** Shared by every author on this instance: a few AI suggestions at a time (free tiers are rate-limited). */
+const aiMetadataGate = createAiGate({ max: 3, waitMs: 8_000, timeoutMs: 20_000 });
 
 function isPlaceholderEnvValue(value?: string): boolean {
   if (!value) return true;
@@ -565,6 +569,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
     messages: AiMessage[];
     jsonMode?: boolean;
     temperature?: number;
+    reasoning?: boolean;
   }): Promise<string | null> {
     const openRouterText = await generateWithOpenRouter(opts);
     if (openRouterText) return openRouterText;
@@ -2899,6 +2904,34 @@ Current Context: "${context || ''}"`;
   });
 
   // 3. AI Book Summary & 5-Minute Briefing
+  // "Fill in with AI" on the New eBook form: an excerpt of the author's manuscript in, checked form values out.
+  app.post('/api/ai/book-metadata', async (req, res) => {
+    const body = req.body ?? {};
+    const excerpt = typeof body.excerpt === 'string' ? body.excerpt.slice(0, MAX_EXCERPT) : '';
+    const headings = Array.isArray(body.headings) ? body.headings.filter((h: unknown): h is string => typeof h === 'string').slice(0, 80) : [];
+    if (excerpt.replace(/\s+/g, ' ').trim().length < 200) {
+      res.status(400).json({ error: 'There is not enough text in the manuscript to suggest details.' });
+      return;
+    }
+    const known = body.known && typeof body.known === 'object' ? {
+      title: typeof body.known.title === 'string' ? body.known.title.slice(0, 300) : undefined,
+      author: typeof body.known.author === 'string' ? body.known.author.slice(0, 200) : undefined,
+      language: typeof body.known.language === 'string' ? body.known.language.slice(0, 40) : undefined,
+    } : undefined;
+    const input = { excerpt, headings, known };
+    const categories = [...GENRES.filter((g: string) => g !== 'All Genres'), ...customCategories];
+    const { system, user } = metadataPrompt(input, categories);
+    // Bounded and rate-shared: when the AI is busy, slow or down, the book's own details answer at once.
+    const { value: text, via } = await aiMetadataGate.run(
+      () => generateAiText({ systemInstruction: system, messages: [{ role: 'user', text: user }], jsonMode: true, temperature: 0.3, reasoning: false }),
+      () => null,
+    );
+    const ai = sanitizeSuggestion(text, categories);
+    if (!ai) logger.warn({ event: 'ai.book_metadata_fallback', via, reply: !!text, active: aiMetadataGate.active, waiting: aiMetadataGate.waiting }, 'AI metadata unavailable; using details found in the book');
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ source: ai ? 'ai' : 'book', suggestion: { ...localSuggestion(input), ...(ai ?? {}) } });
+  });
+
   app.post('/api/ai/book-summary', async (req, res) => {
     try {
       const { book } = req.body;

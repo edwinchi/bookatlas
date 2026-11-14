@@ -104,6 +104,9 @@ export function useEbookApi() {
 
   return {
     authorSales: () => json<AuthorSales>('/api/author/sales'),
+    /** "Fill in with AI": an excerpt of the manuscript in, checked suggestions for the form out. */
+    suggestMetadata: (body: { excerpt: string; headings: string[]; known: Record<string, string | undefined> }) =>
+      json<{ source: 'ai' | 'book'; suggestion: Partial<SubmissionIntake> }>('/api/ai/book-metadata', 'POST', body),
     list: () => json<{ submissions: Submission[] }>('/api/ebook-submissions').then((r) => r.submissions),
     get: (id: string) => json<Submission>(`/api/ebook-submissions/${id}`),
     async submit(intake: SubmissionIntake, file: File, onProgress: (done: number, total: number) => void) {
