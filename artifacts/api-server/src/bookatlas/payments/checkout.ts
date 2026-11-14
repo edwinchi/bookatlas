@@ -17,6 +17,8 @@ export function setStripeClient(next: StripeClient | null) { client = next; }
 export const paymentsConfigured = () => !!client || (!!process.env.STRIPE_SECRET_KEY?.trim() && !!process.env.STRIPE_WEBHOOK_SECRET?.trim());
 /** Stripe Tax stays off until the owner has added the tax registrations in Stripe (STRIPE_TAX=on). */
 const taxEnabled = () => process.env.STRIPE_TAX?.trim() === 'on';
+/** Stripe tax code "Digital Books - downloaded - non subscription - with permanent rights", set by BookAtlas on every eBook. */
+export const EBOOK_TAX_CODE = 'txcd_10302000';
 /** iDEAL charges in euros only; Adaptive Pricing in Stripe shows other buyers their own currency. */
 const CURRENCY = 'eur';
 const MAX_BOOKS = 20;
@@ -60,12 +62,16 @@ export async function createCheckout(who: Identity, requested: unknown, findBook
         tax_behavior: 'inclusive',
         product_data: {
           name: book.title,
+          tax_code: EBOOK_TAX_CODE,
           metadata: { bookId: book.id },
           ...(book.coverImage.startsWith('/') && appUrl.startsWith('https://') ? { images: [`${appUrl}${book.coverImage}`] } : {}),
         },
       },
     })),
     automatic_tax: { enabled: taxEnabled() },
+    // BookAtlas, not Stripe, is the seller and sets VAT-inclusive prices. The Stripe account enables Managed
+    // Payments (Stripe as merchant of record) by default, which refuses automatic_tax[enabled]=false.
+    managed_payments: { enabled: false },
     allow_promotion_codes: true,
     metadata: { app: APP_TAG, userId: who.id, bookIds: ids.join(',') },
     payment_intent_data: { metadata: { app: APP_TAG, userId: who.id, bookIds: ids.join(',') } },

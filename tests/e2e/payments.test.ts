@@ -102,6 +102,10 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
     { currency: 'eur', amount: 499, tax: 'inclusive' }, 'the server sets the price, in euros, VAT included',
   );
   assert.equal(params.payment_method_types, undefined, 'payment methods come from the Stripe dashboard (iDEAL, cards, wallets…)');
+  // BookAtlas sets the tax: Stripe Managed Payments (the account default) is turned off for its checkouts.
+  assert.equal(params.line_items[0].price_data.product_data.tax_code, 'txcd_10302000', 'eBooks carry the Stripe digital-book tax code');
+  assert.deepEqual(params.managed_payments, { enabled: false }, 'BookAtlas, not Stripe, is the seller of record');
+  assert.deepEqual(params.automatic_tax, { enabled: false }, 'Stripe Tax stays off unless STRIPE_TAX=on');
 
   const forged = await fetch('/api/stripe/webhook', { method: 'POST', headers: { 'content-type': 'application/json', 'stripe-signature': 't=1,v1=forged' }, body: '{}' });
   assert.equal(forged.status, 400);
