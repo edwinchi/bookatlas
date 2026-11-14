@@ -62,11 +62,13 @@ export const SERVICES: Service[] = [
     ],
   },
   {
-    id: 'narration', icon: Headphones, name: 'Natural audiobook narration', price: '€24.99 add-on', priceTone: 'addon', badge: 'New',
+    id: 'narration', icon: Headphones, name: 'Natural audiobook narration', price: 'from €24.99', priceTone: 'addon', badge: 'New',
     summary: 'Your eBook read aloud by a natural Google Gemini studio voice instead of the robotic device voice, recorded once and played to every reader.',
     details: [
       'Choose Sulafat (warm, female) or Charon (informative, male) after hearing a short sample.',
-      '€24.99 incl. 21% VAT for books up to 80,000 words; €2.99 per extra 10,000 words.',
+      'Priced by length, incl. 21% VAT: €24.99 up to 60,000 words (about 220 pages), then €3.99 per extra 10,000 words.',
+      'Examples: a 280–290-page book (about 80,000 words) €32.97; a 350-page professional or technical book (about 96,000 words) €40.95; a 400+ page book (about 110,000 words) €44.94. You see the exact price for your book before ordering.',
+      'Technical books: code examples and tables are not read aloud; the narrator says “A code example follows in the book” or “A table follows in the book”, and their words are not charged. Diagrams and screenshots are pictures and are not narrated, so a 400-page PDF full of figures costs less than its page count suggests.',
       'Readers hear it with the paragraph being read highlighted, chapter by chapter.',
       'An administrator approves each order before narration starts; you see its progress.',
     ],

@@ -14,7 +14,8 @@
 | N1 | Generate once vs browser speech | **Generate once with Gemini TTS**; the device voice stays only as a labelled free fallback for books without narration |
 | N2 | Who pays | **Author add-on**: the author orders and pays; an administrator approves before any Gemini spending |
 | N3 | Voice | **Author chooses per book** after hearing a short sample: Sulafat (warm, female) or Charon (informative, male) |
-| N4 | Price | **€24.99 flat incl. 21% VAT** up to 80,000 words; longer books +€2.99 per extra 10,000 words (narration is a service: Dutch VAT 21%, not the 9% e-book rate) |
+| N4 | Price | Revised 2026-11-14 to **length-based**: €24.99 incl. 21% VAT up to 60,000 narrated words (about 220 pages), +€3.99 per extra 10,000 (80,000 words €32.97, 96,000 €40.95, 110,000 €44.94). Narration is a service: Dutch VAT 21%, not the 9% e-book rate. Margin after VAT, Stripe and Gemini: about €13–18 for 80,000–110,000 words |
+| N6 | Code and tables | **Not read aloud**: one spoken cue per code listing or table run; their words are not charged. Diagrams and screenshots are not narrated |
 | N5 | Order | Narration first, then reader reviews, ratings and author pages |
 
 ## Cost

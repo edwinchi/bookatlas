@@ -71,6 +71,7 @@ export function NarrationPanel({ api, bookId }: { api: ReturnType<typeof useEboo
           <p className="text-xs leading-relaxed text-slate-700">
             Your book read aloud by a natural Google Gemini studio voice instead of the robotic device voice. It is recorded once, then every reader can
             listen, chapter by chapter, with the paragraph being read highlighted. Readers without the book hear the free preview part.
+            Code examples and tables are not read aloud (a short spoken note points to them), and diagrams and screenshots are not narrated; only the words read aloud are counted in the price.
           </p>
           <dl className="grid grid-cols-3 gap-2 text-center">
             {[['Words', quote.words.toLocaleString()], ['About', `${quote.hours} hours`], ['Price', euro(quote.priceCents)]].map(([k, v]) => (

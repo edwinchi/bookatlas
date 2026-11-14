@@ -1,15 +1,32 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { inPreview, narrationEstimate, narrationPrice, planSegments, segmentText, wordCount } from './plan.js';
+import { CODE_CUE, TABLE_CUE, inPreview, isCodeLike, narrationEstimate, narrationPrice, planSegments, segmentText, spokenParagraphs, wordCount } from './plan.js';
 import { pcm16ToMp3, pcmSeconds, toPcm16 } from './mp3.js';
 
 const para = (n: number) => `<p>${'word '.repeat(n).trim()}.</p>`;
 
-test('the add-on price: €24.99 up to 80,000 words, then €2.99 per extra 10,000', () => {
+test('the add-on price: €24.99 up to 60,000 words, then €3.99 per extra 10,000', () => {
   assert.equal(narrationPrice(55_752), 2499);
-  assert.equal(narrationPrice(80_000), 2499);
-  assert.equal(narrationPrice(80_001), 2798);
-  assert.equal(narrationPrice(101_000), 2499 + 3 * 299);
+  assert.equal(narrationPrice(60_000), 2499);
+  assert.equal(narrationPrice(60_001), 2898);
+  assert.equal(narrationPrice(80_000), 3297, 'about 290 pages');
+  assert.equal(narrationPrice(96_000), 4095, 'about 350 pages');
+  assert.equal(narrationPrice(110_000), 4494, 'about 400 pages');
+});
+
+test('code examples and tables are not read aloud: one short cue each, and their words are not charged', () => {
+  const code = 'const total = items.reduce((sum, i) => sum + i.price, 0);\nif (total > 100) { console.log(total); }';
+  const cells = ['Name', 'Price', 'Format', 'Codex', '9.36', 'EPUB', 'Scroll', '9.99', 'PDF'];
+  const chapter = { title: 'Code', content: ['<p>Here is how the cart adds prices.</p>', `<pre>${code}</pre>`, `<pre>${code}</pre>`, ...cells, '<p>That is all.</p>'] };
+  const spoken = spokenParagraphs(chapter);
+  assert.equal(spoken[1], CODE_CUE);
+  assert.equal(spoken[2], '', 'a run of code gets one cue');
+  assert.equal(spoken[3], TABLE_CUE);
+  assert.ok(spoken.slice(4, 12).every((t) => t === ''));
+  assert.equal(spoken.at(-1), 'That is all.');
+  assert.equal(wordCount([chapter]), 7 + 3, 'only the prose is charged');
+  assert.ok(!isCodeLike('I AM the Field. I AM the Instrument.'), 'ordinary sentences are read');
+  assert.ok(!segmentText([chapter], planSegments([chapter])[0]!).includes('console.log'));
 });
 
 test('the Gemini cost estimate for a 55,000-word book is about US$10, about 6 hours', () => {
