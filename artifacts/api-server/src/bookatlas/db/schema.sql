@@ -231,7 +231,7 @@ create table if not exists public.bookatlas_invoices (
   buyer_email text,
   buyer_name text,
   buyer_country text check (buyer_country ~ '^[A-Z]{2}$'),
-  vat_scheme text not null check (vat_scheme in ('nl-domestic','nl-eu-threshold','outside-eu','unknown-country-nl')),
+  vat_scheme text not null check (vat_scheme in ('nl-domestic','nl-eu-threshold','outside-eu','unknown-country-nl','nl-service')),
   vat_rate_bp integer not null check (vat_rate_bp between 0 and 10000),
   currency text not null,
   amount_gross integer not null,
@@ -255,6 +255,36 @@ create table if not exists public.bookatlas_invoices (
 create index if not exists bookatlas_invoices_user_idx on public.bookatlas_invoices (user_id, seq desc);
 create index if not exists bookatlas_invoices_intent_idx on public.bookatlas_invoices (payment_intent_id);
 create index if not exists bookatlas_invoices_issued_idx on public.bookatlas_invoices (issued_at);
+
+-- Natural audiobook narration (TASK-0008): one row per order; segments hold the plan and progress.
+create table if not exists public.bookatlas_narrations (
+  id uuid primary key,
+  book_id text not null,
+  owner_id text not null,
+  title text not null,
+  voice text not null check (voice in ('Sulafat','Charon')),
+  status text not null check (status in ('awaiting_payment','paid','approved','running','done','failed','declined','refunded')),
+  price_cents integer not null,
+  words integer not null,
+  estimate_micros bigint not null,
+  spent_micros bigint not null default 0,
+  segments jsonb not null,
+  done integer not null default 0,
+  total integer not null,
+  seconds numeric not null default 0,
+  checkout_session_id text unique,
+  payment_intent_id text,
+  lease_token text,
+  lease_until timestamptz,
+  error text,
+  decided_by text,
+  decided_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists bookatlas_narrations_book_idx on public.bookatlas_narrations (book_id, created_at desc);
+create index if not exists bookatlas_narrations_owner_idx on public.bookatlas_narrations (owner_id, created_at desc);
+create index if not exists bookatlas_narrations_status_idx on public.bookatlas_narrations (status);
 create index if not exists bookatlas_invoices_refund_idx on public.bookatlas_invoices (refund_requested_at) where refund_requested_at is not null;
 
 -- Only the backend service role may access application tables directly.
@@ -271,14 +301,15 @@ alter table public.bookatlas_ebook_submissions enable row level security;
 alter table public.bookatlas_prep_feedback enable row level security;
 alter table public.bookatlas_purchases enable row level security;
 alter table public.bookatlas_invoices enable row level security;
+alter table public.bookatlas_narrations enable row level security;
 revoke all on table public.bookatlas_books, public.bookatlas_categories,
   public.bookatlas_registered_users, public.bookatlas_subscribers, public.bookatlas_campaigns,
   public.bookatlas_publishing_jobs, public.bookatlas_publishing_messages,
   public.bookatlas_publishing_test_books, public.bookatlas_ebook_submissions,
-  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices from anon, authenticated;
+  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations from anon, authenticated;
 grant select, insert, update, delete on table public.bookatlas_books, public.bookatlas_categories,
   public.bookatlas_registered_users, public.bookatlas_subscribers, public.bookatlas_campaigns,
   public.bookatlas_publishing_jobs, public.bookatlas_publishing_messages,
   public.bookatlas_publishing_test_books, public.bookatlas_ebook_submissions,
-  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices to service_role;
+  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations to service_role;
 commit;

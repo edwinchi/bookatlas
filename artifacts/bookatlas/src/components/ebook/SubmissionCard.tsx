@@ -118,7 +118,9 @@ export const SubmissionCard: React.FC<{
   onReadiness: () => Promise<ReadinessPackage>;
   onPublish: () => Promise<void>;
   onReject: (reason: string) => Promise<void>;
-}> = ({ submission: s, isAdmin, onDownload, onEdit, onCover, onPrintLinks, onPrice, onReadiness, onPublish, onReject }) => {
+  /** Extra panels for a published book (natural audiobook narration). */
+  extra?: React.ReactNode;
+}> = ({ submission: s, isAdmin, onDownload, onEdit, onCover, onPrintLinks, onPrice, onReadiness, onPublish, onReject, extra }) => {
   const [busy, setBusy] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const status = STATUS[s.status];
@@ -196,6 +198,7 @@ export const SubmissionCard: React.FC<{
 
       {s.prepared && s.status !== 'uploading' && <ReadinessPanel key={`${s.id}:${s.prepared.sha256 ?? ''}:${s.updatedAt ?? ''}`} title={s.intake.title} load={onReadiness} />}
       {s.status === 'published' && <PriceEditor key={s.intake.price} price={Number(s.intake.price) || 0} onSave={onPrice} />}
+      {extra}
       {['ready', 'checking', 'needs_author', 'published'].includes(s.status) && (
         <PrintLinks key={`${s.printLinks?.amazon ?? ''}|${s.printLinks?.lulu ?? ''}`} links={s.printLinks ?? {}} onSave={onPrintLinks} />
       )}

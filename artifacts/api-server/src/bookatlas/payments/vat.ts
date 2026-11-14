@@ -24,7 +24,9 @@ export const EU_COUNTRIES = new Set([
   'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE',
 ]);
 
-export type VatScheme = 'nl-domestic' | 'nl-eu-threshold' | 'outside-eu' | 'unknown-country-nl';
+export type VatScheme = 'nl-domestic' | 'nl-eu-threshold' | 'outside-eu' | 'unknown-country-nl' | 'nl-service';
+/** Services (audiobook narration) supplied by a Dutch seller to consumers: Dutch standard rate everywhere. */
+export const NL_SERVICE_RATE_BP = 2100;
 
 export interface VatBreakdown {
   /** ISO 3166-1 alpha-2 country of the buyer, as Stripe reports it; null when unknown. */
@@ -58,9 +60,15 @@ export function vatFor(gross: number, buyerCountry: string | null | undefined): 
   return { country, scheme, rateBp, gross, net: gross - vat, vat };
 }
 
+/** VAT inside a service price (narration): 21% Dutch VAT, whatever the buyer's country. */
+export function serviceVatFor(gross: number, buyerCountry: string | null | undefined): VatBreakdown {
+  const vat = Math.round((gross * NL_SERVICE_RATE_BP) / (10_000 + NL_SERVICE_RATE_BP));
+  return { country: normaliseCountry(buyerCountry), scheme: 'nl-service', rateBp: NL_SERVICE_RATE_BP, gross, net: gross - vat, vat };
+}
+
 /** Sum the lines of one order; VAT is computed per line and added, so the invoice lines always add up. */
-export function vatForLines(lines: number[], buyerCountry: string | null | undefined) {
-  const parts = lines.map((gross) => vatFor(gross, buyerCountry));
+export function vatForLines(lines: number[], buyerCountry: string | null | undefined, kind: 'ebook' | 'service' = 'ebook') {
+  const parts = lines.map((gross) => (kind === 'service' ? serviceVatFor(gross, buyerCountry) : vatFor(gross, buyerCountry)));
   const first = parts[0] ?? vatFor(0, buyerCountry);
   return {
     country: first.country, scheme: first.scheme, rateBp: first.rateBp,

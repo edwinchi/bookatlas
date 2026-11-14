@@ -39,6 +39,8 @@ export interface InvoiceInput {
   buyerName: string | null;
   buyerCountry: string | null;
   withdrawalWaiverAt?: string | null;
+  /** 'service' for narration (21% VAT); e-books otherwise. */
+  kind?: 'ebook' | 'service';
   currency: string;
   lines: { bookId: string; title: string; gross: number }[];
 }
@@ -53,7 +55,7 @@ export const invoiceNumber = (invoice: Pick<Invoice, 'seq' | 'issued_at'>) =>
 
 /** Idempotent: the webhook and the success page both fulfil, and Stripe retries; one invoice per session. */
 export async function issueInvoice(input: InvoiceInput): Promise<Invoice> {
-  const vat = vatForLines(input.lines.map((l) => l.gross), input.buyerCountry);
+  const vat = vatForLines(input.lines.map((l) => l.gross), input.buyerCountry, input.kind ?? 'ebook');
   const row = {
     checkout_session_id: input.checkoutSessionId, payment_intent_id: input.paymentIntentId, user_id: input.userId,
     buyer_email: input.buyerEmail, buyer_name: input.buyerName, buyer_country: vat.country,
@@ -175,15 +177,17 @@ export async function anonymiseInvoices(userId: string, marker: string) {
 export async function vatSummary(now = new Date()) {
   const year = now.getUTCFullYear();
   const since = new Date(Date.UTC(year - 1, 0, 1)).toISOString();
-  let rows: Pick<Invoice, 'buyer_country' | 'amount_net' | 'amount_vat' | 'amount_gross' | 'issued_at' | 'status'>[];
+  let rows: Pick<Invoice, 'buyer_country' | 'amount_net' | 'amount_vat' | 'amount_gross' | 'issued_at' | 'status' | 'vat_scheme'>[];
   if (!bookatlasDb) rows = memory.filter((i) => i.issued_at >= since);
   else {
-    const result = await bookatlasDb.from('invoices').select('buyer_country,amount_net,amount_vat,amount_gross,issued_at,status').gte('issued_at', since).limit(100_000);
+    const result = await bookatlasDb.from('invoices').select('buyer_country,amount_net,amount_vat,amount_gross,issued_at,status,vat_scheme').gte('issued_at', since).limit(100_000);
     if (result.error) throw new PaymentError('The VAT summary could not be read.', 503);
     rows = result.data as typeof rows;
   }
   const paid = rows.filter((r) => r.status === 'issued');
-  const crossBorder = (y: number) => paid
+  // The €10,000 threshold is about e-books (electronic services); narration services do not count.
+  const ebooks = paid.filter((r) => r.vat_scheme !== 'nl-service');
+  const crossBorder = (y: number) => ebooks
     .filter((r) => new Date(r.issued_at).getUTCFullYear() === y && !!r.buyer_country && r.buyer_country !== SELLER_COUNTRY && EU_COUNTRIES.has(r.buyer_country))
     .reduce((s, r) => s + r.amount_net, 0);
   const thisYear = paid.filter((r) => new Date(r.issued_at).getUTCFullYear() === year);
@@ -222,6 +226,7 @@ const VAT_NOTE: Record<VatScheme, string> = {
   'nl-eu-threshold': 'Dutch VAT applied: the seller is below the EU €10,000 threshold for cross-border electronic services (art. 59c VAT Directive).',
   'outside-eu': 'No Dutch VAT: the buyer is outside the EU.',
   'unknown-country-nl': 'Dutch VAT, reduced rate for e-books.',
+  'nl-service': 'Dutch VAT, standard rate for services (audiobook narration).',
 };
 
 /** A self-contained, printable invoice page (the buyer saves it as PDF from the browser). */
@@ -231,7 +236,7 @@ export function renderInvoiceHtml(invoice: Invoice) {
   const title = seller.complete ? 'Invoice' : 'Receipt';
   const rate = `${(invoice.vat_rate_bp / 100).toLocaleString('nl-NL')}%`;
   const date = new Date(invoice.issued_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Amsterdam' });
-  const rows = invoice.lines.map((l) => `<tr><td>${esc(l.title)}<div class="muted">eBook (EPUB), digital delivery</div></td><td class="n">${money(l.net, invoice.currency)}</td><td class="n">${rate}</td><td class="n">${money(l.vat, invoice.currency)}</td><td class="n">${money(l.gross, invoice.currency)}</td></tr>`).join('');
+  const rows = invoice.lines.map((l) => `<tr><td>${esc(l.title)}<div class="muted">${invoice.vat_scheme === 'nl-service' ? 'Natural audiobook narration (service)' : 'eBook (EPUB), digital delivery'}</div></td><td class="n">${money(l.net, invoice.currency)}</td><td class="n">${rate}</td><td class="n">${money(l.vat, invoice.currency)}</td><td class="n">${money(l.gross, invoice.currency)}</td></tr>`).join('');
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 <title>${title} ${esc(number)} · BookAtlas</title>
 <style>body{font:14px/1.5 system-ui,sans-serif;color:#0f172a;background:#fff;max-width:760px;margin:32px auto;padding:0 16px}h1{font-size:24px;margin:0}.muted{color:#64748b;font-size:12px}.head{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:28px}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{text-align:left;padding:8px 6px;border-bottom:1px solid #e2e8f0;vertical-align:top}.n{text-align:right;white-space:nowrap}tfoot td{font-weight:600;border:0}.flag{background:#fef3c7;border:1px solid #fcd34d;padding:8px 12px;border-radius:6px;margin:16px 0}.refund{background:#fee2e2;border-color:#fca5a5}@media print{.noprint{display:none}}</style></head><body>

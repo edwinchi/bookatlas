@@ -456,6 +456,20 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
     if (!account) { setOwnedBookIds([]); return; }
     payments.purchases().then(setOwnedBookIds).catch(() => undefined);
   }, [account?.id]);
+  // Back from paying for an audiobook narration (TASK-0008).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const outcome = params.get('narration');
+    if (!outcome || !account) return;
+    const sessionId = params.get('session_id');
+    params.delete('narration'); params.delete('session_id');
+    window.history.replaceState(null, '', `${window.location.pathname}${params.size ? `?${params}` : ''}${window.location.hash}`);
+    if (outcome === 'cancelled') { setCheckoutNotice({ tone: 'info', text: 'Narration order cancelled. You have not been charged.' }); return; }
+    if (outcome !== 'paid' || !sessionId) return;
+    payments.confirmNarration(sessionId).catch(() => undefined).finally(() => setCheckoutNotice({
+      tone: 'ok', text: 'Payment received for your natural audiobook, thank you. An administrator approves it, usually within 2 working days; follow its progress under Publish, on your book. Your invoice is under "Orders & invoices".',
+    }));
+  }, [account?.id]);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const outcome = params.get('checkout');

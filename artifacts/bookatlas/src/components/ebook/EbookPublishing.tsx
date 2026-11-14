@@ -4,6 +4,9 @@ import { EBOOK_REQUIREMENTS, PRINT_REQUIREMENTS, AMAZON_PRINT_REQUIREMENTS, type
 import { useAccount } from '../../auth/AuthContext';
 import { EbookApiError, saveBlob, useEbookApi, type FeedbackOverview, type Submission } from './ebookApi';
 import { AuthorSalesDashboard } from './AuthorSalesDashboard';
+import { ServicesOverview } from './ServicesOverview';
+import { NarrationPanel } from './NarrationPanel';
+import { NarrationQueue } from './NarrationQueue';
 import { SubmissionForm } from './SubmissionForm';
 import { SubmissionCard } from './SubmissionCard';
 import { FeedImport } from './FeedImport';
@@ -134,6 +137,8 @@ export const EbookPublishing: React.FC = () => {
         )}
       </header>
 
+      {!mode && <ServicesOverview />}
+
       {problem && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{problem.message}</p>}
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -180,6 +185,7 @@ export const EbookPublishing: React.FC = () => {
                       : fix === 'original' ? api.originalCover(s.id) : api.replaceCover(s.id, fix.upload))}
                     onPublish={async () => handle(() => api.publish(s.id))}
                     onReject={async (reason) => handle(() => api.reject(s.id, reason))}
+                    extra={s.status === 'published' && s.bookId ? <NarrationPanel api={api} bookId={s.bookId} /> : null}
                   />
                 ))}
           </section>
@@ -204,6 +210,7 @@ export const EbookPublishing: React.FC = () => {
               <div className="mt-3"><PrintCalculator {...calc} onChange={setCalc} /></div>
             </section>
           )}
+          {isAdmin && <NarrationQueue api={api} />}
           {isAdmin && <StoreFeedback api={api} />}
           {isAdmin && <FeedImport />}
         </aside>

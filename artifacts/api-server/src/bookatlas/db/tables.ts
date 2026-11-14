@@ -12,6 +12,7 @@ export const BOOKATLAS_TABLES = Object.freeze({
   prep_feedback: 'bookatlas_prep_feedback',
   purchases: 'bookatlas_purchases',
   invoices: 'bookatlas_invoices',
+  narrations: 'bookatlas_narrations',
 } as const);
 
 export type BookatlasTable = keyof typeof BOOKATLAS_TABLES;

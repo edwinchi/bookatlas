@@ -35,7 +35,7 @@ import {
 import { StudioNarrationPanel } from './voice/StudioNarrationPanel';
 import { Book, Chapter, ReaderSettings, ReaderTheme, ReaderFont, Highlight } from '../types';
 import { useAccount } from '../auth/AuthContext';
-import { useEbookApi } from './ebook/ebookApi';
+import { useEbookApi, type ReaderNarration } from './ebook/ebookApi';
 import { ReaderFigure } from './ebook/ReaderFigure';
 
 import {
@@ -88,8 +88,11 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
         setCurrentChapterIndex((i) => Math.min(i, Math.max(0, r.chapters.length - 1)));
       })
       .catch(() => { if (!cancelled) setFullError('The book could not be loaded, so the free sample is shown. Please retry later.'); });
+    // A natural Gemini narration (TASK-0008) replaces the device voice when the book has one.
+    ebookApi.readerNarration(book.id).then((n) => { if (!cancelled) setNarration(n && n.segments.length ? n : null); }).catch(() => undefined);
     return () => { cancelled = true; };
   }, [book.id, book.hasReaderContent, account?.id]);
+  const [narration, setNarration] = useState<ReaderNarration | null>(null);
   const inPreview = !!book.hasReaderContent && access === 'preview';
   const [showToc, setShowToc] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -213,10 +216,13 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   chaptersRef.current = chapters;
   const SPEECH_LANG: Record<string, string> = { English: 'en', Dutch: 'nl', French: 'fr', German: 'de', Spanish: 'es', Portuguese: 'pt', Swahili: 'sw', Yoruba: 'yo', Hausa: 'ha', Zulu: 'zu', Amharic: 'am', Arabic: 'ar' };
 
+  const narrationAudio = useRef<HTMLAudioElement | null>(null);
+  const narrationUrls = useRef(new globalThis.Map<number, Promise<string>>());
   const stopSpeech = () => {
     speechRun.current += 1;
     speechChapter.current = null;
     synthRef.current?.cancel();
+    narrationAudio.current?.pause();
     setIsSpeaking(false);
     setSpokenParagraph(null);
   };
@@ -256,10 +262,72 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     step(chapterIdx, paragraphIdx);
   };
 
+  /**
+   * Natural narration: plays the recorded segments in order from this chapter, loading the next one ahead,
+   * and highlights each paragraph for a share of the segment proportional to its length.
+   */
+  const playNarrationFrom = (chapterIdx: number) => {
+    const n = narration;
+    if (!n) return;
+    stopSpeech();
+    const run = ++speechRun.current;
+    const segs = n.segments;
+    const first = segs.findIndex((s) => s.chapter >= chapterIdx);
+    if (first < 0) return;
+    const url = (k: number) => {
+      const seg = segs[k];
+      if (!seg) return null;
+      if (!narrationUrls.current.has(seg.n)) {
+        const p = ebookApi.narrationAudio(book.id, seg.n);
+        p.catch(() => narrationUrls.current.delete(seg.n));
+        narrationUrls.current.set(seg.n, p);
+      }
+      return narrationUrls.current.get(seg.n)!;
+    };
+    const audio = narrationAudio.current ?? new Audio();
+    narrationAudio.current = audio;
+    const play = async (k: number) => {
+      if (run !== speechRun.current) return;
+      const seg = segs[k];
+      if (!seg) { stopSpeech(); return; }
+      let src: string;
+      try { src = await url(k)!; } catch { stopSpeech(); return; }
+      if (run !== speechRun.current) return;
+      void url(k + 1)?.catch(() => undefined); // load the next part ahead
+      const chapter = chaptersRef.current[seg.chapter];
+      if (speechChapter.current !== seg.chapter) { speechChapter.current = seg.chapter; setCurrentChapterIndex(seg.chapter); }
+      const paras = Array.from({ length: seg.to - seg.from + 1 }, (_, i) => seg.from + i);
+      const lengths = paras.map((p) => Math.max(1, (chapter?.content[p] ?? '').length));
+      const total = lengths.reduce((a, b) => a + b, 0);
+      const highlight = () => {
+        if (run !== speechRun.current) return;
+        const fraction = audio.duration ? audio.currentTime / audio.duration : 0;
+        let acc = 0;
+        for (let i = 0; i < paras.length; i += 1) {
+          acc += lengths[i]! / total;
+          if (fraction <= acc || i === paras.length - 1) { setSpokenParagraph(paras[i]!); setCurrentParagraphIndex(paras[i]!); break; }
+        }
+      };
+      audio.ontimeupdate = highlight;
+      audio.onended = () => void play(k + 1);
+      audio.onerror = () => stopSpeech();
+      audio.src = src;
+      highlight();
+      await audio.play().catch(() => stopSpeech());
+    };
+    setIsSpeaking(true);
+    void play(first);
+  };
+  useEffect(() => () => {
+    narrationAudio.current?.pause();
+    for (const p of narrationUrls.current.values()) p.then((u) => URL.revokeObjectURL(u)).catch(() => undefined);
+  }, []);
+
   const toggleSpeech = () => {
+    if (isSpeaking) { stopSpeech(); return; }
+    if (narration) { playNarrationFrom(currentChapterIndex); return; }
     if (!synthRef.current) return;
-    if (isSpeaking) stopSpeech();
-    else speakFrom(currentChapterIndex, 0);
+    speakFrom(currentChapterIndex, 0);
   };
 
   // Run AI Copilot
@@ -761,6 +829,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                 <button onClick={toggleSpeech} aria-pressed={isSpeaking} className="px-3 py-1 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors">
                   {isSpeaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                   {isSpeaking ? 'Stop listening' : inPreview ? 'Listen to the preview' : 'Listen to the book'}
+                  <span className="text-[10px] font-normal opacity-80">{narration ? `· ${narration.voice}, natural voice` : '· device voice'}</span>
                 </button>
               </div>
             )}

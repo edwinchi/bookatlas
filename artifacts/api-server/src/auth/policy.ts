@@ -32,6 +32,11 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (/^\/api\/checkout\/sessions\/[^/]+$/.test(normalized) && method === 'GET') return 'reader';
   if (normalized === '/api/purchases' && method === 'GET') return 'reader';
   if (normalized === '/api/author/sales' && method === 'GET') return 'reader';
+  // Narration (TASK-0008): authors order and listen to samples; the step authenticates with its own key.
+  if (method === 'GET' && /^\/api\/narration\/(?:books\/[^/]+|samples\/[^/]+)$/.test(normalized)) return 'reader';
+  if (method === 'POST' && (/^\/api\/narration\/books\/[^/]+\/order$/.test(normalized) || normalized === '/api/narration/confirm')) return 'reader';
+  if (method === 'POST' && normalized === '/api/internal/narration/step') return 'self-service';
+  if (method === 'GET' && /^\/api\/reader\/catalog\/[^/]+\/narration(?:\/\d+)?$/.test(normalized)) return 'self-service';
   if (method === 'GET' && /^\/api\/invoices(?:\/\d+)?$/.test(normalized)) return 'reader';
   if (method === 'POST' && /^\/api\/invoices\/\d+\/refund-request$/.test(normalized)) return 'reader';
   // The EPUBCheck worker authenticates with its bearer token inside the route.

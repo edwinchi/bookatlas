@@ -10,12 +10,14 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@breezystack/lamejs": "1.2.7",
     "@clerk/express": "^2.1.80",
     "@clerk/shared": "^4.40.0",
     "@google-cloud/storage": "^8.4.0",
     "@google/genai": "^2.4.0",
     "@replit/connectors-sdk": "^0.4.3",
     "@supabase/supabase-js": "^2.112.4",
+    "@vercel/functions": "^3.11.2",
     "@workspace/api-zod": "workspace:*",
     "@workspace/bookatlas-catalog": "workspace:*",
     "@workspace/db": "workspace:*",

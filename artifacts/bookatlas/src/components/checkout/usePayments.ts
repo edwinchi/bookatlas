@@ -42,6 +42,9 @@ export function usePayments() {
     }),
     status: (sessionId: string) => request<{ paid: boolean; pending: boolean; bookIds: string[] }>(`/api/checkout/sessions/${encodeURIComponent(sessionId)}`),
     purchases: () => request<{ bookIds: string[] }>('/api/purchases').then((r) => r.bookIds),
+    confirmNarration: (sessionId: string) => request<{ paid: boolean }>('/api/narration/confirm', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }),
+    }),
     invoices: () => request<{ invoices: InvoiceSummary[] }>('/api/invoices').then((r) => r.invoices),
     requestRefund: (seq: number, reason: string) => request<InvoiceSummary>(`/api/invoices/${seq}/refund-request`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }),

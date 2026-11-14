@@ -91,9 +91,25 @@ export async function createCheckout(who: Identity, requested: unknown, findBook
 }
 
 /** Store every book of a paid session. Called by the webhook and by the success page; both are idempotent. */
+/** Narration orders (TASK-0008) are fulfilled by the narration service, registered at start-up. */
+export type NarrationPaid = (order: { narrationId: string; checkoutSessionId: string; paymentIntentId: string | null; userId: string; email: string | null; name: string | null; country: string | null; currency: string; amountTotal: number }) => Promise<void>;
+let narrationPaid: NarrationPaid | null = null;
+export function setNarrationPaidHandler(handler: NarrationPaid | null) { narrationPaid = handler; }
+
 async function fulfil(session: Stripe.Checkout.Session) {
   if (session.metadata?.app !== APP_TAG) return false;
   if (session.payment_status !== 'paid' || !session.client_reference_id) return false;
+  if (session.metadata?.kind === 'narration') {
+    if (!narrationPaid || !session.metadata.narrationId) return false;
+    await narrationPaid({
+      narrationId: session.metadata.narrationId, checkoutSessionId: session.id,
+      paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id ?? null,
+      userId: session.client_reference_id, email: session.customer_details?.email ?? session.customer_email ?? null,
+      name: session.customer_details?.name ?? null, country: session.customer_details?.address?.country ?? null,
+      currency: session.currency ?? CURRENCY, amountTotal: session.amount_total ?? 0,
+    });
+    return true;
+  }
   const items = await stripe().checkout.sessions.listLineItems(session.id, { limit: 100, expand: ['data.price.product'] });
   const paymentIntent = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id ?? null;
   const lines = items.data.flatMap((item) => {
@@ -199,4 +215,41 @@ export async function backfillInvoices(userId: string) {
     }
   }
   return missing.length;
+}
+
+/**
+ * Checkout for the natural audiobook add-on (TASK-0008): a service at a VAT-inclusive price (21% Dutch VAT,
+ * applied by BookAtlas). The price comes from the server's quote; the browser only names the order.
+ */
+export async function createNarrationCheckout(who: Identity, order: { narrationId: string; bookId: string; title: string; voice: string; priceCents: number }, appUrl: string) {
+  const session = await stripe().checkout.sessions.create({
+    mode: 'payment',
+    client_reference_id: who.id,
+    customer_email: who.email,
+    line_items: [{
+      quantity: 1,
+      price_data: {
+        currency: CURRENCY,
+        unit_amount: order.priceCents,
+        tax_behavior: 'inclusive',
+        product_data: { name: `Natural audiobook narration: ${order.title}`.slice(0, 250), description: `Recorded once with the Gemini studio voice ${order.voice}.`, metadata: { narrationId: order.narrationId } },
+      },
+    }],
+    automatic_tax: { enabled: taxEnabled() },
+    managed_payments: { enabled: false },
+    metadata: { app: APP_TAG, kind: 'narration', narrationId: order.narrationId, bookId: order.bookId, userId: who.id },
+    payment_intent_data: { metadata: { app: APP_TAG, kind: 'narration', narrationId: order.narrationId } },
+    success_url: `${appUrl}/?narration=paid&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${appUrl}/?narration=cancelled`,
+  });
+  if (!session.url) throw new PaymentError('Stripe did not return a checkout page. Please retry.', 503);
+  return { url: session.url, id: session.id };
+}
+
+/** The success page after paying for narration fulfils the order too, in case the webhook is delayed. */
+export async function confirmCheckout(who: Identity, sessionId: string) {
+  if (!/^cs_(test|live)_[A-Za-z0-9]{10,200}$/.test(sessionId)) throw new PaymentError('Unknown checkout.', 404);
+  const session = await stripe().checkout.sessions.retrieve(sessionId);
+  if (session.client_reference_id !== who.id) throw new PaymentError('Unknown checkout.', 404);
+  return fulfil(session);
 }

@@ -422,7 +422,7 @@ const authors = new Map<string, string | null>();
  * Who reads the whole book: signed-in readers of a free book, admins, the book's author, and its
  * buyers (TASK-0004). Everyone else, signed in or not, gets the preview.
  */
-async function readerAccess(id: string, who: Identity | undefined, price: number | undefined): Promise<'full' | 'preview'> {
+export async function readerAccess(id: string, who: Identity | undefined, price: number | undefined): Promise<'full' | 'preview'> {
   if (!who) return 'preview';
   if (who.role === 'admin' || price === 0) return 'full';
   // A purchases outage (or the table not created yet) shows the preview rather than an error.

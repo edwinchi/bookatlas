@@ -41,6 +41,11 @@ export interface AuthorSales {
   books: { bookId: string; title: string; units: number; refunds: number; grossCents: number; vatCents: number; netCents: number; shareCents: number; lastSaleAt: string | null }[];
   recent: { at: string; bookId: string; title: string; country: string | null; grossCents: number; shareCents: number; refunded: boolean }[];
 }
+export type NarrationVoice = 'Sulafat' | 'Charon';
+export type NarrationStatus = 'awaiting_payment' | 'paid' | 'approved' | 'running' | 'done' | 'failed' | 'declined' | 'refunded';
+export interface NarrationSummary { id: string; bookId: string; title: string; voice: NarrationVoice; status: NarrationStatus; priceCents: number; words: number; done: number; total: number; seconds: number; error: string | null; createdAt: string; updatedAt: string }
+export interface ReaderNarration { voice: NarrationVoice; seconds: number; access: 'full' | 'preview'; segments: { n: number; chapter: number; from: number; to: number; seconds: number }[] }
+export interface NarrationQuote { bookId: string; title: string; words: number; priceCents: number; hours: number; voices: NarrationVoice[]; current: NarrationSummary | null }
 export interface FeedbackOverview {
   rules: { id: string; title: string; storeRejections: number; blocking: boolean; automaticFix: boolean }[];
   needsNewRule: { id: string; store: string; message: string; created_at: string }[];
@@ -104,6 +109,13 @@ export function useEbookApi() {
 
   return {
     authorSales: () => json<AuthorSales>('/api/author/sales'),
+    // Natural audiobook narration (TASK-0008).
+    narrationQuote: (bookId: string) => json<NarrationQuote>(`/api/narration/books/${encodeURIComponent(bookId)}`),
+    orderNarration: (bookId: string, voice: NarrationVoice) => json<{ url: string }>(`/api/narration/books/${encodeURIComponent(bookId)}/order`, 'POST', { voice }),
+    confirmNarration: (sessionId: string) => json<{ paid: boolean }>('/api/narration/confirm', 'POST', { sessionId }),
+    narrationSample: async (voice: NarrationVoice) => URL.createObjectURL(await (await request(`/api/narration/samples/${voice}`)).blob()),
+    narrations: () => json<{ narrations: (NarrationSummary & { ownerId: string; estimateMicros: number; spentMicros: number })[] }>('/api/manager/narrations').then((r) => r.narrations),
+    decideNarration: (id: string, decision: 'approve' | 'decline' | 'resume') => json<NarrationSummary>(`/api/manager/narrations/${id}/${decision}`, 'POST', {}),
     /** "Fill in with AI": an excerpt of the manuscript in, checked suggestions for the form out. */
     suggestMetadata: (body: { excerpt: string; headings: string[]; known: Record<string, string | undefined> }) =>
       json<{ source: 'ai' | 'book'; suggestion: Partial<SubmissionIntake> }>('/api/ai/book-metadata', 'POST', body),
@@ -146,6 +158,9 @@ export function useEbookApi() {
     feedback: () => json<FeedbackOverview>('/api/ebook-prep/feedback'),
     addFeedback: (store: string, message: string, submissionId?: string) =>
       json<{ matched_rules: string[] }>('/api/ebook-prep/feedback', 'POST', { store, message, submissionId }),
+    /** The book's natural narration, if any: every segment for entitled readers, the preview part otherwise. */
+    readerNarration: (bookId: string) => json<{ narration: ReaderNarration | null }>(`/api/reader/catalog/${bookId}/narration`).then((r) => r.narration),
+    narrationAudio: async (bookId: string, n: number) => URL.createObjectURL(await (await request(`/api/reader/catalog/${bookId}/narration/${n}`)).blob()),
     readerContent: (bookId: string) => json<{ chapters: import('../../types').Chapter[]; access: 'full' | 'preview' }>(`/api/reader/catalog/${bookId}/content`),
     async readerImage(bookId: string, name: string) {
       return URL.createObjectURL(await (await request(`/api/reader/catalog/${bookId}/images/${name}`)).blob());
