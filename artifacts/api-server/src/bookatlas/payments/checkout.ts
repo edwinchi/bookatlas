@@ -3,6 +3,7 @@ import type { Book } from '@workspace/bookatlas-catalog/types';
 import type { Identity } from '../../auth/policy.js';
 import { logger } from '../../lib/logger.js';
 import { PaymentError, markRefunded, purchasedBookIds, recordPaid } from './purchases.js';
+import { issueInvoice, markInvoiceRefunded } from './invoices.js';
 
 /** The parts of the Stripe client BookAtlas uses; tests substitute a fake. */
 export type StripeClient = {
@@ -97,7 +98,28 @@ async function fulfil(session: Stripe.Checkout.Session) {
     }] : [];
   });
   await recordPaid(lines);
-  logger.info({ event: 'payments.fulfilled', session: session.id, books: lines.length }, 'Checkout fulfilled');
+  // VAT is worked out by BookAtlas from the buyer's country (Stripe Managed Payments is off).
+  const titles = new Map(items.data.map((item) => {
+    const product = item.price?.product;
+    const bookId = product && typeof product === 'object' && 'metadata' in product ? product.metadata?.bookId : undefined;
+    return [bookId, item.description ?? ''] as const;
+  }));
+  // The book is unlocked above whatever happens here. A failed invoice is logged for the owner and issued on
+  // the next fulfilment of this session (the buyer's success-page check); issueInvoice is idempotent.
+  let invoice: Awaited<ReturnType<typeof issueInvoice>> | null = null;
+  try {
+    invoice = await issueInvoice({
+      checkoutSessionId: session.id, paymentIntentId: paymentIntent, userId: session.client_reference_id,
+      buyerEmail: session.customer_details?.email ?? session.customer_email ?? null,
+      buyerName: session.customer_details?.name ?? null,
+      buyerCountry: session.customer_details?.address?.country ?? null,
+      currency: session.currency ?? CURRENCY,
+      lines: lines.map((l) => ({ bookId: l.book_id, title: titles.get(l.book_id) || l.book_id, gross: l.amount_total })),
+    });
+  } catch (err) {
+    logger.error({ err, event: 'payments.invoice_failed', session: session.id }, 'Invoice could not be issued');
+  }
+  logger.info({ event: 'payments.fulfilled', session: session.id, books: lines.length, invoice: invoice?.seq ?? null, vatScheme: invoice?.vat_scheme ?? null }, 'Checkout fulfilled');
   return true;
 }
 
@@ -121,6 +143,7 @@ export async function handleWebhook(rawBody: Buffer, signature: string | undefin
       const intent = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id;
       if (charge.refunded && intent) {
         await markRefunded(intent);
+        await markInvoiceRefunded(intent).catch((err) => logger.error({ err, event: 'payments.invoice_failed', paymentIntent: intent }, 'Invoice refund could not be recorded'));
         logger.info({ event: 'payments.refunded', paymentIntent: intent }, 'Purchase refunded; the book is locked again');
       }
       break;

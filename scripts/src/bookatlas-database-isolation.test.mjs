@@ -16,7 +16,7 @@ test('every allowed persistence table is Bookatlas-prefixed', () => {
 test('setup SQL changes only prefixed tables and inserts no demo records', () => {
   const sql = readFileSync('artifacts/api-server/src/bookatlas/db/schema.sql', 'utf8').replace(/--[^\n]*/g, '');
   const changed = [...sql.matchAll(/(?:create table if not exists|alter table)\s+([\w.]+)/gi)];
-  assert.equal(changed.length, 27);
+  assert.equal(changed.length, 29);
   assert.ok(changed.every(match => match[1].startsWith('public.bookatlas_')));
   assert.doesNotMatch(sql, /\b(?:drop|truncate)\b|\binsert\s+into\b/i);
   assert.match(sql, /^begin;/m);

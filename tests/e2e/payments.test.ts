@@ -27,7 +27,7 @@ const fake = {
       retrieve: async (id: string) => sessions.get(id),
       listLineItems: async (id: string) => ({
         data: sessions.get(id)!.line_items.map((line: any) => ({
-          amount_total: line.price_data.unit_amount, currency: line.price_data.currency,
+          amount_total: line.price_data.unit_amount, currency: line.price_data.currency, description: line.price_data.product_data.name,
           price: { product: { metadata: line.price_data.product_data.metadata } },
         })),
       }),
@@ -117,7 +117,7 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
   assert.equal((await fetch('/api/stripe/webhook', { method: 'POST', headers: { 'content-type': 'application/json', 'stripe-signature': foreign.header }, body: foreign.payload })).status, 200);
   assert.equal(await access(), 'preview', 'an untagged session unlocks nothing');
 
-  Object.assign(sessions.get(id)!, { status: 'complete', payment_status: 'paid' });
+  Object.assign(sessions.get(id)!, { status: 'complete', payment_status: 'paid', currency: 'eur', customer_details: { email: 'reader@example.com', name: 'Rea Der', address: { country: 'DE' } } });
   for (let delivery = 0; delivery < 2; delivery += 1) {
     const event = signedEvent('checkout.session.completed', sessions.get(id)!);
     const res = await fetch('/api/stripe/webhook', { method: 'POST', headers: { 'content-type': 'application/json', 'stripe-signature': event.header }, body: event.payload });
@@ -129,9 +129,29 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
   assert.equal((await fetch(`/api/checkout/sessions/${id}`, as('admin'))).status, 404, 'another account cannot read this checkout');
   assert.equal((await fetch('/api/checkout/sessions', json({ bookIds: [bookId] }))).status, 409, 'already owned');
 
+  // BookAtlas issues one invoice per paid checkout, with Dutch 9% VAT for an EU buyer below the threshold.
+  const invoices = (await (await fetch('/api/invoices', as('reader'))).json()).invoices;
+  assert.equal(invoices.length, 1, 'a retried webhook and the success page issue one invoice');
+  assert.deepEqual({ gross: invoices[0].grossCents, vat: invoices[0].vatCents, status: invoices[0].status, title: invoices[0].books[0].title },
+    { gross: 499, vat: 41, status: 'issued', title: 'The Bought Codex' });
+  assert.match(invoices[0].number, /^BA-\d{4}-\d{6}$/);
+  const page = await fetch(`/api/invoices/${invoices[0].seq}`, as('reader'));
+  assert.equal(page.status, 200);
+  assert.match(page.headers.get('content-type') ?? '', /text\/html/);
+  const html = await page.text();
+  for (const text of ['The Bought Codex', '9%', 'Country: DE', 'art. 59c', invoices[0].number]) assert.ok(html.includes(text), `invoice shows ${text}`);
+  assert.equal((await fetch(`/api/invoices/${invoices[0].seq}`, as('admin'))).status, 404, 'another account cannot open this invoice');
+  assert.equal((await fetch('/api/invoices/abc', as('reader'))).status, 404);
+  assert.equal((await fetch('/api/manager/vat-summary', as('reader'))).status, 403, 'the VAT summary is admin-only');
+  const summary = await (await fetch('/api/manager/vat-summary', as('admin'))).json();
+  assert.equal(summary.threshold.state, 'ok');
+  assert.ok(summary.threshold.netThisYearCents >= 458, 'a sale to Germany counts towards the cross-border threshold');
+
   const refund = signedEvent('charge.refunded', { id: 'ch_test_1', object: 'charge', refunded: true, payment_intent: sessions.get(id)!.payment_intent });
   assert.equal((await fetch('/api/stripe/webhook', { method: 'POST', headers: { 'content-type': 'application/json', 'stripe-signature': refund.header }, body: refund.payload })).status, 200);
   assert.equal(await access(), 'preview');
+  assert.equal((await (await fetch('/api/invoices', as('reader'))).json()).invoices[0].status, 'refunded', 'a full refund marks the invoice refunded');
+  assert.match(await (await fetch(`/api/invoices/${invoices[0].seq}`, as('reader'))).text(), /Refunded in full/);
 
   // The reader's data export lists the purchase (GDPR access), refund included.
   const exported = await (await fetch('/api/account/export', as('reader'))).json();
@@ -139,4 +159,5 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
   assert.equal(row.status, 'refunded');
   assert.equal(row.amount_total, 499);
   assert.ok(Array.isArray(exported.ebookSubmissions));
+  assert.ok(exported.purchases.some((p: { record?: string; amount_vat?: number }) => p.record === 'invoice' && p.amount_vat === 41), 'the export includes the invoice');
 });

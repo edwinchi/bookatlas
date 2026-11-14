@@ -8,6 +8,7 @@ import { ReadingUpdatePreferences } from '../components/ReadingUpdatePreferences
 import { readerReturnUrl, safeReaderReturnPath, clerkRouterPath } from './navigation';
 import { AdminEntry } from './AdminWorkspace';
 import { AccountPrivacy } from '../components/AccountPrivacy';
+import { AccountInvoices } from '../components/AccountInvoices';
 import { LegalNotice } from '../components/LegalNotice';
 import { PrivacyNotice } from '../components/PrivacyNotice';
 import { readSignupConsent, saveSignupConsent } from './signupConsent';
@@ -69,7 +70,7 @@ function SessionBar({ authUnavailable = false }: { authUnavailable?: boolean }) 
         : <span role="status">{account ? `Signed in as ${account.email}${account.role === 'admin' ? ' · Administrator' : ''}` : 'Your next chapter starts here.'}</span>}
       <div className="ml-auto flex flex-wrap items-center gap-x-5 gap-y-1">
         {authUnavailable ? <a href="mailto:getintouch@apps-pilot.nl?subject=Help%20with%20BookAtlas" className={utilityLink}>Help</a>
-          : account ? <><Link href="/user-portal" className={utilityLink}>My Bookshelf</Link>{account.role === 'admin' && <Link href="/admin" className={utilityLink}>Admin workspace</Link>}<ReadingUpdatePreferences /><AccountPrivacy /><button onClick={signOut} className={`${utilityLink} cursor-pointer`}>Sign out</button></>
+          : account ? <><Link href="/user-portal" className={utilityLink}>My Bookshelf</Link>{account.role === 'admin' && <Link href="/admin" className={utilityLink}>Admin workspace</Link>}<ReadingUpdatePreferences /><AccountInvoices /><AccountPrivacy /><button onClick={signOut} className={`${utilityLink} cursor-pointer`}>Sign out</button></>
           : <><Link href="/sign-in" className={utilityLink}>Sign in</Link><Link href="/sign-up" className={utilityLink}>Create account</Link></>}
       </div>
     </div>

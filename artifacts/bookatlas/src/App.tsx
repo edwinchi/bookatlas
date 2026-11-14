@@ -441,7 +441,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
               })),
               ...prev,
             ]);
-            setCheckoutNotice({ tone: 'ok', text: `Payment received, thank you. ${bought.length === 1 ? `"${bought[0]!.title}" is` : 'Your books are'} in your library, ready to read.` });
+            setCheckoutNotice({ tone: 'ok', text: `Payment received, thank you. ${bought.length === 1 ? `"${bought[0]!.title}" is` : 'Your books are'} in your library, ready to read. Your invoice is under "Orders & invoices".` });
             clearParams();
             return;
           }

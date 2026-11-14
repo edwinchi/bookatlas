@@ -3,6 +3,7 @@ import type { Book } from '@workspace/bookatlas-catalog/types';
 import { logger } from '../../lib/logger.js';
 import { checkoutStatus, createCheckout, handleWebhook, paymentsConfigured } from './checkout.js';
 import { PaymentError, purchasedBookIds } from './purchases.js';
+import { invoiceForUser, invoiceNumber, invoicesOf, renderInvoiceHtml, sellerDetails, vatSummary } from './invoices.js';
 
 function guarded(handler: (req: Request, res: Response) => Promise<void>) {
   return async (req: Request, res: Response) => {
@@ -40,5 +41,28 @@ export function mountPayments(app: Express, findBook: (id: string) => Promise<Bo
   app.get('/api/purchases', guarded(async (req, res) => {
     res.setHeader('Cache-Control', 'private, no-store');
     res.json({ bookIds: await purchasedBookIds(req.bookatlasIdentity!.id) });
+  }));
+  // Invoices (owner decision 2026-11-14: BookAtlas handles VAT). Buyers see only their own.
+  app.get('/api/invoices', guarded(async (req, res) => {
+    res.setHeader('Cache-Control', 'private, no-store');
+    const invoices = await invoicesOf(req.bookatlasIdentity!.id);
+    res.json({ invoices: invoices.map((i) => ({
+      seq: i.seq, number: invoiceNumber(i), issuedAt: i.issued_at, status: i.status, currency: i.currency,
+      grossCents: i.amount_gross, vatCents: i.amount_vat, books: i.lines.map((l) => ({ bookId: l.bookId, title: l.title })),
+    })) });
+  }));
+  app.get('/api/invoices/:seq', guarded(async (req, res) => {
+    const seq = Number(req.params.seq);
+    if (!Number.isSafeInteger(seq) || seq < 1) throw new PaymentError('Unknown invoice.', 404);
+    const invoice = await invoiceForUser(req.bookatlasIdentity!.id, seq);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.type('html').send(renderInvoiceHtml(invoice));
+  }));
+  app.get('/api/manager/vat-summary', guarded(async (req, res) => {
+    // The access policy already makes /api/manager admin-only; checked here too, as other admin routes do.
+    if (req.bookatlasIdentity?.role !== 'admin') throw new PaymentError('Administrator access is required.', 403);
+    res.setHeader('Cache-Control', 'private, no-store');
+    const seller = sellerDetails();
+    res.json({ ...(await vatSummary()), sellerDetailsComplete: seller.complete });
   }));
 }

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 // Must run before any other local import — ESM evaluates static imports in
 // source order before this module's own body runs, so db/supabaseClient.ts
 // and ai/openrouterClient.ts (which read process.env at module top-level)
@@ -15,6 +16,7 @@ import { mountPublishingJobs } from './publishing/jobRoutes.js';
 import { mountEbookPrep } from './ebookPrep/routes.js';
 import { mountPayments } from './payments/routes.js';
 import { anonymisePurchases, purchasesOf } from './payments/purchases.js';
+import { anonymiseInvoices, invoiceNumber, invoicesOf } from './payments/invoices.js';
 import { listSubmissions } from './ebookPrep/submissions.js';
 import { eraseAuthorData } from './ebookPrep/service.js';
 import { mountCatalog } from './catalog/routes.js';
@@ -739,7 +741,10 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
       return data ?? [];
     },
     async purchases(userId) {
-      try { return await purchasesOf(userId); } catch { throw new AccountStoreError('Purchase records are unavailable.'); }
+      try {
+        const [purchases, invoices] = await Promise.all([purchasesOf(userId), invoicesOf(userId)]);
+        return [...purchases, ...invoices.map(({ user_id: _u, ...invoice }) => ({ record: 'invoice', number: invoiceNumber(invoice), ...invoice }))];
+      } catch { throw new AccountStoreError('Purchase records are unavailable.'); }
     },
     async submissions(userId) {
       try {
@@ -752,6 +757,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
     async erase(email, userId) {
       try {
         await anonymisePurchases(userId);
+        await anonymiseInvoices(userId, `erased-${randomUUID()}`);
         await eraseAuthorData(userId);
       } catch { throw new AccountStoreError('eBook and purchase records could not be erased.'); }
       if (bookatlasDb) {

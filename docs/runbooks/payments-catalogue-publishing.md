@@ -17,6 +17,7 @@ Point an uptime monitor (for example Vercel's or Better Stack's) at both, every 
 |---|---|---|
 | `payments.fulfilled` (`session`, `books`) | A paid checkout unlocked its books | Sales metric |
 | `payments.refunded` (`paymentIntent`) | A full refund locked the book again | None |
+| `payments.invoice_failed` (`session`) | The book was unlocked but its invoice was not saved | Check that `bookatlas_invoices` exists (SQL below); the invoice is issued when the buyer's success page checks again |
 | `payments.webhook_rejected` | Stripe webhook with a bad signature | A few: ignore. Many: check `STRIPE_WEBHOOK_SECRET` matches endpoint `we_1UaErjRV4gYJjN7FOTpVo3Ux`, or someone is probing |
 | `Payment request failed` (error) | Stripe or the purchases table failed | See "A buyer paid but has no book" |
 | `[catalog] search failed`, `[catalog] cards failed` | Supabase query error | Check `/api/healthz/ready`; Supabase status page |
@@ -61,6 +62,16 @@ The card shows the reason. "Upload again" restarts it. Files over 150 MB are ref
 - Deploy: `npx vercel --prod --yes` after typecheck, unit, end-to-end (and browser tests when the UI changed) pass. Then `BASE_URL=https://booksatlas.app pnpm test:security` and `pnpm test:browser`, and record the deployment in the task file.
 - Rollback: Vercel → bookatlas → Deployments → previous deployment → **Promote to Production**. Deployments are listed in the task files.
 - Database changes are run by the owner in the Supabase SQL editor before the code that needs them is deployed.
+
+## VAT and invoices (owner decision 2026-11-14)
+
+BookAtlas, not Stripe, handles VAT: Stripe Managed Payments is turned off on each checkout and prices are VAT-inclusive. Below the EU €10,000 cross-border threshold every EU buyer is charged Dutch 9% e-book VAT; buyers outside the EU pay none. Each paid checkout gets one sequentially numbered invoice (`BA-<year>-<seq>`) in `bookatlas_invoices`; buyers open it under **Orders & invoices**.
+
+- **Database:** run `artifacts/api-server/src/bookatlas/db/migrations-2026-11-14-invoices.sql` once in the Supabase SQL editor before deploying.
+- **Seller details (Vercel, Production):** `SELLER_LEGAL_NAME` (default Atlantean Globals Services), `SELLER_ADDRESS` (use `
+` for new lines), `SELLER_KVK`, `SELLER_VAT_ID`, `SELLER_EMAIL`. Until address, KvK and VAT ID are set the document is titled *Receipt* and says a full VAT invoice is available on request.
+- **Threshold:** `GET /api/manager/vat-summary` (admin) shows net cross-border EU sales this and last year, VAT by country, and `threshold.state` (`ok`, `warning` from 80%, `over`). At `warning`, register for OSS and switch to per-country rates (code change in `payments/vat.ts`, rates confirmed by the accountant).
+- **Refunds:** a full refund marks the invoice *refunded*; whether a separate credit note is needed is for the accountant.
 
 ## Secrets
 
