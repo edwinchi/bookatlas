@@ -125,7 +125,7 @@ for (const [menu, item, check] of [
   }
   await openMenu(page, 'Author hub');
   const soon = await site(page).getByText('Soon', { exact: true }).count();
-  ok('Author hub and Publish list 6 planned features as Soon', soon === 6, `${soon} badges`);
+  ok('Author hub lists 5 planned features as Soon', soon === 5, `${soon} badges`);
   ok('Soon entries are not focusable', (await site(page).locator('li:has-text("Soon") >> [data-nav-item]').count()) === 0);
   await page.keyboard.press('Escape');
   for (const path of ['/privacy', '/legal']) {

@@ -211,7 +211,7 @@ export const Header: React.FC<HeaderProps> = ({
                 { label: 'Start a book', description: 'Tell us about your book', icon: Mail, href: contactHref('Start my book') },
               ] },
               { items: [
-                { label: 'Audiobook publishing', icon: Headphones, badge: 'Soon' },
+                { label: 'Audiobook publishing', description: 'Natural studio voice, from €24.99', icon: Headphones, badge: 'New', onSelect: () => onNavigateSection('audiobook-publishing') },
               ] },
             ]} />
             <HeaderNavMenu label="Author hub" groups={[
@@ -734,6 +734,7 @@ export const Header: React.FC<HeaderProps> = ({
             {([
               ['Who it’s for', 'solutions', PenTool],
               ['Services and pricing', 'pricing', Ruler],
+              ['Audiobook publishing', 'audiobook-publishing', Headphones],
               ['How it works', 'how-it-works', ListOrdered],
               ['Earnings calculator', 'earnings', Calculator],
               ['About BooksAtlas', 'about', Building2],

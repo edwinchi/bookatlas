@@ -138,7 +138,9 @@ export const HeaderNavMenu: React.FC<HeaderNavMenuProps> = ({ label, groups, ali
                   </>
                 );
                 const cls = 'group/item flex w-full items-start gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 cursor-pointer';
-                if (item.badge) {
+                const badge = item.badge && <span className="ml-auto shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800">{item.badge}</span>;
+                // A badge without an action is a coming-soon placeholder; with one (e.g. "New") it is a live link.
+                if (item.badge && !item.onSelect && !item.href) {
                   return (
                     <li key={item.label} className="flex items-start gap-3 rounded-xl px-3 py-2 opacity-70">
                       {body}
@@ -149,8 +151,8 @@ export const HeaderNavMenu: React.FC<HeaderNavMenuProps> = ({ label, groups, ali
                 return (
                   <li key={item.label}>
                     {item.href
-                      ? <a data-nav-item href={item.href} onClick={() => setOpen(false)} className={cls}>{body}</a>
-                      : <button data-nav-item type="button" onClick={() => select(item)} className={cls}>{body}</button>}
+                      ? <a data-nav-item href={item.href} onClick={() => setOpen(false)} className={cls}>{body}{badge}</a>
+                      : <button data-nav-item type="button" onClick={() => select(item)} className={cls}>{body}{badge}</button>}
                   </li>
                 );
               })}

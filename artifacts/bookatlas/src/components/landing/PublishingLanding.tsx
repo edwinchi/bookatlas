@@ -2,7 +2,7 @@ import { coverProps } from '../../utils/coverImage';
 import React, { useRef } from 'react';
 import {
   Accessibility, ArrowRight, ArrowUpRight, BadgeEuro, BookOpenCheck, Building2, Calculator, Crown, Globe2, GraduationCap,
-  KeyRound, Library, Link2, Palette, PenTool, Ruler, ShieldCheck, Sparkles,
+  AudioLines, Headphones, KeyRound, Library, Link2, Palette, PenTool, Ruler, ShieldCheck, Sparkles,
 } from 'lucide-react';
 import { Book } from '../../types';
 import { OPERATOR } from '../LegalDocument';
@@ -235,6 +235,39 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
             );
           })}
         </div>
+      </section>
+
+      {/* Audiobook publishing: natural narration of a published eBook */}
+      <section id="audiobook-publishing" aria-labelledby="landing-audiobook" className="scroll-mt-36 lg:scroll-mt-44 bg-white px-4 pt-6 pb-20 sm:px-6">
+        <Reveal className="mx-auto max-w-6xl">
+          <div className="grid gap-10 rounded-[2rem] bg-amber-50 p-8 ring-1 ring-amber-200 sm:p-12 lg:grid-cols-[1.1fr_1fr]">
+            <div className="space-y-4">
+              <span className="inline-flex items-center gap-2 rounded-full bg-amber-400 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-950"><Headphones className="h-3.5 w-3.5" aria-hidden />New · Audiobook publishing</span>
+              <h2 id="landing-audiobook" className="font-serif text-3xl font-bold text-slate-950 sm:text-4xl">Turn your eBook into a natural audiobook</h2>
+              <p className="max-w-lg text-sm leading-relaxed text-slate-700 sm:text-base">
+                A Google Gemini studio voice reads your book once, and every reader can listen chapter by chapter while the paragraph being read is highlighted.
+                No studio, no microphone, no robotic device voice.
+              </p>
+              <button type="button" onClick={() => onNavigateSection('publish')} className={`${primaryButton} bg-slate-950 text-white hover:bg-slate-800`}>
+                Publish and add narration <ArrowRight className="h-4 w-4" />
+              </button>
+              <p className="text-xs text-slate-500">Publish your eBook first, then open “Natural audiobook” under it to hear the voices and order.</p>
+            </div>
+            <ul className="grid gap-3 text-sm text-slate-800">
+              {[
+                ['Two voices to choose from', 'Sulafat (warm, female) or Charon (informative, male): play a sample before you order.'],
+                ['From €24.99, incl. 21% VAT', 'Up to 60,000 words (about 220 pages), then €3.99 per extra 10,000 words. You see the exact price first.'],
+                ['Fair for technical books', 'Code examples and tables are announced, not read out, and their words are not charged.'],
+                ['Checked before it starts', 'An administrator approves each order; you follow its progress and get an invoice.'],
+              ].map(([title, text]) => (
+                <li key={title} className="flex gap-3 rounded-2xl bg-white p-4 ring-1 ring-amber-100">
+                  <AudioLines className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden />
+                  <span><span className="block font-bold text-slate-950">{title}</span><span className="mt-0.5 block text-xs leading-relaxed text-slate-600">{text}</span></span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Reveal>
       </section>
 
       {/* One page for every edition */}

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import React from 'react';
 import * as Accordion from '@radix-ui/react-accordion';
 import { BarChart3, BookCheck, ChevronDown, FileType2, Globe2, Headphones, Sparkles, type LucideIcon } from 'lucide-react';
@@ -71,20 +72,38 @@ export const SERVICES: Service[] = [
       'Technical books: code examples and tables are not read aloud; the narrator says “A code example follows in the book” or “A table follows in the book”, and their words are not charged. Diagrams and screenshots are pictures and are not narrated, so a 400-page PDF full of figures costs less than its page count suggests.',
       'Readers hear it with the paragraph being read highlighted, chapter by chapter.',
       'An administrator approves each order before narration starts; you see its progress.',
+      'How to add one: publish your eBook below, then open “Natural audiobook” under the book in “Your eBooks”, play the samples, choose a voice and order.',
     ],
   },
 ];
 
+/** Opens one service and scrolls to it, e.g. the header's "Audiobook publishing" (event or #service-<id>). */
+export const OPEN_SERVICE_EVENT = 'bookatlas:open-service';
+
 export function ServicesOverview() {
+  const [open, setOpen] = useState<string[]>(() => {
+    const id = typeof window !== 'undefined' ? window.location.hash.match(/^#service-([a-z-]+)$/)?.[1] : undefined;
+    return id ? [id] : [];
+  });
+  useEffect(() => {
+    const show = (id: string) => {
+      setOpen((o) => (o.includes(id) ? o : [...o, id]));
+      requestAnimationFrame(() => document.getElementById(`service-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    };
+    const onEvent = (e: Event) => show(String((e as CustomEvent<string>).detail));
+    window.addEventListener(OPEN_SERVICE_EVENT, onEvent);
+    if (open[0]) show(open[0]);
+    return () => window.removeEventListener(OPEN_SERVICE_EVENT, onEvent);
+  }, []);
   return (
     <section aria-labelledby="services-title" className="space-y-4">
       <div>
         <h2 id="services-title" className="font-serif text-xl font-bold text-slate-900">What BooksAtlas does for you</h2>
         <p className="mt-1 text-sm text-slate-600">Everything you need to publish and sell your eBook. Open a service to see what is included.</p>
       </div>
-      <Accordion.Root type="multiple" className="grid gap-3 md:grid-cols-2">
+      <Accordion.Root type="multiple" value={open} onValueChange={setOpen} className="grid gap-3 md:grid-cols-2">
         {SERVICES.map((s) => (
-          <Accordion.Item key={s.id} value={s.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow data-[state=open]:shadow-md">
+          <Accordion.Item key={s.id} id={`service-${s.id}`} value={s.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow data-[state=open]:shadow-md">
             <Accordion.Header>
               <Accordion.Trigger className="group flex w-full items-start gap-3 p-4 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 cursor-pointer">
                 <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${s.priceTone === 'addon' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-50 text-indigo-600'}`}>
