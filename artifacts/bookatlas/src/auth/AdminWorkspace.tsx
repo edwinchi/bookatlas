@@ -1,3 +1,4 @@
+import { BusinessDashboard } from '../components/ebook/BusinessDashboard';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useAccount } from './AuthContext';
@@ -83,6 +84,7 @@ function AdminPortal() {
     </header>
     <main className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-8">
       {error && <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900"><span>{error}</span><button type="button" onClick={() => setError('')} className="min-h-11 px-3 font-semibold underline">Dismiss</button></div>}
+      <BusinessDashboard />
       {loading ? <p className="p-8 text-center text-white" role="status">Loading administration workspace…</p> :
         <ManagerPortal books={books} onAddBook={addBook} onUpdateBook={updateBook} onDeleteBook={deleteBook} onPreviewBook={setPreviewBook} onReturnToStore={() => navigate('/')} />}
     </main>

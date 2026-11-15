@@ -164,6 +164,16 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
   assert.ok(!buyerView.books.some((b: { bookId: string }) => b.bookId === bookId), 'only the author of a book sees its sales');
   assert.equal((await fetch('/api/author/sales', as('unauthenticated'))).status, 401);
 
+  // The owner's business view: commission, what is owed to the author, VAT to declare.
+  assert.equal((await fetch('/api/manager/business', as('reader'))).status, 403);
+  const business = await (await fetch('/api/manager/business', as('admin'))).json();
+  const month = business.periods.find((p: { period: string }) => p.period === 'month');
+  assert.ok(month.orders >= 1 && month.vatCents >= 41);
+  assert.equal(business.commissionRate, 33);
+  const owed = business.authorsOwed.find((a: { ownerId: string }) => a.ownerId === 'test-admin-1');
+  assert.ok(owed && owed.owedCents >= 307, 'the author is owed 67% of the price excluding VAT');
+  assert.ok(business.topBooks.some((b: { bookId: string }) => b.bookId === bookId));
+
   // The buyer asks for a refund within 14 days; an administrator approves it, which refunds through Stripe.
   assert.ok(html.includes('art. 16(m)'), 'the invoice confirms the withdrawal waiver on a durable medium (art. 8(7))');
   assert.equal(invoices[0].refund.state, 'available');

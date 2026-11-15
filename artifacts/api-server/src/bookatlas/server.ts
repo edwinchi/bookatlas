@@ -18,6 +18,7 @@ import { mountPayments } from './payments/routes.js';
 import { announceBook, mountSeo } from './seo.js';
 import { mountNarration } from './narration/routes.js';
 import { mountReviews } from './reviews/routes.js';
+import { businessSummary } from './payments/business.js';
 import { eraseReviewsOf, reviewsOf } from './reviews/service.js';
 import { createAiGate, localSuggestion, MAX_EXCERPT, metadataPrompt, sanitizeSuggestion } from './ai/bookMetadata.js';
 import { anonymisePurchases, purchasesOf } from './payments/purchases.js';
@@ -476,6 +477,18 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
   mountNarration(app, (bookId) => catalog.get(bookId), APP_URL);
   // Reader reviews, ratings and author pages (TASK-0009).
   mountReviews(app, catalog);
+  // The owner's business dashboard (cycle 5): revenue, commission, VAT, narration margin, author payouts owed.
+  app.get('/api/manager/business', async (req, res) => {
+    if (req.bookatlasIdentity?.role !== 'admin') { res.status(403).json({ error: 'Administrator access is required.' }); return; }
+    try {
+      const monthStart = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.json(await businessSummary({ total: registeredUsers.length, newThisMonth: registeredUsers.filter((u) => u.registeredAt >= monthStart).length }));
+    } catch (err) {
+      logger.error({ err, event: 'business.summary_failed' }, 'Business summary failed');
+      res.status(503).json({ error: 'The business figures are temporarily unavailable.' });
+    }
+  });
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
   mountPublishingReadiness(app);

@@ -49,6 +49,19 @@ export interface NarrationQuote { bookId: string; title: string; words: number; 
 export interface ReaderReview { id: string; name: string; rating: number; title: string | null; body: string; verifiedPurchase: boolean; date: string; edited: boolean }
 export interface BookReviews { average: number; count: number; breakdown: { stars: number; count: number }[]; reviews: ReaderReview[] }
 export interface MyReview { canReview: boolean; reason?: string; verifiedPurchase?: boolean; review: (ReaderReview & { hidden: boolean }) | null }
+export interface BusinessPeriod {
+  period: 'month' | 'quarter' | 'year' | 'all'; orders: number; refunds: number; grossCents: number; vatCents: number;
+  vat: { ebooks9Cents: number; services21Cents: number }; ebookSalesNetCents: number; commissionCents: number; authorsShareCents: number;
+  narrationNetCents: number; narrationCostCents: number; stripeFeesEstimateCents: number; marginCents: number;
+}
+export interface BusinessSummary {
+  currency: string; commissionRate: number; users: { total: number; newThisMonth: number };
+  catalogue: { publishedBooks: number; waitingForReview: number }; narration: { open: number; done: number };
+  periods: BusinessPeriod[]; monthly: { month: string; grossCents: number; orders: number }[];
+  topBooks: { bookId: string; title: string; author: string; units: number; netCents: number }[];
+  authorsOwed: { ownerId: string; author: string; email: string; units: number; owedCents: number }[];
+  countries: Record<string, number>; notes: string;
+}
 export interface FeedbackOverview {
   rules: { id: string; title: string; storeRejections: number; blocking: boolean; automaticFix: boolean }[];
   needsNewRule: { id: string; store: string; message: string; created_at: string }[];
@@ -112,6 +125,7 @@ export function useEbookApi() {
 
   return {
     authorSales: () => json<AuthorSales>('/api/author/sales'),
+    business: () => json<BusinessSummary>('/api/manager/business'),
     // Reader reviews (TASK-0009).
     bookReviews: (bookId: string) => json<BookReviews>(`/api/catalog/books/${encodeURIComponent(bookId)}/reviews`),
     myReview: (bookId: string) => json<MyReview>(`/api/reviews/books/${encodeURIComponent(bookId)}/mine`),
