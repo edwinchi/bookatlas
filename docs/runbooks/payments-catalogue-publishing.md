@@ -90,4 +90,5 @@ BookAtlas, not Stripe, handles VAT: Stripe Managed Payments is turned off on eac
 |---|---|---|
 | `STRIPE_SECRET_KEY` | Vercel (sensitive) | Stripe → Developers → API keys → Roll; update Vercel; redeploy |
 | `STRIPE_WEBHOOK_SECRET` | Vercel (sensitive) | Stripe → Webhooks → endpoint → Roll secret; update Vercel; redeploy |
+| `COINGATE_API_TOKEN` | Vercel (sensitive) | CoinGate → Apps → API → new token; update Vercel; redeploy. `COINGATE_ENV=sandbox` only for sandbox tokens |
 | `SUPABASE_SERVICE_ROLE_KEY` | Vercel, `.env.local` | Supabase → Settings → API; update both; redeploy |

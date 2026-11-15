@@ -38,7 +38,11 @@ function stripe(): StripeClient {
 /** Only real BooksAtlas eBooks with a prepared file are sold; the demo catalogue is not. */
 const sellable = (book: Book | null | undefined): book is Book => !!book?.hasReaderContent && book.price > 0;
 
-export async function createCheckout(who: Identity, requested: unknown, findBook: (id: string) => Promise<Book | null | undefined>, appUrl: string, withdrawalWaiver?: unknown) {
+/**
+ * The checks every checkout makes, whatever the payment method (Stripe or crypto): the withdrawal waiver,
+ * 1 to 20 sellable BooksAtlas eBooks, none already owned. Prices always come from the server.
+ */
+export async function validateCart(who: Identity, requested: unknown, findBook: (id: string) => Promise<Book | null | undefined>, withdrawalWaiver?: unknown) {
   // Directive 2011/83/EU art. 16(m): digital content may open at once only with the buyer's express consent
   // and acknowledgement that the 14-day withdrawal right is lost; the cart asks for both.
   if (withdrawalWaiver !== true) throw new PaymentError('Please confirm that your eBooks may open immediately and that you then lose the 14-day right of withdrawal.');
@@ -54,6 +58,11 @@ export async function createCheckout(who: Identity, requested: unknown, findBook
   const owned = new Set(await purchasedBookIds(who.id));
   const already = (books as Book[]).find((b) => owned.has(b.id));
   if (already) throw new PaymentError(`You already own "${already.title}".`, 409);
+  return { ids, books: books as Book[], waiverAt };
+}
+
+export async function createCheckout(who: Identity, requested: unknown, findBook: (id: string) => Promise<Book | null | undefined>, appUrl: string, withdrawalWaiver?: unknown) {
+  const { ids, books, waiverAt } = await validateCart(who, requested, findBook, withdrawalWaiver);
 
   const session = await stripe().checkout.sessions.create({
     mode: 'payment',
@@ -205,7 +214,7 @@ export async function refundPayment(paymentIntentId: string, invoiceSeq: number)
 export async function backfillInvoices(userId: string) {
   const [purchases, invoices] = await Promise.all([purchasesOf(userId), invoicesOf(userId)]);
   const invoiced = new Set(invoices.map((i) => i.checkout_session_id));
-  const missing = [...new Set(purchases.filter((p) => !invoiced.has(p.checkout_session_id)).map((p) => p.checkout_session_id))].slice(0, 10);
+  const missing = [...new Set(purchases.filter((p) => !invoiced.has(p.checkout_session_id) && !p.checkout_session_id.startsWith('cg_')).map((p) => p.checkout_session_id))].slice(0, 10);
   for (const id of missing) {
     try {
       const session = await stripe().checkout.sessions.retrieve(id);

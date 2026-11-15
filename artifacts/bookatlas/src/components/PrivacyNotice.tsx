@@ -19,7 +19,7 @@ const sections: { title: string; body: ReactNode }[] = [
       <li><strong>Reader profile:</strong> when you joined, when you were last active, your reading streak and books read.</li>
       <li><strong>Sign-up confirmations:</strong> that you confirmed you are 16 or older and which version of this notice you read, with the time.</li>
       <li><strong>Email preferences:</strong> only if you opt in to reading updates, the time and source of that consent, plus delivery status of emails we send you.</li>
-      <li><strong>Orders:</strong> when you buy an eBook, which books you bought, the amount, VAT, your name, email address and country as Stripe reports them, the invoice and any refund request with its reason. Card details are handled by Stripe and never reach us.</li>
+      <li><strong>Orders:</strong> when you buy an eBook, which books you bought, the amount, VAT, your name, email address and country as Stripe reports them, the invoice and any refund request with its reason. Card details are handled by Stripe and never reach us. If you pay in crypto, CoinGate handles the payment and your wallet; we receive only the order status and amount in euros.</li>
       <li><strong>Reviews:</strong> if you review a book, your rating and text are public with your first name and initial; you can edit or delete them at any time.</li>
       <li><strong>Authors you follow:</strong> which authors you follow and your email address, with the time you chose to follow, so we can email you once when they publish a new book. Every email has a one-click unsubscribe link.</li>
       <li><strong>On your device only:</strong> your cart, wishlist, reading progress and reader settings are stored in your browser, not on our servers.</li>
@@ -39,7 +39,7 @@ const sections: { title: string; body: ReactNode }[] = [
   {
     title: 'Who processes it for us',
     body: <>
-      <p>Clerk (sign-in and email verification), Stripe (payments and refunds), Supabase (database hosting), Vercel (application hosting), Resend (email delivery, only if you opt in), and AI providers (OpenRouter, Google Gemini) for text you choose to submit to AI features. Pages load fonts from Google Fonts and cover images from Unsplash, which receive your IP address. We do not sell your personal data, use advertising trackers or run third-party analytics.</p>
+      <p>Clerk (sign-in and email verification), Stripe (card payments and refunds), CoinGate UAB, Lithuania (crypto payments, only if you choose them), Supabase (database hosting), Vercel (application hosting), Resend (email delivery, only if you opt in), and AI providers (OpenRouter, Google Gemini) for text you choose to submit to AI features. Pages load fonts from Google Fonts and cover images from Unsplash, which receive your IP address. We do not sell your personal data, use advertising trackers or run third-party analytics.</p>
       <p className="mt-3">Some of these providers are based in the United States. Transfers outside the European Economic Area rely on the safeguards the GDPR requires, such as the EU–US Data Privacy Framework or the European Commission's standard contractual clauses.</p>
     </>,
   },

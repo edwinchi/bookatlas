@@ -133,6 +133,7 @@ export function OrdersPanel({ active, wide = false }: { active: boolean; wide?: 
                   <p className="text-slate-600">{r.number} · bought {day(r.issuedAt)} · {r.buyerEmail ?? 'erased account'}</p>
                   {r.refund.statutoryWithdrawal && <p className="font-semibold text-rose-700">No withdrawal waiver recorded: the buyer may withdraw within 14 days. Refund it (Directive 2011/83/EU art. 9).</p>}
                   <p className="text-slate-800 italic">"{r.reason}"</p>
+                  {r.method === 'crypto' && <p className="font-semibold text-amber-800">Paid in crypto: approving closes access and marks it refunded; then send the refund from your CoinGate dashboard (Orders → Refund).</p>}
                   <div className="flex gap-2 pt-1">
                     <button type="button" disabled={busy} className={button} onClick={() => setConfirming(r)}>Approve refund</button>
                     <button type="button" disabled={busy} className={`${button} text-slate-600`} onClick={() => void decide(r.seq, 'decline')}>Decline</button>

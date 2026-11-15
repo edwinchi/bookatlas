@@ -2,6 +2,7 @@ import { useAuth } from '@clerk/react';
 import { useEffect, useRef, useState } from 'react';
 
 export interface InvoiceSummary {
+  method?: 'card' | 'crypto';
   seq: number; number: string; issuedAt: string; status: 'issued' | 'refunded'; currency: string;
   grossCents: number; vatCents: number; books: { bookId: string; title: string }[];
   refund: { state: 'available' | 'requested' | 'declined' | 'refunded' | 'expired'; until: string; requestedAt: string | null; decision: 'approved' | 'declined' | null; statutoryWithdrawal: boolean };
@@ -18,9 +19,10 @@ export function usePayments() {
   const tokenRef = useRef(getToken);
   tokenRef.current = getToken;
   const [enabled, setEnabled] = useState(false);
+  const [crypto, setCrypto] = useState(false);
 
   useEffect(() => {
-    fetch('/api/payments/config').then((r) => r.json()).then((d) => setEnabled(!!d.enabled)).catch(() => setEnabled(false));
+    fetch('/api/payments/config').then((r) => r.json()).then((d) => { setEnabled(!!d.enabled); setCrypto(!!d.crypto); }).catch(() => { setEnabled(false); setCrypto(false); });
   }, []);
 
   const request = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
@@ -37,6 +39,12 @@ export function usePayments() {
 
   return {
     enabled,
+    /** Crypto through CoinGate (BTC, ETH, USDC, …), priced in euros. */
+    crypto,
+    startCryptoCheckout: (bookIds: string[], withdrawalWaiver: boolean) => request<{ url: string; id: string }>('/api/crypto/orders', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bookIds, withdrawalWaiver }),
+    }),
+    cryptoStatus: (orderId: string) => request<{ paid: boolean; pending: boolean; status: string; bookIds: string[] }>(`/api/crypto/orders/${encodeURIComponent(orderId)}`),
     startCheckout: (bookIds: string[], withdrawalWaiver: boolean) => request<{ url: string }>('/api/checkout/sessions', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bookIds, withdrawalWaiver }),
     }),

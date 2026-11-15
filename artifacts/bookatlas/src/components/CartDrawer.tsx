@@ -12,6 +12,7 @@ import {
   Tag,
   BookOpen,
   Headphones,
+  Bitcoin,
 } from 'lucide-react';
 import { CartItem } from '../types';
 import {
@@ -50,9 +51,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const [checkoutError, setCheckoutError] = useState('');
   // EU Consumer Rights Directive art. 16(m): immediate access needs express consent and acknowledgement.
   const [waiver, setWaiver] = useState(false);
+  const [method, setMethod] = useState<'card' | 'crypto'>('card');
   // With Stripe connected the order is paid on Stripe's page, in euros with VAT included.
   const payments = usePayments();
-  const live = payments.enabled;
+  const live = payments.enabled || payments.crypto;
 
   if (!isOpen) return null;
 
@@ -73,13 +75,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     }
   };
 
-  const handleCompleteOrder = async () => {
+  const handleCompleteOrder = async (via: 'card' | 'crypto' = 'card') => {
     if (!onCheckout()) return;
     setCheckoutError('');
     if (live) {
       setIsCheckingOut(true);
+      setMethod(via);
       try {
-        const { url } = await payments.startCheckout(cart.map((item) => item.book.id), waiver);
+        const ids = cart.map((item) => item.book.id);
+        const { url } = via === 'crypto' ? await payments.startCryptoCheckout(ids, waiver) : await payments.startCheckout(ids, waiver);
         window.location.assign(url);
       } catch (error) {
         setCheckoutError(error instanceof Error ? error.message : 'Checkout could not start. Please retry.');
@@ -271,7 +275,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </div>
 
             <div className="rounded-lg border border-slate-200 bg-white p-3 text-xs leading-relaxed text-slate-700">
-              {live
+              {live && !payments.enabled
+                ? 'You pay in crypto on CoinGate (Bitcoin, Ethereum, USDC, USDT and more). The price is in euros, VAT included; CoinGate shows the amount in your coin. Your books open once the network confirms the payment, usually within minutes.'
+                : live
                 ? 'You pay securely on Stripe: card, iDEAL, Bancontact, Apple Pay, Google Pay, Klarna and more, depending on your country. Charged in euros, VAT included. Your books open as soon as the payment is confirmed.'
                 : 'No payment provider is connected. This demo will not submit an order or add books to your library.'}
             </div>
@@ -284,15 +290,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             )}
 
             {/* Checkout Action */}
-            <button
-              onClick={handleCompleteOrder}
+            {(payments.enabled || !live) && <button
+              onClick={() => void handleCompleteOrder('card')}
               disabled={isCheckingOut || (live && isAuthenticated && !waiver)}
               className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-75"
             >
               {isCheckingOut ? (
                 <span className="flex items-center gap-2">
                   <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  {live ? 'Opening secure payment…' : 'Running a checkout demo…'}
+                  {live ? (method === 'crypto' ? 'Opening CoinGate…' : 'Opening secure payment…') : 'Running a checkout demo…'}
                 </span>
               ) : (
                 <>
@@ -300,11 +306,27 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
-            </button>
+            </button>}
+
+            {payments.crypto && isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => void handleCompleteOrder('crypto')}
+                disabled={isCheckingOut || !waiver}
+                className="w-full py-2.5 px-4 bg-white hover:bg-amber-50 text-slate-900 font-bold text-sm rounded-xl ring-1 ring-amber-300 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60"
+              >
+                {isCheckingOut && method === 'crypto'
+                  ? <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></span>Opening CoinGate…</span>
+                  : <><Bitcoin className="w-4 h-4 text-amber-600" aria-hidden /><span>Pay €{total.toFixed(2)} with crypto</span></>}
+              </button>
+            )}
+            {payments.crypto && isAuthenticated && payments.enabled && (
+              <p className="text-center text-[10px] text-gray-500">Crypto: Bitcoin, Ethereum, USDC, USDT and more through CoinGate (EU-licensed). Price in euros, VAT included.</p>
+            )}
 
             <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-500">
               <ShieldCheck className="w-3 h-3 text-emerald-600" />
-              <span>{live ? 'Payments are processed by Stripe; BooksAtlas never sees your card details' : 'Review your order before simulated checkout'}</span>
+              <span>{live ? (payments.enabled ? 'Card payments by Stripe, crypto by CoinGate; BooksAtlas never sees your card or wallet' : 'Crypto payments are processed by CoinGate; BooksAtlas never holds your coins') : 'Review your order before simulated checkout'}</span>
             </div>
 
           </div>

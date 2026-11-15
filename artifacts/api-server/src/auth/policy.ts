@@ -37,6 +37,10 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (normalized === '/api/checkout/sessions' && method === 'POST') return 'reader';
   if (/^\/api\/checkout\/sessions\/[^/]+$/.test(normalized) && method === 'GET') return 'reader';
   if (normalized === '/api/purchases' && method === 'GET') return 'reader';
+  // Crypto (CoinGate): the callback proves itself with the order's token and is re-checked with CoinGate's API.
+  if (normalized === '/api/crypto/callback' && method === 'POST') return 'self-service';
+  if (normalized === '/api/crypto/orders' && method === 'POST') return 'reader';
+  if (/^\/api\/crypto\/orders\/[^/]+$/.test(normalized) && method === 'GET') return 'reader';
   if (normalized === '/api/author/sales' && method === 'GET') return 'reader';
   // Narration (TASK-0008): authors order and listen to samples; the step authenticates with its own key.
   if (method === 'GET' && /^\/api\/narration\/(?:books\/[^/]+|samples\/[^/]+)$/.test(normalized)) return 'reader';

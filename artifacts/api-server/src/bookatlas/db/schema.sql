@@ -256,6 +256,24 @@ create index if not exists bookatlas_invoices_user_idx on public.bookatlas_invoi
 create index if not exists bookatlas_invoices_intent_idx on public.bookatlas_invoices (payment_intent_id);
 create index if not exists bookatlas_invoices_issued_idx on public.bookatlas_invoices (issued_at);
 
+-- Crypto payments (CoinGate, paid out in EUR): orders waiting for or holding a crypto payment.
+create table if not exists public.bookatlas_crypto_orders (
+  id uuid primary key,
+  user_id text not null,
+  email text,
+  name text,
+  book_ids text[] not null,
+  lines jsonb not null,
+  amount_cents integer not null,
+  waiver_at timestamptz not null,
+  callback_token text not null,
+  coingate_id bigint unique,
+  status text not null default 'new' check (status in ('new','pending','confirming','paid','invalid','expired','canceled','refunded')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists bookatlas_crypto_orders_user_idx on public.bookatlas_crypto_orders (user_id, created_at desc);
+
 -- Follow authors (cycle 5c): explicit consent to e-mails about an author's new books.
 create table if not exists public.bookatlas_follows (
   user_id text not null,
@@ -333,14 +351,15 @@ alter table public.bookatlas_invoices enable row level security;
 alter table public.bookatlas_narrations enable row level security;
 alter table public.bookatlas_reviews enable row level security;
 alter table public.bookatlas_follows enable row level security;
+alter table public.bookatlas_crypto_orders enable row level security;
 revoke all on table public.bookatlas_books, public.bookatlas_categories,
   public.bookatlas_registered_users, public.bookatlas_subscribers, public.bookatlas_campaigns,
   public.bookatlas_publishing_jobs, public.bookatlas_publishing_messages,
   public.bookatlas_publishing_test_books, public.bookatlas_ebook_submissions,
-  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations, public.bookatlas_reviews, public.bookatlas_follows from anon, authenticated;
+  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations, public.bookatlas_reviews, public.bookatlas_follows, public.bookatlas_crypto_orders from anon, authenticated;
 grant select, insert, update, delete on table public.bookatlas_books, public.bookatlas_categories,
   public.bookatlas_registered_users, public.bookatlas_subscribers, public.bookatlas_campaigns,
   public.bookatlas_publishing_jobs, public.bookatlas_publishing_messages,
   public.bookatlas_publishing_test_books, public.bookatlas_ebook_submissions,
-  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations, public.bookatlas_reviews, public.bookatlas_follows to service_role;
+  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations, public.bookatlas_reviews, public.bookatlas_follows, public.bookatlas_crypto_orders to service_role;
 commit;

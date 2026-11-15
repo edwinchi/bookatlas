@@ -3,6 +3,7 @@ import type { Book } from '@workspace/bookatlas-catalog/types';
 import { logger } from '../../lib/logger.js';
 import { backfillInvoices, checkoutStatus, createCheckout, handleWebhook, paymentsConfigured, refundPayment } from './checkout.js';
 import { PaymentError, purchasedBookIds } from './purchases.js';
+import { createCryptoCheckout, cryptoConfigured, cryptoOrderStatus, handleCryptoCallback, isCryptoPayment, refundCryptoPayment } from './crypto.js';
 import { authorSales } from './authorSales.js';
 import { memoryInvoices, REFUND_WINDOW_DAYS, invoiceBySeq, invoiceForUser, invoiceNumber, invoicesOf, recordRefundDecision, refundRequests, refundState, refundableUntil, renderInvoiceHtml, requestRefund, sellerDetails, vatSummary, type Invoice } from './invoices.js';
 
@@ -28,6 +29,7 @@ function requireAdmin(req: Request) {
   if (req.bookatlasIdentity?.role !== 'admin') throw new PaymentError('Administrator access is required.', 403);
 }
 const summary = (i: Invoice) => ({
+  method: i.payment_intent_id?.startsWith('cg_') ? 'crypto' : 'card',
   seq: i.seq, number: invoiceNumber(i), issuedAt: i.issued_at, status: i.status, currency: i.currency,
   grossCents: i.amount_gross, vatCents: i.amount_vat, books: i.lines.map((l) => ({ bookId: l.bookId, title: l.title })),
   refund: {
@@ -49,7 +51,7 @@ export function mountPayments(app: Express, findBook: (id: string) => Promise<Bo
 
   const json = express.json({ limit: '16kb' });
   app.get('/api/payments/config', (_req, res) => {
-    res.json({ enabled: paymentsConfigured(), currency: 'EUR' });
+    res.json({ enabled: paymentsConfigured(), crypto: cryptoConfigured(), currency: 'EUR' });
   });
   app.post('/api/checkout/sessions', json, guarded(async (req, res) => {
     res.status(201).json(await createCheckout(req.bookatlasIdentity!, req.body?.bookIds, findBook, appUrl, req.body?.withdrawalWaiver));
@@ -57,6 +59,20 @@ export function mountPayments(app: Express, findBook: (id: string) => Promise<Bo
   app.get('/api/checkout/sessions/:id', guarded(async (req, res) => {
     res.setHeader('Cache-Control', 'private, no-store');
     res.json(await checkoutStatus(req.bookatlasIdentity!, String(req.params.id)));
+  }));
+  // Crypto payments through CoinGate (owner decision 2026-11-15). CoinGate posts its callback as a form.
+  app.post('/api/crypto/orders', json, guarded(async (req, res) => {
+    if (!req.bookatlasIdentity) throw new PaymentError('Please sign in with a verified email address.', 401);
+    if (!cryptoConfigured()) throw new PaymentError('Crypto payments are not available yet.', 503);
+    res.status(201).json(await createCryptoCheckout(req.bookatlasIdentity, req.body?.bookIds, findBook, appUrl, req.body?.withdrawalWaiver));
+  }));
+  app.post('/api/crypto/callback', express.urlencoded({ extended: false, limit: '32kb' }), json, guarded(async (req, res) => {
+    res.json(await handleCryptoCallback((req.body ?? {}) as Record<string, unknown>));
+  }));
+  app.get('/api/crypto/orders/:id', guarded(async (req, res) => {
+    if (!req.bookatlasIdentity) throw new PaymentError('Please sign in with a verified email address.', 401);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json(await cryptoOrderStatus(req.bookatlasIdentity, String(req.params.id)));
   }));
   app.get('/api/purchases', guarded(async (req, res) => {
     res.setHeader('Cache-Control', 'private, no-store');
@@ -91,8 +107,10 @@ export function mountPayments(app: Express, findBook: (id: string) => Promise<Bo
     if (refundState(invoice) !== 'requested') throw new PaymentError('This order has no open refund request.', 409);
     if (decision === 'approved') {
       if (!invoice.payment_intent_id) throw new PaymentError('This order has no Stripe payment to refund.', 409);
+      // Crypto: the money goes back from the CoinGate dashboard; access closes here.
+      if (isCryptoPayment(invoice.payment_intent_id)) await refundCryptoPayment(invoice.payment_intent_id);
       // Stripe first: the decision is only recorded once the money is on its way back.
-      await refundPayment(invoice.payment_intent_id, invoice.seq);
+      else await refundPayment(invoice.payment_intent_id, invoice.seq);
     }
     await recordRefundDecision(invoice.seq, decision, req.bookatlasIdentity!.id);
     res.json(summary(await invoiceBySeq(invoice.seq)));

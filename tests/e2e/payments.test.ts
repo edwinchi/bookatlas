@@ -83,7 +83,7 @@ function signedEvent(type: string, object: Record<string, unknown>) {
 
 test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks it again', async () => {
   const { fetch } = await getSharedTestServer();
-  assert.deepEqual(await (await fetch('/api/payments/config')).json(), { enabled: true, currency: 'EUR' });
+  assert.deepEqual(await (await fetch('/api/payments/config')).json(), { enabled: true, crypto: false, currency: 'EUR' });
   const bookId = await publishPaidBook(fetch);
   const access = async () => (await (await fetch(`/api/reader/catalog/${bookId}/content`, as('reader'))).json()).access;
   assert.equal(await access(), 'preview');

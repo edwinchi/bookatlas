@@ -34,7 +34,7 @@ const sections: { title: string; body: ReactNode }[] = [
   },
   {
     title: 'How refunds are paid',
-    body: <p>Approved refunds are made in full within 14 days, to the same card or payment method you used (Directive 2011/83/EU, art. 13), through Stripe; we start them the day we approve. Your bank usually shows the money within 5 to 10 working days. The book then returns to preview only and your invoice is marked <em>Refunded</em>.</p>,
+    body: <p>Approved refunds are made in full within 14 days, to the same card or payment method you used (Directive 2011/83/EU, art. 13), through Stripe; we start them the day we approve. Your bank usually shows the money within 5 to 10 working days. Crypto payments are refunded through CoinGate in the amount in euros you paid; CoinGate e-mails you to choose the wallet the refund goes to. The book then returns to preview only and your invoice is marked <em>Refunded</em>.</p>,
   },
   {
     title: 'Disputes',

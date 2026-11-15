@@ -481,22 +481,24 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
   }, [account?.id]);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const outcome = params.get('checkout');
+    // Card (Stripe): ?checkout=success&session_id=…; crypto (CoinGate): ?crypto=paid&order=…
+    const crypto = params.get('crypto');
+    const outcome = crypto ? (crypto === 'paid' ? 'success' : 'cancelled') : params.get('checkout');
     if (!outcome) return;
     const clearParams = () => {
-      params.delete('checkout'); params.delete('session_id');
+      params.delete('checkout'); params.delete('session_id'); params.delete('crypto'); params.delete('order');
       window.history.replaceState(null, '', `${window.location.pathname}${params.size ? `?${params}` : ''}${window.location.hash}`);
     };
-    if (outcome === 'cancelled') { setCheckoutNotice({ tone: 'info', text: 'Checkout cancelled. You have not been charged.' }); clearParams(); return; }
-    const sessionId = params.get('session_id');
+    if (outcome === 'cancelled') { setCheckoutNotice({ tone: 'info', text: crypto ? 'Crypto payment cancelled. Nothing was charged.' : 'Checkout cancelled. You have not been charged.' }); clearParams(); return; }
+    const sessionId = crypto ? params.get('order') : params.get('session_id');
     if (outcome !== 'success' || !sessionId || !account) return;
     let cancelled = false;
-    setCheckoutNotice({ tone: 'info', text: 'Confirming your payment…' });
+    setCheckoutNotice({ tone: 'info', text: crypto ? 'Waiting for the network to confirm your crypto payment… This usually takes a few minutes; you can keep browsing.' : 'Confirming your payment…' });
     (async () => {
-      // Card payments confirm at once; some methods take a few seconds.
-      for (let attempt = 0; attempt < 15 && !cancelled; attempt += 1) {
+      // Card payments confirm at once; some methods take a few seconds; crypto waits for block confirmations.
+      for (let attempt = 0; attempt < (crypto ? 90 : 15) && !cancelled; attempt += 1) {
         try {
-          const result = await payments.status(sessionId);
+          const result = crypto ? await payments.cryptoStatus(sessionId) : await payments.status(sessionId);
           // The catalogue may still be loading; wait for the bought books to appear in it.
           const bought = booksRef.current.filter((b) => result.bookIds.includes(b.id));
           if (result.paid && (bought.length === result.bookIds.length || attempt >= 5)) {
@@ -515,10 +517,12 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
           }
           if (!result.paid && !result.pending) break;
         } catch { /* retry */ }
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, crypto ? 4000 : 2000));
       }
       if (!cancelled) {
-        setCheckoutNotice({ tone: 'error', text: 'We could not confirm your payment yet. If you were charged, your books appear in your library within a few minutes; otherwise nothing was charged.' });
+        setCheckoutNotice({ tone: 'error', text: crypto
+          ? 'Your crypto payment is not confirmed yet. If you sent it, your books appear in your library as soon as the network confirms it (CoinGate also e-mails you); an expired or underpaid payment is handled by CoinGate.'
+          : 'We could not confirm your payment yet. If you were charged, your books appear in your library within a few minutes; otherwise nothing was charged.' });
         clearParams();
       }
     })();
