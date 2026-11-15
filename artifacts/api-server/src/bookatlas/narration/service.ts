@@ -338,15 +338,38 @@ export async function step(id?: string): Promise<{ id: string | null; more: bool
       if (done >= n.total) logger.info({ event: 'narration.done', narration: n.id, book: n.book_id }, 'Narration complete');
       return { id: n.id, more: done < n.total };
     } catch (err) {
+      // Google's quota (e.g. the free tier's 10 speech requests a day): retrying cannot help, so pause at once
+      // with a plain explanation; nothing is lost and an administrator resumes once the quota allows.
+      const quota = quotaProblem(err);
+      if (quota) {
+        logger.warn({ event: 'narration.quota_exceeded', narration: n.id, segment: n.done, daily: quota.daily }, 'Narration paused: Gemini quota exceeded');
+        await update(n.id, { status: 'failed', error: quota.message, lease_until: null, lease_token: null });
+        return { id: n.id, more: false };
+      }
       const attempts = (seg.attempts ?? 0) + 1;
       const segments = n.segments.map((s, i) => (i === n.done ? { ...s, attempts } : s));
       const failed = attempts >= MAX_ATTEMPTS;
       logger.warn({ err, event: 'narration.step_failed', narration: n.id, segment: n.done, attempts }, 'Narration step failed');
-      await update(n.id, { segments, status: failed ? 'failed' : 'running', error: failed ? `Segment ${n.done + 1} failed ${attempts} times: ${err instanceof Error ? err.message : 'error'}` : null, lease_until: null, lease_token: null });
+      await update(n.id, { segments, status: failed ? 'failed' : 'running', error: failed ? `Segment ${n.done + 1} failed ${attempts} times: ${err instanceof Error ? err.message.slice(0, 300) : 'error'}` : null, lease_until: null, lease_token: null });
       return { id: n.id, more: !failed };
     }
   }
   return { id: null, more: false };
+}
+
+/** A Gemini "quota exceeded" (HTTP 429, RESOURCE_EXHAUSTED) as a message an administrator can act on. */
+export function quotaProblem(err: unknown): { daily: boolean; message: string } | null {
+  const text = err instanceof Error ? err.message : String(err ?? '');
+  if (!/RESOURCE_EXHAUSTED|"code":\s*429|Quota exceeded|exceeded your current quota/i.test(text)) return null;
+  const freeTier = /free_tier|FreeTier|Free Tier/i.test(text);
+  const daily = /PerDay|per day/i.test(text);
+  const retry = /retry in ((?:\d+h)?(?:\d+m)?\d+(?:\.\d+)?s)/i.exec(text)?.[1]?.replace(/\.\d+s$/, 's');
+  return {
+    daily,
+    message: freeTier
+      ? `Paused: the Gemini API key is on Google's free tier, which allows only a few narration requests ${daily ? 'a day' : 'a minute'}. Turn on billing for the key in Google AI Studio (aistudio.google.com → API keys → Set up billing), then press Resume. Nothing recorded so far is lost.`
+      : `Paused: Gemini's ${daily ? 'daily' : 'per-minute'} quota for this API key was reached${retry ? ` (Google says retry in ${retry})` : ''}. Press Resume later, or raise the quota in Google AI Studio. Nothing recorded so far is lost.`,
+  };
 }
 
 // ---------------------------------------------------------------------------------------------- samples

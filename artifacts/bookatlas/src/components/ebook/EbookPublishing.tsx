@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BookUp, CheckCircle2, ClipboardList, Loader2, Plus, Sparkles } from 'lucide-react';
 import { EBOOK_REQUIREMENTS, PRINT_REQUIREMENTS, AMAZON_PRINT_REQUIREMENTS, type PaperId, type Requirement, type TrimSizeId } from '@workspace/bookatlas-catalog/publishing';
 import { useAccount } from '../../auth/AuthContext';
@@ -122,6 +122,17 @@ export const EbookPublishing: React.FC = () => {
     finally { setBusy(false); setProgress(null); }
   };
 
+  // The form opens at the top of the page: bring it into view (the buttons that open it are further down).
+  const formRef = useRef<HTMLElement>(null);
+  const modeKey = mode ? (mode.kind === 'edit' ? mode.submission.id : 'new') : null;
+  useEffect(() => {
+    if (!modeKey) return;
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      formRef.current?.querySelector<HTMLElement>('#ebook-form-title')?.focus({ preventScroll: true });
+    });
+  }, [modeKey]);
+
   return (
     <div className="space-y-8">
       <header className="rounded-3xl bg-gradient-to-br from-indigo-950 via-indigo-900 to-slate-900 p-6 text-white sm:p-10">
@@ -147,8 +158,8 @@ export const EbookPublishing: React.FC = () => {
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-6">
           {mode && (
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-              <h2 className="mb-4 flex items-center gap-2 font-serif text-xl font-bold text-slate-900"><BookUp className="h-5 w-5 text-indigo-600" aria-hidden />{mode.kind === 'new' ? 'New eBook' : mode.submission.status === 'published' ? `New version of ${mode.submission.intake.title}` : `Edit ${mode.submission.intake.title}`}</h2>
+            <section ref={formRef} aria-labelledby="ebook-form-title" className="scroll-mt-40 rounded-2xl border border-indigo-300 bg-white p-5 shadow-sm ring-2 ring-indigo-100 sm:p-6">
+              <h2 id="ebook-form-title" tabIndex={-1} className="mb-4 flex items-center gap-2 font-serif text-xl font-bold text-slate-900 focus:outline-none"><BookUp className="h-5 w-5 text-indigo-600" aria-hidden />{mode.kind === 'new' ? 'New eBook' : mode.submission.status === 'published' ? `New version of ${mode.submission.intake.title}` : `Edit ${mode.submission.intake.title}`}</h2>
               <SubmissionForm
                 key={mode.kind === 'edit' ? mode.submission.id : 'new'}
                 suggest={(body) => api.suggestMetadata(body)}

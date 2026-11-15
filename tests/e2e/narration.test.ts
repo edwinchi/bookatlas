@@ -178,3 +178,15 @@ test('administrators narrate any book at no charge: no checkout, no invoice, it 
   assert.equal(n.decided_by, 'test-admin-1', 'recorded as approved by the administrator');
   assert.equal((await fetch(`/api/narration/books/${bookId}/order`, json({ voice: 'Sulafat' }))).status, 409, 'still one narration per book');
 });
+
+test('a Gemini quota error pauses narration with a plain explanation instead of retrying', async () => {
+  const { quotaProblem } = await import('../../artifacts/api-server/src/bookatlas/narration/service.ts');
+  const google = '{"error":{"code":429,"message":"You exceeded your current quota. Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 10, model: gemini-3.8-flash-tts, description: Generate content requests per day limit exceeded on Free Tier.\nPlease retry in 17h58m51.048901826s.","status":"RESOURCE_EXHAUSTED","details":[{"quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier"}]}}';
+  const free = quotaProblem(new Error(google))!;
+  assert.equal(free.daily, true);
+  assert.match(free.message, /free tier/);
+  assert.match(free.message, /Set up billing/);
+  const paid = quotaProblem(new Error('{"error":{"code":429,"status":"RESOURCE_EXHAUSTED","message":"Quota exceeded per minute. Please retry in 41.2s."}}'))!;
+  assert.match(paid.message, /per-minute quota.*retry in 41s/);
+  assert.equal(quotaProblem(new Error('Gemini overloaded')), null, 'other errors keep the normal retries');
+});

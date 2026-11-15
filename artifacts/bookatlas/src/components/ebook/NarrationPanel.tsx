@@ -118,7 +118,17 @@ export function NarrationPanel({ api, bookId }: { api: ReturnType<typeof useEboo
             <ProgressBar value={current.total ? (current.done / current.total) * 100 : 0} label={`Narrating: part ${current.done} of ${current.total}…`} />
           )}
           {current.status === 'done' && <p className="flex items-center gap-1.5 font-semibold text-emerald-800"><CheckCircle2 className="h-4 w-4" aria-hidden />Your natural audiobook is live ({Math.round(current.seconds / 360) / 10} hours). Readers choose “Listen to the book”.</p>}
-          {current.status === 'failed' && <p className="flex items-start gap-1.5 text-rose-700"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />Narration paused after an error. An administrator will resume it; you do not need to do anything.</p>}
+          {current.status === 'failed' && (quote?.free ? (
+            // Administrators see the reason and can resume here.
+            <div className="space-y-2 rounded-lg bg-rose-50 p-2.5 text-rose-800">
+              <p className="flex items-start gap-1.5"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />{current.error ?? 'Narration paused after an error.'}</p>
+              <p className="text-[11px] text-rose-700">{current.done} of {current.total} parts recorded so far.</p>
+              <button type="button" disabled={busy} onClick={() => { setBusy(true); setError(''); api.decideNarration(current.id, 'resume').then(() => load()).catch((e) => setError(e instanceof Error ? e.message : 'Could not resume.')).finally(() => setBusy(false)); }}
+                className="inline-flex items-center gap-1.5 rounded-full bg-rose-700 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-rose-600 disabled:opacity-60 cursor-pointer">
+                {busy ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden /> : <Play className="h-3 w-3" aria-hidden />}Resume narration
+              </button>
+            </div>
+          ) : <p className="flex items-start gap-1.5 text-rose-700"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />Narration paused after an error. An administrator will resume it; you do not need to do anything.</p>)}
         </div>
       )}
     </section>
