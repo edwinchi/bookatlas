@@ -164,12 +164,14 @@ export const BookCard: React.FC<BookCardProps> = ({
             {book.author}
           </p>
 
-          {/* Rating */}
-          {book.reviewCount > 0 ? (
+          {/* Rating: real reader reviews only; sample titles are labelled, never rated */}
+          {book.isSample ? (
+            <p className="mt-1.5 text-[11px] font-semibold text-slate-500">Sample title</p>
+          ) : book.reviewCount > 0 ? (
             <div className="flex items-center gap-1 text-xs mt-1.5">
               <div className="flex items-center text-amber-500">
                 <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                <span className="font-bold ml-1 text-slate-900 text-[11px]">{book.rating}</span>
+                <span className="font-bold ml-1 text-slate-900 text-[11px]">{book.rating.toFixed(1)}</span>
               </div>
               <span className="text-slate-500 text-[10px]">({book.reviewCount})</span>
             </div>

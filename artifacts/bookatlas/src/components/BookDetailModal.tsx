@@ -1,3 +1,5 @@
+import { authorPath } from './AuthorProfileModal';
+import { ReviewsPanel, Stars } from './ebook/ReviewsPanel';
 import { coverProps } from '../utils/coverImage';
 import React, { useState } from 'react';
 import { AppModal } from './ui/app-modal';
@@ -63,7 +65,8 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
   const isGenerated = !!publicationId;
   // Prepared eBooks (TASK-0003): everyone gets the preview; free books open in full for signed-in readers. No ratings until real readers leave them.
   const prepared = !!book.hasReaderContent;
-  const unrated = isGenerated || (prepared && book.reviewCount === 0);
+  // Only real reviews (TASK-0009): demo titles and books without reviews show no rating at all.
+  const unrated = isGenerated || !prepared || !book.reviewCount;
   const readsFree = prepared && book.price === 0;
   const opensInFull = prepared && (readsFree || owned);
   const { account, requireSignIn } = useAccount();
@@ -252,12 +255,12 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                 {/* Author & Narrator */}
                 <div className="mt-2 text-sm text-slate-700">
                   <span>By </span>
-                  <button 
-                    onClick={() => setActiveTab('author')}
-                    className="font-bold text-indigo-600 hover:underline cursor-pointer"
-                  >
-                    {book.author}
-                  </button>
+                  {prepared ? (
+                    // Real books link to the author's page (TASK-0009); sample authors are fictional.
+                    <a href={authorPath(book.author)} className="font-bold text-indigo-600 hover:underline">{book.author}</a>
+                  ) : (
+                    <button onClick={() => setActiveTab('author')} className="font-bold text-indigo-600 hover:underline cursor-pointer">{book.author}</button>
+                  )}
                   {book.narrator && (
                     <span className="text-slate-500 ml-2">
                       • Narrated by <span className="font-medium text-slate-800">{book.narrator}</span>
@@ -265,21 +268,15 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                   )}
                 </div>
 
-                {/* Star rating summary */}
+                {/* Star rating summary: real reviews only */}
                 {unrated ? (
-                  <p className="mt-3 text-xs text-slate-500">{isGenerated ? 'Generated from an uploaded source and reviewed by a BooksAtlas editor. No reader ratings yet.' : 'New on BooksAtlas. No reader ratings yet.'}</p>
+                  <p className="mt-3 text-xs text-slate-500">{isGenerated ? 'Generated from an uploaded source and reviewed by a BooksAtlas editor. No reader ratings yet.' : prepared ? 'New on BooksAtlas. No reader ratings yet.' : 'Sample title on BooksAtlas: shown as an example, without reader ratings.'}</p>
                 ) : (
-                <div className="flex items-center gap-2 mt-3">
-                  <div className="flex items-center text-amber-400">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  <span className="font-bold text-slate-900 text-sm">{book.rating}</span>
-                  <span className="text-slate-500 text-xs">
-                    ({book.reviewCount.toLocaleString()} verified readers)
-                  </span>
-                </div>
+                  <button type="button" onClick={() => setActiveTab('reviews')} className="mt-3 flex items-center gap-2 cursor-pointer">
+                    <Stars value={book.rating} />
+                    <span className="text-sm font-bold text-slate-900">{book.rating.toFixed(1)}</span>
+                    <span className="text-xs text-slate-500 underline-offset-2 hover:underline">({book.reviewCount.toLocaleString()} reader review{book.reviewCount === 1 ? '' : 's'})</span>
+                  </button>
                 )}
                 {isGenerated && publicationId && (
                   <div className="mt-4">
@@ -474,7 +471,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                 }`}
               >
                 <MessageSquare className="w-4 h-4" />
-                <span>Reader Reviews ({book.reviews.length})</span>
+                <span>Reader Reviews{prepared && book.reviewCount ? ` (${book.reviewCount})` : ''}</span>
               </button>
 
               <button
@@ -645,99 +642,10 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
               </div>
             )}
 
-            {/* Tab: Reviews */}
-            {activeTab === 'reviews' && (
-              <div className="space-y-4">
-                {/* 5-Star Breakdown */}
-                {!unrated && <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="text-center sm:text-left">
-                    <div className="text-3xl font-black text-slate-900">{book.rating}</div>
-                    <div className="flex justify-center sm:justify-start text-amber-400 my-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-amber-400" />
-                      ))}
-                    </div>
-                    <p className="text-xs text-slate-500">Based on {book.reviewCount} customer reviews</p>
-                  </div>
-
-                  <div className="flex-1 max-w-xs w-full space-y-1 text-xs">
-                    {[
-                      { star: '5★', pct: '86%' },
-                      { star: '4★', pct: '10%' },
-                      { star: '3★', pct: '3%' },
-                      { star: '2★', pct: '1%' },
-                      { star: '1★', pct: '0%' },
-                    ].map((row, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <span className="w-5 text-slate-500 text-[11px] font-medium">{row.star}</span>
-                        <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
-                          <div className="h-full bg-amber-400 rounded-full" style={{ width: row.pct }}></div>
-                        </div>
-                        <span className="w-8 text-right text-slate-600 text-[11px]">{row.pct}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>}
-
-                {/* Individual Reviews */}
-                <div className="space-y-3">
-                  {unrated && book.reviews.length === 0 && (
-                    <p className="text-xs text-slate-500 p-4 rounded-xl border border-dashed border-slate-200 text-center">No reader reviews yet.</p>
-                  )}
-                  {(book.reviews.length > 0 || unrated ? book.reviews : [
-                    {
-                      id: 'def1',
-                      authorName: 'Hannah Vance',
-                      rating: 5,
-                      date: '3 weeks ago',
-                      title: 'Captivating and impossible to put down!',
-                      comment: 'The world-building and character progression kept me up until 3 AM reading on my BooksAtlas eReader. Highly recommended!',
-                      verifiedPurchase: true,
-                      upvotes: 24,
-                    }
-                  ]).map((rev) => (
-                    <div key={rev.id} className="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-xs">
-                            {rev.authorName[0]}
-                          </div>
-                          <div>
-                            <span className="font-bold text-xs text-slate-900">{rev.authorName}</span>
-                            {rev.verifiedPurchase && (
-                              <span className="ml-2 text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-sm font-semibold">
-                                Verified Reader
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <span className="text-xs text-slate-400">{rev.date}</span>
-                      </div>
-
-                      <div className="flex text-amber-400">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`w-3.5 h-3.5 ${
-                              i < rev.rating ? 'fill-amber-400' : 'text-slate-300'
-                            }`}
-                          />
-                        ))}
-                      </div>
-
-                      <h5 className="font-bold text-sm text-slate-900">{rev.title}</h5>
-                      <p className="text-xs text-slate-700 leading-relaxed">{rev.comment}</p>
-
-                      <div className="pt-1 flex items-center gap-1 text-[11px] text-slate-500">
-                        <button className="flex items-center gap-1 hover:text-slate-900 cursor-pointer">
-                          <ThumbsUp className="w-3 h-3" /> Helpful ({rev.upvotes})
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Tab: Reviews (real readers only) */}
+            {activeTab === 'reviews' && (prepared
+              ? <ReviewsPanel bookId={book.id} />
+              : <p className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-500">This is a sample title. Reviews are available for books published on BooksAtlas.</p>)}
 
             {/* Tab: Author */}
             {activeTab === 'author' && (

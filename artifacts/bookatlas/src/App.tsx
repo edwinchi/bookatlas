@@ -1,3 +1,4 @@
+import { AuthorProfileModal } from './components/AuthorProfileModal';
 import { fetchFullBook, needsFullRecord, useCatalogFacets, useCatalogSearch, useShelves } from './hooks/useCatalog';
 import { AppModal } from './components/ui/app-modal';
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -117,6 +118,8 @@ const bookIdFromPath = () => {
   return m ? decodeURIComponent(m[1]!) : null;
 };
 const bookPath = (id: string) => `${import.meta.env.BASE_URL}books/${encodeURIComponent(id)}`;
+/** The author slug in /author/<slug>, if the address is an author page (TASK-0009). */
+const authorSlugFromPath = () => /^\/author\/([a-z0-9-]{2,80})\/?$/.exec(window.location.pathname.slice(import.meta.env.BASE_URL.length - 1))?.[1] ?? null;
 
 export default function App({ initialTab = 'store', initialLibraryTab = 'reading', resumeCheckout = false, pendingReaderService }: {
   initialTab?: ReaderTab;
@@ -284,6 +287,12 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
   // Every book has its own address, /books/<id> (SEO cycle 2): opening a book puts it in the address bar,
   // closing it or pressing Back restores the page before, and opening the address opens the book.
   const bookPushedRef = useRef(false);
+  const [authorSlug, setAuthorSlug] = useState<string | null>(() => authorSlugFromPath());
+  useEffect(() => {
+    const sync = () => setAuthorSlug(authorSlugFromPath());
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, []);
   const setSelectedBookForDetail = useCallback((book: Book | null, fromAddress = false) => {
     setDetailBook(book);
     if (book && needsFullRecord(book)) {
@@ -1196,6 +1205,11 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
       )}
 
       {/* Book Detail Modal */}
+      {authorSlug && (
+        <AuthorProfileModal slug={authorSlug}
+          onClose={() => { setAuthorSlug(null); if (authorSlugFromPath()) window.history.replaceState(null, '', import.meta.env.BASE_URL); }}
+          onOpenBook={(b) => { setAuthorSlug(null); setSelectedBookForDetail(b); }} />
+      )}
       <BookDetailModal
         book={selectedBookForDetail}
         onClose={() => setSelectedBookForDetail(null)}

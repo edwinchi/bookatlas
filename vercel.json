@@ -33,6 +33,10 @@
       "destination": "/api"
     },
     {
+      "source": "/author/:slug",
+      "destination": "/api"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

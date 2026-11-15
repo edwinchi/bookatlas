@@ -5,6 +5,7 @@ import { waitUntil } from '@vercel/functions';
 import type { Book } from '@workspace/bookatlas-catalog/types';
 import { logger } from '../lib/logger.js';
 import type { CatalogStore } from './catalog/store.js';
+import { authorProfile, authorSlug } from './reviews/routes.js';
 
 /**
  * Search engines and link previews (owner cycle 2, 2026-11-14). Every book has its own address,
@@ -210,10 +211,60 @@ export function mountSeo(app: Express, catalog: CatalogStore, appUrl: string) {
     }
   });
 
+  // Author pages (TASK-0009): the author's name, bio and books in the page head and as plain HTML.
+  app.get('/author/:slug', async (req, res) => {
+    const slug = String(req.params.slug).toLowerCase();
+    try {
+      const [html, profile] = await Promise.all([appShell(appUrl), authorProfile(catalog, slug)]);
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      if (!profile) {
+        res.status(404).setHeader('Cache-Control', 'no-cache');
+        res.send(injectHead(html, `<title>Author not found | ${SITE_NAME}</title>\n    <meta name="robots" content="noindex" />`));
+        return;
+      }
+      const url = `${appUrl}/author/${slug}`;
+      const description = plain(profile.bio ?? '', 158) || `Books by ${profile.name} on ${SITE_NAME}: read a free preview of every book in your browser.`;
+      const image = profile.books[0]?.coverImage ? absolute(profile.books[0].coverImage, appUrl) : `${appUrl}/icon-512.png`;
+      const jsonLd = {
+        '@context': 'https://schema.org', '@type': 'ProfilePage', url,
+        mainEntity: {
+          '@type': 'Person', name: profile.name, url, ...(profile.bio ? { description: plain(profile.bio, 1000) } : {}),
+          workExample: profile.books.slice(0, 50).map((b) => ({ '@type': 'Book', name: b.title, url: `${appUrl}/books/${encodeURIComponent(b.id)}` })),
+        },
+      };
+      const head = [
+        `<title>${esc(`${profile.name}: books and audiobooks | ${SITE_NAME}`)}</title>`,
+        `<meta name="description" content="${esc(description)}" />`,
+        `<link rel="canonical" href="${esc(url)}" />`,
+        `<meta property="og:site_name" content="${SITE_NAME}" />`,
+        '<meta property="og:type" content="profile" />',
+        `<meta property="og:title" content="${esc(`${profile.name} on ${SITE_NAME}`)}" />`,
+        `<meta property="og:description" content="${esc(description)}" />`,
+        `<meta property="og:url" content="${esc(url)}" />`,
+        `<meta property="og:image" content="${esc(image)}" />`,
+        '<meta name="twitter:card" content="summary_large_image" />',
+        `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`,
+      ].join('\n    ');
+      const body = `<noscript>
+      <main>
+        <h1>${esc(profile.name)}</h1>
+        ${profile.bio ? `<p>${esc(plain(profile.bio, 1200))}</p>` : ''}
+        <h2>Books by ${esc(profile.name)} on ${SITE_NAME}</h2>
+        <ul>${profile.books.map((b) => `<li><a href="${appUrl}/books/${encodeURIComponent(b.id)}">${esc(b.title)}</a>${b.price > 0 ? ` · eBook €${b.price.toFixed(2)}` : ''}</li>`).join('')}</ul>
+      </main>
+    </noscript>`;
+      res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600');
+      res.send(injectBody(injectHead(html, head), body));
+    } catch (err) {
+      logger.error({ err, event: 'seo.author_page_failed', slug }, 'Author page could not be rendered');
+      res.status(503).send('BooksAtlas is temporarily unavailable. Please try again.');
+    }
+  });
+
   app.get('/sitemap.xml', async (_req, res) => {
     try {
       const chunks = Math.max(1, Math.ceil((await catalog.sitemapCount()) / SITEMAP_CHUNK));
-      const entries = ['pages', ...Array.from({ length: chunks }, (_, i) => `books-${i + 1}`)]
+      const entries = ['pages', 'authors', ...Array.from({ length: chunks }, (_, i) => `books-${i + 1}`)]
         .map((name) => `  <sitemap><loc>${appUrl}/sitemaps/${name}.xml</loc></sitemap>`).join('\n');
       xml(res, `<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</sitemapindex>`);
     } catch (err) {
@@ -227,6 +278,19 @@ export function mountSeo(app: Express, catalog: CatalogStore, appUrl: string) {
     try {
       if (file === 'pages.xml') {
         xml(res, `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...STATIC_PAGES, '/llms.txt', '/llms-full.txt'].map((p) => `  <url><loc>${appUrl}${p}</loc></url>`).join('\n')}\n</urlset>`);
+        return;
+      }
+      if (file === 'authors.xml') {
+        // Every author of a real book (demo titles excluded), from the first 5,000 titles.
+        const slugs = new Set<string>();
+        for (let chunk = 0; chunk < 5; chunk += 1) {
+          const rows = (await catalog.sitemapChunk(chunk, 1_000)).filter((r) => !r.sample);
+          if (!rows.length) break;
+          for (let i = 0; i < rows.length; i += 100) {
+            for (const card of await catalog.getMany(rows.slice(i, i + 100).map((r) => r.id))) if (card.author) slugs.add(authorSlug(card.author));
+          }
+        }
+        xml(res, `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...slugs].filter(Boolean).map((sl) => `  <url><loc>${appUrl}/author/${sl}</loc></url>`).join('\n')}\n</urlset>`);
         return;
       }
       const m = /^books-(\d{1,4})\.xml$/.exec(file);

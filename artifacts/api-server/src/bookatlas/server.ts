@@ -18,6 +18,7 @@ import { mountPayments } from './payments/routes.js';
 import { announceBook, mountSeo } from './seo.js';
 import { mountNarration } from './narration/routes.js';
 import { mountReviews } from './reviews/routes.js';
+import { eraseReviewsOf, reviewsOf } from './reviews/service.js';
 import { createAiGate, localSuggestion, MAX_EXCERPT, metadataPrompt, sanitizeSuggestion } from './ai/bookMetadata.js';
 import { anonymisePurchases, purchasesOf } from './payments/purchases.js';
 import { anonymiseInvoices, invoiceNumber, invoicesOf } from './payments/invoices.js';
@@ -758,8 +759,9 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
     },
     async purchases(userId) {
       try {
-        const [purchases, invoices] = await Promise.all([purchasesOf(userId), invoicesOf(userId)]);
-        return [...purchases, ...invoices.map(({ user_id: _u, ...invoice }) => ({ record: 'invoice', number: invoiceNumber(invoice), ...invoice }))];
+        const [purchases, invoices, reviews] = await Promise.all([purchasesOf(userId), invoicesOf(userId), reviewsOf(userId)]);
+        return [...purchases, ...invoices.map(({ user_id: _u, ...invoice }) => ({ record: 'invoice', number: invoiceNumber(invoice), ...invoice })),
+          ...reviews.map((review) => ({ record: 'review', ...review }))];
       } catch { throw new AccountStoreError('Purchase records are unavailable.'); }
     },
     async submissions(userId) {
@@ -774,6 +776,8 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
       try {
         await anonymisePurchases(userId);
         await anonymiseInvoices(userId, `erased-${randomUUID()}`);
+        // Reviews name the reader, so they are deleted; the books' ratings are recalculated.
+        await eraseReviewsOf(userId, { get: (id) => catalog.get(id), setRating: (book, rating, count) => catalog.upsert([{ ...book, rating, reviewCount: count }]) });
         await eraseAuthorData(userId);
       } catch { throw new AccountStoreError('eBook and purchase records could not be erased.'); }
       if (bookatlasDb) {

@@ -46,6 +46,9 @@ export type NarrationStatus = 'awaiting_payment' | 'paid' | 'approved' | 'runnin
 export interface NarrationSummary { id: string; bookId: string; title: string; voice: NarrationVoice; status: NarrationStatus; priceCents: number; words: number; done: number; total: number; seconds: number; error: string | null; createdAt: string; updatedAt: string }
 export interface ReaderNarration { voice: NarrationVoice; seconds: number; access: 'full' | 'preview'; segments: { n: number; chapter: number; from: number; to: number; seconds: number }[] }
 export interface NarrationQuote { bookId: string; title: string; words: number; priceCents: number; hours: number; voices: NarrationVoice[]; current: NarrationSummary | null }
+export interface ReaderReview { id: string; name: string; rating: number; title: string | null; body: string; verifiedPurchase: boolean; date: string; edited: boolean }
+export interface BookReviews { average: number; count: number; breakdown: { stars: number; count: number }[]; reviews: ReaderReview[] }
+export interface MyReview { canReview: boolean; reason?: string; verifiedPurchase?: boolean; review: (ReaderReview & { hidden: boolean }) | null }
 export interface FeedbackOverview {
   rules: { id: string; title: string; storeRejections: number; blocking: boolean; automaticFix: boolean }[];
   needsNewRule: { id: string; store: string; message: string; created_at: string }[];
@@ -109,6 +112,11 @@ export function useEbookApi() {
 
   return {
     authorSales: () => json<AuthorSales>('/api/author/sales'),
+    // Reader reviews (TASK-0009).
+    bookReviews: (bookId: string) => json<BookReviews>(`/api/catalog/books/${encodeURIComponent(bookId)}/reviews`),
+    myReview: (bookId: string) => json<MyReview>(`/api/reviews/books/${encodeURIComponent(bookId)}/mine`),
+    saveReview: (bookId: string, review: { rating: number; title: string; body: string }) => json<ReaderReview>(`/api/reviews/books/${encodeURIComponent(bookId)}`, 'PUT', review),
+    deleteReview: (bookId: string) => json<void>(`/api/reviews/books/${encodeURIComponent(bookId)}`, 'DELETE'),
     // Natural audiobook narration (TASK-0008).
     narrationQuote: (bookId: string) => json<NarrationQuote>(`/api/narration/books/${encodeURIComponent(bookId)}`),
     orderNarration: (bookId: string, voice: NarrationVoice) => json<{ url: string }>(`/api/narration/books/${encodeURIComponent(bookId)}/order`, 'POST', { voice }),

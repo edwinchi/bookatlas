@@ -223,6 +223,7 @@ function ProviderWithRoutes() {
         <Route path="/checkout"><Store resumeCheckout /></Route>
         <Route path="/admin"><Store /></Route>
         <Route path="/books/:id"><Store /></Route>
+        <Route path="/author/:slug"><Store /></Route>
         <Route path="/"><Store /></Route>
         <Route><main className="p-10 text-center"><h1 className="text-2xl font-bold">Page not found</h1><Link href="/">Return to BooksAtlas</Link></main></Route>
       </Switch>
