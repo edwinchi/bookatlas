@@ -42,6 +42,9 @@ export async function createTestServer(): Promise<TestServerInstance> {
         name: 'Sanne van Dijk',
         role: 'reader',
       };
+    } else if (roleHeader === 'author') {
+      // An ordinary signed-in account that publishes books (not an administrator).
+      req.bookatlasIdentity = { id: 'test-author-1', email: 'author.zwolle@bookatlas.nl', name: 'Ada Writer', role: 'reader' };
     } else {
       req.bookatlasIdentity = {
         id: 'test-admin-1',

@@ -50,3 +50,8 @@ booksatlas.app runs on Vercel functions (60 s per request, nothing runs between 
 | Admin approval | ✅ `NarrationQueue`: approve (shows estimate), decline with full refund, resume |
 | Segmented narration with self-chaining steps | ✅ `narration/service.ts` step + lease, `waitUntil` chain, stalled-chain recovery, 3 attempts per segment, budget cap 1.5 × estimate |
 | Reader playback with paragraph highlighting | ✅ `EReaderModal` plays MP3 segments, highlights by paragraph length; device voice labelled |
+
+
+## Administrators narrate free (owner decision 2026-11-15)
+
+An administrator's order skips Stripe: it is recorded at €0, approved by that administrator and starts at once (no invoice). The Gemini cost still shows in the business dashboard. Every other account pays the price shown and waits for approval. Test: `tests/e2e/narration.test.ts` (paid path with an ordinary author account; free admin path).

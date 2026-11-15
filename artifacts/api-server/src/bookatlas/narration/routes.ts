@@ -67,7 +67,10 @@ export function mountNarration(app: Express, findBook: (id: string) => Promise<B
     res.json(q);
   }));
   app.post('/api/narration/books/:bookId/order', json, guarded(async (req, res) => {
-    res.status(201).json(await order(signedIn(req), String(req.params.bookId), req.body?.voice, appUrl));
+    const result = await order(signedIn(req), String(req.params.bookId), req.body?.voice, appUrl);
+    // A free administrator order is approved already: start narrating now.
+    if ('free' in result && result.free) kick(result.narration.id);
+    res.status(201).json(result);
   }));
   app.post('/api/narration/confirm', json, guarded(async (req, res) => {
     res.json({ paid: await confirmCheckout(signedIn(req), String(req.body?.sessionId ?? '')) });

@@ -52,7 +52,12 @@ export function NarrationPanel({ api, bookId }: { api: ReturnType<typeof useEboo
   };
   const orderIt = async () => {
     setBusy(true); setError('');
-    try { window.location.assign((await api.orderNarration(bookId, voice)).url); }
+    try {
+      const r = await api.orderNarration(bookId, voice);
+      // Administrators narrate at no charge: no payment page, narration starts at once.
+      if (r.free || !r.url) { await load(); setBusy(false); return; }
+      window.location.assign(r.url);
+    }
     catch (e) { setError(e instanceof Error ? e.message : 'The order could not be started.'); setBusy(false); }
   };
 
@@ -74,7 +79,7 @@ export function NarrationPanel({ api, bookId }: { api: ReturnType<typeof useEboo
             Code examples and tables are not read aloud (a short spoken note points to them), and diagrams and screenshots are not narrated; only the words read aloud are counted in the price.
           </p>
           <dl className="grid grid-cols-3 gap-2 text-center">
-            {[['Words', quote.words.toLocaleString()], ['About', `${quote.hours} hours`], ['Price', euro(quote.priceCents)]].map(([k, v]) => (
+            {[['Words', quote.words.toLocaleString()], ['About', `${quote.hours} hours`], ['Price', quote.free ? 'Free (admin)' : euro(quote.priceCents)]].map(([k, v]) => (
               <div key={k} className="rounded-lg bg-white px-2 py-1.5 ring-1 ring-amber-100"><dt className="text-[10px] uppercase tracking-wide text-slate-500">{k}</dt><dd className="text-sm font-bold text-slate-900">{v}</dd></div>
             ))}
           </dl>
@@ -95,16 +100,18 @@ export function NarrationPanel({ api, bookId }: { api: ReturnType<typeof useEboo
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={() => void orderIt()} disabled={busy}
               className="inline-flex items-center gap-2 rounded-full bg-amber-400 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-300 disabled:opacity-60 cursor-pointer">
-              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Headphones className="h-3.5 w-3.5" aria-hidden />}Order for {euro(quote.priceCents)}
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Headphones className="h-3.5 w-3.5" aria-hidden />}{quote.free ? 'Narrate free (admin)' : `Order for ${euro(quote.priceCents)}`}
             </button>
-            <p className="text-[11px] text-slate-500">Incl. 21% VAT. Paid securely with Stripe; an administrator approves before narration starts. You receive an invoice.</p>
+            <p className="text-[11px] text-slate-500">{quote.free
+              ? `As an administrator you narrate at no charge; it starts straight away. Authors pay ${euro(quote.priceCents)} for this book.`
+              : 'Incl. 21% VAT. Paid securely with Stripe; an administrator approves before narration starts. You receive an invoice.'}</p>
           </div>
         </div>
       )}
 
       {current && (
         <div className="mt-2 space-y-2 text-xs text-slate-700">
-          <p className="text-slate-500">Voice: {VOICES[current.voice].label} ({VOICES[current.voice].style}) · {euro(current.priceCents)}</p>
+          <p className="text-slate-500">Voice: {VOICES[current.voice].label} ({VOICES[current.voice].style}) · {current.priceCents === 0 ? 'Free (admin)' : euro(current.priceCents)}</p>
           {current.status === 'awaiting_payment' && <p className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-amber-600" aria-hidden />Waiting for payment. If you closed the payment page, order again.</p>}
           {current.status === 'paid' && <p className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-amber-600" aria-hidden />Paid, thank you. An administrator approves the narration, usually within 2 working days.</p>}
           {(current.status === 'approved' || current.status === 'running') && (

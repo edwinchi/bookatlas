@@ -51,18 +51,19 @@ after(async () => { service.setNarrationProvider(null); delete process.env.STRIP
 const json = (body: unknown, role = 'admin') => ({ method: 'POST', headers: { 'content-type': 'application/json', 'x-test-role': role }, body: JSON.stringify(body) });
 const as = (role: string) => ({ headers: { 'x-test-role': role } });
 
-async function publishBook(fetch: (path: string, init?: RequestInit) => Promise<Response>) {
+/** The book belongs to an ordinary author account (who pays for narration); an administrator publishes it. */
+async function publishBook(fetch: (path: string, init?: RequestInit) => Promise<Response>, owner = 'author') {
   const file = epub2(5);
   const intake = {
     title: 'The Narrated Codex', author: 'Ada Writer', language: 'English', description: 'A guide to calm and alignment. '.repeat(8),
     categories: ['Spiritual Healing & Alignment'], keywords: ['healing'], copyrightHolder: 'Test Press', copyrightYear: 2026,
     price: 4.99, rightsConfirmed: true, aiContent: 'none', wantsPrint: false,
   };
-  const s = await (await fetch('/api/ebook-submissions', json({ intake, fileName: 'n.epub', size: file.byteLength }))).json();
+  const s = await (await fetch('/api/ebook-submissions', json({ intake, fileName: 'n.epub', size: file.byteLength }, owner))).json();
   for (let part = 0; part < s.upload.parts; part += 1) {
-    await fetch(`/api/ebook-submissions/${s.id}/upload/${part}`, { method: 'PUT', headers: { 'content-type': 'application/octet-stream', 'x-test-role': 'admin' }, body: file.subarray(part * s.partBytes, (part + 1) * s.partBytes) });
+    await fetch(`/api/ebook-submissions/${s.id}/upload/${part}`, { method: 'PUT', headers: { 'content-type': 'application/octet-stream', 'x-test-role': owner }, body: file.subarray(part * s.partBytes, (part + 1) * s.partBytes) });
   }
-  await fetch(`/api/ebook-submissions/${s.id}/prepare`, json({}));
+  await fetch(`/api/ebook-submissions/${s.id}/prepare`, json({}, owner));
   return (await (await fetch(`/api/ebook-submissions/${s.id}/publish`, json({}))).json()).bookId as string;
 }
 
@@ -77,26 +78,27 @@ test('natural narration: author orders and pays, an administrator approves, step
   const { imageSize } = await import('../../artifacts/api-server/src/bookatlas/ebookPrep/images.ts');
   assert.ok((imageSize(new Uint8Array(await small.arrayBuffer()))?.width ?? 0) <= 360, 'the card size is at most 360 pixels wide');
   assert.equal((await fetch(`/api/catalog/covers/${bookId}-w999.jpg`)).status, 404, 'only the defined sizes');
-  const q = await (await fetch(`/api/narration/books/${bookId}`, as('admin'))).json();
+  const q = await (await fetch(`/api/narration/books/${bookId}`, as('author'))).json();
   assert.equal(q.priceCents, 2499);
+  assert.equal(q.free, false, 'authors pay');
   assert.deepEqual(q.voices, ['Sulafat', 'Charon']);
   assert.equal(q.current, null);
 
-  assert.equal((await fetch(`/api/narration/books/${bookId}/order`, json({ voice: 'Robot' }))).status, 400);
-  const ordered = await fetch(`/api/narration/books/${bookId}/order`, json({ voice: 'Sulafat' }));
+  assert.equal((await fetch(`/api/narration/books/${bookId}/order`, json({ voice: 'Robot' }, 'author'))).status, 400);
+  const ordered = await fetch(`/api/narration/books/${bookId}/order`, json({ voice: 'Sulafat' }, 'author'));
   assert.equal(ordered.status, 201);
   assert.match((await ordered.json()).url, /^https:\/\/checkout\.stripe\.com\//);
   const [session] = [...sessions.values()];
   assert.equal(session!.metadata.kind, 'narration');
   assert.equal(session!.params.line_items[0].price_data.unit_amount, 2499, 'the server sets the price');
-  assert.equal((await fetch(`/api/narration/books/${bookId}/order`, json({ voice: 'Charon' }))).status, 201, 'an unpaid order can be replaced');
+  assert.equal((await fetch(`/api/narration/books/${bookId}/order`, json({ voice: 'Charon' }, 'author'))).status, 201, 'an unpaid order can be replaced');
 
   // Paying: the signed webhook marks the order paid and issues a 21% VAT invoice.
   Object.assign(session!, { status: 'complete', payment_status: 'paid', customer_details: { email: 'eddy@example.com', name: 'Eddy', address: { country: 'NL' } } });
   const payload = JSON.stringify({ id: 'evt_narr', object: 'event', type: 'checkout.session.completed', data: { object: session } });
   const paid = await fetch('/api/stripe/webhook', { method: 'POST', headers: { 'content-type': 'application/json', 'stripe-signature': stripeWebhooks.generateTestHeaderString({ payload, secret: WEBHOOK_SECRET }) }, body: payload });
   assert.equal(paid.status, 200);
-  const invoices = (await (await fetch('/api/invoices', as('admin'))).json()).invoices;
+  const invoices = (await (await fetch('/api/invoices', as('author'))).json()).invoices;
   const inv = invoices.find((i: { books: { title: string }[] }) => /Natural audiobook narration/.test(i.books[0]!.title));
   assert.deepEqual({ gross: inv.grossCents, vat: inv.vatCents }, { gross: 2499, vat: 434 }, '21% Dutch VAT on the service');
 
@@ -159,4 +161,20 @@ test('natural narration: author orders and pays, an administrator approves, step
   if (locked) assert.equal((await fetch(`/api/reader/catalog/${bookId}/narration/${locked.n}`, as('reader'))).status, 403);
   assert.equal((await fetch(`/api/reader/catalog/${bookId}/narration/${full.segments.length + 5}`, as('reader'))).status, 403, 'unknown segments are refused');
   assert.equal((await fetch(`/api/narration/books/${bookId}/order`, json({ voice: 'Sulafat' }))).status, 409, 'one narration per book');
+});
+
+test('administrators narrate any book at no charge: no checkout, no invoice, it starts at once', async () => {
+  const { fetch } = await getSharedTestServer();
+  const bookId = await publishBook(fetch, 'admin');
+  const q = await (await fetch(`/api/narration/books/${bookId}`, as('admin'))).json();
+  assert.equal(q.free, true);
+  const sessionsBefore = sessions.size;
+  const res = await fetch(`/api/narration/books/${bookId}/order`, json({ voice: 'Charon' }));
+  assert.equal(res.status, 201);
+  const body = await res.json();
+  assert.deepEqual([body.free, body.url, body.narration.status, body.narration.priceCents], [true, null, 'approved', 0]);
+  assert.equal(sessions.size, sessionsBefore, 'no Stripe checkout is created');
+  const n = (await service.getNarration(body.narration.id))!;
+  assert.equal(n.decided_by, 'test-admin-1', 'recorded as approved by the administrator');
+  assert.equal((await fetch(`/api/narration/books/${bookId}/order`, json({ voice: 'Sulafat' }))).status, 409, 'still one narration per book');
 });

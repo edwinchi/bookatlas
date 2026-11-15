@@ -231,6 +231,8 @@ export async function quote(who: Identity, bookId: string) {
   const current = await latestForBook(bookId);
   return {
     bookId, title: submission.data.intake.title, words, priceCents: narrationPrice(words), hours: Math.round((estimate.seconds / 3600) * 10) / 10,
+    // Owner decision 2026-11-15: administrators narrate any book at no charge; everyone else pays.
+    free: who.role === 'admin',
     voices: NARRATION_VOICES, current: current && ACTIVE.includes(current.status) || current?.status === 'failed' ? summary(current) : null,
   };
 }
@@ -245,17 +247,25 @@ export async function order(who: Identity, bookId: string, voice: unknown, appUr
   const { submission, chapters } = await ownedPublishedBook(who, bookId);
   const current = await latestForBook(bookId);
   if (current && ['paid', 'approved', 'running', 'done'].includes(current.status)) throw new NarrationError('This book already has a narration order.', 409);
+  // A paid checkout that was abandoned is replaced by the new order.
   const segments = planSegments(chapters);
   if (!segments.length) throw new NarrationError('This book has no text to narrate.', 422);
   const words = wordCount(chapters);
   const now = new Date().toISOString();
+  // Owner decision 2026-11-15: an administrator's order is free (€0, no checkout, no invoice) and starts at once.
+  const free = who.role === 'admin';
+  if (free && !freeTier()) provider(); // fails clearly when neither the free tier nor Gemini is configured
   const n: Narration = {
     id: randomUUID(), book_id: bookId, owner_id: who.id, title: submission.data.intake.title, voice: voice as NarrationVoice,
-    status: 'awaiting_payment', price_cents: narrationPrice(words), words, estimate_micros: narrationEstimate(words).micros, spent_micros: 0,
+    status: free ? 'approved' : 'awaiting_payment', price_cents: free ? 0 : narrationPrice(words), words, estimate_micros: narrationEstimate(words).micros, spent_micros: 0,
     segments, done: 0, total: segments.length, seconds: 0, checkout_session_id: null, payment_intent_id: null,
-    lease_token: null, lease_until: null, error: null, decided_by: null, decided_at: null, created_at: now, updated_at: now,
+    lease_token: null, lease_until: null, error: null, decided_by: free ? who.id : null, decided_at: free ? now : null, created_at: now, updated_at: now,
   };
   await insert(n);
+  if (free) {
+    logger.info({ event: 'narration.admin_free', narration: n.id, book: bookId }, 'Administrator narration started at no charge');
+    return { url: null, free: true as const, narration: summary(n) };
+  }
   const checkout = await createNarrationCheckout(who, { narrationId: n.id, bookId, title: n.title, voice: n.voice, priceCents: n.price_cents }, appUrl);
   await update(n.id, { checkout_session_id: checkout.id });
   return { url: checkout.url };
