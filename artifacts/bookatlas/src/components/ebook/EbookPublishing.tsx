@@ -149,6 +149,7 @@ export const EbookPublishing: React.FC = () => {
               <SubmissionForm
                 key={mode.kind === 'edit' ? mode.submission.id : 'new'}
                 suggest={(body) => api.suggestMetadata(body)}
+                prepared={mode.kind === 'edit' && mode.submission.report ? { cover: mode.submission.report.cover, findings: { errors: mode.submission.report.summary.errors, warnings: mode.submission.report.summary.warnings } } : undefined}
                 categories={categories}
                 initial={mode.kind === 'edit' ? mode.submission.intake : undefined}
                 serverErrors={problem?.fields}

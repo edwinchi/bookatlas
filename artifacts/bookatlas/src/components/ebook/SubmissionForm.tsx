@@ -5,6 +5,7 @@ import { PrintCalculator } from './PrintCalculator';
 import { ManuscriptPicker, ProgressBar } from './ManuscriptPicker';
 import type { ConvertedManuscript } from './convert/convert';
 import type { ManuscriptExcerpt } from './convert/excerpt';
+import { LaunchPanel } from './LaunchPanel';
 
 /** The fields "fill from your book" may set; the form never overwrites what the author typed. */
 const FILLABLE = ['title', 'subtitle', 'author', 'language', 'description', 'categories', 'keywords', 'copyrightHolder', 'copyrightYear', 'authorBio', 'backCoverBlurb'] as const;
@@ -40,7 +41,9 @@ export const SubmissionForm: React.FC<{
   onCancel?: () => void;
   /** Suggests the form's details from the manuscript (free AI model, then the book's own pages). */
   suggest?: SuggestMetadata;
-}> = ({ categories, initial, serverErrors, progress, busy, fileRequired = !initial, onSubmit, onCancel, suggest }) => {
+  /** For a prepared book being edited: its cover size and preparation findings (Launch Score). */
+  prepared?: { cover: { width: number; height: number } | null; findings: { errors: number; warnings: number } };
+}> = ({ categories, initial, serverErrors, progress, busy, fileRequired = !initial, onSubmit, onCancel, suggest, prepared }) => {
   const [intake, setIntake] = useState<SubmissionIntake>(initial ?? EMPTY);
   const [file, setFile] = useState<File | null>(null);
   // A Word or PDF manuscript is converted here; the EPUB is packaged at submit with the form's latest details.
@@ -48,6 +51,23 @@ export const SubmissionForm: React.FC<{
   const [converting, setConverting] = useState<{ fraction: number; label: string } | null>(null);
   const [convertError, setConvertError] = useState('');
   const convertRun = React.useRef(0);
+  // The cover found in a converted manuscript, measured for the Launch Score.
+  const [coverSize, setCoverSize] = useState<{ width: number; height: number } | null>(null);
+  useEffect(() => {
+    const c = manuscript?.cover;
+    if (!c || typeof createImageBitmap !== 'function') { setCoverSize(null); return; }
+    let cancelled = false;
+    createImageBitmap(new Blob([c.data as Uint8Array<ArrayBuffer>], { type: c.mediaType }))
+      .then((bmp) => { if (!cancelled) setCoverSize({ width: bmp.width, height: bmp.height }); bmp.close(); })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [manuscript]);
+  const focusField = (id: string) => {
+    const labels: Record<string, string> = { title: 'Title', description: 'Description', categories: 'Categories', keywords: 'Keywords', bio: 'Author bio', price: 'eBook price', cover: 'Your manuscript' };
+    const el = [...document.querySelectorAll('form label, form legend, form span')].find((n) => n.textContent?.trim().startsWith(labels[id] ?? '§'));
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    (el?.querySelector('input, textarea, select') as HTMLElement | null)?.focus({ preventScroll: true });
+  };
   const [newCategory, setNewCategory] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => { if (serverErrors) setErrors(serverErrors); }, [serverErrors]);
@@ -219,6 +239,11 @@ export const SubmissionForm: React.FC<{
         </div>
       )}
       {fillNote && !filling && <p role="status" className="text-xs text-slate-600">{fillNote}</p>}
+
+      <LaunchPanel intake={intake} words={manuscript?.report.words}
+        cover={prepared ? prepared.cover : manuscript ? (manuscript.cover ? coverSize ?? undefined : null) : undefined}
+        findings={prepared?.findings}
+        onUsePrice={(price) => set('price', price)} onFocusField={focusField} />
 
       <fieldset className="space-y-4">
         <legend className="font-serif text-lg font-bold text-slate-900">The book</legend>
