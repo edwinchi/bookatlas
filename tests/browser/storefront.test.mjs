@@ -167,7 +167,7 @@ test('the site menu row opens on hover and click, and its links reach the landin
   const hub = site.getByRole('button', { name: 'Author hub', exact: true });
   await hub.focus();
   await page.keyboard.press('ArrowDown');
-  await page.waitForFunction(() => document.activeElement?.textContent?.includes('Join early access'));
+  await page.waitForFunction(() => document.activeElement?.textContent?.includes('Books and drafts'));
   await page.keyboard.press('Escape');
   assert.equal(await hub.getAttribute('aria-expanded'), 'false');
 });

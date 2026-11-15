@@ -96,6 +96,17 @@ export type PayoutView = { configured: false } | {
 };
 export interface PayoutInput { accountHolder: string; iban: string; bic?: string; address: string; country: string; taxId?: string; vatId?: string; business: boolean }
 
+export type AnnotationKind = 'highlight' | 'bookmark' | 'note';
+export interface Annotation {
+  id: string; book_id: string; kind: AnnotationKind; color: string | null; chapter_index: number; paragraph_index: number;
+  excerpt: string; note: string | null; created_at: string; updated_at: string;
+}
+export interface SyncedProgress { book_id: string; chapter_index: number; paragraph_index: number; progress_percent: number; device: string | null; updated_at: string }
+export interface ReadingStats {
+  totalMinutes: number; words: number; wordsPerMinute: number | null; streakDays: number; booksStarted: number; booksFinished: number;
+  sessions: number; last30: { day: string; minutes: number }[];
+}
+
 export function useEbookApi() {
   const { getToken } = useAuth();
   const tokenRef = useRef(getToken);
@@ -135,6 +146,20 @@ export function useEbookApi() {
     salesCsv: async () => (await request('/api/author/sales.csv')).blob(),
     statementHtml: async (month: string) => (await request(`/api/author/statements/${month}`)).text(),
     payout: () => json<PayoutView>('/api/author/payout'),
+    // BooksAtlas Reader sync (cycle 7).
+    readerState: (bookId: string) => json<{ progress: SyncedProgress | null; annotations: Annotation[] }>(`/api/reader/state/${encodeURIComponent(bookId)}`),
+    saveReaderProgress: (bookId: string, body: { chapterIndex: number; paragraphIndex: number; progressPercent: number; device: string; at: string }) =>
+      json<SyncedProgress>(`/api/reader/progress/${encodeURIComponent(bookId)}`, 'PUT', body),
+    addAnnotation: (body: { bookId: string; kind: AnnotationKind; color?: string; chapterIndex: number; paragraphIndex: number; excerpt: string; note?: string }) =>
+      json<Annotation>('/api/reader/annotations', 'POST', body),
+    updateAnnotation: (id: string, body: { note?: string; color?: string }) => json<Annotation>(`/api/reader/annotations/${id}`, 'PATCH', body),
+    deleteAnnotation: (id: string) => json<void>(`/api/reader/annotations/${id}`, 'DELETE'),
+    searchAnnotations: (q: string) => json<{ annotations: Annotation[] }>(`/api/reader/annotations?q=${encodeURIComponent(q)}`).then((r) => r.annotations),
+    readerPreferences: () => json<{ settings: Record<string, unknown> | null; updated_at: string | null }>('/api/reader/preferences'),
+    saveReaderPreferences: (settings: Record<string, unknown>) => json<{ settings: Record<string, unknown> }>('/api/reader/preferences', 'PUT', settings),
+    recordReadingSession: (body: { bookId: string; startedAt: string; seconds: number; paragraphs: number; words: number; device: string }) =>
+      json<unknown>('/api/reader/sessions', 'POST', body),
+    readingStats: () => json<ReadingStats>('/api/reader/stats'),
     savePayout: (body: PayoutInput) => json<PayoutView>('/api/author/payout', 'PUT', body),
     // Follow authors (cycle 5c).
     followState: (slug: string) => json<{ following: boolean }>(`/api/follows/${slug}/mine`),

@@ -17,6 +17,10 @@ export const BOOKATLAS_TABLES = Object.freeze({
   follows: 'bookatlas_follows',
   crypto_orders: 'bookatlas_crypto_orders',
   author_payouts: 'bookatlas_author_payouts',
+  reader_progress: 'bookatlas_reader_progress',
+  reader_annotations: 'bookatlas_reader_annotations',
+  reader_preferences: 'bookatlas_reader_preferences',
+  reading_sessions: 'bookatlas_reading_sessions',
 } as const);
 
 export type BookatlasTable = keyof typeof BOOKATLAS_TABLES;

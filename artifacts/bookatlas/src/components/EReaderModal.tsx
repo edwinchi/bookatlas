@@ -30,13 +30,17 @@ import {
   Pause,
   Languages,
   Send,
-  Sparkle
+  Sparkle,
+  NotebookPen,
+  StickyNote
 } from 'lucide-react';
 import { StudioNarrationPanel } from './voice/StudioNarrationPanel';
-import { Book, Chapter, ReaderSettings, ReaderTheme, ReaderFont, Highlight } from '../types';
+import { Book, Chapter, ReaderSettings, ReaderTheme, ReaderFont } from '../types';
 import { useAccount } from '../auth/AuthContext';
 import { useEbookApi, type ReaderNarration } from './ebook/ebookApi';
 import { ReaderFigure } from './ebook/ReaderFigure';
+import { useReaderSync } from './reader/useReaderSync';
+import { HIGHLIGHT_BG, HIGHLIGHT_COLORS, ReaderNotebook } from './reader/ReaderNotebook';
 
 import {
   READER_DISPLAY_PREFERENCES_KEY,
@@ -131,9 +135,9 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
-  const [highlights, setHighlights] = useState<Highlight[]>([]);
-  const [selectedHighlightColor, setSelectedHighlightColor] = useState<'yellow' | 'green' | 'blue' | 'pink'>('yellow');
+  const [selectedHighlightColor, setSelectedHighlightColor] = useState<string>('yellow');
+  const [showNotebook, setShowNotebook] = useState(false);
+  const [markError, setMarkError] = useState('');
   const [activeHighlightMode, setActiveHighlightMode] = useState(false);
 
   const [settings, setSettings] = useState<ReaderSettings>(readSavedReaderSettings);
@@ -178,6 +182,26 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const totalParas = chapters.reduce((acc, c) => acc + c.content.length, 0);
   const readParas = chapters.slice(0, currentChapterIndex).reduce((acc, c) => acc + c.content.length, 0) + (currentParagraphIndex + 1);
   const progressPercent = Math.min(100, Math.round((readParas / Math.max(1, totalParas)) * 100));
+
+  // BooksAtlas Reader sync (cycle 7): marks, place, settings and reading time on the account.
+  const sync = useReaderSync({
+    api: ebookApi, signedIn: !!account, bookId: book.id, chapters,
+    chapterIndex: currentChapterIndex, paragraphIndex: currentParagraphIndex, progressPercent,
+    settings, onRemoteSettings: setSettings,
+  });
+  const highlights = sync.annotations.filter((a) => a.kind === 'highlight');
+  const marksHere = (kind: 'bookmark' | 'note', c: number, p: number) => sync.annotations.filter((a) => a.kind === kind && a.chapter_index === c && a.paragraph_index === p);
+  const bookmarkHere = marksHere('bookmark', currentChapterIndex, currentParagraphIndex)[0];
+  const bookmarked = !!bookmarkHere;
+  const tryMark = (fn: () => Promise<unknown>) => { setMarkError(''); fn().catch((e) => setMarkError(e instanceof Error ? e.message : 'Could not save. Please retry.')); };
+  const toggleBookmark = () => tryMark(() => bookmarkHere ? sync.remove(bookmarkHere.id) : sync.add('bookmark', { chapterIndex: currentChapterIndex, paragraphIndex: currentParagraphIndex }));
+  const jumpTo = (c: number, p: number) => {
+    setCurrentChapterIndex(c);
+    setCurrentParagraphIndex(p);
+    requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector(`[data-para="${p}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })));
+  };
+  // Another device is further along (or elsewhere): offer to continue there.
+  const remoteElsewhere = sync.remote && (sync.remote.chapter_index !== currentChapterIndex || Math.abs(sync.remote.paragraph_index - currentParagraphIndex) > 2) ? sync.remote : null;
 
   // Stable ref for progress callback to prevent infinite re-render loops
   const onSaveProgressRef = useRef(onSaveProgress);
@@ -546,12 +570,17 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Typing a note, a search or a question must not turn the page.
+      const t = e.target as HTMLElement | null;
+      const typing = !!t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName));
+      if (typing && e.key !== 'Escape') return;
       if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
         nextPage();
       } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
         prevPage();
       } else if (e.key === 'Escape') {
-        if (showSettings) setShowSettings(false);
+        if (showNotebook) setShowNotebook(false);
+        else if (showSettings) setShowSettings(false);
         else if (showToc) setShowToc(false);
         else if (showAICopilot) setShowAICopilot(false);
         else onClose();
@@ -559,7 +588,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentChapterIndex, chapters.length, showSettings, showToc, showAICopilot]);
+  }, [currentChapterIndex, chapters.length, showSettings, showToc, showAICopilot, showNotebook]);
 
   // Turning the page yourself stops the voice; listening turns pages on its own.
   useEffect(() => {
@@ -629,30 +658,14 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const handleParagraphClick = (pIndex: number, text: string) => {
     setSelectedPassage(text);
     if (!activeHighlightMode) return;
-    const existing = highlights.find(
-      (h) => h.chapterIndex === currentChapterIndex && h.paragraphIndex === pIndex
-    );
-    if (existing) {
-      setHighlights((prev) => prev.filter((h) => h.id !== existing.id));
-    } else {
-      setHighlights((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          text,
-          color: selectedHighlightColor,
-          chapterIndex: currentChapterIndex,
-          paragraphIndex: pIndex,
-          date: new Date().toLocaleDateString(),
-        },
-      ]);
-    }
+    void text;
+    const existing = highlights.find((h) => h.chapter_index === currentChapterIndex && h.paragraph_index === pIndex);
+    tryMark(() => existing && existing.color === selectedHighlightColor ? sync.remove(existing.id)
+      : sync.add('highlight', { chapterIndex: currentChapterIndex, paragraphIndex: pIndex }, { color: selectedHighlightColor }));
   };
 
   const isParagraphHighlighted = (pIndex: number) => {
-    return highlights.find(
-      (h) => h.chapterIndex === currentChapterIndex && h.paragraphIndex === pIndex
-    );
+    return highlights.find((h) => h.chapter_index === currentChapterIndex && h.paragraph_index === pIndex);
   };
 
   return (
@@ -743,7 +756,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
           {/* Bookmark toggle */}
           <button
-            onClick={() => setBookmarked(!bookmarked)}
+            onClick={toggleBookmark}
             aria-label={bookmarked ? 'Remove page bookmark' : 'Bookmark this page'}
             className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${
               bookmarked ? 'text-indigo-600' : 'hover:bg-black/10 opacity-75'
@@ -751,6 +764,17 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             title={bookmarked ? 'Bookmark Saved' : 'Bookmark this page'}
           >
             <Bookmark className={`w-4 h-4 ${bookmarked ? 'fill-indigo-600' : ''}`} />
+          </button>
+
+          {/* Notebook: highlights, bookmarks, notes, search, export and reading stats */}
+          <button
+            onClick={() => { setShowNotebook(!showNotebook); setShowAICopilot(false); }}
+            aria-label={showNotebook ? 'Close notebook' : 'Open notebook: highlights, bookmarks, notes and reading stats'}
+            aria-expanded={showNotebook}
+            className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${showNotebook ? 'bg-indigo-600 text-white' : 'hover:bg-black/10 opacity-75'}`}
+            title="Notebook"
+          >
+            <NotebookPen className="w-4 h-4" />
           </button>
 
           {/* Text to Speech toggle */}
@@ -857,13 +881,9 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                 );
               }
               const highlight = isParagraphHighlighted(pIdx);
-              let highlightBg = '';
-              if (highlight) {
-                if (highlight.color === 'yellow') highlightBg = 'bg-yellow-200/50 text-slate-900 px-1 rounded-xs';
-                if (highlight.color === 'green') highlightBg = 'bg-emerald-200/50 text-slate-900 px-1 rounded-xs';
-                if (highlight.color === 'blue') highlightBg = 'bg-sky-200/50 text-slate-900 px-1 rounded-xs';
-                if (highlight.color === 'pink') highlightBg = 'bg-pink-200/50 text-slate-900 px-1 rounded-xs';
-              }
+              const highlightBg = highlight ? `${HIGHLIGHT_BG[highlight.color ?? 'yellow'] ?? HIGHLIGHT_BG.yellow} text-slate-900 px-1 rounded-xs` : '';
+              const paraNotes = marksHere('note', currentChapterIndex, pIdx);
+              const paraBookmarked = marksHere('bookmark', currentChapterIndex, pIdx).length > 0;
 
               return (
                 <React.Fragment key={pIdx}>
@@ -876,6 +896,12 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                   } ${highlightBg} ${spokenParagraph === pIdx ? 'rounded-md bg-indigo-500/10 ring-1 ring-indigo-500/30' : ''}`}
                   aria-current={spokenParagraph === pIdx ? 'true' : undefined}
                 >
+                  {(paraBookmarked || paraNotes.length > 0) && (
+                    <span className="absolute -left-6 top-1 hidden flex-col gap-1 sm:flex" aria-hidden>
+                      {paraBookmarked && <Bookmark className="h-3.5 w-3.5 fill-indigo-600 text-indigo-600" />}
+                      {paraNotes.length > 0 && <button type="button" tabIndex={-1} onClick={(e) => { e.stopPropagation(); setShowNotebook(true); }} title={paraNotes.map((n) => n.note).join('\n')} className="cursor-pointer"><StickyNote className="h-3.5 w-3.5 text-amber-600" /></button>}
+                    </span>
+                  )}
                   {pIdx === 0 && (
                     <span className="float-left text-4xl sm:text-5xl font-bold font-serif mr-2 leading-none">
                       {paragraph[0]}
@@ -1028,15 +1054,46 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
               </h4>
               <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                 {highlights.map((h) => (
-                  <div key={h.id} className="p-2.5 bg-slate-900/90 rounded-lg text-xs space-y-1 border border-slate-800">
-                    <p className="line-clamp-2 italic text-slate-300">"{h.text}"</p>
-                    <span className="text-[10px] text-slate-500">Ch. {h.chapterIndex + 1} • {h.date}</span>
-                  </div>
+                  <button type="button" key={h.id} onClick={() => { jumpTo(h.chapter_index, h.paragraph_index); setShowToc(false); }} className="block w-full p-2.5 bg-slate-900/90 rounded-lg text-left text-xs space-y-1 border border-slate-800 hover:border-slate-600 cursor-pointer">
+                    <p className="line-clamp-2 italic text-slate-300">"{h.excerpt}"</p>
+                    <span className="text-[10px] text-slate-500">Ch. {h.chapter_index + 1} • {new Date(h.created_at).toLocaleDateString('en-GB')}</span>
+                  </button>
                 ))}
               </div>
             </div>
           )}
         </div>
+      )}
+
+      {activeHighlightMode && (
+        <div role="group" aria-label="Highlight colour" className="absolute left-1/2 top-[4.5rem] z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-lg">
+          Tap a paragraph to highlight
+          {HIGHLIGHT_COLORS.map((c) => (
+            <button key={c} type="button" onClick={() => setSelectedHighlightColor(c)} aria-label={`${c} highlighter`} aria-pressed={selectedHighlightColor === c}
+              className={`h-5 w-5 rounded-full ${HIGHLIGHT_BG[c]} border border-slate-300 ${selectedHighlightColor === c ? 'ring-2 ring-slate-900 ring-offset-1' : ''} cursor-pointer`} />
+          ))}
+        </div>
+      )}
+      {remoteElsewhere && (
+        <div role="status" className="absolute bottom-20 left-1/2 z-40 flex w-[min(30rem,calc(100%-2rem))] -translate-x-1/2 flex-wrap items-center gap-2 rounded-2xl border border-indigo-200 bg-white px-4 py-3 text-xs text-slate-800 shadow-xl">
+          <span className="flex-1">You were at <b>{chapters[remoteElsewhere.chapter_index]?.title ?? `Chapter ${remoteElsewhere.chapter_index + 1}`}</b> ({remoteElsewhere.progress_percent}%){remoteElsewhere.device ? ` on your ${remoteElsewhere.device.toLowerCase()}` : ''}.</span>
+          <button type="button" onClick={() => { jumpTo(Math.min(remoteElsewhere.chapter_index, chapters.length - 1), remoteElsewhere.paragraph_index); sync.dismissRemote(); }} className="rounded-full bg-indigo-600 px-3 py-1.5 font-bold text-white hover:bg-indigo-500 cursor-pointer">Continue there</button>
+          <button type="button" onClick={sync.dismissRemote} className="rounded-full px-2 py-1.5 font-semibold text-slate-500 hover:bg-slate-100 cursor-pointer">Stay here</button>
+        </div>
+      )}
+      {markError && (
+        <div role="alert" className="absolute bottom-20 right-4 z-40 max-w-xs rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800 shadow-lg">
+          {markError} <button type="button" onClick={() => setMarkError('')} className="ml-1 underline cursor-pointer">Close</button>
+        </div>
+      )}
+      {showNotebook && (
+        <ReaderNotebook
+          api={ebookApi} signedIn={!!account} status={sync.status} title={book.title} author={book.author} chapters={chapters}
+          annotations={sync.annotations} current={{ chapterIndex: currentChapterIndex, paragraphIndex: currentParagraphIndex }}
+          onJump={(c, p) => { jumpTo(c, p); }}
+          onAddNote={async (note) => { await sync.add('note', { chapterIndex: currentChapterIndex, paragraphIndex: currentParagraphIndex }, { note }); }}
+          onUpdate={sync.update} onDelete={sync.remove} onClose={() => setShowNotebook(false)}
+        />
       )}
 
       {/* Gemini Multimodal In-Reader AI Studio Drawer */}

@@ -12,7 +12,7 @@ const configured = !!url && !!service;
 const as = (key) => (key ? { apikey: key, Authorization: `Bearer ${key}` } : {});
 
 const TABLES = ['books', 'categories', 'registered_users', 'subscribers', 'campaigns', 'publishing_jobs', 'publishing_messages',
-  'publishing_test_books', 'ebook_submissions', 'prep_feedback', 'purchases', 'invoices', 'narrations', 'reviews', 'follows', 'crypto_orders', 'author_payouts'].map((t) => `bookatlas_${t}`);
+  'publishing_test_books', 'ebook_submissions', 'prep_feedback', 'purchases', 'invoices', 'narrations', 'reviews', 'follows', 'crypto_orders', 'author_payouts', 'reader_progress', 'reader_annotations', 'reader_preferences', 'reading_sessions'].map((t) => `bookatlas_${t}`);
 const VIEWS = ['bookatlas_catalog_facets'];
 const FUNCTIONS = ['bookatlas_catalog_facets', 'bookatlas_refresh_catalog_facets'];
 const BUCKET = 'bookatlas-ebooks';

@@ -45,6 +45,11 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   // Author hub (cycle 6): CSV export, royalty statements, payout details.
   if ((normalized === '/api/author/sales.csv' || /^\/api\/author\/statements\/[^/]+$/.test(normalized)) && method === 'GET') return 'reader';
   if (normalized === '/api/author/payout' && ['GET', 'PUT'].includes(method)) return 'reader';
+  // BooksAtlas Reader sync (cycle 7): progress, highlights, bookmarks, notes, settings, sessions and stats.
+  if (method === 'GET' && (/^\/api\/reader\/state\/[^/]+$/.test(normalized) || ['/api/reader/annotations', '/api/reader/preferences', '/api/reader/stats'].includes(normalized))) return 'reader';
+  if (method === 'PUT' && (/^\/api\/reader\/progress\/[^/]+$/.test(normalized) || normalized === '/api/reader/preferences')) return 'reader';
+  if (method === 'POST' && (normalized === '/api/reader/annotations' || normalized === '/api/reader/sessions')) return 'reader';
+  if (['PATCH', 'DELETE'].includes(method) && /^\/api\/reader\/annotations\/[^/]+$/.test(normalized)) return 'reader';
   // Narration (TASK-0008): authors order and listen to samples; the step authenticates with its own key.
   if (method === 'GET' && /^\/api\/narration\/(?:books\/[^/]+|samples\/[^/]+)$/.test(normalized)) return 'reader';
   if (method === 'POST' && (/^\/api\/narration\/books\/[^/]+\/order$/.test(normalized) || normalized === '/api/narration/confirm')) return 'reader';

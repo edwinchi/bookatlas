@@ -20,6 +20,8 @@ import { mountNarration } from './narration/routes.js';
 import { mountReviews } from './reviews/routes.js';
 import { businessSummary } from './payments/business.js';
 import { mountFollows } from './follows/routes.js';
+import { mountReader } from './reader/routes.js';
+import { eraseReaderData, readerDataOf } from './reader/service.js';
 import { announceToFollowers, eraseFollowsOf, followsOf } from './follows/service.js';
 import { erasePayout, getPayout } from './payments/payouts.js';
 import { authorSlug } from './reviews/routes.js';
@@ -484,6 +486,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
   mountReviews(app, catalog);
   // Follow authors and new-book e-mails (cycle 5c).
   mountFollows(app, catalog);
+  mountReader(app, catalog);
   // The owner's business dashboard (cycle 5): revenue, commission, VAT, narration margin, author payouts owed.
   app.get('/api/manager/business', async (req, res) => {
     if (req.bookatlasIdentity?.role !== 'admin') { res.status(403).json({ error: 'Administrator access is required.' }); return; }
@@ -785,7 +788,8 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
         return [...purchases, ...invoices.map(({ user_id: _u, ...invoice }) => ({ record: 'invoice', number: invoiceNumber(invoice), ...invoice })),
           ...reviews.map((review) => ({ record: 'review', ...review })),
           ...(await followsOf(userId)).map(({ user_id: _u, ...f }) => ({ record: 'follow', ...f })),
-          ...[await getPayout(userId)].filter(Boolean).map((p) => { const { user_id: _u, ...rest } = p!; return { record: 'payout-details', ...rest }; })];
+          ...[await getPayout(userId)].filter(Boolean).map((p) => { const { user_id: _u, ...rest } = p!; return { record: 'payout-details', ...rest }; }),
+          ...[await readerDataOf(userId)].map((r) => ({ record: 'reader', progress: r.progress.map(({ user_id: _u, ...x }) => x), annotations: r.annotations.map(({ user_id: _u, ...x }) => x), preferences: r.preferences, sessions: r.sessions.map(({ user_id: _u, ...x }) => x) }))];
       } catch { throw new AccountStoreError('Purchase records are unavailable.'); }
     },
     async submissions(userId) {
@@ -802,6 +806,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
         await anonymiseInvoices(userId, `erased-${randomUUID()}`);
         await eraseFollowsOf(userId);
         await erasePayout(userId);
+        await eraseReaderData(userId);
         // Reviews name the reader, so they are deleted; the books' ratings are recalculated.
         await eraseReviewsOf(userId, { get: (id) => catalog.get(id), setRating: (book, rating, count) => catalog.upsert([{ ...book, rating, reviewCount: count }]) });
         await eraseAuthorData(userId);
