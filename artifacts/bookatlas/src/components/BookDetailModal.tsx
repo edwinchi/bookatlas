@@ -27,6 +27,7 @@ import {
 import { Book } from '../types';
 import { ReaderPublicationAccess } from './publishing/ReaderPublicationAccess';
 import { useAccount } from '../auth/AuthContext';
+import { audioOnSale, audioProductOf, isNarrated } from '../audioEdition';
 
 interface BookDetailModalProps {
   book: Book | null;
@@ -34,6 +35,8 @@ interface BookDetailModalProps {
   onReadSample: (book: Book) => void;
   /** Bought by this account (TASK-0004): the whole book opens in the reader. */
   owned?: boolean;
+  /** Bought the natural audiobook add-on (cycle 9). */
+  ownsAudio?: boolean;
   onAddToCart: (book: Book) => void;
   onToggleWishlist: (book: Book) => void;
   onPlayAudioSample: (book: Book) => void;
@@ -53,6 +56,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
   onClose,
   onReadSample,
   owned = false,
+  ownsAudio = false,
   onAddToCart,
   onToggleWishlist,
   onPlayAudioSample,
@@ -69,11 +73,21 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
   const unrated = isGenerated || !prepared || !book.reviewCount;
   const readsFree = prepared && book.price === 0;
   const opensInFull = prepared && (readsFree || owned);
+  // Cycle 9: a narrated book is sold with its natural audiobook included, or with the audiobook as an add-on.
+  const narrated = isNarrated(book);
+  const audioAddOn = audioOnSale(book);
+  const audioPrice = book.audioPrice ?? 0;
+  const audioHours = book.audioDurationMinutes ? (book.audioDurationMinutes >= 90 ? `${Math.round(book.audioDurationMinutes / 6) / 10} hours` : `${book.audioDurationMinutes} min`) : '';
+  const money = (n: number) => (n === 0 ? 'Free' : `${currencySymbol}${n.toFixed(2)}`);
   const { account, requireSignIn } = useAccount();
   const openFullBook = () => { if (account) onReadSample(book); else requireSignIn('reading the full book'); };
 
   const [activeTab, setActiveTab] = useState<'overview' | 'ai_summary' | 'reviews' | 'author'>('overview');
   const [selectedFormat, setSelectedFormat] = useState<'ebook' | 'audiobook'>('ebook');
+  /** What "Buy" adds when the audiobook is chosen: the add-on, plus the eBook unless it is owned or free. */
+  const buysAudio = narrated && audioAddOn && !ownsAudio && selectedFormat === 'audiobook';
+  const buyAudio = () => { if (!owned && !readsFree) onAddToCart(book); onAddToCart(audioProductOf(book)); };
+  const audioTotal = (owned || readsFree ? 0 : book.price) + audioPrice;
   const [aiSummary, setAiSummary] = useState<any>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [previewVibe, setPreviewVibe] = useState<'cinematic' | 'bedtime' | 'suspense'>('cinematic');
@@ -201,11 +215,11 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
 
                 {book.audioDurationMinutes && (
                   <button
-                    onClick={() => onPlayAudioSample(book)}
+                    onClick={() => (narrated ? onReadSample(book) : onPlayAudioSample(book))}
                     className="w-full py-2.5 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 font-semibold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
                   >
                     <Headphones className="w-4 h-4 text-indigo-600" />
-                    <span>Listen to Audio Sample</span>
+                    <span>{narrated ? (ownsAudio || (opensInFull && !audioAddOn) ? 'Listen to the audiobook' : 'Listen to the narrated preview') : 'Listen to Audio Sample'}</span>
                   </button>
                 )}
               </div>
@@ -294,7 +308,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                   </span>
                 </div>
 
-                <div className={`grid gap-2 ${prepared && !book.audioDurationMinutes ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                <div className={`grid gap-2 ${prepared && !narrated ? 'grid-cols-1' : 'grid-cols-2'}`}>
                   <button
                     onClick={() => setSelectedFormat('ebook')}
                     className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
@@ -314,7 +328,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                     <p className="text-[11px] text-slate-500 mt-1">{isGenerated ? 'EPUB, reader sign-in required' : prepared ? <>EPUB • about {book.pageCount} pages{readsFree ? ' • free with a BooksAtlas account' : ''}</> : <>EPUB & PDF • {book.pageCount} pages</>}</p>
                   </button>
 
-                  {!(prepared && !book.audioDurationMinutes) && <button
+                  {!(prepared && !narrated) && <button
                     onClick={() => setSelectedFormat('audiobook')}
                     className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                       selectedFormat === 'audiobook'
@@ -327,11 +341,11 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                         <Headphones className="w-4 h-4 text-indigo-600" /> Audiobook
                       </span>
                       <span className="font-extrabold text-sm text-slate-900">
-                        {currencySymbol}{(book.price + 4.99).toFixed(2)}
+                        {narrated ? (ownsAudio ? 'Owned' : audioAddOn ? `+${money(audioPrice)}` : 'Included') : `${currencySymbol}${(book.price + 4.99).toFixed(2)}`}
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      {isGenerated ? 'Chapter narration, reader sign-in required' : book.audioDurationMinutes ? `${Math.round(book.audioDurationMinutes / 60)} hrs unabridged` : 'Full audio track'}
+                      {narrated ? `Natural voice${book.narrator ? ` (${book.narrator.replace(/ \(BooksAtlas natural voice\)$/, '')})` : ''}${audioHours ? ` • ${audioHours}` : ''} • ${audioAddOn ? 'add-on to the eBook' : 'included with the eBook'}` : isGenerated ? 'Chapter narration, reader sign-in required' : book.audioDurationMinutes ? `${Math.round(book.audioDurationMinutes / 60)} hrs unabridged` : 'Full audio track'}
                     </p>
                   </button>}
                 </div>
@@ -358,12 +372,12 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                 {/* Buy / Cart Action Row */}
                 <div className="pt-2 flex items-center gap-3">
                   <button
-                    onClick={() => (opensInFull ? openFullBook() : onAddToCart(book))}
+                    onClick={() => (buysAudio ? buyAudio() : opensInFull ? openFullBook() : onAddToCart(book))}
                     className="flex-1 py-3 px-5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 shadow-md transition-colors cursor-pointer"
                   >
                     <ShoppingBag className="w-4 h-4 text-amber-300" />
                     <span>
-                      {owned ? 'Read the Full Book' : readsFree ? (account ? 'Read the Full Book Free' : 'Sign In to Read Free') : <>Buy Now for {selectedFormat === 'ebook' ? (book.price === 0 ? 'Free' : `${currencySymbol}${book.price.toFixed(2)}`) : `${currencySymbol}${(book.price + 4.99).toFixed(2)}`}</>}
+                      {buysAudio ? (owned || readsFree ? <>Add the Audiobook for {money(audioPrice)}</> : <>Buy eBook + Audiobook for {money(audioTotal)}</>) : owned ? 'Read the Full Book' : readsFree ? (account ? 'Read the Full Book Free' : 'Sign In to Read Free') : <>Buy Now for {selectedFormat === 'ebook' ? (book.price === 0 ? 'Free' : `${currencySymbol}${book.price.toFixed(2)}`) : `${currencySymbol}${(book.price + 4.99).toFixed(2)}`}</>}
                     </span>
                   </button>
 

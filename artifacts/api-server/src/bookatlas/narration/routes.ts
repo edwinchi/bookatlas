@@ -3,11 +3,11 @@ import express, { type Express, type Request, type Response } from 'express';
 import { waitUntil } from '@vercel/functions';
 import type { Book } from '@workspace/bookatlas-catalog/types';
 import { logger } from '../../lib/logger.js';
-import { readerAccess } from '../ebookPrep/service.js';
 import { PrepError } from '../ebookPrep/archive.js';
 import { PaymentError } from '../payments/purchases.js';
 import { confirmCheckout } from '../payments/checkout.js';
-import { NarrationError, decide, getNarration, listNarrations, order, quote, readerManifest, readerSegment, step, summary, voiceSample } from './service.js';
+import { NarrationError, decide, getNarration, listNarrations, order, quote, readerManifest, readerSegment, setAudioPrice, step, summary, voiceSample } from './service.js';
+import { audioAccess } from './edition.js';
 
 /** The key the server uses to call its own next narration step; derived from the session secret. */
 export const stepKey = () => createHmac('sha256', process.env.SESSION_SECRET ?? 'bookatlas-local').update('bookatlas-narration-step-v1').digest('hex');
@@ -72,6 +72,10 @@ export function mountNarration(app: Express, findBook: (id: string) => Promise<B
     if ('free' in result && result.free) kick(result.narration.id);
     res.status(201).json(result);
   }));
+  // Cycle 9: sell the finished audiobook as an add-on to the eBook (0 = included with the eBook).
+  app.put('/api/narration/books/:bookId/sale', json, guarded(async (req, res) => {
+    res.json(await setAudioPrice(signedIn(req), String(req.params.bookId), req.body?.audioPrice));
+  }));
   app.post('/api/narration/confirm', json, guarded(async (req, res) => {
     res.json({ paid: await confirmCheckout(signedIn(req), String(req.body?.sessionId ?? '')) });
   }));
@@ -104,11 +108,15 @@ export function mountNarration(app: Express, findBook: (id: string) => Promise<B
     res.json(result);
   }));
 
-  const accessOf = async (req: Request, bookId: string) => readerAccess(bookId, req.bookatlasIdentity, (await findBook(bookId))?.price);
+  // The narration is the eBook's unless the author sells the audiobook as an add-on (cycle 9).
+  const accessOf = async (req: Request, bookId: string) => audioAccess(bookId, await findBook(bookId), req.bookatlasIdentity);
   app.get('/api/reader/catalog/:bookId/narration', guarded(async (req, res) => {
     const bookId = String(req.params.bookId);
     res.setHeader('Cache-Control', 'private, no-store');
-    res.json({ narration: /^atlas-ebook-[0-9a-f]{8}$/.test(bookId) ? await readerManifest(bookId, await accessOf(req, bookId)) : null });
+    if (!/^atlas-ebook-[0-9a-f]{8}$/.test(bookId)) { res.json({ narration: null }); return; }
+    const book = await findBook(bookId);
+    const manifest = await readerManifest(bookId, await audioAccess(bookId, book, req.bookatlasIdentity));
+    res.json({ narration: manifest && { ...manifest, audioPrice: book?.audioPrice ?? 0 } });
   }));
   app.get('/api/reader/catalog/:bookId/narration/:n', guarded(async (req, res) => {
     const bookId = String(req.params.bookId);

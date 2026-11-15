@@ -2,6 +2,7 @@ import { bookatlasDb } from '../db/supabaseClient.js';
 import { listSubmissions } from '../ebookPrep/submissions.js';
 import { PaymentError } from './purchases.js';
 import type { Invoice } from './invoices.js';
+import { audioId } from '../narration/edition.js';
 
 /**
  * Author sales dashboard (cycle 3, 2026-11-14). An author sees the sales of the books they published:
@@ -34,7 +35,12 @@ export async function authorSaleRows(userId: string, memoryInvoices: () => Invoi
   const books = new Map<string, string>();
   const authorNames = new Set<string>();
   for (const s of submissions) if (s.book_id) { books.set(s.book_id, s.data.intake.title); if (s.data.intake.author) authorNames.add(s.data.intake.author); }
-  const invoices = await invoicesForBooks([...books.keys()], memoryInvoices);
+  // The natural audiobook add-on (cycle 9) is its own product line, with the same author share.
+  const audiobooks = new Map<string, string>();
+  for (const [id, title] of books) audiobooks.set(audioId(id), `${title} (natural audiobook)`);
+  const invoices = await invoicesForBooks([...books.keys(), ...audiobooks.keys()], memoryInvoices);
+  const sold = new Set(invoices.flatMap((inv) => inv.lines.map((l) => l.bookId)));
+  for (const [id, title] of audiobooks) if (sold.has(id)) books.set(id, title);
   const sales: Sale[] = invoices.flatMap((inv) => inv.lines.filter((l) => books.has(l.bookId)).map((l) => ({
     at: inv.issued_at, bookId: l.bookId, title: books.get(l.bookId) ?? l.title, country: inv.buyer_country,
     gross: l.gross, vat: l.vat, net: l.net, refunded: inv.status === 'refunded',

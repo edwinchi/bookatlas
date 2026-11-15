@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import { AlertCircle, CheckCircle2, Clock, Headphones, Loader2, Pause, Play } from 'lucide-react';
 import { ProgressBar } from './ManuscriptPicker';
+import { AudiobookSale } from './AudiobookSale';
 import type { NarrationQuote, NarrationVoice, useEbookApi } from './ebookApi';
 
 const euro = (cents: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR' }).format(cents / 100);
@@ -118,6 +119,7 @@ export function NarrationPanel({ api, bookId }: { api: ReturnType<typeof useEboo
             <ProgressBar value={current.total ? (current.done / current.total) * 100 : 0} label={`Narrating: part ${current.done} of ${current.total}…`} />
           )}
           {current.status === 'done' && <p className="flex items-center gap-1.5 font-semibold text-emerald-800"><CheckCircle2 className="h-4 w-4" aria-hidden />Your natural audiobook is live ({Math.round(current.seconds / 360) / 10} hours). Readers choose “Listen to the book”.</p>}
+          {current.status === 'done' && quote?.sale && <AudiobookSale api={api} bookId={bookId} sale={quote.sale} onSaved={() => void load()} />}
           {current.status === 'failed' && (quote?.free ? (
             // Administrators see the reason and can resume here.
             <div className="space-y-2 rounded-lg bg-rose-50 p-2.5 text-rose-800">

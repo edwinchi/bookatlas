@@ -71,6 +71,12 @@ export interface Book {
   editorialReview: string;
   sampleChapters: Chapter[];
   audioSampleUrl?: string;
+  /**
+   * The natural audiobook (cycle 9) as a paid add-on, VAT included. Unset or 0: the narration comes free with the eBook.
+   * Sold as the product `<id>.audio`; `audioPricedAt` is when it went on sale (earlier eBook buyers keep listening).
+   */
+  audioPrice?: number;
+  audioPricedAt?: string;
   superPointsEarned: number;
   tags: string[];
   reviews: BookReview[];

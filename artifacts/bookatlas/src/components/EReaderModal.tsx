@@ -43,6 +43,7 @@ import { ReaderFigure } from './ebook/ReaderFigure';
 import { useReaderSync } from './reader/useReaderSync';
 import { HIGHLIGHT_BG, HIGHLIGHT_COLORS, ReaderNotebook } from './reader/ReaderNotebook';
 import { ReaderAssistant, type AssistantTab, type WordsRequest } from './reader/ReaderAssistant';
+import { audioProductOf } from '../audioEdition';
 
 import {
   READER_DISPLAY_PREFERENCES_KEY,
@@ -372,9 +373,13 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     for (const p of narrationUrls.current.values()) p.then((u) => URL.revokeObjectURL(u)).catch(() => undefined);
   }, []);
 
+  const naturalHere = !!narration?.segments.some((s) => s.chapter >= currentChapterIndex);
+  /** Cycle 9: the eBook is open in full but the audiobook is a paid add-on not bought yet. */
+  const audioUpsell = !!narration && narration.access === 'preview' && (narration.audioPrice ?? 0) > 0 && !inPreview;
   const toggleSpeech = () => {
     if (isSpeaking) { stopSpeech(); return; }
-    if (narration) { playNarrationFrom(currentChapterIndex); return; }
+    // The natural voice where it may be heard (all of it, or the preview of an audiobook add-on); the device voice after.
+    if (naturalHere) { playNarrationFrom(currentChapterIndex); return; }
     if (!synthRef.current) return;
     speakFrom(currentChapterIndex, 0);
   };
@@ -883,8 +888,14 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                 <button onClick={toggleSpeech} aria-pressed={isSpeaking} className="px-3 py-1 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors">
                   {isSpeaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                   {isSpeaking ? 'Stop listening' : inPreview ? 'Listen to the preview' : 'Listen to the book'}
-                  <span className="text-[10px] font-normal opacity-80">{narration ? `· ${narration.voice}, natural voice` : '· device voice'}</span>
+                  <span className="text-[10px] font-normal opacity-80">{narration && naturalHere ? `· ${narration.voice}, natural voice${audioUpsell ? ' (preview)' : ''}` : '· device voice'}</span>
                 </button>
+                {audioUpsell && (
+                  <button onClick={() => { onAddToCart(audioProductOf({ ...book, audioPrice: narration!.audioPrice })); onClose(); }}
+                    className="px-3 py-1 rounded-full border border-indigo-500/60 font-semibold inline-flex items-center gap-1.5 cursor-pointer hover:bg-indigo-500/10 transition-colors">
+                    <Headphones className="w-3.5 h-3.5" />Whole audiobook in a natural voice: €{narration!.audioPrice!.toFixed(2)}
+                  </button>
+                )}
               </div>
             )}
           </div>

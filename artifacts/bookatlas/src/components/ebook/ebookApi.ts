@@ -44,8 +44,10 @@ export interface AuthorSales {
 export type NarrationVoice = 'Sulafat' | 'Charon';
 export type NarrationStatus = 'awaiting_payment' | 'paid' | 'approved' | 'running' | 'done' | 'failed' | 'declined' | 'refunded';
 export interface NarrationSummary { id: string; bookId: string; title: string; voice: NarrationVoice; status: NarrationStatus; priceCents: number; words: number; done: number; total: number; seconds: number; error: string | null; createdAt: string; updatedAt: string }
-export interface ReaderNarration { voice: NarrationVoice; seconds: number; access: 'full' | 'preview'; segments: { n: number; chapter: number; from: number; to: number; seconds: number }[] }
-export interface NarrationQuote { bookId: string; title: string; words: number; priceCents: number; hours: number; voices: NarrationVoice[]; current: NarrationSummary | null; free?: boolean }
+export interface ReaderNarration { voice: NarrationVoice; seconds: number; access: 'full' | 'preview'; audioPrice?: number; segments: { n: number; chapter: number; from: number; to: number; seconds: number }[] }
+export interface NarrationQuote { bookId: string; title: string; words: number; priceCents: number; hours: number; voices: NarrationVoice[]; current: NarrationSummary | null; free?: boolean; sale?: NarrationSale | null }
+/** Cycle 9: how readers get the finished audiobook (audioPrice 0 = included with the eBook). */
+export interface NarrationSale { ebookPrice: number; audioPrice: number; audioPricedAt: string | null }
 export interface ReaderReview { id: string; name: string; rating: number; title: string | null; body: string; verifiedPurchase: boolean; date: string; edited: boolean }
 export interface BookReviews { average: number; count: number; breakdown: { stars: number; count: number }[]; reviews: ReaderReview[] }
 export interface MyReview { canReview: boolean; reason?: string; verifiedPurchase?: boolean; review: (ReaderReview & { hidden: boolean }) | null }
@@ -195,6 +197,7 @@ export function useEbookApi() {
     deleteReview: (bookId: string) => json<void>(`/api/reviews/books/${encodeURIComponent(bookId)}`, 'DELETE'),
     // Natural audiobook narration (TASK-0008).
     narrationQuote: (bookId: string) => json<NarrationQuote>(`/api/narration/books/${encodeURIComponent(bookId)}`),
+    setAudioPrice: (bookId: string, audioPrice: number) => json<NarrationSale>(`/api/narration/books/${encodeURIComponent(bookId)}/sale`, 'PUT', { audioPrice }),
     orderNarration: (bookId: string, voice: NarrationVoice) => json<{ url: string | null; free?: boolean }>(`/api/narration/books/${encodeURIComponent(bookId)}/order`, 'POST', { voice }),
     confirmNarration: (sessionId: string) => json<{ paid: boolean }>('/api/narration/confirm', 'POST', { sessionId }),
     narrationSample: async (voice: NarrationVoice) => URL.createObjectURL(await (await request(`/api/narration/samples/${voice}`)).blob()),

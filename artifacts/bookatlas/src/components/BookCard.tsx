@@ -131,7 +131,7 @@ export const BookCard: React.FC<BookCardProps> = ({
                   <Headphones className="w-3 h-3" /> Audio
                 </span>
               ) : book.format === 'bundle' ? (
-                <span className="text-purple-700 font-semibold">eBook + Audio</span>
+                <span className="flex items-center gap-0.5 text-purple-700 font-semibold" title="eBook with a natural-voice audiobook"><Headphones className="w-3 h-3" aria-hidden /> eBook + Audio</span>
               ) : (
                 <span className="flex items-center gap-0.5">
                   <BookOpen className="w-3 h-3 text-slate-400" /> eBook

@@ -16,7 +16,10 @@ import { mountPublishingJobs } from './publishing/jobRoutes.js';
 import { mountEbookPrep } from './ebookPrep/routes.js';
 import { mountPayments } from './payments/routes.js';
 import { announceBook, mountSeo } from './seo.js';
+import type { Book } from '@workspace/bookatlas-catalog/types';
 import { mountNarration } from './narration/routes.js';
+import { setNarrationCatalog } from './narration/service.js';
+import { withAudioEditions } from './narration/edition.js';
 import { mountReviews } from './reviews/routes.js';
 import { businessSummary } from './payments/business.js';
 import { mountFollows } from './follows/routes.js';
@@ -477,10 +480,18 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
   mountReadiness(app);
   mountCatalog(app, catalog, () => [...GENRES.filter((g: string) => g !== 'All Genres'), ...customCategories]);
   // Before the JSON parser: the Stripe webhook is verified against its raw body.
-  mountPayments(app, (bookId) => catalog.get(bookId), APP_URL);
+  // A published book changed (hardcopy links, price, audiobook): the live catalogue and the database.
+  const saveBook = async (book: Book) => {
+    const existing = liveCatalog.findIndex((item: { id: string }) => item.id === book.id);
+    if (existing >= 0) liveCatalog[existing] = book;
+    await db.upsertBookInDb(book);
+  };
+  // Checkout also sells the natural audiobook add-on `<bookId>.audio` (cycle 9).
+  mountPayments(app, withAudioEditions((bookId) => catalog.get(bookId)), APP_URL);
   // Book addresses, link previews and the sitemap (outside /api, public).
   mountSeo(app, catalog, APP_URL);
   // Natural audiobook narration (TASK-0008).
+  setNarrationCatalog({ get: (bookId) => catalog.get(bookId), save: saveBook });
   mountNarration(app, (bookId) => catalog.get(bookId), APP_URL);
   // Reader reviews, ratings and author pages (TASK-0009).
   mountReviews(app, catalog);
@@ -527,12 +538,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
     addLog('inventory_sync', `Published New Title: "${book.title}"`, `Prepared eBook added to ${categories.join(', ')}.`, 'eBook Preparation');
   }, {
     get: (bookId) => catalog.get(bookId),
-    // A published book changed (hardcopy links): the live catalogue and the database.
-    save: async (book) => {
-      const existing = liveCatalog.findIndex((item: { id: string }) => item.id === book.id);
-      if (existing >= 0) liveCatalog[existing] = book;
-      await db.upsertBookInDb(book);
-    },
+    save: saveBook,
   });
   mountWorkforce(app);
 

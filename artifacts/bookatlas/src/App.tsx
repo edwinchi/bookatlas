@@ -1,4 +1,5 @@
 import { AuthorProfileModal } from './components/AuthorProfileModal';
+import { AUDIO_SUFFIX, audioOnSale, audioProductOf, isAudioAddOn } from './audioEdition';
 import { fetchFullBook, needsFullRecord, useCatalogFacets, useCatalogSearch, useShelves } from './hooks/useCatalog';
 import { AppModal } from './components/ui/app-modal';
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -501,7 +502,9 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
           const result = crypto ? await payments.cryptoStatus(sessionId) : await payments.status(sessionId);
           // The catalogue may still be loading; wait for the bought books to appear in it.
           const bought = booksRef.current.filter((b) => result.bookIds.includes(b.id));
-          if (result.paid && (bought.length === result.bookIds.length || attempt >= 5)) {
+          // An audiobook add-on is not a separate library book.
+          const ebookIds = result.bookIds.filter((id) => !isAudioAddOn(id));
+          if (result.paid && (bought.length === ebookIds.length || attempt >= 5)) {
             setOwnedBookIds((ids) => [...new Set([...ids, ...result.bookIds])]);
             setCart((prev) => prev.filter((item) => !result.bookIds.includes(item.book.id)));
             setLibrary((prev) => [
@@ -511,7 +514,10 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
               })),
               ...prev,
             ]);
-            setCheckoutNotice({ tone: 'ok', text: `Payment received, thank you. ${bought.length === 1 ? `"${bought[0]!.title}" is` : 'Your books are'} in your library, ready to read. Your invoice is under "Orders & invoices".` });
+            const audioOnly = !ebookIds.length;
+            setCheckoutNotice({ tone: 'ok', text: audioOnly
+              ? 'Payment received, thank you. Open the book and choose “Listen to the book” to hear the whole audiobook. Your invoice is under "Orders & invoices".'
+              : `Payment received, thank you. ${bought.length === 1 ? `"${bought[0]!.title}" is` : 'Your books are'} in your library, ready to read${result.bookIds.length > ebookIds.length ? ' and listen to' : ''}. Your invoice is under "Orders & invoices".` });
             clearParams();
             return;
           }
@@ -533,8 +539,10 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
   useEffect(() => {
     if (!isCartOpen || !cart.length) return;
     let cancelled = false;
-    Promise.all(cart.map((item) => fetch(`/api/catalog/books/${encodeURIComponent(item.book.id)}`)
-      .then((res) => (res.ok ? res.json() : null)).then((data) => (data?.book as Book | undefined) ?? null).catch(() => null)))
+    // An audiobook add-on (cycle 9) is priced from its eBook's catalogue entry.
+    Promise.all(cart.map((item) => fetch(`/api/catalog/books/${encodeURIComponent(isAudioAddOn(item.book.id) ? item.book.id.slice(0, -AUDIO_SUFFIX.length) : item.book.id)}`)
+      .then((res) => (res.ok ? res.json() : null)).then((data) => (data?.book as Book | undefined) ?? null)
+      .then((b) => (b && isAudioAddOn(item.book.id) ? (audioOnSale(b) ? audioProductOf(b) : null) : b)).catch(() => null)))
       .then((fresh) => {
         if (cancelled) return;
         const byId = new Map(fresh.filter((b): b is Book => !!b).map((b) => [b.id, b]));
@@ -1238,6 +1246,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
         onPlayAudioSample={(b) => setActiveAudiobook(b)}
         isWishlisted={selectedBookForDetail ? wishlist.some((w) => w.id === selectedBookForDetail.id) : false}
         owned={selectedBookForDetail ? ownedBookIds.includes(selectedBookForDetail.id) : false}
+        ownsAudio={selectedBookForDetail ? ownedBookIds.includes(`${selectedBookForDetail.id}.audio`) : false}
         currencySymbol={currencySymbol}
         hasAiAccess={hasAiAccess}
         onRequireAiAccess={requireAiAccess}

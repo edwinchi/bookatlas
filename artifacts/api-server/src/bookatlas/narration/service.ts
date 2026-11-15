@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { GoogleGenAI } from '@google/genai';
 import { STUDIO_SPEECH_MODEL, narrationDirection } from '@workspace/bookatlas-catalog/voices';
+import type { Book } from '@workspace/bookatlas-catalog/types';
 import type { Identity } from '../../auth/policy.js';
 import { logger } from '../../lib/logger.js';
 import { bookatlasDb } from '../db/supabaseClient.js';
@@ -12,6 +13,7 @@ import { issueInvoice } from '../payments/invoices.js';
 import { PaymentError } from '../payments/purchases.js';
 import { createNarrationCheckout, refundPayment, setNarrationPaidHandler } from '../payments/checkout.js';
 import { pcm16ToMp3, pcmSeconds, toPcm16 } from './mp3.js';
+import { MAX_AUDIO_PRICE, MIN_AUDIO_PRICE, forgetAudioAccess, narratedFields } from './edition.js';
 import {
   NARRATION_VOICES, inPreview, narrationEstimate, narrationPrice, planSegments, segmentText, wordCount,
   type Chapter, type NarrationVoice, type Segment,
@@ -211,6 +213,24 @@ async function bookLanguage(bookId: string) {
   return languages.get(bookId)!;
 }
 
+// ---------------------------------------------------------------------------------------------- catalogue
+
+/** The store's catalogue (registered at start-up): a finished narration lists the book as an audiobook. */
+export interface NarrationCatalog { get(id: string): Promise<Book | null>; save(book: Book): Promise<void> }
+let catalogAccess: NarrationCatalog | null = null;
+export function setNarrationCatalog(c: NarrationCatalog | null) { catalogAccess = c; }
+
+async function listNarrated(n: Pick<Narration, 'book_id' | 'voice' | 'seconds'>) {
+  if (!catalogAccess) return null;
+  const book = await catalogAccess.get(n.book_id);
+  if (!book) return null;
+  const fields = narratedFields(n);
+  if (book.format === fields.format && book.narrator === fields.narrator && book.audioDurationMinutes === fields.audioDurationMinutes) return book;
+  const next = { ...book, ...fields };
+  await catalogAccess.save(next);
+  return next;
+}
+
 // ---------------------------------------------------------------------------------------------- author
 
 const segKey = (id: string, n: number) => `narrations/${id}/seg-${String(n).padStart(4, '0')}.mp3`;
@@ -229,12 +249,39 @@ export async function quote(who: Identity, bookId: string) {
   const words = wordCount(chapters);
   const estimate = narrationEstimate(words);
   const current = await latestForBook(bookId);
+  // A finished narration: the book is listed as an audiobook and the author can sell it as an add-on.
+  const listed = current?.status === 'done' ? await listNarrated(current).catch((err) => { logger.warn({ err, event: 'narration.listing_failed' }, 'Audiobook listing failed'); return null; }) : null;
   return {
     bookId, title: submission.data.intake.title, words, priceCents: narrationPrice(words), hours: Math.round((estimate.seconds / 3600) * 10) / 10,
     // Owner decision 2026-11-15: administrators narrate any book at no charge; everyone else pays.
     free: who.role === 'admin',
     voices: NARRATION_VOICES, current: current && ACTIVE.includes(current.status) || current?.status === 'failed' ? summary(current) : null,
+    sale: listed ? { ebookPrice: listed.price, audioPrice: listed.audioPrice ?? 0, audioPricedAt: listed.audioPricedAt ?? null } : null,
   };
+}
+
+/**
+ * The author (or an administrator) sells the finished audiobook as an add-on to the eBook, or includes it (0).
+ * The first time it goes on sale is kept: eBooks bought before then keep the full narration.
+ */
+export async function setAudioPrice(who: Identity, bookId: string, input: unknown) {
+  await ownedPublishedBook(who, bookId);
+  const n = await finishedForBook(bookId);
+  if (!n) throw new NarrationError('The audiobook can be priced once its narration is finished.', 409);
+  if (!catalogAccess) throw new NarrationError('The store is temporarily unavailable. Please retry.', 503);
+  const price = Math.round(Number(input) * 100) / 100;
+  if (input === null || input === '' || !Number.isFinite(price) || (price !== 0 && (price < MIN_AUDIO_PRICE || price > MAX_AUDIO_PRICE))) {
+    throw new NarrationError(`Enter 0 to include the audiobook with the eBook, or a price between €${MIN_AUDIO_PRICE} and €${MAX_AUDIO_PRICE}.`, 422);
+  }
+  const book = await catalogAccess.get(bookId);
+  if (!book) throw new NarrationError('The published book could not be found.', 404);
+  const { audioPrice: before, audioPricedAt: since, ...rest } = book;
+  const pricedAt = price > 0 ? ((before ?? 0) > 0 && since ? since : new Date().toISOString()) : undefined;
+  const next: Book = { ...rest, ...narratedFields(n), ...(price > 0 ? { audioPrice: price, audioPricedAt: pricedAt } : {}) };
+  await catalogAccess.save(next);
+  forgetAudioAccess();
+  logger.info({ event: 'audiobook.priced', book: bookId, price }, 'Audiobook add-on price set');
+  return { ebookPrice: next.price, audioPrice: price, audioPricedAt: pricedAt ?? null };
 }
 
 export const summary = (n: Narration) => ({
@@ -335,7 +382,10 @@ export async function step(id?: string): Promise<{ id: string | null; more: bool
         segments, done, seconds: n.seconds + seconds, spent_micros: n.spent_micros + (used === 'gemini' ? costMicros(seconds, text.length) : 0),
         status: done >= n.total ? 'done' : 'running', lease_until: null, lease_token: null,
       });
-      if (done >= n.total) logger.info({ event: 'narration.done', narration: n.id, book: n.book_id }, 'Narration complete');
+      if (done >= n.total) {
+        logger.info({ event: 'narration.done', narration: n.id, book: n.book_id }, 'Narration complete');
+        await listNarrated({ ...n, seconds: n.seconds + seconds }).catch((err) => logger.warn({ err, event: 'narration.listing_failed' }, 'Audiobook listing failed'));
+      }
       return { id: n.id, more: done < n.total };
     } catch (err) {
       // Google's quota (e.g. the free tier's 10 speech requests a day): retrying cannot help, so pause at once

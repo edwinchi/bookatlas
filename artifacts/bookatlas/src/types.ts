@@ -71,6 +71,9 @@ export interface Book {
   editorialReview: string;
   sampleChapters: Chapter[];
   audioSampleUrl?: string;
+  /** The natural audiobook add-on price (cycle 9); unset or 0 = included with the eBook. */
+  audioPrice?: number;
+  audioPricedAt?: string;
   superPointsEarned: number;
   tags: string[];
   reviews: BookReview[];

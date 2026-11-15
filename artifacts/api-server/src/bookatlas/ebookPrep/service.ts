@@ -340,6 +340,11 @@ export async function publishSubmission(id: string, onPublished: (book: Book, ca
     sampleChapters: sampleChapters(content.chapters), superPointsEarned: Math.round(price * 10),
     tags: intake.keywords, reviews: [], readingTimeHours: Math.max(1, Math.round(words / 250 / 60)),
     ...(row.data.printLinks && Object.keys(row.data.printLinks).length ? { printLinks: row.data.printLinks } : {}),
+    // A new version keeps its natural audiobook: the narration, its listing and its add-on price.
+    ...(previous?.format === 'bundle' ? {
+      format: 'bundle' as const, narrator: previous.narrator, audioDurationMinutes: previous.audioDurationMinutes,
+      ...(previous.audioPrice ? { audioPrice: previous.audioPrice, audioPricedAt: previous.audioPricedAt } : {}),
+    } : {}),
   };
   onPublished(book, intake.categories);
   return saveSubmission(row, {

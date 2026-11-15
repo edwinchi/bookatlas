@@ -4,6 +4,7 @@ import type { Identity } from '../../auth/policy.js';
 import { logger } from '../../lib/logger.js';
 import { PaymentError, markRefunded, purchasedBookIds, purchasesOf, recordPaid } from './purchases.js';
 import { invoicesOf, issueInvoice, markInvoiceRefunded } from './invoices.js';
+import { audioAccess, baseOfAudio } from '../narration/edition.js';
 
 /** The parts of the Stripe client BooksAtlas uses; tests substitute a fake. */
 export type StripeClient = {
@@ -58,6 +59,16 @@ export async function validateCart(who: Identity, requested: unknown, findBook: 
   const owned = new Set(await purchasedBookIds(who.id));
   const already = (books as Book[]).find((b) => owned.has(b.id));
   if (already) throw new PaymentError(`You already own "${already.title}".`, 409);
+  // The natural audiobook (cycle 9) is an add-on to the eBook: bought with it, after it, or with a free eBook.
+  for (const id of ids) {
+    const base = baseOfAudio(id);
+    if (!base) continue;
+    const ebook = await findBook(base);
+    if (!ids.includes(base) && !owned.has(base) && ebook?.price !== 0) {
+      throw new PaymentError(`The audiobook of "${ebook?.title ?? 'this book'}" is an add-on to the eBook: add the eBook to your cart too.`, 422);
+    }
+    if (await audioAccess(base, ebook, who) === 'full') throw new PaymentError(`You can already listen to all of "${ebook?.title ?? 'this book'}".`, 409);
+  }
   return { ids, books: books as Book[], waiverAt };
 }
 
