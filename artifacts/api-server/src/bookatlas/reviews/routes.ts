@@ -4,6 +4,7 @@ import type { BookCard } from '@workspace/bookatlas-catalog/query';
 import { logger } from '../../lib/logger.js';
 import type { CatalogStore } from '../catalog/store.js';
 import { submissionForBook } from '../ebookPrep/submissions.js';
+import { followerCount } from '../follows/service.js';
 import { ReviewError, bookReviews, deleteReview, moderate, myReview, saveReview, type ReviewCatalog } from './service.js';
 
 /** "Apehgong Edwin Chi" -> "apehgong-edwin-chi": the author page address. */
@@ -25,7 +26,7 @@ export async function authorProfile(catalog: CatalogStore, slug: string) {
   const rated = books.filter((b) => (b.reviewCount ?? 0) > 0);
   const reviews = rated.reduce((n, b) => n + (b.reviewCount ?? 0), 0);
   const rating = reviews ? Math.round((rated.reduce((n, b) => n + b.rating * (b.reviewCount ?? 0), 0) / reviews) * 10) / 10 : 0;
-  return { slug, name, bio, books, rating, reviews };
+  return { slug, name, bio, books, rating, reviews, followers: await followerCount(slug).catch(() => 0) };
 }
 
 function guarded(handler: (req: Request, res: Response) => Promise<void>) {

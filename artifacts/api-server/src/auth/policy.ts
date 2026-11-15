@@ -18,6 +18,9 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   // Reviews and author pages (TASK-0009): reading is public; writing needs a signed-in reader.
   if (method === 'GET' && /^\/api\/catalog\/(?:books\/[^/]+\/reviews|authors\/[a-z0-9-]+)$/.test(normalized)) return 'public';
   if (/^\/api\/reviews\/books\/[^/]+(?:\/mine)?$/.test(normalized) && ['GET', 'PUT', 'DELETE'].includes(method)) return 'reader';
+  // Follow authors (cycle 5c); the unsubscribe link is checked by its signed token.
+  if (normalized === '/api/follows/unsubscribe' && ['GET', 'POST'].includes(method)) return 'self-service';
+  if (/^\/api\/follows\/[a-z0-9-]+(?:\/mine)?$/.test(normalized) && ['GET', 'POST', 'DELETE'].includes(method)) return 'reader';
   // Everyone may read a prepared book's preview; the route decides who gets the whole book.
   if (method === 'GET' && /^\/api\/reader\/catalog\/[^/]+\/(?:content|images\/[^/]+)$/.test(normalized)) return 'self-service';
   if (normalized === '/api/ebook-submissions' && ['GET', 'POST'].includes(method)) return 'reader';

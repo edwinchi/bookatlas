@@ -125,6 +125,10 @@ export function useEbookApi() {
 
   return {
     authorSales: () => json<AuthorSales>('/api/author/sales'),
+    // Follow authors (cycle 5c).
+    followState: (slug: string) => json<{ following: boolean }>(`/api/follows/${slug}/mine`),
+    follow: (slug: string) => json<{ following: boolean }>(`/api/follows/${slug}`, 'POST', {}),
+    unfollow: (slug: string) => json<{ following: boolean }>(`/api/follows/${slug}`, 'DELETE'),
     business: () => json<BusinessSummary>('/api/manager/business'),
     // Reader reviews (TASK-0009).
     bookReviews: (bookId: string) => json<BookReviews>(`/api/catalog/books/${encodeURIComponent(bookId)}/reviews`),

@@ -20,6 +20,8 @@ const sections: { title: string; body: ReactNode }[] = [
       <li><strong>Sign-up confirmations:</strong> that you confirmed you are 16 or older and which version of this notice you read, with the time.</li>
       <li><strong>Email preferences:</strong> only if you opt in to reading updates, the time and source of that consent, plus delivery status of emails we send you.</li>
       <li><strong>Orders:</strong> when you buy an eBook, which books you bought, the amount, VAT, your name, email address and country as Stripe reports them, the invoice and any refund request with its reason. Card details are handled by Stripe and never reach us.</li>
+      <li><strong>Reviews:</strong> if you review a book, your rating and text are public with your first name and initial; you can edit or delete them at any time.</li>
+      <li><strong>Authors you follow:</strong> which authors you follow and your email address, with the time you chose to follow, so we can email you once when they publish a new book. Every email has a one-click unsubscribe link.</li>
       <li><strong>On your device only:</strong> your cart, wishlist, reading progress and reader settings are stored in your browser, not on our servers.</li>
     </ul>,
   },

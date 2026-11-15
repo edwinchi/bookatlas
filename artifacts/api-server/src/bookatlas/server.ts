@@ -19,6 +19,10 @@ import { announceBook, mountSeo } from './seo.js';
 import { mountNarration } from './narration/routes.js';
 import { mountReviews } from './reviews/routes.js';
 import { businessSummary } from './payments/business.js';
+import { mountFollows } from './follows/routes.js';
+import { announceToFollowers, eraseFollowsOf, followsOf } from './follows/service.js';
+import { authorSlug } from './reviews/routes.js';
+import { waitUntil } from '@vercel/functions';
 import { eraseReviewsOf, reviewsOf } from './reviews/service.js';
 import { createAiGate, localSuggestion, MAX_EXCERPT, metadataPrompt, sanitizeSuggestion } from './ai/bookMetadata.js';
 import { anonymisePurchases, purchasesOf } from './payments/purchases.js';
@@ -477,6 +481,8 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
   mountNarration(app, (bookId) => catalog.get(bookId), APP_URL);
   // Reader reviews, ratings and author pages (TASK-0009).
   mountReviews(app, catalog);
+  // Follow authors and new-book e-mails (cycle 5c).
+  mountFollows(app, catalog);
   // The owner's business dashboard (cycle 5): revenue, commission, VAT, narration margin, author payouts owed.
   app.get('/api/manager/business', async (req, res) => {
     if (req.bookatlasIdentity?.role !== 'admin') { res.status(403).json({ error: 'Administrator access is required.' }); return; }
@@ -502,6 +508,8 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
     // Tell search engines (IndexNow: Bing, which ChatGPT search and Copilot use) about the new book at once.
     announceBook(book.id, APP_URL);
     const existing = liveCatalog.findIndex((item: { id: string }) => item.id === book.id);
+    // Followers hear about a book once, when it is first published (not for new versions).
+    if (existing < 0) waitUntil(announceToFollowers(book, authorSlug(book.author), APP_URL).catch(() => undefined));
     if (existing >= 0) liveCatalog[existing] = book;
     else liveCatalog.unshift(book);
     void db.upsertBookInDb(book);
@@ -774,7 +782,8 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
       try {
         const [purchases, invoices, reviews] = await Promise.all([purchasesOf(userId), invoicesOf(userId), reviewsOf(userId)]);
         return [...purchases, ...invoices.map(({ user_id: _u, ...invoice }) => ({ record: 'invoice', number: invoiceNumber(invoice), ...invoice })),
-          ...reviews.map((review) => ({ record: 'review', ...review }))];
+          ...reviews.map((review) => ({ record: 'review', ...review })),
+          ...(await followsOf(userId)).map(({ user_id: _u, ...f }) => ({ record: 'follow', ...f }))];
       } catch { throw new AccountStoreError('Purchase records are unavailable.'); }
     },
     async submissions(userId) {
@@ -789,6 +798,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
       try {
         await anonymisePurchases(userId);
         await anonymiseInvoices(userId, `erased-${randomUUID()}`);
+        await eraseFollowsOf(userId);
         // Reviews name the reader, so they are deleted; the books' ratings are recalculated.
         await eraseReviewsOf(userId, { get: (id) => catalog.get(id), setRating: (book, rating, count) => catalog.upsert([{ ...book, rating, reviewCount: count }]) });
         await eraseAuthorData(userId);

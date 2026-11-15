@@ -91,3 +91,34 @@ test('author pages: the author\'s real books and bio, with a search-engine versi
   assert.ok((await (await fetch('/sitemap.xml')).text()).includes('/sitemaps/authors.xml'));
   assert.ok((await (await fetch('/sitemaps/authors.xml')).text()).includes('/author/ada-writer'));
 });
+
+test('readers follow authors; the new-book e-mail has a one-click unsubscribe that works without signing in', async () => {
+  const { fetch } = await getSharedTestServer();
+  await publishBook(fetch);
+  assert.equal((await fetch('/api/follows/ada-writer', { method: 'POST', headers: { 'x-test-role': 'unauthenticated' } })).status, 401);
+  assert.equal((await fetch('/api/follows/no-such-author', { method: 'POST', headers: { 'x-test-role': 'reader' } })).status, 404);
+  assert.equal((await fetch('/api/follows/ada-writer', { method: 'POST', headers: { 'x-test-role': 'reader' } })).status, 201);
+  assert.equal((await fetch('/api/follows/ada-writer', { method: 'POST', headers: { 'x-test-role': 'reader' } })).status, 201, 'following twice is harmless');
+  assert.equal((await (await fetch('/api/follows/ada-writer/mine', as('reader'))).json()).following, true);
+  assert.equal((await (await fetch('/api/catalog/authors/ada-writer')).json()).followers, 1);
+
+  const service = await import('../../artifacts/api-server/src/bookatlas/follows/service.ts');
+  const [f] = await service.followersOf('ada-writer');
+  const mail = service.newBookEmail({ id: 'atlas-ebook-00000001', title: 'Book <Two>', author: 'Ada Writer', synopsis: 'A second book.', coverImage: '/api/catalog/covers/atlas-ebook-00000001.jpg' } as never, f!, 'https://booksatlas.app');
+  assert.equal(mail.subject, 'New from Ada Writer: Book <Two>');
+  assert.ok(mail.html.includes('Book &lt;Two&gt;') && mail.html.includes('-w360.jpg'));
+  assert.match(mail.headers['List-Unsubscribe'], /^<https:\/\/booksatlas\.app\/api\/follows\/unsubscribe\?token=/);
+  const result = await service.announceToFollowers({ id: 'atlas-ebook-00000001', title: 'Two', author: 'Ada Writer', synopsis: 'x' } as never, 'ada-writer', 'https://booksatlas.app');
+  assert.deepEqual(result, { sent: 0, followers: 1 }, 'without Resend settings nothing is sent and nothing fails');
+
+  assert.equal((await fetch('/api/follows/unsubscribe?token=forged.token')).status, 400);
+  const token = service.unfollowToken(f!.user_id, 'ada-writer');
+  const out = await fetch(`/api/follows/unsubscribe?token=${encodeURIComponent(token)}`, { headers: { 'x-test-role': 'unauthenticated' } });
+  assert.equal(out.status, 200);
+  assert.match(await out.text(), /no longer receive e-mails/);
+  assert.equal((await (await fetch('/api/follows/ada-writer/mine', as('reader'))).json()).following, false);
+
+  await fetch('/api/follows/ada-writer', { method: 'POST', headers: { 'x-test-role': 'reader' } });
+  const exported = await (await fetch('/api/account/export', as('reader'))).json();
+  assert.ok(exported.purchases.some((p: { record?: string; author_slug?: string }) => p.record === 'follow' && p.author_slug === 'ada-writer'), 'follows are in the data export');
+});
