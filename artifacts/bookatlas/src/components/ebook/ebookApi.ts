@@ -45,7 +45,7 @@ export type NarrationVoice = 'Sulafat' | 'Charon';
 export type NarrationStatus = 'awaiting_payment' | 'paid' | 'approved' | 'running' | 'done' | 'failed' | 'declined' | 'refunded';
 export interface NarrationSummary { id: string; bookId: string; title: string; voice: NarrationVoice; status: NarrationStatus; priceCents: number; words: number; done: number; total: number; seconds: number; error: string | null; createdAt: string; updatedAt: string }
 export interface ReaderNarration { voice: NarrationVoice; seconds: number; access: 'full' | 'preview'; segments: { n: number; chapter: number; from: number; to: number; seconds: number }[] }
-export interface NarrationQuote { bookId: string; title: string; words: number; priceCents: number; hours: number; voices: NarrationVoice[]; current: NarrationSummary | null }
+export interface NarrationQuote { bookId: string; title: string; words: number; priceCents: number; hours: number; voices: NarrationVoice[]; current: NarrationSummary | null; free?: boolean }
 export interface ReaderReview { id: string; name: string; rating: number; title: string | null; body: string; verifiedPurchase: boolean; date: string; edited: boolean }
 export interface BookReviews { average: number; count: number; breakdown: { stars: number; count: number }[]; reviews: ReaderReview[] }
 export interface MyReview { canReview: boolean; reason?: string; verifiedPurchase?: boolean; review: (ReaderReview & { hidden: boolean }) | null }
@@ -107,6 +107,20 @@ export interface ReadingStats {
   sessions: number; last30: { day: string; minutes: number }[];
 }
 
+export interface AskResult {
+  answer: string; access: 'full' | 'preview'; remaining: number;
+  sources: { n: number; chapterIndex: number; paragraphIndex: number; chapterTitle: string; excerpt: string; cited: boolean }[];
+}
+export type StudyKind = 'summary' | 'key_concepts' | 'flashcards' | 'quiz';
+export interface StudyResult {
+  chapterIndex: number; cached: boolean;
+  summary?: string; points?: string[];
+  concepts?: { term: string; explanation: string }[];
+  cards?: { front: string; back: string }[];
+  questions?: { question: string; options: string[]; answer: number; explanation: string }[];
+}
+export interface Definition { word: string; pronunciation: string; partOfSpeech: string; definitions: string[]; synonyms: string[]; example: string; origin: string }
+
 export function useEbookApi() {
   const { getToken } = useAuth();
   const tokenRef = useRef(getToken);
@@ -160,6 +174,14 @@ export function useEbookApi() {
     recordReadingSession: (body: { bookId: string; startedAt: string; seconds: number; paragraphs: number; words: number; device: string }) =>
       json<unknown>('/api/reader/sessions', 'POST', body),
     readingStats: () => json<ReadingStats>('/api/reader/stats'),
+    // Reader Phase 2 (cycle 8): AI on the text the reader may read.
+    readerAiConfig: () => json<{ dailyLimit: number; languages: Record<string, string> }>('/api/reader/ai/config'),
+    askBook: (body: { bookId: string; question: string; chapterIndex: number; history: { role: 'user' | 'assistant'; text: string }[] }) =>
+      json<AskResult>('/api/reader/ai/ask', 'POST', body),
+    studyChapter: <K extends StudyKind>(body: { bookId: string; chapterIndex: number; kind: K }) => json<StudyResult & { kind: K; remaining: number }>('/api/reader/ai/study', 'POST', body),
+    explainPassage: (body: { bookId: string; text: string; mode: 'explain' | 'simplify' }) => json<{ mode: string; answer: string; remaining: number }>('/api/reader/ai/explain', 'POST', body),
+    translatePassage: (body: { bookId: string; text: string; target: string }) => json<{ language: string; translation: string; remaining: number }>('/api/reader/ai/translate', 'POST', body),
+    defineWord: (body: { bookId: string; word: string; context: string }) => json<Definition & { remaining: number }>('/api/reader/ai/define', 'POST', body),
     savePayout: (body: PayoutInput) => json<PayoutView>('/api/author/payout', 'PUT', body),
     // Follow authors (cycle 5c).
     followState: (slug: string) => json<{ following: boolean }>(`/api/follows/${slug}/mine`),
@@ -173,7 +195,7 @@ export function useEbookApi() {
     deleteReview: (bookId: string) => json<void>(`/api/reviews/books/${encodeURIComponent(bookId)}`, 'DELETE'),
     // Natural audiobook narration (TASK-0008).
     narrationQuote: (bookId: string) => json<NarrationQuote>(`/api/narration/books/${encodeURIComponent(bookId)}`),
-    orderNarration: (bookId: string, voice: NarrationVoice) => json<{ url: string }>(`/api/narration/books/${encodeURIComponent(bookId)}/order`, 'POST', { voice }),
+    orderNarration: (bookId: string, voice: NarrationVoice) => json<{ url: string | null; free?: boolean }>(`/api/narration/books/${encodeURIComponent(bookId)}/order`, 'POST', { voice }),
     confirmNarration: (sessionId: string) => json<{ paid: boolean }>('/api/narration/confirm', 'POST', { sessionId }),
     narrationSample: async (voice: NarrationVoice) => URL.createObjectURL(await (await request(`/api/narration/samples/${voice}`)).blob()),
     narrations: () => json<{ narrations: (NarrationSummary & { ownerId: string; estimateMicros: number; spentMicros: number })[] }>('/api/manager/narrations').then((r) => r.narrations),

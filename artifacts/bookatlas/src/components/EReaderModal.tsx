@@ -32,7 +32,8 @@ import {
   Send,
   Sparkle,
   NotebookPen,
-  StickyNote
+  StickyNote,
+  GraduationCap
 } from 'lucide-react';
 import { StudioNarrationPanel } from './voice/StudioNarrationPanel';
 import { Book, Chapter, ReaderSettings, ReaderTheme, ReaderFont } from '../types';
@@ -41,6 +42,7 @@ import { useEbookApi, type ReaderNarration } from './ebook/ebookApi';
 import { ReaderFigure } from './ebook/ReaderFigure';
 import { useReaderSync } from './reader/useReaderSync';
 import { HIGHLIGHT_BG, HIGHLIGHT_COLORS, ReaderNotebook } from './reader/ReaderNotebook';
+import { ReaderAssistant, type AssistantTab, type WordsRequest } from './reader/ReaderAssistant';
 
 import {
   READER_DISPLAY_PREFERENCES_KEY,
@@ -137,6 +139,29 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [selectedHighlightColor, setSelectedHighlightColor] = useState<string>('yellow');
   const [showNotebook, setShowNotebook] = useState(false);
+  // Reader Phase 2 (cycle 8): the reading assistant and the toolbar shown over selected text.
+  const [showAssistant, setShowAssistant] = useState(false);
+  const [assistantTab, setAssistantTab] = useState<AssistantTab>('ask');
+  const [wordsRequest, setWordsRequest] = useState<WordsRequest | null>(null);
+  const [selectionBar, setSelectionBar] = useState<{ x: number; y: number; text: string; context: string } | null>(null);
+  const openAssistant = (tab: AssistantTab) => { setAssistantTab(tab); setShowAssistant(true); setShowNotebook(false); setShowAICopilot(false); };
+  const onTextSelected = () => {
+    const sel = window.getSelection();
+    const text = sel?.toString().replace(/\s+/g, ' ').trim() ?? '';
+    if (!sel || !text || text.length > 2000 || !sel.rangeCount) { setSelectionBar(null); return; }
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    const box = readerContainerRef.current?.getBoundingClientRect();
+    if (!box || !rect.width) { setSelectionBar(null); return; }
+    const para = (sel.anchorNode?.parentElement?.closest('[data-para]') as HTMLElement | null)?.innerText ?? text;
+    setSelectionBar({ x: Math.min(Math.max(rect.left + rect.width / 2 - box.left, 150), box.width - 150), y: Math.max(rect.top - box.top - 48, 64), text, context: para.slice(0, 600) });
+  };
+  const runSelection = (action: WordsRequest['action']) => {
+    if (!selectionBar) return;
+    setWordsRequest({ id: Date.now(), action, text: selectionBar.text, context: selectionBar.context });
+    openAssistant('words');
+    setSelectionBar(null);
+    window.getSelection()?.removeAllRanges();
+  };
   const [markError, setMarkError] = useState('');
   const [activeHighlightMode, setActiveHighlightMode] = useState(false);
 
@@ -390,16 +415,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
         throw new Error('Fallback needed');
       }
     } catch (err) {
-      // Heuristic fallback
-      if (type === 'explain') {
-        setCopilotResponse(`In "${book.title}", this passage establishes the central tension and thematic weight of ${book.author}'s narrative. Key metaphors reveal subtle character psychological motivations.`);
-      } else if (type === 'historical_context') {
-        setCopilotResponse(`This passage reflects broader sociopolitical currents and the author's philosophical inquiries into modern human nature and European literary traditions.`);
-      } else if (type === 'themes') {
-        setCopilotResponse(`Key themes illustrated here: existential agency, destiny vs. choice, and emotional resilience under high stakes.`);
-      } else {
-        setCopilotResponse(`Character dynamics display underlying unspoken friction and subtextual bonding, driving forward the immediate plot conflict.`);
-      }
+      // Never show invented "analysis" as if the AI had written it.
+      setCopilotResponse('The AI assistant is not available right now. Please try again in a minute.');
     } finally {
       setCopilotLoading(false);
     }
@@ -579,7 +596,9 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
         prevPage();
       } else if (e.key === 'Escape') {
-        if (showNotebook) setShowNotebook(false);
+        if (selectionBar) setSelectionBar(null);
+        else if (showAssistant) setShowAssistant(false);
+        else if (showNotebook) setShowNotebook(false);
         else if (showSettings) setShowSettings(false);
         else if (showToc) setShowToc(false);
         else if (showAICopilot) setShowAICopilot(false);
@@ -588,7 +607,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentChapterIndex, chapters.length, showSettings, showToc, showAICopilot, showNotebook]);
+  }, [currentChapterIndex, chapters.length, showSettings, showToc, showAICopilot, showNotebook, showAssistant, selectionBar]);
 
   // Turning the page yourself stops the voice; listening turns pages on its own.
   useEffect(() => {
@@ -766,9 +785,20 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             <Bookmark className={`w-4 h-4 ${bookmarked ? 'fill-indigo-600' : ''}`} />
           </button>
 
+          {/* Reading assistant: ask the book, study, words */}
+          <button
+            onClick={() => (showAssistant ? setShowAssistant(false) : openAssistant('ask'))}
+            aria-label={showAssistant ? 'Close reading assistant' : 'Open reading assistant: ask the book, study, translate and define'}
+            aria-expanded={showAssistant}
+            className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${showAssistant ? 'bg-indigo-600 text-white' : 'hover:bg-black/10 opacity-75'}`}
+            title="Ask the book and study"
+          >
+            <GraduationCap className="w-4 h-4" />
+          </button>
+
           {/* Notebook: highlights, bookmarks, notes, search, export and reading stats */}
           <button
-            onClick={() => { setShowNotebook(!showNotebook); setShowAICopilot(false); }}
+            onClick={() => { setShowNotebook(!showNotebook); setShowAICopilot(false); setShowAssistant(false); }}
             aria-label={showNotebook ? 'Close notebook' : 'Open notebook: highlights, bookmarks, notes and reading stats'}
             aria-expanded={showNotebook}
             className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${showNotebook ? 'bg-indigo-600 text-white' : 'hover:bg-black/10 opacity-75'}`}
@@ -860,7 +890,10 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           </div>
 
           {/* Chapter Paragraphs */}
-          <div 
+          <div
+            onMouseUp={() => setTimeout(onTextSelected, 0)}
+            onTouchEnd={() => setTimeout(onTextSelected, 250)}
+            onKeyUp={(e) => { if (e.shiftKey) onTextSelected(); }}
             className={`space-y-6 ${getFontFamilyClass(settings.fontFamily)}`}
             style={{
               fontSize: `${settings.fontSize}px`,
@@ -1085,6 +1118,23 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
         <div role="alert" className="absolute bottom-20 right-4 z-40 max-w-xs rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800 shadow-lg">
           {markError} <button type="button" onClick={() => setMarkError('')} className="ml-1 underline cursor-pointer">Close</button>
         </div>
+      )}
+      {selectionBar && (
+        <div role="toolbar" aria-label="Selected text" style={{ left: selectionBar.x, top: selectionBar.y }}
+          className="absolute z-50 flex -translate-x-1/2 items-center gap-0.5 rounded-full bg-slate-900 p-1 text-[11px] font-semibold text-white shadow-xl">
+          {selectionBar.text.split(' ').length <= 3 && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runSelection('define')} className="rounded-full px-2.5 py-1.5 hover:bg-white/15 cursor-pointer">Define</button>}
+          <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runSelection('explain')} className="rounded-full px-2.5 py-1.5 hover:bg-white/15 cursor-pointer">Explain</button>
+          <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runSelection('simplify')} className="rounded-full px-2.5 py-1.5 hover:bg-white/15 cursor-pointer">Simplify</button>
+          <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runSelection('translate')} className="rounded-full px-2.5 py-1.5 hover:bg-white/15 cursor-pointer">Translate</button>
+          <button type="button" onClick={() => setSelectionBar(null)} aria-label="Close" className="rounded-full px-1.5 py-1.5 text-white/60 hover:bg-white/15 cursor-pointer"><X className="h-3 w-3" /></button>
+        </div>
+      )}
+      {showAssistant && (
+        <ReaderAssistant
+          api={ebookApi} signedIn={!!account} onSignIn={() => requireSignIn('the reading assistant')} bookId={book.id} chapters={chapters}
+          chapterIndex={currentChapterIndex} inPreview={inPreview || !book.hasReaderContent} tab={assistantTab} onTab={setAssistantTab} request={wordsRequest}
+          onJump={(c, p) => jumpTo(c, p)} onClose={() => setShowAssistant(false)}
+        />
       )}
       {showNotebook && (
         <ReaderNotebook

@@ -486,7 +486,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
   mountReviews(app, catalog);
   // Follow authors and new-book e-mails (cycle 5c).
   mountFollows(app, catalog);
-  mountReader(app, catalog);
+  mountReader(app, catalog, (opts) => generateAiText(opts));
   // The owner's business dashboard (cycle 5): revenue, commission, VAT, narration margin, author payouts owed.
   app.get('/api/manager/business', async (req, res) => {
     if (req.bookatlasIdentity?.role !== 'admin') { res.status(403).json({ error: 'Administrator access is required.' }); return; }
@@ -2923,11 +2923,8 @@ Current Context: "${context || ''}"`;
       });
 
       if (!text_) {
-        res.json({
-          success: true,
-          source: 'local_synthesis',
-          result: getFallbackCopilotResult(action, text, bookTitle),
-        });
+        // Never present invented "analysis" as if it came from the AI.
+        res.status(503).json({ success: false, error: 'The AI assistant is not available right now. Please try again in a minute.' });
         return;
       }
 
@@ -2938,11 +2935,7 @@ Current Context: "${context || ''}"`;
       });
     } catch (error: any) {
       logger.error({ err: error }, 'Reader Copilot AI Error');
-      res.json({
-        success: true,
-        source: 'fallback',
-        result: getFallbackCopilotResult(req.body.action, req.body.text, req.body.bookTitle),
-      });
+      res.status(503).json({ success: false, error: 'The AI assistant is not available right now. Please try again in a minute.' });
     }
   });
 
@@ -3687,21 +3680,6 @@ function generateHeuristicMatches(query: string, candidateBooks: any[]) {
   return scored.sort((a: any, b: any) => b.matchScore - a.matchScore).slice(0, 4);
 }
 
-function getFallbackCopilotResult(action: string, text: string, bookTitle: string) {
-  if (action === 'explain') {
-    return `In this passage from "${bookTitle}", the author uses rich sensory imagery to establish psychological tension. The character's internal dialogue reveals an unresolved dilemma that drives the upcoming plot turn.`;
-  }
-  if (action === 'summarize') {
-    return `• The scene introduces a pivotal revelation that shifts the character's immediate objective.\n• Undercurrents of mistrust and historical conflict are established.\n• The narrative sets up an urgent imperative for the chapters ahead.`;
-  }
-  if (action === 'character_intent') {
-    return `The character is navigating conflicting allegiances. Their hesitation demonstrates an awareness of the severe consequences tied to this critical decision.`;
-  }
-  if (action === 'vocab_etymology') {
-    return `The excerpt employs evocative prose with deliberate cadences. Notice the rhythmic balance between descriptive pauses and sharp, decisive verbs.`;
-  }
-  return `This section explores core themes of resilience, perception, and human curiosity under pressure.`;
-}
 
 function getFallbackSummary(book: any) {
   return {

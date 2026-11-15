@@ -1,0 +1,118 @@
+import test, { after, before } from 'node:test';
+import assert from 'node:assert/strict';
+import { getSharedTestServer, closeSharedTestServer } from './helpers.ts';
+import { epub2 } from '../../artifacts/api-server/src/bookatlas/ebookPrep/testFixtures.ts';
+import type { Generate } from '../../artifacts/api-server/src/bookatlas/reader/ai.ts';
+
+// A fake AI that records what it was sent and answers by request type.
+const calls: Parameters<Generate>[0][] = [];
+let reply: (o: Parameters<Generate>[0]) => string | null = () => 'ok';
+const fake: Generate = async (o) => { calls.push(o); return reply(o); };
+let setGen: (g: Generate | null) => void = () => undefined;
+let resetQuota: () => void = () => undefined;
+before(async () => {
+  ({ setReaderAiGenerator: setGen } = await import('../../artifacts/api-server/src/bookatlas/reader/routes.ts'));
+  ({ resetAiQuota: resetQuota } = await import('../../artifacts/api-server/src/bookatlas/reader/ai.ts'));
+  setGen(fake);
+});
+after(async () => { setGen(null); await closeSharedTestServer(); });
+
+const post = (path: string, body: unknown, role = 'reader') => ({ method: 'POST', headers: { 'content-type': 'application/json', 'x-test-role': role }, body: JSON.stringify(body) });
+
+async function publishBook(fetch: (path: string, init?: RequestInit) => Promise<Response>) {
+  const file = epub2(5);
+  const intake = {
+    title: 'The Studied Codex', author: 'Study Writer', language: 'English', description: 'A guide to calm and alignment. '.repeat(8),
+    categories: ['Spiritual Healing & Alignment'], keywords: ['healing'], copyrightHolder: 'Test Press', copyrightYear: 2026,
+    price: 0, rightsConfirmed: true, aiContent: 'none', wantsPrint: false,
+  };
+  const s = await (await fetch('/api/ebook-submissions', post('', { intake, fileName: 'a.epub', size: file.byteLength }, 'admin'))).json();
+  for (let part = 0; part < s.upload.parts; part += 1) {
+    await fetch(`/api/ebook-submissions/${s.id}/upload/${part}`, { method: 'PUT', headers: { 'content-type': 'application/octet-stream', 'x-test-role': 'admin' }, body: file.subarray(part * s.partBytes, (part + 1) * s.partBytes) });
+  }
+  await fetch(`/api/ebook-submissions/${s.id}/prepare`, post('', {}, 'admin'));
+  return (await (await fetch(`/api/ebook-submissions/${s.id}/publish`, post('', {}, 'admin'))).json()).bookId as string;
+}
+
+test('retrieval ranks the paragraphs that answer the question', async () => {
+  const { retrieve } = await import('../../artifacts/api-server/src/bookatlas/reader/ai.ts');
+  const chapters = [
+    { title: 'One', content: ['The river flowed north through the desert.', 'Farmers planted wheat in spring.', 'Nothing else happened.'] },
+    { title: 'Two', content: ['The astronomers watched Sirius rise before the flood.', 'They built a stone calendar circle at Nabta Playa.', 'Priests kept the records.'] },
+  ];
+  const top = retrieve(chapters, 'Who built the stone calendar at Nabta Playa?', { chapterIndex: 0 });
+  assert.equal(top[0]!.chapterIndex, 1);
+  assert.ok(top[0]!.text.includes('Nabta Playa'));
+  assert.equal(retrieve(chapters, 'what about this?', { chapterIndex: 1 })[0]!.chapterIndex, 1, 'a vague question uses the reader\'s chapter');
+});
+
+test('reader AI: ask with sources, study tools, explain, translate and define; honest errors; daily limit', async () => {
+  const { fetch } = await getSharedTestServer();
+  const bookId = await publishBook(fetch);
+  resetQuota();
+
+  assert.equal((await fetch('/api/reader/ai/ask', post('', { bookId, question: 'What is this about?' }, 'unauthenticated'))).status, 401);
+  assert.equal((await fetch('/api/reader/ai/ask', post('', { bookId: 'nope', question: 'What is this about?' }))).status, 404);
+  const config = await (await fetch('/api/reader/ai/config')).json();
+  assert.equal(config.languages.nl, 'Dutch');
+
+  // Ask: the model sees only excerpts of the book and the answer comes with its sources.
+  reply = () => 'The opening chapter is a series of numbered paragraphs [1].';
+  const asked = await (await fetch('/api/reader/ai/ask', post('', { bookId, question: 'What happens in paragraph 7 of the opening chapter?', chapterIndex: 0 }))).json();
+  assert.match(asked.answer, /\[1\]/);
+  assert.ok(asked.sources.length >= 1 && asked.sources[0].cited, 'the cited excerpt is marked');
+  assert.ok(asked.sources.some((s: { excerpt: string }) => /Paragraph 7/.test(s.excerpt)));
+  const sent = calls.at(-1)!;
+  assert.match(sent.systemInstruction!, /Answer ONLY from the numbered excerpts/);
+  assert.ok(sent.systemInstruction!.includes('Paragraph 7 of the opening chapter'));
+  assert.equal(typeof asked.remaining, 'number');
+
+  // Study: JSON is validated; malformed items are dropped; the result is cached for the chapter.
+  const chapterIndex = asked.sources[0].chapterIndex;
+  reply = () => JSON.stringify({ questions: [
+    { question: 'How many paragraphs?', options: ['10', '12'], answer: 1, explanation: 'There are twelve.' },
+    { question: 'Broken', options: ['a'], answer: 3 },
+  ] });
+  const quiz = await (await fetch('/api/reader/ai/study', post('', { bookId, chapterIndex, kind: 'quiz' }))).json();
+  assert.equal(quiz.questions.length, 1, 'an invalid question is removed');
+  assert.equal(quiz.cached, false);
+  const n = calls.length;
+  const again = await (await fetch('/api/reader/ai/study', post('', { bookId, chapterIndex, kind: 'quiz' }))).json();
+  assert.equal(again.cached, true);
+  assert.equal(calls.length, n, 'cached study material costs no AI call');
+  reply = () => '{"cards": []}';
+  assert.equal((await fetch('/api/reader/ai/study', post('', { bookId, chapterIndex, kind: 'flashcards' }))).status, 502, 'an empty result is an error, not a blank set');
+  assert.equal((await fetch('/api/reader/ai/study', post('', { bookId, chapterIndex: 99, kind: 'summary' }))).status, 404);
+
+  // Explain and translate only text from this book.
+  reply = () => 'It is a numbered paragraph.';
+  assert.equal((await fetch('/api/reader/ai/explain', post('', { bookId, text: 'Some text that is not in the book at all, invented.' }))).status, 400);
+  const explained = await (await fetch('/api/reader/ai/explain', post('', { bookId, text: 'Paragraph 3 of the opening chapter.', mode: 'simplify' }))).json();
+  assert.deepEqual([explained.mode, explained.answer], ['simplify', 'It is a numbered paragraph.']);
+  reply = () => 'Alinea 3 van het openingshoofdstuk.';
+  assert.equal((await fetch('/api/reader/ai/translate', post('', { bookId, text: 'Paragraph 3 of the opening chapter.', target: 'xx' }))).status, 400);
+  const nl = await (await fetch('/api/reader/ai/translate', post('', { bookId, text: 'Paragraph 3 of the opening chapter.', target: 'nl' }))).json();
+  assert.deepEqual([nl.language, nl.translation], ['Dutch', 'Alinea 3 van het openingshoofdstuk.']);
+
+  // Define.
+  reply = () => '```json\n{"word":"opening","pronunciation":"/ˈəʊpənɪŋ/","partOfSpeech":"adjective","definitions":["coming at the beginning"],"synonyms":["first","initial"],"example":"the opening chapter","origin":""}\n```';
+  assert.equal((await fetch('/api/reader/ai/define', post('', { bookId, word: '<script>' }))).status, 400);
+  const def = await (await fetch('/api/reader/ai/define', post('', { bookId, word: 'opening', context: 'Paragraph 3 of the opening chapter.' }))).json();
+  assert.deepEqual([def.word, def.definitions[0], def.synonyms.length], ['opening', 'coming at the beginning', 2]);
+
+  // No AI answer: an honest error, and the request does not count.
+  reply = () => null;
+  const before = (await (await fetch('/api/reader/ai/explain', post('', { bookId, text: 'Paragraph 3 of the opening chapter.' }))).json());
+  assert.match(before.error, /not available right now/);
+
+  // Daily limit.
+  resetQuota();
+  reply = () => 'fine';
+  let last = 0;
+  for (let i = 0; i < 40; i += 1) last = (await fetch('/api/reader/ai/explain', post('', { bookId, text: 'Paragraph 3 of the opening chapter.' }))).status;
+  assert.equal(last, 200);
+  const blocked = await fetch('/api/reader/ai/explain', post('', { bookId, text: 'Paragraph 3 of the opening chapter.' }));
+  assert.equal(blocked.status, 429);
+  assert.match((await blocked.json()).error, /40 AI requests/);
+  resetQuota();
+});

@@ -418,55 +418,34 @@ test('F8-1: AI matchmaker scores books based on reader preference queries', asyn
   assert.ok(typeof topMatch.rationale === 'string' && topMatch.rationale.length > 10);
 });
 
-test('F8-2: AI copilot explain action produces rich psychological and narrative insight', async () => {
+const copilot = async (action: string, text: string) => {
   const server = await getSharedTestServer();
-  const res = await server.fetch('/api/ai/reader-copilot', {
+  return server.fetch('/api/ai/reader-copilot', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'explain',
-      text: 'The canals reflected the amber gas lamps.',
-      bookTitle: 'The Keizersgracht Cipher',
-    }),
+    body: JSON.stringify({ action, text, bookTitle: 'The Keizersgracht Cipher' }),
   });
-  assert.equal(res.status, 200);
+};
+
+test('F8-2: AI copilot explain without an AI provider says so instead of inventing an explanation', async () => {
+  const res = await copilot('explain', 'The canals reflected the amber gas lamps.');
+  assert.equal(res.status, 503);
   const data = await res.json();
-  assert.equal(data.success, true);
-  assert.match(data.result, /psychological tension|imagery|The Keizersgracht Cipher/i);
+  assert.equal(data.success, false);
+  assert.match(data.error, /not available right now/);
+  assert.equal(data.result, undefined, 'no analysis is made up');
 });
 
-test('F8-3: AI copilot summarize action generates structured bullet points', async () => {
-  const server = await getSharedTestServer();
-  const res = await server.fetch('/api/ai/reader-copilot', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'summarize',
-      text: 'A secret document was found behind the painting.',
-      bookTitle: 'The Keizersgracht Cipher',
-    }),
-  });
-  assert.equal(res.status, 200);
-  const data = await res.json();
-  assert.equal(data.success, true);
-  assert.match(data.result, /•/);
+test('F8-3: AI copilot summarize without an AI provider returns no invented summary', async () => {
+  const res = await copilot('summarize', 'A secret document was found behind the painting.');
+  assert.equal(res.status, 503);
+  assert.doesNotMatch(JSON.stringify(await res.json()), /•|pivotal revelation/);
 });
 
-test('F8-4: AI copilot character_intent action analyzes internal conflict', async () => {
-  const server = await getSharedTestServer();
-  const res = await server.fetch('/api/ai/reader-copilot', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'character_intent',
-      text: 'He looked back at the doorway, hesitant to step across.',
-      bookTitle: 'The Keizersgracht Cipher',
-    }),
-  });
-  assert.equal(res.status, 200);
-  const data = await res.json();
-  assert.equal(data.success, true);
-  assert.match(data.result, /allegiances|motives|hesitation|decision|conflict/i);
+test('F8-4: AI copilot character_intent without an AI provider returns no invented character analysis', async () => {
+  const res = await copilot('character_intent', 'He looked back at the doorway, hesitant to step across.');
+  assert.equal(res.status, 503);
+  assert.doesNotMatch(JSON.stringify(await res.json()), /allegiances|severe consequences/);
 });
 
 test('F8-5: AI book summary provides core takeaways and philosophical questions', async () => {

@@ -50,6 +50,7 @@ app.use(
     { prefix: "/api/stripe/webhook", limit: 600 },
     { prefix: "/api/crypto/orders", limit: 60 },
     { prefix: "/api/crypto/callback", limit: 600 },
+    { prefix: "/api/reader/ai", limit: 30 },
   ]),
 );
 // Without a secret key Clerk throws on every request, taking the public catalog down with it.

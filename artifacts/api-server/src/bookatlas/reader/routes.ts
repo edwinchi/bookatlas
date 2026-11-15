@@ -5,6 +5,11 @@ import {
   ReaderError, addAnnotation, annotationsOf, deleteAnnotation, getPreferences, getProgress, readingStats, recordSession,
   saveProgress, savePreferences, searchAnnotations, updateAnnotation,
 } from './service.js';
+import { DAILY_AI_LIMIT, LANGUAGES, askBook, defineWord, explainPassage, refundAiQuota, studyChapter, translatePassage, useAiQuota, type Generate } from './ai.js';
+
+let generatorOverride: Generate | null = null;
+/** Tests substitute the AI; production uses the app's OpenRouter/Gemini text generation. */
+export function setReaderAiGenerator(g: Generate | null) { generatorOverride = g; }
 
 function guarded(handler: (req: Request, res: Response) => Promise<void>) {
   return async (req: Request, res: Response) => {
@@ -13,8 +18,8 @@ function guarded(handler: (req: Request, res: Response) => Promise<void>) {
       await handler(req, res);
     } catch (error) {
       if (error instanceof ReaderError) { res.status(error.status).json({ error: error.message }); return; }
-      logger.error({ err: error }, 'Reader sync request failed');
-      res.status(503).json({ error: 'Syncing is temporarily unavailable. Your reading continues on this device.' });
+      logger.error({ err: error }, 'Reader request failed');
+      res.status(503).json({ error: req.path.startsWith('/api/reader/ai/') ? 'The AI assistant is not available right now. Please try again in a minute.' : 'Syncing is temporarily unavailable. Your reading continues on this device.' });
     }
   };
 }
@@ -25,7 +30,7 @@ const signedIn = (req: Request) => {
 const body = (req: Request) => (req.body ?? {}) as Record<string, unknown>;
 
 /** BooksAtlas Reader sync (cycle 7): one account, the same place, marks and settings on every device. */
-export function mountReader(app: Express, catalog: CatalogStore) {
+export function mountReader(app: Express, catalog: CatalogStore, generate?: Generate) {
   const json = express.json({ limit: '32kb' });
   const knownBook = async (id: string) => { if (!(await catalog.get(id))) throw new ReaderError('Unknown book.', 404); };
 
@@ -69,4 +74,25 @@ export function mountReader(app: Express, catalog: CatalogStore) {
   app.get('/api/reader/stats', guarded(async (req, res) => {
     res.json(await readingStats(signedIn(req).id));
   }));
+
+  // Reader Phase 2 (cycle 8): AI on the text the reader may read, with a daily limit per reader.
+  const ai = (handler: (gen: Generate, book: NonNullable<Awaited<ReturnType<CatalogStore['get']>>>, who: NonNullable<Request['bookatlasIdentity']>, b: Record<string, unknown>) => Promise<object>) =>
+    guarded(async (req, res) => {
+      if (!req.bookatlasIdentity) throw new ReaderError('Sign in to use the AI reading assistant.', 401);
+      const who = req.bookatlasIdentity;
+      const book = await catalog.get(String(body(req).bookId ?? ''));
+      if (!book) throw new ReaderError('Unknown book.', 404);
+      const gen = generatorOverride ?? generate;
+      if (!gen) throw new ReaderError('The AI assistant is not configured yet.', 503);
+      const remaining = useAiQuota(who.id);
+      let result: object;
+      try { result = await handler(gen, book, who, body(req)); } catch (e) { refundAiQuota(who.id); throw e; }
+      res.json({ ...result, remaining });
+    });
+  app.get('/api/reader/ai/config', (_req, res) => { res.json({ dailyLimit: DAILY_AI_LIMIT, languages: LANGUAGES }); });
+  app.post('/api/reader/ai/ask', json, ai(askBook));
+  app.post('/api/reader/ai/study', json, ai(studyChapter));
+  app.post('/api/reader/ai/explain', json, ai(explainPassage));
+  app.post('/api/reader/ai/translate', json, ai(translatePassage));
+  app.post('/api/reader/ai/define', json, ai(defineWord));
 }
