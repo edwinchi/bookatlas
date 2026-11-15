@@ -51,6 +51,8 @@ app.use(
     { prefix: "/api/crypto/orders", limit: 60 },
     { prefix: "/api/crypto/callback", limit: 600 },
     { prefix: "/api/reader/ai", limit: 30 },
+    { prefix: "/api/reader/groups", limit: 60 },
+    { prefix: "/api/reader/reports", limit: 20 },
   ]),
 );
 // Without a secret key Clerk throws on every request, taking the public catalog down with it.

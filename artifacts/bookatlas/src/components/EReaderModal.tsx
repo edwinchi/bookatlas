@@ -33,7 +33,9 @@ import {
   Sparkle,
   NotebookPen,
   StickyNote,
-  GraduationCap
+  GraduationCap,
+  Users,
+  Flame
 } from 'lucide-react';
 import { StudioNarrationPanel } from './voice/StudioNarrationPanel';
 import { Book, Chapter, ReaderSettings, ReaderTheme, ReaderFont } from '../types';
@@ -44,6 +46,8 @@ import { useReaderSync } from './reader/useReaderSync';
 import { HIGHLIGHT_BG, HIGHLIGHT_COLORS, ReaderNotebook } from './reader/ReaderNotebook';
 import { ReaderAssistant, type AssistantTab, type WordsRequest } from './reader/ReaderAssistant';
 import { audioProductOf } from '../audioEdition';
+import { ReaderCommunity, type CommunityTab } from './reader/ReaderCommunity';
+import type { ChapterSocial } from './ebook/ebookApi';
 
 import {
   READER_DISPLAY_PREFERENCES_KEY,
@@ -61,6 +65,8 @@ interface EReaderModalProps {
   currency?: string;
   hasAiAccess?: boolean;
   onRequireAiAccess?: (featureTitle: string, featureDescription: string, action: () => void) => void;
+  /** Open the readers panel on this reading group (after joining from an invite link). */
+  openGroupId?: string | null;
 }
 
 export const EReaderModal: React.FC<EReaderModalProps> = ({
@@ -73,6 +79,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   currency = 'EUR',
   hasAiAccess = true,
   onRequireAiAccess,
+  openGroupId = null,
 }) => {
   const [currentChapterIndex, setCurrentChapterIndex] = useState(initialChapterIndex);
   const [currentParagraphIndex, setCurrentParagraphIndex] = useState(initialParagraphIndex);
@@ -145,7 +152,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const [assistantTab, setAssistantTab] = useState<AssistantTab>('ask');
   const [wordsRequest, setWordsRequest] = useState<WordsRequest | null>(null);
   const [selectionBar, setSelectionBar] = useState<{ x: number; y: number; text: string; context: string } | null>(null);
-  const openAssistant = (tab: AssistantTab) => { setAssistantTab(tab); setShowAssistant(true); setShowNotebook(false); setShowAICopilot(false); };
+  const openAssistant = (tab: AssistantTab) => { setAssistantTab(tab); setShowAssistant(true); setShowNotebook(false); setShowAICopilot(false); setShowCommunity(false); };
   const onTextSelected = () => {
     const sel = window.getSelection();
     const text = sel?.toString().replace(/\s+/g, ' ').trim() ?? '';
@@ -226,6 +233,21 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     setCurrentParagraphIndex(p);
     requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector(`[data-para="${p}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })));
   };
+  // Reader Phase 3 (cycle 10): other readers' shared notes and popular passages in this chapter; reading groups.
+  const [showCommunity, setShowCommunity] = useState(!!openGroupId);
+  const [communityTab, setCommunityTab] = useState<CommunityTab>(openGroupId ? 'groups' : 'chapter');
+  const [social, setSocial] = useState<ChapterSocial | null>(null);
+  const [socialError, setSocialError] = useState('');
+  useEffect(() => {
+    if (!account || !book.hasReaderContent) { setSocial(null); return; }
+    let cancelled = false;
+    setSocial(null); setSocialError('');
+    ebookApi.chapterSocial(book.id, currentChapterIndex).then((r) => { if (!cancelled) setSocial(r); })
+      .catch((e) => { if (!cancelled) setSocialError(e instanceof Error ? e.message : 'Readers’ notes could not be loaded.'); });
+    return () => { cancelled = true; };
+  }, [account?.id, book.id, book.hasReaderContent, currentChapterIndex]);
+  const popularHere = new globalThis.Map((social?.popular ?? []).map((p) => [p.paragraphIndex, p.readers]));
+  const sharedHere = new Set((social?.notes ?? []).filter((n) => !n.mine).map((n) => n.paragraphIndex));
   // Another device is further along (or elsewhere): offer to continue there.
   const remoteElsewhere = sync.remote && (sync.remote.chapter_index !== currentChapterIndex || Math.abs(sync.remote.paragraph_index - currentParagraphIndex) > 2) ? sync.remote : null;
 
@@ -602,6 +624,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
         prevPage();
       } else if (e.key === 'Escape') {
         if (selectionBar) setSelectionBar(null);
+        else if (showCommunity) setShowCommunity(false);
         else if (showAssistant) setShowAssistant(false);
         else if (showNotebook) setShowNotebook(false);
         else if (showSettings) setShowSettings(false);
@@ -612,7 +635,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentChapterIndex, chapters.length, showSettings, showToc, showAICopilot, showNotebook, showAssistant, selectionBar]);
+  }, [currentChapterIndex, chapters.length, showSettings, showToc, showAICopilot, showNotebook, showAssistant, selectionBar, showCommunity]);
 
   // Turning the page yourself stops the voice; listening turns pages on its own.
   useEffect(() => {
@@ -801,9 +824,22 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             <GraduationCap className="w-4 h-4" />
           </button>
 
+          {/* Readers: shared notes, popular passages and reading groups */}
+          {book.hasReaderContent && (
+            <button
+              onClick={() => { setShowCommunity(!showCommunity); setShowNotebook(false); setShowAssistant(false); setShowAICopilot(false); }}
+              aria-label={showCommunity ? 'Close readers panel' : 'Open readers panel: shared notes, popular highlights and reading groups'}
+              aria-expanded={showCommunity}
+              className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${showCommunity ? 'bg-indigo-600 text-white' : 'hover:bg-black/10 opacity-75'}`}
+              title="Readers and reading groups"
+            >
+              <Users className="w-4 h-4" />
+            </button>
+          )}
+
           {/* Notebook: highlights, bookmarks, notes, search, export and reading stats */}
           <button
-            onClick={() => { setShowNotebook(!showNotebook); setShowAICopilot(false); setShowAssistant(false); }}
+            onClick={() => { setShowNotebook(!showNotebook); setShowAICopilot(false); setShowAssistant(false); setShowCommunity(false); }}
             aria-label={showNotebook ? 'Close notebook' : 'Open notebook: highlights, bookmarks, notes and reading stats'}
             aria-expanded={showNotebook}
             className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${showNotebook ? 'bg-indigo-600 text-white' : 'hover:bg-black/10 opacity-75'}`}
@@ -940,6 +976,16 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                   } ${highlightBg} ${spokenParagraph === pIdx ? 'rounded-md bg-indigo-500/10 ring-1 ring-indigo-500/30' : ''}`}
                   aria-current={spokenParagraph === pIdx ? 'true' : undefined}
                 >
+                  {popularHere.has(pIdx) && (
+                    <button type="button" tabIndex={-1} onClick={(e) => { e.stopPropagation(); setCommunityTab('chapter'); setShowCommunity(true); }}
+                      title={`${popularHere.get(pIdx)} readers highlighted this passage`} aria-hidden
+                      className="absolute -right-6 top-1 hidden text-orange-500 sm:block cursor-pointer"><Flame className="h-3.5 w-3.5" /></button>
+                  )}
+                  {!popularHere.has(pIdx) && sharedHere.has(pIdx) && (
+                    <button type="button" tabIndex={-1} onClick={(e) => { e.stopPropagation(); setCommunityTab('chapter'); setShowCommunity(true); }}
+                      title="Other readers shared a note here" aria-hidden
+                      className="absolute -right-6 top-1 hidden text-indigo-500 sm:block cursor-pointer"><Users className="h-3.5 w-3.5" /></button>
+                  )}
                   {(paraBookmarked || paraNotes.length > 0) && (
                     <span className="absolute -left-6 top-1 hidden flex-col gap-1 sm:flex" aria-hidden>
                       {paraBookmarked && <Bookmark className="h-3.5 w-3.5 fill-indigo-600 text-indigo-600" />}
@@ -1153,7 +1199,14 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           annotations={sync.annotations} current={{ chapterIndex: currentChapterIndex, paragraphIndex: currentParagraphIndex }}
           onJump={(c, p) => { jumpTo(c, p); }}
           onAddNote={async (note) => { await sync.add('note', { chapterIndex: currentChapterIndex, paragraphIndex: currentParagraphIndex }, { note }); }}
-          onUpdate={sync.update} onDelete={sync.remove} onClose={() => setShowNotebook(false)}
+          onUpdate={sync.update} onDelete={sync.remove} onShare={sync.share} onClose={() => setShowNotebook(false)}
+        />
+      )}
+      {showCommunity && (
+        <ReaderCommunity
+          api={ebookApi} signedIn={!!account} onSignIn={() => requireSignIn('reading with others')} bookId={book.id} bookTitle={book.title}
+          chapters={chapters} chapterIndex={currentChapterIndex} social={social} socialError={socialError}
+          onJump={(c, p) => jumpTo(c, p)} onClose={() => setShowCommunity(false)} tab={communityTab} onTab={setCommunityTab} openGroupId={openGroupId}
         />
       )}
 

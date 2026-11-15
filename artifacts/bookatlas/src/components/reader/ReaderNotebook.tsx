@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
-import { Bookmark, CloudOff, Cloud, Download, Flame, Highlighter, Loader2, NotebookPen, Search, StickyNote, Timer, Trash2, X } from 'lucide-react';
+import { Bookmark, CloudOff, Cloud, Download, Flame, Globe2, Highlighter, Loader2, NotebookPen, Search, StickyNote, Timer, Trash2, X } from 'lucide-react';
+import { ReaderAchievements } from './ReaderAchievements';
 import type { Chapter } from '../../types';
 import { saveBlob, type Annotation, type ReadingStats, type useEbookApi } from '../ebook/ebookApi';
 import { annotationsMarkdown } from './useReaderSync';
@@ -25,6 +26,8 @@ export function ReaderNotebook(props: {
   onAddNote: (note: string) => Promise<void>;
   onUpdate: (id: string, patch: { note?: string; color?: string }) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  /** Phase 3: share a highlight or note with other readers of the book. */
+  onShare?: (id: string, shared: boolean) => Promise<void>;
   onClose: () => void;
   initialTab?: Tab;
 }) {
@@ -63,6 +66,13 @@ export function ReaderNotebook(props: {
           {a.excerpt && <p className="line-clamp-3 italic text-slate-700">“{a.excerpt}”</p>}
           <p className="mt-1 text-[10px] text-slate-500">{where(a)} · {new Date(a.created_at).toLocaleDateString('en-GB')}</p>
         </button>
+        {props.onShare && signedIn && a.kind !== 'bookmark' && (
+          <button type="button" onClick={() => void act(() => props.onShare!(a.id, !a.shared))} aria-pressed={!!a.shared}
+            title={a.shared ? `Shared with other readers as ${a.display_name ?? 'you'}${a.hidden ? ' (hidden after reports)' : ''}. Tap to stop sharing.` : 'Share with other readers of this book (first name and initial)'}
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold cursor-pointer ${a.shared ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
+            <Globe2 className="h-3 w-3" aria-hidden />{a.shared ? 'Shared' : 'Share'}
+          </button>
+        )}
         <button type="button" onClick={() => void act(() => props.onDelete(a.id))} aria-label="Delete" className="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
       </div>
       {a.kind === 'highlight' && (
@@ -153,7 +163,7 @@ export function ReaderNotebook(props: {
           <Tabs.Content value="stats">
             {!signedIn ? empty('Sign in to see your reading time, speed and streak.')
               : !stats ? <p className="flex items-center gap-2 text-xs text-slate-500"><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />Loading…</p>
-                : <ReadingStatsView stats={stats} />}
+                : <div className="space-y-5"><ReadingStatsView stats={stats} /><ReaderAchievements api={api} /></div>}
           </Tabs.Content>
         </div>
       </Tabs.Root>

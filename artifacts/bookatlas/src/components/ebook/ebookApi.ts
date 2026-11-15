@@ -102,7 +102,16 @@ export type AnnotationKind = 'highlight' | 'bookmark' | 'note';
 export interface Annotation {
   id: string; book_id: string; kind: AnnotationKind; color: string | null; chapter_index: number; paragraph_index: number;
   excerpt: string; note: string | null; created_at: string; updated_at: string;
+  /** Phase 3: shared with other readers of the book under `display_name`. */
+  shared?: boolean; display_name?: string | null; hidden?: boolean;
 }
+export interface SharedNote { id: string; name: string; kind: 'highlight' | 'note'; color: string | null; paragraphIndex: number; excerpt: string; note: string | null; date: string; mine: boolean }
+export interface ChapterSocial { popular: { paragraphIndex: number; readers: number }[]; notes: SharedNote[] }
+export interface Achievement { id: string; title: string; description: string; icon: string; points: number; target: number; current: number; unlocked: boolean }
+export interface AchievementsView { achievements: Achievement[]; points: number; unlocked: number; goal: { minutes: number; today: number; met: boolean } }
+export interface GroupSummary { id: string; bookId: string; bookTitle: string | null; name: string; members: number; role: 'owner' | 'member' | null; createdAt: string; inviteCode?: string }
+export interface GroupPost { id: string; name: string; chapterIndex: number | null; body: string; date: string; mine: boolean; hidden: boolean; canDelete: boolean }
+export interface GroupDetail extends GroupSummary { inviteCode: string; memberNames: { name: string; role: string; me: boolean }[]; posts: GroupPost[] }
 export interface SyncedProgress { book_id: string; chapter_index: number; paragraph_index: number; progress_percent: number; device: string | null; updated_at: string }
 export interface ReadingStats {
   totalMinutes: number; words: number; wordsPerMinute: number | null; streakDays: number; booksStarted: number; booksFinished: number;
@@ -176,6 +185,20 @@ export function useEbookApi() {
     recordReadingSession: (body: { bookId: string; startedAt: string; seconds: number; paragraphs: number; words: number; device: string }) =>
       json<unknown>('/api/reader/sessions', 'POST', body),
     readingStats: () => json<ReadingStats>('/api/reader/stats'),
+    // Reader Phase 3 (cycle 10): achievements, shared notes, reports, reading groups.
+    achievements: () => json<AchievementsView>('/api/reader/achievements'),
+    shareAnnotation: (id: string, bookId: string, shared: boolean) => json<Annotation>(`/api/reader/annotations/${id}/share`, 'PATCH', { bookId, shared }),
+    chapterSocial: (bookId: string, chapter: number) => json<ChapterSocial>(`/api/reader/social/${encodeURIComponent(bookId)}/${chapter}`),
+    report: (kind: 'annotation' | 'post', targetId: string, reason?: string) => json<{ reported: boolean }>('/api/reader/reports', 'POST', { kind, targetId, reason }),
+    readingGroups: (bookId?: string) => json<{ groups: GroupSummary[] }>(`/api/reader/groups${bookId ? `?bookId=${encodeURIComponent(bookId)}` : ''}`).then((r) => r.groups),
+    createGroup: (bookId: string, name: string) => json<GroupSummary>('/api/reader/groups', 'POST', { bookId, name }),
+    joinGroup: (code: string) => json<GroupSummary>('/api/reader/groups/join', 'POST', { code }),
+    readingGroup: (id: string) => json<GroupDetail>(`/api/reader/groups/${id}`),
+    postToGroup: (id: string, body: string, chapterIndex: number | null) => json<GroupPost>(`/api/reader/groups/${id}/posts`, 'POST', { body, chapterIndex }),
+    deleteGroupPost: (id: string, postId: string) => json<void>(`/api/reader/groups/${id}/posts/${postId}`, 'DELETE'),
+    leaveGroup: (id: string) => json<{ deleted: boolean }>(`/api/reader/groups/${id}/membership`, 'DELETE'),
+    readerReports: () => json<{ items: { kind: 'annotation' | 'post'; id: string; reports: number; reasons: string[]; last: string; gone: boolean; name: string | null; text: string; hidden: boolean }[] }>('/api/manager/reader-reports').then((r) => r.items),
+    moderateReaderItem: (kind: 'annotation' | 'post', id: string, action: 'hide' | 'restore') => json<{ ok: boolean }>(`/api/manager/reader-reports/${kind}/${id}/${action}`, 'POST'),
     // Reader Phase 2 (cycle 8): AI on the text the reader may read.
     readerAiConfig: () => json<{ dailyLimit: number; languages: Record<string, string> }>('/api/reader/ai/config'),
     askBook: (body: { bookId: string; question: string; chapterIndex: number; history: { role: 'user' | 'assistant'; text: string }[] }) =>

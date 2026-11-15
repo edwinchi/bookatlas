@@ -15,7 +15,12 @@ export type AnnotationKind = 'highlight' | 'bookmark' | 'note';
 export interface Annotation {
   id: string; user_id: string; book_id: string; kind: AnnotationKind; color: string | null;
   chapter_index: number; paragraph_index: number; excerpt: string; note: string | null; created_at: string; updated_at: string;
+  /** Phase 3 (cycle 10): shared with other readers of the book under `display_name`; `hidden` after reports. */
+  shared?: boolean; display_name?: string | null; hidden?: boolean;
 }
+export interface ReadingGroup { id: string; book_id: string; name: string; owner_id: string; invite_code: string; created_at: string }
+export interface GroupMember { group_id: string; user_id: string; display_name: string; role: 'owner' | 'member'; joined_at: string }
+export interface GroupPost { id: string; group_id: string; user_id: string; display_name: string; chapter_index: number | null; body: string; status: 'published' | 'hidden'; created_at: string }
 export interface Session { id: string; user_id: string; book_id: string; started_at: string; seconds: number; paragraphs: number; words: number; device: string | null }
 
 const COLORS = ['yellow', 'green', 'blue', 'pink', 'purple', 'orange'];
@@ -23,7 +28,12 @@ const MAX_PER_BOOK = 5_000;
 const BOOK = /^[\w.-]{1,120}$/;
 
 const db = () => bookatlasDb;
-const mem = { progress: new Map<string, Progress>(), annotations: [] as Annotation[], prefs: new Map<string, { settings: Record<string, unknown>; updated_at: string }>(), sessions: [] as Session[] };
+const mem = {
+  progress: new Map<string, Progress>(), annotations: [] as Annotation[], prefs: new Map<string, { settings: Record<string, unknown>; updated_at: string }>(), sessions: [] as Session[],
+  groups: [] as ReadingGroup[], members: [] as GroupMember[], posts: [] as GroupPost[],
+};
+/** The local stack and tests keep reader data in memory (no Supabase). */
+export const readerMemory = () => mem;
 
 const int = (v: unknown, max: number) => { const n = Number(v); return Number.isInteger(n) && n >= 0 && n <= max ? n : null; };
 const text = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, max) : '');
@@ -134,6 +144,8 @@ const PREF_KEYS: Record<string, (v: unknown) => unknown> = {
   marginWidth: (v) => (typeof v === 'string' && /^[a-z]{2,12}$/.test(v) ? v : undefined),
   ttsVoice: (v) => (typeof v === 'string' ? text(v, 80) || undefined : undefined),
   ttsSpeed: (v) => (typeof v === 'number' && v >= 0.5 && v <= 3 ? v : undefined),
+  // Phase 3 (cycle 10): the daily reading goal in minutes.
+  dailyGoalMinutes: (v) => (int(v, 240) !== null && Number(v) >= 5 ? Number(v) : undefined),
 };
 
 export async function getPreferences(userId: string) {
@@ -143,7 +155,8 @@ export async function getPreferences(userId: string) {
   return r.data as { settings: Record<string, unknown>; updated_at: string } | null;
 }
 export async function savePreferences(userId: string, body: Record<string, unknown>) {
-  const settings: Record<string, unknown> = {};
+  // Merged into the stored settings: the reader's display sync and the daily goal are saved separately.
+  const settings: Record<string, unknown> = { ...((await getPreferences(userId))?.settings ?? {}) };
   for (const [k, clean] of Object.entries(PREF_KEYS)) { const v = clean(body[k]); if (v !== undefined) settings[k] = v; }
   const row = { user_id: userId, settings, updated_at: new Date().toISOString() };
   if (!db()) mem.prefs.set(userId, { settings, updated_at: row.updated_at });
@@ -184,6 +197,12 @@ export async function readingStats(userId: string, now = new Date()) {
   // Today not read yet still keeps yesterday's streak alive.
   if (!days.has(cursor.toISOString().slice(0, 10))) cursor.setUTCDate(cursor.getUTCDate() - 1);
   while (days.has(cursor.toISOString().slice(0, 10))) { streak += 1; cursor.setUTCDate(cursor.getUTCDate() - 1); }
+  // The longest run of consecutive reading days ever (for achievements).
+  let bestStreak = 0, run = 0, prev = '';
+  for (const d of [...days].sort()) {
+    const next = prev && new Date(Date.parse(`${prev}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10) === d;
+    run = next ? run + 1 : 1; bestStreak = Math.max(bestStreak, run); prev = d;
+  }
   const seconds = sessions.reduce((n, s) => n + s.seconds, 0);
   const words = sessions.reduce((n, s) => n + s.words, 0);
   const timed = sessions.filter((s) => s.words > 0);
@@ -197,7 +216,7 @@ export async function readingStats(userId: string, now = new Date()) {
     : ((await db()!.from('reader_progress').select('book_id,progress_percent').eq('user_id', userId)).data ?? []) as Pick<Progress, 'book_id' | 'progress_percent'>[];
   return {
     totalMinutes: Math.round(seconds / 60), words, wordsPerMinute: timedSeconds >= 60 ? Math.round(words / (timedSeconds / 60)) : null,
-    streakDays: streak, booksStarted: progress.length, booksFinished: progress.filter((p) => p.progress_percent >= 98).length,
+    streakDays: streak, bestStreakDays: bestStreak, todayMinutes: last30[29]!.minutes, booksStarted: progress.length, booksFinished: progress.filter((p) => p.progress_percent >= 98).length,
     sessions: sessions.length, last30,
   };
 }

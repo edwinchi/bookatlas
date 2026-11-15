@@ -139,7 +139,14 @@ export function useReaderSync(opts: {
     setAnnotations((list) => list.map((a) => (a.id === id ? saved : a)));
   };
 
-  return { annotations, add, remove, update, remote, status, device, dismissRemote: () => setRemote(null) };
+  /** Phase 3 (cycle 10): share a highlight or note with other readers of the book, or stop sharing it. */
+  const share = async (id: string, shared: boolean) => {
+    if (!signedIn || id.startsWith('local-')) throw new Error('Sign in to share with other readers.');
+    const saved = await api.shareAnnotation(id, bookId, shared);
+    setAnnotations((list) => list.map((a) => (a.id === id ? saved : a)));
+  };
+
+  return { annotations, add, remove, update, share, remote, status, device, dismissRemote: () => setRemote(null) };
 }
 
 /** Markdown of the book's highlights, bookmarks and notes, for "Export". */

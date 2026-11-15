@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ReaderReportsQueue } from './ReaderReportsQueue';
 import { BookUp, CheckCircle2, ClipboardList, Loader2, Plus, Sparkles } from 'lucide-react';
 import { EBOOK_REQUIREMENTS, PRINT_REQUIREMENTS, AMAZON_PRINT_REQUIREMENTS, type PaperId, type Requirement, type TrimSizeId } from '@workspace/bookatlas-catalog/publishing';
 import { useAccount } from '../../auth/AuthContext';
@@ -226,6 +227,7 @@ export const EbookPublishing: React.FC = () => {
             </section>
           )}
           {isAdmin && <NarrationQueue api={api} />}
+          {isAdmin && <ReaderReportsQueue api={api} />}
           {isAdmin && <StoreFeedback api={api} />}
           {isAdmin && <FeedImport />}
         </aside>

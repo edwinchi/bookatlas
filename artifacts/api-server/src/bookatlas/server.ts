@@ -25,6 +25,8 @@ import { businessSummary } from './payments/business.js';
 import { mountFollows } from './follows/routes.js';
 import { mountReader } from './reader/routes.js';
 import { eraseReaderData, readerDataOf } from './reader/service.js';
+import { eraseGroupData, groupDataOf } from './reader/groups.js';
+import { eraseReportsBy } from './reader/social.js';
 import { announceToFollowers, eraseFollowsOf, followsOf } from './follows/service.js';
 import { erasePayout, getPayout } from './payments/payouts.js';
 import { authorSlug } from './reviews/routes.js';
@@ -795,7 +797,8 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
           ...reviews.map((review) => ({ record: 'review', ...review })),
           ...(await followsOf(userId)).map(({ user_id: _u, ...f }) => ({ record: 'follow', ...f })),
           ...[await getPayout(userId)].filter(Boolean).map((p) => { const { user_id: _u, ...rest } = p!; return { record: 'payout-details', ...rest }; }),
-          ...[await readerDataOf(userId)].map((r) => ({ record: 'reader', progress: r.progress.map(({ user_id: _u, ...x }) => x), annotations: r.annotations.map(({ user_id: _u, ...x }) => x), preferences: r.preferences, sessions: r.sessions.map(({ user_id: _u, ...x }) => x) }))];
+          ...[await readerDataOf(userId)].map((r) => ({ record: 'reader', progress: r.progress.map(({ user_id: _u, ...x }) => x), annotations: r.annotations.map(({ user_id: _u, ...x }) => x), preferences: r.preferences, sessions: r.sessions.map(({ user_id: _u, ...x }) => x) })),
+          ...[await groupDataOf(userId)].map((g) => ({ record: 'reading-groups', memberships: g.memberships.map(({ user_id: _u, ...x }) => x), posts: g.posts.map(({ user_id: _u, ...x }) => x) }))];
       } catch { throw new AccountStoreError('Purchase records are unavailable.'); }
     },
     async submissions(userId) {
@@ -812,6 +815,8 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
         await anonymiseInvoices(userId, `erased-${randomUUID()}`);
         await eraseFollowsOf(userId);
         await erasePayout(userId);
+        await eraseGroupData(userId);
+        await eraseReportsBy(userId);
         await eraseReaderData(userId);
         // Reviews name the reader, so they are deleted; the books' ratings are recalculated.
         await eraseReviewsOf(userId, { get: (id) => catalog.get(id), setRating: (book, rating, count) => catalog.upsert([{ ...book, rating, reviewCount: count }]) });

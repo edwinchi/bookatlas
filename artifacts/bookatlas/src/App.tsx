@@ -1,4 +1,5 @@
 import { AuthorProfileModal } from './components/AuthorProfileModal';
+import { useEbookApi } from './components/ebook/ebookApi';
 import { AUDIO_SUFFIX, audioOnSale, audioProductOf, isAudioAddOn } from './audioEdition';
 import { fetchFullBook, needsFullRecord, useCatalogFacets, useCatalogSearch, useShelves } from './hooks/useCatalog';
 import { AppModal } from './components/ui/app-modal';
@@ -128,7 +129,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
   resumeCheckout?: boolean;
   pendingReaderService?: string;
 }) {
-  const { account, tier: accountTier, requireSignIn, requireAdmin, signOut } = useAccount();
+  const { account, tier: accountTier, requireSignIn, requireAdmin, signOut, loading: accountLoading } = useAccount();
   const [books, setBooks] = useState<Book[]>(INITIAL_BOOKS);
   const [activeTab, setActiveTabState] = useState<ReaderTab>(initialTab);
   const setActiveTab = (tab: typeof activeTab) => {
@@ -480,6 +481,22 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
       tone: 'ok', text: 'Payment received for your natural audiobook, thank you. An administrator approves it, usually within 2 working days; follow its progress under Publish, on your book. Your invoice is under "Orders & invoices".',
     }));
   }, [account?.id]);
+  // Reader Phase 3 (cycle 10): an invite link (?join=CODE) joins the reading group and opens its book.
+  const readerApi = useEbookApi();
+  const [joinGroupId, setJoinGroupId] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('join');
+    if (!code || accountLoading) return;
+    if (!account) { requireSignIn('joining a reading group', `/?join=${encodeURIComponent(code.slice(0, 10))}`); return; }
+    params.delete('join');
+    window.history.replaceState(null, '', `${window.location.pathname}${params.size ? `?${params}` : ''}${window.location.hash}`);
+    readerApi.joinGroup(code).then(async (g) => {
+      setCheckoutNotice({ tone: 'ok', text: `You joined the reading group "${g.name}"${g.bookTitle ? ` for ${g.bookTitle}` : ''}.` });
+      const book = await fetchFullBook(g.bookId).catch(() => null);
+      if (book) { setJoinGroupId(g.id); await handleReadSample(book); }
+    }).catch((e) => setCheckoutNotice({ tone: 'error', text: e instanceof Error ? e.message : 'The invite link could not be used.' }));
+  }, [account?.id, accountLoading]);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     // Card (Stripe): ?checkout=success&session_id=…; crypto (CoinGate): ?crypto=paid&order=…
@@ -1256,8 +1273,9 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
       {activeReadingBook && (
         <EReaderModal
           book={activeReadingBook.book}
-          onClose={() => setActiveReadingBook(null)}
+          onClose={() => { setActiveReadingBook(null); setJoinGroupId(null); }}
           onAddToCart={handleAddToCart}
+          openGroupId={joinGroupId}
           initialChapterIndex={activeReadingBook.chapterIndex}
           initialParagraphIndex={activeReadingBook.paragraphIndex}
           onSaveProgress={handleSaveProgress}

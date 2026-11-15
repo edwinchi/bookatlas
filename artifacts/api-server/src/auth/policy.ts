@@ -49,6 +49,12 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (method === 'GET' && (/^\/api\/reader\/state\/[^/]+$/.test(normalized) || ['/api/reader/annotations', '/api/reader/preferences', '/api/reader/stats'].includes(normalized))) return 'reader';
   if (method === 'PUT' && (/^\/api\/reader\/progress\/[^/]+$/.test(normalized) || normalized === '/api/reader/preferences')) return 'reader';
   if (method === 'POST' && (normalized === '/api/reader/annotations' || normalized === '/api/reader/sessions')) return 'reader';
+  // Reader Phase 3 (cycle 10): achievements, shared notes, reports, reading groups; moderation for administrators.
+  if (method === 'GET' && (normalized === '/api/reader/achievements' || normalized === '/api/reader/groups' || /^\/api\/reader\/social\/[^/]+\/\d+$/.test(normalized) || /^\/api\/reader\/groups\/[0-9a-f-]{36}$/.test(normalized))) return 'reader';
+  if (method === 'PATCH' && /^\/api\/reader\/annotations\/[^/]+\/share$/.test(normalized)) return 'reader';
+  if (method === 'POST' && (['/api/reader/reports', '/api/reader/groups', '/api/reader/groups/join'].includes(normalized) || /^\/api\/reader\/groups\/[0-9a-f-]{36}\/posts$/.test(normalized))) return 'reader';
+  if (method === 'DELETE' && /^\/api\/reader\/groups\/[0-9a-f-]{36}\/(?:posts\/[0-9a-f-]{36}|membership)$/.test(normalized)) return 'reader';
+  if (/^\/api\/manager\/reader-reports(?:\/|$)/.test(normalized)) return 'admin';
   if (['PATCH', 'DELETE'].includes(method) && /^\/api\/reader\/annotations\/[^/]+$/.test(normalized)) return 'reader';
   // Reader Phase 2 (cycle 8): AI tools for signed-in readers; the language list is public.
   if (method === 'POST' && /^\/api\/reader\/ai\/(?:ask|study|explain|translate|define)$/.test(normalized)) return 'reader';
