@@ -4,7 +4,8 @@ import { logger } from '../../lib/logger.js';
 import { backfillInvoices, checkoutStatus, createCheckout, handleWebhook, paymentsConfigured, refundPayment } from './checkout.js';
 import { PaymentError, purchasedBookIds } from './purchases.js';
 import { createCryptoCheckout, cryptoConfigured, cryptoOrderStatus, handleCryptoCallback, isCryptoPayment, refundCryptoPayment } from './crypto.js';
-import { authorSales } from './authorSales.js';
+import { authorSales, authorSalesCsv, renderRoyaltyStatement, royaltyStatement } from './authorSales.js';
+import { getPayout, publicPayout, savePayout } from './payouts.js';
 import { memoryInvoices, REFUND_WINDOW_DAYS, invoiceBySeq, invoiceForUser, invoiceNumber, invoicesOf, recordRefundDecision, refundRequests, refundState, refundableUntil, renderInvoiceHtml, requestRefund, sellerDetails, vatSummary, type Invoice } from './invoices.js';
 
 function guarded(handler: (req: Request, res: Response) => Promise<void>) {
@@ -12,7 +13,7 @@ function guarded(handler: (req: Request, res: Response) => Promise<void>) {
     try {
       await handler(req, res);
     } catch (error) {
-      if (error instanceof PaymentError) { res.status(error.status).json({ error: error.message }); return; }
+      if (error instanceof PaymentError) { res.status(error.status).json({ error: error.message, ...((error as PaymentError & { fields?: unknown }).fields ? { fields: (error as PaymentError & { fields?: unknown }).fields } : {}) }); return; }
       logger.error({ err: error }, 'Payment request failed');
       res.status(503).json({ error: 'Payments are temporarily unavailable. You have not been charged; please retry.' });
     }
@@ -121,6 +122,31 @@ export function mountPayments(app: Express, findBook: (id: string) => Promise<Bo
     // The access policy already requires a signed-in reader; checked here too.
     if (!req.bookatlasIdentity) throw new PaymentError('Please sign in with a verified email address.', 401);
     res.json(await authorSales(req.bookatlasIdentity.id, memoryInvoices));
+  }));
+  // Author hub (cycle 6): sales export, monthly royalty statements and payout details, own data only.
+  const author = (req: Request) => {
+    if (!req.bookatlasIdentity) throw new PaymentError('Please sign in with a verified email address.', 401);
+    return req.bookatlasIdentity;
+  };
+  app.get('/api/author/sales.csv', guarded(async (req, res) => {
+    const csv = await authorSalesCsv(author(req).id, memoryInvoices);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('Content-Disposition', `attachment; filename="booksatlas-sales-${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.type('text/csv; charset=utf-8').send(csv);
+  }));
+  app.get('/api/author/statements/:month', guarded(async (req, res) => {
+    const st = await royaltyStatement(author(req).id, String(req.params.month), memoryInvoices);
+    res.setHeader('Cache-Control', 'private, no-store');
+    if (req.query.format === 'json') { res.json(st); return; }
+    const seller = sellerDetails();
+    res.type('html').send(renderRoyaltyStatement(st, { name: seller.name, lines: [...seller.address.split('\n'), `VAT ${seller.vatId} · KvK ${seller.kvk}`] }));
+  }));
+  app.get('/api/author/payout', guarded(async (req, res) => {
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json(publicPayout(await getPayout(author(req).id)));
+  }));
+  app.put('/api/author/payout', json, guarded(async (req, res) => {
+    res.json(await savePayout(author(req).id, (req.body ?? {}) as Record<string, unknown>));
   }));
   app.get('/api/manager/vat-summary', guarded(async (req, res) => {
     requireAdmin(req);

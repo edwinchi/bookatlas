@@ -90,6 +90,12 @@ export class EbookApiError extends Error {
 }
 
 /** Calls the eBook API with the signed-in account's token; files move in parts of `partBytes`. */
+export type PayoutView = { configured: false } | {
+  configured: true; accountHolder: string; iban: string; bic: string | null; address: string; country: string;
+  taxId: string | null; vatId: string | null; business: boolean; updatedAt: string;
+};
+export interface PayoutInput { accountHolder: string; iban: string; bic?: string; address: string; country: string; taxId?: string; vatId?: string; business: boolean }
+
 export function useEbookApi() {
   const { getToken } = useAuth();
   const tokenRef = useRef(getToken);
@@ -125,6 +131,11 @@ export function useEbookApi() {
 
   return {
     authorSales: () => json<AuthorSales>('/api/author/sales'),
+    /** Author hub (cycle 6): files fetched with the sign-in token, returned as blobs. */
+    salesCsv: async () => (await request('/api/author/sales.csv')).blob(),
+    statementHtml: async (month: string) => (await request(`/api/author/statements/${month}`)).text(),
+    payout: () => json<PayoutView>('/api/author/payout'),
+    savePayout: (body: PayoutInput) => json<PayoutView>('/api/author/payout', 'PUT', body),
     // Follow authors (cycle 5c).
     followState: (slug: string) => json<{ following: boolean }>(`/api/follows/${slug}/mine`),
     follow: (slug: string) => json<{ following: boolean }>(`/api/follows/${slug}`, 'POST', {}),

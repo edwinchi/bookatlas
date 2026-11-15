@@ -274,6 +274,20 @@ create table if not exists public.bookatlas_crypto_orders (
 );
 create index if not exists bookatlas_crypto_orders_user_idx on public.bookatlas_crypto_orders (user_id, created_at desc);
 
+-- Author payouts (cycle 6): SEPA IBAN and tax details (DAC7)
+create table if not exists public.bookatlas_author_payouts (
+  user_id text primary key,
+  account_holder text not null,
+  iban text not null,
+  bic text,
+  address text not null,
+  country text not null check (country ~ '^[A-Z]{2}$'),
+  tax_id text,
+  vat_id text,
+  business boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+
 -- Follow authors (cycle 5c): explicit consent to e-mails about an author's new books.
 create table if not exists public.bookatlas_follows (
   user_id text not null,
@@ -352,14 +366,15 @@ alter table public.bookatlas_narrations enable row level security;
 alter table public.bookatlas_reviews enable row level security;
 alter table public.bookatlas_follows enable row level security;
 alter table public.bookatlas_crypto_orders enable row level security;
+alter table public.bookatlas_author_payouts enable row level security;
 revoke all on table public.bookatlas_books, public.bookatlas_categories,
   public.bookatlas_registered_users, public.bookatlas_subscribers, public.bookatlas_campaigns,
   public.bookatlas_publishing_jobs, public.bookatlas_publishing_messages,
   public.bookatlas_publishing_test_books, public.bookatlas_ebook_submissions,
-  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations, public.bookatlas_reviews, public.bookatlas_follows, public.bookatlas_crypto_orders from anon, authenticated;
+  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations, public.bookatlas_reviews, public.bookatlas_follows, public.bookatlas_crypto_orders, public.bookatlas_author_payouts from anon, authenticated;
 grant select, insert, update, delete on table public.bookatlas_books, public.bookatlas_categories,
   public.bookatlas_registered_users, public.bookatlas_subscribers, public.bookatlas_campaigns,
   public.bookatlas_publishing_jobs, public.bookatlas_publishing_messages,
   public.bookatlas_publishing_test_books, public.bookatlas_ebook_submissions,
-  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations, public.bookatlas_reviews, public.bookatlas_follows, public.bookatlas_crypto_orders to service_role;
+  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations, public.bookatlas_reviews, public.bookatlas_follows, public.bookatlas_crypto_orders, public.bookatlas_author_payouts to service_role;
 commit;

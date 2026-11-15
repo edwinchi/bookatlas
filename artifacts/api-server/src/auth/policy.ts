@@ -42,6 +42,9 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (normalized === '/api/crypto/orders' && method === 'POST') return 'reader';
   if (/^\/api\/crypto\/orders\/[^/]+$/.test(normalized) && method === 'GET') return 'reader';
   if (normalized === '/api/author/sales' && method === 'GET') return 'reader';
+  // Author hub (cycle 6): CSV export, royalty statements, payout details.
+  if ((normalized === '/api/author/sales.csv' || /^\/api\/author\/statements\/[^/]+$/.test(normalized)) && method === 'GET') return 'reader';
+  if (normalized === '/api/author/payout' && ['GET', 'PUT'].includes(method)) return 'reader';
   // Narration (TASK-0008): authors order and listen to samples; the step authenticates with its own key.
   if (method === 'GET' && /^\/api\/narration\/(?:books\/[^/]+|samples\/[^/]+)$/.test(normalized)) return 'reader';
   if (method === 'POST' && (/^\/api\/narration\/books\/[^/]+\/order$/.test(normalized) || normalized === '/api/narration/confirm')) return 'reader';

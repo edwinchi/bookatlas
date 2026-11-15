@@ -114,7 +114,7 @@ for (const [menu, item, check] of [
 {
   const page = await fresh();
   const hrefs = {};
-  for (const [menu, item] of [['Publish', 'Start a book'], ['Author hub', 'Join early access'], ['Resources', 'Help'], ['About', 'Contact us'], ['About', 'Privacy notice'], ['About', 'Legal notice']]) {
+  for (const [menu, item] of [['Publish', 'Start a book'], ['Author hub', 'Questions?'], ['Resources', 'Help'], ['About', 'Contact us'], ['About', 'Privacy notice'], ['About', 'Legal notice']]) {
     await openMenu(page, menu);
     hrefs[item] = await site(page).getByRole('link', { name: new RegExp(`^${item}`) }).getAttribute('href');
     await page.keyboard.press('Escape');
@@ -125,8 +125,8 @@ for (const [menu, item, check] of [
   }
   await openMenu(page, 'Author hub');
   const soon = await site(page).getByText('Soon', { exact: true }).count();
-  ok('Author hub lists 5 planned features as Soon', soon === 5, `${soon} badges`);
-  ok('Soon entries are not focusable', (await site(page).locator('li:has-text("Soon") >> [data-nav-item]').count()) === 0);
+  ok('Author hub has no coming-soon placeholders left', soon === 0, `${soon} badges`);
+  ok('Author hub lists its 5 tools as links', (await site(page).getByRole('button', { name: /Books and drafts|Sales and CSV export|Royalty statements|Public author page|Payout setup/ }).count()) === 5);
   await page.keyboard.press('Escape');
   for (const path of ['/privacy', '/legal']) {
     const r = await page.request.get(base + path);

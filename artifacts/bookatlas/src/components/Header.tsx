@@ -215,15 +215,15 @@ export const Header: React.FC<HeaderProps> = ({
               ] },
             ]} />
             <HeaderNavMenu label="Author hub" groups={[
-              { heading: 'Opening to early-access authors', items: [
-                { label: 'Books and drafts', icon: Library, badge: 'Soon' },
-                { label: 'Sales and CSV export', icon: FileText, badge: 'Soon' },
-                { label: 'Royalty statements', icon: Crown, badge: 'Soon' },
-                { label: 'Public author page', icon: Link2, badge: 'Soon' },
-                { label: 'Payout setup', icon: ShieldCheck, badge: 'Soon' },
+              { items: [
+                { label: 'Books and drafts', description: 'Published, in review and drafts', icon: Library, onSelect: () => onNavigateSection('author-hub:books') },
+                { label: 'Sales and CSV export', description: 'Every sale, ready for Excel', icon: FileText, onSelect: () => onNavigateSection('author-hub:sales') },
+                { label: 'Royalty statements', description: 'Monthly, printable as PDF', icon: Crown, onSelect: () => onNavigateSection('author-hub:statements') },
+                { label: 'Public author page', description: 'Your bio, books and reviews', icon: Link2, onSelect: () => onNavigateSection('author-hub:page') },
+                { label: 'Payout setup', description: 'Bank account and tax details', icon: ShieldCheck, onSelect: () => onNavigateSection('author-hub:payout') },
               ] },
               { items: [
-                { label: 'Join early access', description: OPERATOR.email, icon: Mail, href: contactHref('Author hub early access') },
+                { label: 'Questions?', description: OPERATOR.email, icon: Mail, href: contactHref('Author hub question') },
               ] },
             ]} />
             <HeaderNavMenu label="Resources" groups={[{ items: [
@@ -735,6 +735,7 @@ export const Header: React.FC<HeaderProps> = ({
               ['Who it’s for', 'solutions', PenTool],
               ['Services and pricing', 'pricing', Ruler],
               ['Audiobook publishing', 'audiobook-publishing', Headphones],
+              ['Author hub', 'author-hub:books', Library],
               ['How it works', 'how-it-works', ListOrdered],
               ['Earnings calculator', 'earnings', Calculator],
               ['About BooksAtlas', 'about', Building2],

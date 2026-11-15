@@ -5,6 +5,7 @@ import { useAccount } from '../../auth/AuthContext';
 import { EbookApiError, saveBlob, useEbookApi, type FeedbackOverview, type Submission } from './ebookApi';
 import { AuthorSalesDashboard } from './AuthorSalesDashboard';
 import { ServicesOverview } from './ServicesOverview';
+import { AuthorHub } from './AuthorHub';
 import { NarrationPanel } from './NarrationPanel';
 import { NarrationQueue } from './NarrationQueue';
 import { SubmissionForm } from './SubmissionForm';
@@ -137,6 +138,8 @@ export const EbookPublishing: React.FC = () => {
         )}
       </header>
 
+      {!mode && <AuthorHub api={api} submissions={submissions} onShowBooks={() => document.getElementById('your-ebooks')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />}
+
       {!mode && <ServicesOverview />}
 
       {problem && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{problem.message}</p>}
@@ -171,7 +174,7 @@ export const EbookPublishing: React.FC = () => {
           {/* Sales of the signed-in author's own published books (cycle 3). */}
           {submissions?.some((s) => s.status === 'published') && <AuthorSalesDashboard api={api} />}
 
-          <section className="space-y-4">
+          <section id="your-ebooks" className="space-y-4 scroll-mt-40">
             <h2 className="font-serif text-xl font-bold text-slate-900">{isAdmin ? 'All submissions' : 'Your eBooks'}</h2>
             {!submissions ? <p className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" aria-hidden />Loading…</p>
               : !submissions.length ? <p className="text-sm text-slate-500">No eBooks yet. Start with “New eBook”.</p>

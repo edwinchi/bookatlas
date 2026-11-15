@@ -21,6 +21,7 @@ import { mountReviews } from './reviews/routes.js';
 import { businessSummary } from './payments/business.js';
 import { mountFollows } from './follows/routes.js';
 import { announceToFollowers, eraseFollowsOf, followsOf } from './follows/service.js';
+import { erasePayout, getPayout } from './payments/payouts.js';
 import { authorSlug } from './reviews/routes.js';
 import { waitUntil } from '@vercel/functions';
 import { eraseReviewsOf, reviewsOf } from './reviews/service.js';
@@ -783,7 +784,8 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
         const [purchases, invoices, reviews] = await Promise.all([purchasesOf(userId), invoicesOf(userId), reviewsOf(userId)]);
         return [...purchases, ...invoices.map(({ user_id: _u, ...invoice }) => ({ record: 'invoice', number: invoiceNumber(invoice), ...invoice })),
           ...reviews.map((review) => ({ record: 'review', ...review })),
-          ...(await followsOf(userId)).map(({ user_id: _u, ...f }) => ({ record: 'follow', ...f }))];
+          ...(await followsOf(userId)).map(({ user_id: _u, ...f }) => ({ record: 'follow', ...f })),
+          ...[await getPayout(userId)].filter(Boolean).map((p) => { const { user_id: _u, ...rest } = p!; return { record: 'payout-details', ...rest }; })];
       } catch { throw new AccountStoreError('Purchase records are unavailable.'); }
     },
     async submissions(userId) {
@@ -799,6 +801,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
         await anonymisePurchases(userId);
         await anonymiseInvoices(userId, `erased-${randomUUID()}`);
         await eraseFollowsOf(userId);
+        await erasePayout(userId);
         // Reviews name the reader, so they are deleted; the books' ratings are recalculated.
         await eraseReviewsOf(userId, { get: (id) => catalog.get(id), setRating: (book, rating, count) => catalog.upsert([{ ...book, rating, reviewCount: count }]) });
         await eraseAuthorData(userId);

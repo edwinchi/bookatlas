@@ -626,6 +626,14 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
   // Header and landing links: show the unfiltered front page, then scroll once it has rendered.
   const goToSection = (id: string) => {
     if (id === 'publish') { setActiveTab('publish'); window.scrollTo({ top: 0 }); return; }
+    if (id.startsWith('author-hub:')) {
+      // Author hub tiles live on the Publish page (which asks visitors to sign in first).
+      setActiveTab('publish');
+      window.scrollTo({ top: 0 });
+      const tile = id.slice('author-hub:'.length);
+      [200, 700].forEach((ms) => setTimeout(() => window.dispatchEvent(new CustomEvent('bookatlas:author-hub', { detail: tile })), ms));
+      return;
+    }
     if (id === 'audiobook-publishing' && account) {
       // Signed in: the Publish page's "Natural audiobook narration" service, opened. Signed out: the landing section.
       setActiveTab('publish');
