@@ -30,6 +30,15 @@ Stopping:
 
 **Speed:** on an 8-core PC, a part of about 50 seconds takes about 80 seconds to record.
 
+## Audio samples for every book
+
+Run `npm run samples` to record a real audio sample with Kokoro for every English book in the store that doesn't have one yet.
+
+- A sample is the opening of the book, about 45 seconds.
+- It is played by the store's "Listen to Audio Sample" button, for everyone.
+- Run it again after new books are published.
+- A book nobody has recorded is recorded with the cloud voice the first time someone listens, if the Gemini quota allows.
+
 ## Voices
 
 | Voice | Description |
