@@ -307,3 +307,37 @@ test('the free local Kokoro narrator: token-only API, one voice for the whole bo
     assert.equal(book.narrator, 'Heart (BooksAtlas natural voice)');
   } finally { delete process.env.NARRATION_WORKER_TOKEN; }
 });
+
+test('every book has a real audio sample for everyone: the opening of the book, recorded once', async () => {
+  const { fetch } = await getSharedTestServer();
+  const bookId = await publishBook(fetch, 'admin');
+  const before = calls.length;
+  const res = await fetch(`/api/audio-samples/${bookId}`, { headers: { 'x-test-role': 'unauthenticated' } });
+  assert.equal(res.status, 200, 'visitors may listen');
+  assert.equal(res.headers.get('content-type'), 'audio/mpeg');
+  assert.ok((await res.arrayBuffer()).byteLength > 200);
+  assert.equal(calls.length, before + 1, 'recorded once');
+  assert.ok(calls.at(-1)!.length <= 760, 'about 45 seconds of the opening');
+  await fetch(`/api/audio-samples/${bookId}`, { headers: { 'x-test-role': 'unauthenticated' } });
+  assert.equal(calls.length, before + 1, 'then served from storage');
+  assert.equal((await fetch('/api/audio-samples/no-such-book')).status, 404);
+
+  // The local narrator lists books without a sample and uploads Kokoro recordings, with its token only.
+  process.env.NARRATION_WORKER_TOKEN = 'synthetic-local-narrator-token-for-tests-0123456789';
+  const auth = { authorization: `Bearer ${process.env.NARRATION_WORKER_TOKEN}` };
+  try {
+    assert.equal((await fetch('/api/internal/narration/local/samples')).status, 403);
+    const { missing } = await (await fetch('/api/internal/narration/local/samples', { headers: auth })).json();
+    assert.ok(!missing.some((m: { bookId: string }) => m.bookId === bookId), 'this book has its sample now');
+    const sampleTitle = missing.find((m: { bookId: string }) => !m.bookId.startsWith('atlas-ebook-'));
+    if (sampleTitle) {
+      const body = new Uint8Array(400); body[0] = 0xff; body[1] = 0xfb;
+      const put = (key: string) => fetch(`/api/internal/narration/local/samples/${sampleTitle.bookId}`, { method: 'PUT', headers: { ...auth, 'content-type': 'audio/mpeg', 'x-sample-key': key }, body });
+      assert.equal((await put('samples/books/other.mp3')).status, 409, 'only the key for the book\'s current text');
+      assert.equal((await put(sampleTitle.key)).status, 200);
+      const heard = calls.length;
+      assert.equal((await fetch(`/api/audio-samples/${sampleTitle.bookId}`)).status, 200);
+      assert.equal(calls.length, heard, 'the uploaded recording is used, no cloud voice');
+    }
+  } finally { delete process.env.NARRATION_WORKER_TOKEN; }
+});

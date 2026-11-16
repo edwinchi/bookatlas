@@ -8,11 +8,14 @@
   "scripts": {
     "list": "node narrate.mjs --list",
     "narrate": "node narrate.mjs",
-    "sample": "node narrate.mjs --sample"
+    "sample": "node narrate.mjs --sample",
+    "samples": "node narrate.mjs --samples"
   },
   "dependencies": {
     "@breezystack/lamejs": "1.2.7",
     "kokoro-js": "1.2.1"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

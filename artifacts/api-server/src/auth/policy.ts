@@ -66,7 +66,12 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (method === 'POST' && normalized === '/api/internal/narration/step') return 'self-service';
   // The daily narration schedule (Vercel Cron); the route checks CRON_SECRET itself.
   if (method === 'GET' && normalized === '/api/internal/narration/cron') return 'self-service';
+  // Audio samples of every book, for everyone (owner request 2026-11-16).
+  if (method === 'GET' && /^\/api\/audio-samples\/[\w.-]{1,120}$/.test(normalized)) return 'public';
+  if (method === 'GET' && /^\/api\/book-outline\/atlas-ebook-[0-9a-f]{8}$/.test(normalized)) return 'public';
   // The local Kokoro narrator authenticates with NARRATION_WORKER_TOKEN inside the routes.
+  if (method === 'GET' && normalized === '/api/internal/narration/local/samples') return 'self-service';
+  if (method === 'PUT' && /^\/api\/internal\/narration\/local\/samples\/[\w.-]{1,120}$/.test(normalized)) return 'self-service';
   if (method === 'GET' && normalized === '/api/internal/narration/local') return 'self-service';
   if (method === 'POST' && /^\/api\/internal\/narration\/local\/[0-9a-f-]{36}\/(?:claim|release)$/.test(normalized)) return 'self-service';
   if (method === 'PUT' && /^\/api\/internal\/narration\/local\/[0-9a-f-]{36}\/parts\/\d{1,5}$/.test(normalized)) return 'self-service';

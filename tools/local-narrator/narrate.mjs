@@ -7,6 +7,7 @@
 //   npm run list                      the narrations you can take
 //   npm run sample -- --voice af_heart     hear a voice (writes sample-af_heart.mp3)
 //   npm run narrate -- --narration <id> [--voice af_heart] [--from-start] [--parts 20]
+//   npm run samples                   a real audio sample for every English book that has none yet
 //
 // Settings come from ../../.env.local (or the environment): NARRATION_WORKER_TOKEN (required, the same value as
 // in Vercel) and BOOKSATLAS_URL (default https://booksatlas.app). The voice model (~90 MB) is downloaded on the
@@ -138,6 +139,23 @@ async function sample() {
   console.log(`Wrote ${file} (${(pcm.length / SAMPLE_RATE).toFixed(1)} s of audio in ${((Date.now() - started) / 1000).toFixed(1)} s).`);
 }
 
+/** A real audio sample for every book in the store that lacks one (owner request 2026-11-16). */
+async function samples() {
+  const { missing } = await api('/api/internal/narration/local/samples');
+  const english = missing.filter((m) => /^english$/i.test(m.language));
+  if (missing.length > english.length) console.log(`${missing.length - english.length} non-English books are left to the cloud voice (Kokoro reads English only).`);
+  if (!english.length) { console.log('Every English book has an audio sample.'); return; }
+  console.log(`Recording ${english.length} audio samples with ${VOICES[voice]}…`);
+  for (const m of english) {
+    const pcm = await speak(m.text);
+    await api(`/api/internal/narration/local/samples/${encodeURIComponent(m.bookId)}`, {
+      method: 'PUT', body: toMp3(pcm), headers: { 'content-type': 'audio/mpeg', 'x-sample-key': m.key },
+    });
+    console.log(`  ${m.title}: ${(pcm.length / SAMPLE_RATE).toFixed(0)} s`);
+  }
+  console.log('Done.');
+}
+
 async function list() {
   const { narrations } = await api('/api/internal/narration/local');
   if (!narrations.length) { console.log('No open narrations. Order one for your book in Publish → Natural audiobook first.'); return; }
@@ -180,6 +198,6 @@ async function narrate() {
   console.log(`Paused after part ${next.n} of ${claim.total}. Run the same command again to continue.`);
 }
 
-const command = opts.sample ? sample : opts.list ? list : narrate;
+const command = opts.sample ? sample : opts.list ? list : opts.samples ? samples : narrate;
 if (command !== sample && !token) { console.error('NARRATION_WORKER_TOKEN is missing: add it to .env.local (the same value as in Vercel).'); process.exit(2); }
 command().catch((e) => { console.error(`Stopped: ${e.message}`); process.exit(1); });

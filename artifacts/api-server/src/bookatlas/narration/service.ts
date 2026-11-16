@@ -186,6 +186,11 @@ function freeTier(): FreeTierProvider | null {
   };
 }
 
+/** A short audio sample (narration/samples.ts) in the Sulafat voice: free Chirp when configured, else Gemini. */
+export async function narrateSample(text: string, language = 'English') {
+  return (await speakToMp3(text, 'Sulafat', language)).mp3;
+}
+
 /** Free Chirp while this month's free characters last and the language is supported; paid Gemini otherwise. */
 async function speakToMp3(text: string, voice: NarrationVoice, language = 'English') {
   const locale = CHIRP_LOCALES[language];

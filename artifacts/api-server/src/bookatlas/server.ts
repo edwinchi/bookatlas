@@ -18,6 +18,7 @@ import { mountPayments } from './payments/routes.js';
 import { announceBook, mountSeo } from './seo.js';
 import type { Book } from '@workspace/bookatlas-catalog/types';
 import { mountNarration } from './narration/routes.js';
+import { mountSamples } from './narration/samples.js';
 import { setNarrationCatalog } from './narration/service.js';
 import { withAudioEditions } from './narration/edition.js';
 import { mountReviews } from './reviews/routes.js';
@@ -495,6 +496,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
   // Natural audiobook narration (TASK-0008).
   setNarrationCatalog({ get: (bookId) => catalog.get(bookId), save: saveBook });
   mountNarration(app, (bookId) => catalog.get(bookId), APP_URL);
+  mountSamples(app, catalog);
   // Reader reviews, ratings and author pages (TASK-0009).
   mountReviews(app, catalog);
   // Follow authors and new-book e-mails (cycle 5c).

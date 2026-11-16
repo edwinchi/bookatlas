@@ -55,6 +55,7 @@ app.use(
     { prefix: "/api/reader/reports", limit: 20 },
     { prefix: "/api/internal/narration/cron", limit: 5 },
     { prefix: "/api/internal/narration/local", limit: 240 },
+    { prefix: "/api/audio-samples", limit: 60 },
   ]),
 );
 // Without a secret key Clerk throws on every request, taking the public catalog down with it.

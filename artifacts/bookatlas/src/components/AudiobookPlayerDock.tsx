@@ -1,28 +1,9 @@
 import { coverProps } from '../utils/coverImage';
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Play, 
-  Pause, 
-  RotateCcw, 
-  RotateCw, 
-  Volume2, 
-  VolumeX, 
-  X, 
-  ChevronUp, 
-  ChevronDown, 
-  Clock, 
-  Headphones, 
-  Sparkles,
-  Bookmark
-} from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import * as Slider from '@radix-ui/react-slider';
+import { Headphones, Loader2, Pause, Play, RotateCcw, RotateCw, Volume2, VolumeX, X } from 'lucide-react';
 import { Book } from '../types';
-import {
-  calculateAudioDurationSeconds,
-  formatAudioTime,
-  skipAudioForward,
-  skipAudioBackward,
-  AUDIO_PLAYBACK_SPEEDS,
-} from '../utils/audioPlayer';
+import { formatAudioTime, AUDIO_PLAYBACK_SPEEDS } from '../utils/audioPlayer';
 
 interface AudiobookPlayerDockProps {
   book: Book;
@@ -30,149 +11,107 @@ interface AudiobookPlayerDockProps {
   onOpenDetail: (book: Book) => void;
 }
 
-export const AudiobookPlayerDock: React.FC<AudiobookPlayerDockProps> = ({
-  book,
-  onClose,
-  onOpenDetail,
-}) => {
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [currentTime, setCurrentTime] = useState(24);
-  const [speed, setSpeed] = useState<number>(1.0);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [sleepTimer, setSleepTimer] = useState<number | null>(null);
+/** Where every book's audio sample is served (narration/samples.ts): the opening of the book, read aloud. */
+export const audioSampleUrl = (bookId: string) => `/api/audio-samples/${encodeURIComponent(bookId)}`;
 
-  const duration = calculateAudioDurationSeconds(book.audioDurationMinutes);
+/**
+ * The audio sample player (owner request 2026-11-16). It used to run a pretend timer with no sound; it now plays
+ * the book's real sample, for everyone, signed in or not. The first listen of a new book may take a few seconds
+ * while the sample is recorded.
+ */
+export const AudiobookPlayerDock: React.FC<AudiobookPlayerDockProps> = ({ book, onClose, onOpenDetail }) => {
+  const audio = useRef<HTMLAudioElement | null>(null);
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [error, setError] = useState('');
+  const [playing, setPlaying] = useState(false);
+  const [time, setTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [speed, setSpeed] = useState(1);
+  const [muted, setMuted] = useState(false);
 
   useEffect(() => {
-    let interval: any;
-    if (isPlaying) {
-      interval = setInterval(() => {
-        setCurrentTime((prev) => (prev >= duration ? 0 : prev + speed));
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, speed, duration]);
+    let cancelled = false;
+    let url: string | null = null;
+    setState('loading'); setPlaying(false); setTime(0); setDuration(0);
+    fetch(audioSampleUrl(book.id))
+      .then(async (res) => {
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? 'The sample could not be loaded.');
+        url = URL.createObjectURL(await res.blob());
+        if (cancelled) return;
+        const a = audio.current!;
+        a.src = url;
+        setState('ready');
+        await a.play().catch(() => undefined);
+      })
+      .catch((e) => { if (!cancelled) { setError(e instanceof Error ? e.message : 'The sample could not be loaded.'); setState('error'); } });
+    return () => { cancelled = true; audio.current?.pause(); if (url) URL.revokeObjectURL(url); };
+  }, [book.id]);
 
-  const formatTime = formatAudioTime;
-  const skipForward = () => setCurrentTime((t) => skipAudioForward(t, duration));
-  const skipBackward = () => setCurrentTime((t) => skipAudioBackward(t));
+  useEffect(() => { if (audio.current) audio.current.playbackRate = speed; }, [speed, state]);
+  useEffect(() => { if (audio.current) audio.current.muted = muted; }, [muted]);
 
+  const toggle = () => { const a = audio.current; if (!a || state !== 'ready') return; if (a.paused) void a.play(); else a.pause(); };
+  const seek = (to: number) => { const a = audio.current; if (!a || !duration) return; a.currentTime = Math.max(0, Math.min(duration, to)); setTime(a.currentTime); };
   const speeds: readonly number[] = AUDIO_PLAYBACK_SPEEDS;
+  const voice = book.narrator?.includes('BooksAtlas natural voice') ? book.narrator.replace(/ \(BooksAtlas natural voice\)$/, '') : null;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-40 bg-stone-950/95 backdrop-blur-md text-white border-t border-white/10 shadow-2xl transition-all duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3">
-        
-        {/* Scrubber Bar across top of dock */}
-        <div className="w-full mb-2 flex items-center gap-3">
-          <span className="text-[11px] text-gray-400 font-mono w-12 text-right">
-            {formatTime(currentTime)}
-          </span>
-          <div className="flex-1 relative flex items-center group">
-            <input
-              type="range"
-              min={0}
-              max={duration}
-              value={currentTime}
-              onChange={(e) => setCurrentTime(Number(e.target.value))}
-              className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#bf0000] hover:h-2 transition-all"
-            />
-          </div>
-          <span className="text-[11px] text-gray-400 font-mono w-14">
-            -{formatTime(duration - currentTime)}
-          </span>
+    <div role="region" aria-label={`Audio sample: ${book.title}`}
+      className="fixed bottom-0 inset-x-0 z-40 border-t border-white/10 bg-stone-950/95 text-white shadow-2xl backdrop-blur-md supports-[backdrop-filter]:bg-stone-950/85 pb-[env(safe-area-inset-bottom)]">
+      <audio ref={audio} preload="auto" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)}
+        onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)} onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)} />
+      <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6 sm:py-3">
+        <div className="mb-2 flex w-full items-center gap-3">
+          <span className="w-12 text-right font-mono text-[11px] tabular-nums text-stone-400">{formatAudioTime(time)}</span>
+          <Slider.Root value={[time]} max={Math.max(1, duration)} step={0.5} disabled={state !== 'ready'} onValueChange={([v]) => seek(v ?? 0)}
+            aria-label="Position in the sample" className="group relative flex h-4 flex-1 touch-none select-none items-center data-[disabled]:opacity-50">
+            <Slider.Track className="relative h-1.5 grow overflow-hidden rounded-full bg-white/15 transition-[height] group-hover:h-2">
+              <Slider.Range className="absolute h-full rounded-full bg-gradient-to-r from-amber-400 to-rose-500" />
+            </Slider.Track>
+            <Slider.Thumb className="block h-3.5 w-3.5 rounded-full bg-white shadow ring-2 ring-rose-500/60 transition-transform focus-visible:scale-125 focus-visible:outline-none group-hover:scale-110" />
+          </Slider.Root>
+          <span className="w-14 font-mono text-[11px] tabular-nums text-stone-400">-{formatAudioTime(Math.max(0, duration - time))}</span>
         </div>
 
         <div className="flex items-center justify-between gap-4">
-          
-          {/* Left: Book Cover & Titles */}
-          <div 
-            onClick={() => onOpenDetail(book)}
-            className="flex items-center gap-3 cursor-pointer group min-w-0 max-w-xs sm:max-w-sm"
-          >
-            <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-md overflow-hidden shrink-0 shadow-md border border-white/20">
-              <img
-                {...coverProps(book.coverImage, 64)}
-                alt={book.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                <Headphones className="w-4 h-4 text-white opacity-80" />
-              </div>
-            </div>
+          <button type="button" onClick={() => onOpenDetail(book)} className="group flex min-w-0 max-w-xs items-center gap-3 text-left cursor-pointer sm:max-w-sm">
+            <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-md border border-white/20 shadow-md sm:h-12 sm:w-12">
+              <img {...coverProps(book.coverImage, 64)} alt="" className="h-full w-full object-cover transition-transform group-hover:scale-105" referrerPolicy="no-referrer" />
+              <span className="absolute inset-0 grid place-items-center bg-black/25"><Headphones className="h-4 w-4 text-white/90" aria-hidden /></span>
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-xs font-bold text-white transition-colors group-hover:text-amber-300 sm:text-sm">{book.title}</span>
+              <span className="block truncate text-[11px] text-stone-400">
+                {state === 'loading' ? 'Preparing the audio sample…' : state === 'error' ? error : `Audio sample · ${voice ? `${voice}, ` : ''}BooksAtlas natural voice`}
+              </span>
+            </span>
+          </button>
 
-            <div className="min-w-0">
-              <h4 className="text-xs sm:text-sm font-bold text-white truncate group-hover:text-amber-400 transition-colors">
-                {book.title}
-              </h4>
-              <p className="text-[11px] text-gray-400 truncate">
-                {book.narrator ? `Narrated by ${book.narrator}` : book.author}
-              </p>
-            </div>
-          </div>
-
-          {/* Center: Audio Controls (15s back, Play/Pause, 15s forward, Speed) */}
           <div className="flex items-center gap-2 sm:gap-4">
-            <button
-              onClick={skipBackward}
-              className="p-1.5 text-gray-400 hover:text-white transition-colors cursor-pointer"
-              title="Rewind 15 seconds"
-            >
-              <RotateCcw className="w-4 h-4" />
+            <button type="button" onClick={() => seek(time - 15)} disabled={state !== 'ready'} className="p-1.5 text-stone-400 transition-colors hover:text-white disabled:opacity-40 cursor-pointer" title="Rewind 15 seconds" aria-label="Rewind 15 seconds">
+              <RotateCcw className="h-4 w-4" />
             </button>
-
-            <button
-              onClick={() => setIsPlaying(!isPlaying)}
-              className="w-10 h-10 rounded-full bg-[#bf0000] hover:bg-[#a60000] text-white flex items-center justify-center shadow-lg transition-transform hover:scale-105 cursor-pointer"
-              title={isPlaying ? 'Pause' : 'Play'}
-            >
-              {isPlaying ? <Pause className="w-5 h-5 fill-white" /> : <Play className="w-5 h-5 fill-white ml-0.5" />}
+            <button type="button" onClick={toggle} disabled={state !== 'ready'} title={playing ? 'Pause' : 'Play'} aria-label={playing ? 'Pause the sample' : 'Play the sample'}
+              className="grid h-10 w-10 place-items-center rounded-full bg-rose-600 text-white shadow-lg transition hover:scale-105 hover:bg-rose-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:opacity-60 motion-reduce:transition-none cursor-pointer">
+              {state === 'loading' ? <Loader2 className="h-5 w-5 animate-spin" /> : playing ? <Pause className="h-5 w-5 fill-white" /> : <Play className="ml-0.5 h-5 w-5 fill-white" />}
             </button>
-
-            <button
-              onClick={skipForward}
-              className="p-1.5 text-gray-400 hover:text-white transition-colors cursor-pointer"
-              title="Fast Forward 15 seconds"
-            >
-              <RotateCw className="w-4 h-4" />
+            <button type="button" onClick={() => seek(time + 15)} disabled={state !== 'ready'} className="p-1.5 text-stone-400 transition-colors hover:text-white disabled:opacity-40 cursor-pointer" title="Fast Forward 15 seconds" aria-label="Forward 15 seconds">
+              <RotateCw className="h-4 w-4" />
             </button>
-
-            {/* Speed Selector */}
-            <div className="relative hidden sm:block">
-              <button
-                onClick={() => {
-                  const currIdx = speeds.indexOf(speed);
-                  const nextSpeed = speeds[(currIdx + 1) % speeds.length];
-                  setSpeed(nextSpeed);
-                }}
-                className="px-2 py-1 bg-white/10 hover:bg-white/20 rounded-md text-xs font-mono font-bold text-amber-300 transition-colors cursor-pointer"
-                title="Change Playback Speed"
-              >
-                {speed}x
-              </button>
-            </div>
+            <button type="button" onClick={() => setSpeed(speeds[(speeds.indexOf(speed) + 1) % speeds.length]!)}
+              className="hidden rounded-md bg-white/10 px-2 py-1 font-mono text-xs font-bold text-amber-300 transition-colors hover:bg-white/20 sm:block cursor-pointer" title="Change Playback Speed">
+              {speed}x
+            </button>
           </div>
 
-          {/* Right: Sound & Close */}
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsMuted(!isMuted)}
-              className="p-1.5 text-gray-400 hover:text-white transition-colors cursor-pointer hidden md:block"
-            >
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            <button type="button" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Unmute' : 'Mute'} className="hidden p-1.5 text-stone-400 transition-colors hover:text-white md:block cursor-pointer">
+              {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
             </button>
-
-            <button
-              onClick={onClose}
-              className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/10 cursor-pointer"
-              title="Close Audiobook Player"
-            >
-              <X className="w-4 h-4" />
+            <button type="button" onClick={onClose} className="rounded-full p-1.5 text-stone-400 transition-colors hover:bg-white/10 hover:text-white cursor-pointer" title="Close Audiobook Player" aria-label="Close the audio sample">
+              <X className="h-4 w-4" />
             </button>
           </div>
-
         </div>
       </div>
     </div>

@@ -104,7 +104,18 @@ test('reader display settings persist across reloads', async () => {
 
 test('the audiobook dock plays samples and cycles playback speed', async () => {
   const page = await open('/');
+  // A real recording of the book's opening (it used to be a timer with no sound).
+  const pending = page.waitForResponse((r) => r.url().includes('/api/audio-samples/'), { timeout: 60_000 });
   await page.locator('[title="Listen to Audio Sample"]').first().click();
+  const sample = await pending;
+  if (sample.status() === 200) {
+    assert.equal(sample.headers()['content-type'], 'audio/mpeg');
+    await page.getByRole('button', { name: /^(Pause|Play) the sample$/ }).waitFor({ timeout: 15_000 });
+  } else {
+    // Not recorded yet and the cloud voice's free quota is used up: a plain message, no broken player.
+    assert.equal(sample.status(), 503);
+    await page.getByText(/audio sample is being prepared/i).waitFor();
+  }
   const speed = page.locator('[title="Change Playback Speed"]');
   const before = await speed.innerText();
   await speed.click();
@@ -265,11 +276,11 @@ test('the book window: preview opens the reader in front, Buy Now opens the cart
   const dialog = page.getByRole('dialog', { name, exact: true });
   await dialog.waitFor();
   // AI briefing: visitors see a sign-in offer in the tab, not a jump to another page.
-  await dialog.getByRole('button', { name: /AI Briefing/ }).click();
+  await dialog.getByRole('tab', { name: /AI Briefing/ }).click();
   await dialog.getByRole('button', { name: /sign in for the ai briefing/i }).waitFor();
   assert.match(new URL(page.url()).pathname, /^\/books\//, 'still on the book');
   for (const tab of [/Reader Reviews/, /^About /, /Synopsis/]) {
-    await dialog.getByRole('button', { name: tab }).click();
+    await dialog.getByRole('tab', { name: tab }).click();
     assert.ok(await dialog.isVisible(), `${tab} keeps the book open`);
   }
   // Buy Now adds it and opens the cart.

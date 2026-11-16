@@ -1,7 +1,10 @@
 import { authorPath } from './AuthorProfileModal';
 import { ReviewsPanel, Stars } from './ebook/ReviewsPanel';
 import { coverProps } from '../utils/coverImage';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import * as Tabs from '@radix-ui/react-tabs';
+import * as RadioGroup from '@radix-ui/react-radio-group';
+import * as ScrollArea from '@radix-ui/react-scroll-area';
 import { AppModal } from './ui/app-modal';
 import { 
   X, 
@@ -23,6 +26,8 @@ import {
   Wand2,
   BookmarkCheck,
   ExternalLink,
+  Lock,
+  PlayCircle,
 } from 'lucide-react';
 import { Book } from '../types';
 import { ReaderPublicationAccess } from './publishing/ReaderPublicationAccess';
@@ -84,6 +89,15 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
   const openFullBook = () => { if (account) onReadSample(book); else requireSignIn('reading the full book'); };
 
   const [activeTab, setActiveTab] = useState<'overview' | 'ai_summary' | 'reviews' | 'author'>('overview');
+  /** The book's real chapter titles (prepared books), for "Sample excerpt included". */
+  const [outline, setOutline] = useState<{ title: string; subtitle: string | null; preview: boolean }[] | null>(null);
+  useEffect(() => {
+    if (!book.hasReaderContent) return;
+    let cancelled = false;
+    fetch(`/api/book-outline/${encodeURIComponent(book.id)}`).then((r) => (r.ok ? r.json() : null))
+      .then((r) => { if (!cancelled && r?.chapters) setOutline(r.chapters); }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [book.id, book.hasReaderContent]);
   const [selectedFormat, setSelectedFormat] = useState<'ebook' | 'audiobook'>('ebook');
   /** What "Buy" adds when the audiobook is chosen: the add-on, plus the eBook unless it is owned or free. */
   const buysAudio = narrated && audioAddOn && !ownsAudio && selectedFormat === 'audiobook';
@@ -124,6 +138,16 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
     } finally {
       setAiLoading(false);
     }
+  };
+
+  const changeTab = (value: string) => {
+    const tab = value as typeof activeTab;
+    if (tab !== 'ai_summary') { setActiveTab(tab); return; }
+    const openAiSummary = () => { setActiveTab('ai_summary'); void fetchAISummary(); };
+    // Visitors stay on the book: the tab explains and offers sign-in (back to this book).
+    if (!account) { setActiveTab('ai_summary'); return; }
+    if (hasAiAccess || !onRequireAiAccess) openAiSummary();
+    else onRequireAiAccess('AI Executive Briefing', 'Get an AI-generated 5-minute executive summary, key themes, and a dynamic story preview for this book.', openAiSummary);
   };
 
   // Generate dynamic custom story preview
@@ -208,7 +232,8 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                   <span>{opensInFull && account ? 'Open the Book' : prepared ? 'Read & Listen to the Free Preview' : 'Read Free Instant Sample'}</span>
                 </button>
 
-                {book.audioDurationMinutes && (
+                {/* Owner request 2026-11-16: every book has a real audio sample, for everyone. */}
+                {(
                   <button
                     onClick={() => (narrated ? onReadSample(book) : onPlayAudioSample(book))}
                     className="w-full py-2.5 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 font-semibold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
@@ -303,15 +328,8 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                   </span>
                 </div>
 
-                <div className={`grid gap-2 ${prepared && !narrated ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                  <button
-                    onClick={() => setSelectedFormat('ebook')}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      selectedFormat === 'ebook'
-                        ? 'bg-white border-indigo-600 ring-2 ring-indigo-600/15 shadow-xs'
-                        : 'bg-white/60 border-slate-200 hover:bg-white'
-                    }`}
-                  >
+                <RadioGroup.Root value={selectedFormat} onValueChange={(v) => setSelectedFormat(v as 'ebook' | 'audiobook')} aria-label="Format" className="grid grid-cols-2 gap-2">
+                  <RadioGroup.Item value="ebook" className="group relative p-3 rounded-xl border text-left transition-all cursor-pointer bg-white/60 border-slate-200 hover:bg-white hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 data-[state=checked]:bg-white data-[state=checked]:border-indigo-600 data-[state=checked]:ring-2 data-[state=checked]:ring-indigo-600/15 data-[state=checked]:shadow-xs">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                         <BookOpen className="w-4 h-4 text-indigo-600" /> eBook
@@ -321,16 +339,22 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1">{isGenerated ? 'EPUB, reader sign-in required' : prepared ? <>EPUB • about {book.pageCount} pages{readsFree ? ' • free with a BooksAtlas account' : ''}</> : <>EPUB & PDF • {book.pageCount} pages</>}</p>
-                  </button>
+                  </RadioGroup.Item>
 
-                  {!(prepared && !narrated) && <button
-                    onClick={() => setSelectedFormat('audiobook')}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      selectedFormat === 'audiobook'
-                        ? 'bg-white border-indigo-600 ring-2 ring-indigo-600/15 shadow-xs'
-                        : 'bg-white/60 border-slate-200 hover:bg-white'
-                    }`}
-                  >
+                  {prepared && !narrated ? (
+                    // Not narrated yet: no audiobook to sell, but a real sample of the book, read aloud.
+                    <button type="button" onClick={() => onPlayAudioSample(book)}
+                      className="group p-3 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/40 text-left transition-all hover:border-indigo-400 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                          <Headphones className="w-4 h-4 text-indigo-600" /> Audiobook
+                        </span>
+                        <PlayCircle className="w-5 h-5 text-indigo-600 transition-transform group-hover:scale-110" aria-hidden />
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1">Free audio sample • full audiobook not narrated yet</p>
+                    </button>
+                  ) : (
+                    <RadioGroup.Item value="audiobook" className="group relative p-3 rounded-xl border text-left transition-all cursor-pointer bg-white/60 border-slate-200 hover:bg-white hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 data-[state=checked]:bg-white data-[state=checked]:border-indigo-600 data-[state=checked]:ring-2 data-[state=checked]:ring-indigo-600/15 data-[state=checked]:shadow-xs">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                         <Headphones className="w-4 h-4 text-indigo-600" /> Audiobook
@@ -342,8 +366,9 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                     <p className="text-[11px] text-slate-500 mt-1">
                       {narrated ? `Natural voice${book.narrator ? ` (${book.narrator.replace(/ \(BooksAtlas natural voice\)$/, '')})` : ''}${audioHours ? ` • ${audioHours}` : ''} • ${audioAddOn ? 'add-on to the eBook' : 'included with the eBook'}` : isGenerated ? 'Chapter narration, reader sign-in required' : book.audioDurationMinutes ? `${Math.round(book.audioDurationMinutes / 60)} hrs unabridged` : 'Full audio track'}
                     </p>
-                  </button>}
-                </div>
+                    </RadioGroup.Item>
+                  )}
+                </RadioGroup.Root>
                 {narrated && audioAddOn && !ownsAudio && (
                   <p className="-mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500">
                     <span>The audiobook keeps playing with your screen off; reading along with your device’s voice stays free.</span>
@@ -438,73 +463,22 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
           </div>
 
           {/* Tabs: Synopsis, AI Briefing, Reviews, Author */}
-          <div className="space-y-4">
-            <div className="flex border-b border-slate-200 text-sm font-semibold overflow-x-auto gap-2">
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`pb-2.5 px-3 transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
-                  activeTab === 'overview'
-                    ? 'border-indigo-600 text-indigo-600'
-                    : 'border-transparent text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Synopsis & Details
-              </button>
-
-              <button
-                onClick={() => {
-                  const openAiSummary = () => {
-                    setActiveTab('ai_summary');
-                    fetchAISummary();
-                  };
-                  // Visitors stay on the book: the tab explains and offers sign-in (back to this book).
-                  if (!account) { setActiveTab('ai_summary'); return; }
-                  if (hasAiAccess || !onRequireAiAccess) {
-                    openAiSummary();
-                  } else {
-                    onRequireAiAccess(
-                      'AI Executive Briefing',
-                      'Get an AI-generated 5-minute executive summary, key themes, and a dynamic story preview for this book.',
-                      openAiSummary
-                    );
-                  }
-                }}
-                className={`pb-2.5 px-3 transition-colors cursor-pointer border-b-2 flex items-center gap-1.5 whitespace-nowrap ${
-                  activeTab === 'ai_summary'
-                    ? 'border-indigo-600 text-indigo-600 font-bold'
-                    : 'border-transparent text-slate-600 hover:text-slate-900'
-                }`}
-              >
+          <Tabs.Root value={activeTab} onValueChange={changeTab} className="space-y-4">
+            <Tabs.List aria-label="About this book" className="flex border-b border-slate-200 text-sm font-semibold overflow-x-auto gap-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <Tabs.Trigger value="overview" className="pb-2.5 px-3 -mb-px transition-colors cursor-pointer border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap text-slate-600 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-t-md data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-600 data-[state=active]:font-bold">Synopsis & Details</Tabs.Trigger>
+              <Tabs.Trigger value="ai_summary" className="pb-2.5 px-3 -mb-px transition-colors cursor-pointer border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap text-slate-600 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-t-md data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-600 data-[state=active]:font-bold">
                 <BrainCircuit className="w-4 h-4 text-indigo-600" />
                 <span>AI Briefing & Key Insights</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('reviews')}
-                className={`pb-2.5 px-3 transition-colors cursor-pointer border-b-2 flex items-center gap-1.5 whitespace-nowrap ${
-                  activeTab === 'reviews'
-                    ? 'border-indigo-600 text-indigo-600'
-                    : 'border-transparent text-slate-600 hover:text-slate-900'
-                }`}
-              >
+              </Tabs.Trigger>
+              <Tabs.Trigger value="reviews" className="pb-2.5 px-3 -mb-px transition-colors cursor-pointer border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap text-slate-600 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-t-md data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-600 data-[state=active]:font-bold">
                 <MessageSquare className="w-4 h-4" />
                 <span>Reader Reviews{prepared && book.reviewCount ? ` (${book.reviewCount})` : ''}</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('author')}
-                className={`pb-2.5 px-3 transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
-                  activeTab === 'author'
-                    ? 'border-indigo-600 text-indigo-600'
-                    : 'border-transparent text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                About {book.author}
-              </button>
-            </div>
+              </Tabs.Trigger>
+              <Tabs.Trigger value="author" className="pb-2.5 px-3 -mb-px transition-colors cursor-pointer border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap text-slate-600 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-t-md data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-600 data-[state=active]:font-bold">About {book.author}</Tabs.Trigger>
+            </Tabs.List>
 
             {/* Tab: Overview */}
-            {activeTab === 'overview' && (
+            <Tabs.Content value="overview" className="focus-visible:outline-none">
               <div className="space-y-5">
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
@@ -526,25 +500,43 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                   </div>
                 )}
 
-                {/* Chapter Outline Preview */}
-                <div className="space-y-2">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Sample Excerpt Included
-                  </h3>
-                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-xs space-y-1">
-                    {book.sampleChapters.map((ch, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-slate-700 font-medium py-1">
-                        <span className="font-semibold">{ch.title}</span>
-                        <span className="text-slate-500 text-[11px]">{ch.subtitle || 'Excerpt'}</span>
-                      </div>
-                    ))}
+                {/* Chapter outline: the sample title's sample chapters, or a published book's real chapters */}
+                {(outline?.length || book.sampleChapters?.length) ? (
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      {outline?.length ? 'Inside this book' : 'Sample Excerpt Included'}
+                    </h3>
+                    <ScrollArea.Root type="auto" className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                      <ScrollArea.Viewport className="max-h-64 w-full">
+                        <ul className="divide-y divide-slate-200/70 p-1.5 text-xs">
+                          {(outline ?? book.sampleChapters.map((c) => ({ title: c.title, subtitle: c.subtitle ?? null, preview: true }))).map((ch, idx) => (
+                            <li key={idx} className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-slate-700 transition-colors hover:bg-white">
+                              <span className="min-w-0 truncate font-semibold">{ch.title}</span>
+                              {outline ? (
+                                ch.preview
+                                  ? <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200">Free preview</span>
+                                  : <Lock className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-label="In the full book" />
+                              ) : <span className="shrink-0 text-[11px] text-slate-500">{ch.subtitle || 'Excerpt'}</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      </ScrollArea.Viewport>
+                      <ScrollArea.Scrollbar orientation="vertical" className="flex w-2 touch-none select-none p-0.5">
+                        <ScrollArea.Thumb className="relative flex-1 rounded-full bg-slate-300 hover:bg-slate-400" />
+                      </ScrollArea.Scrollbar>
+                    </ScrollArea.Root>
+                    {outline && (
+                      <button type="button" onClick={() => onReadSample(book)} className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:underline cursor-pointer">
+                        <BookOpen className="h-3.5 w-3.5" aria-hidden />Read the free preview
+                      </button>
+                    )}
                   </div>
-                </div>
+                ) : null}
               </div>
-            )}
+            </Tabs.Content>
 
             {/* Tab: AI Summary & Generator */}
-            {activeTab === 'ai_summary' && (
+            <Tabs.Content value="ai_summary" className="focus-visible:outline-none">
               <div className="space-y-6">
                 {!account ? (
                   <div className="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-5 text-center space-y-3">
@@ -672,15 +664,15 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                   </div>
                 ) : null}
               </div>
-            )}
+            </Tabs.Content>
 
             {/* Tab: Reviews (real readers only) */}
-            {activeTab === 'reviews' && (prepared
+            <Tabs.Content value="reviews" className="focus-visible:outline-none">{prepared
               ? <ReviewsPanel bookId={book.id} />
-              : <p className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-500">This is a sample title. Reviews are available for books published on BooksAtlas.</p>)}
+              : <p className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-500">This is a sample title. Reviews are available for books published on BooksAtlas.</p>}</Tabs.Content>
 
             {/* Tab: Author */}
-            {activeTab === 'author' && (
+            <Tabs.Content value="author" className="focus-visible:outline-none">
               <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
                 <h3 className="font-bold text-base text-slate-950">{book.author}</h3>
                 <p className="text-sm text-slate-700 leading-relaxed">{book.authorBio}</p>
@@ -688,8 +680,8 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                   <span>More titles by {book.author} available on BooksAtlas eBook Store</span>
                 </div>
               </div>
-            )}
-          </div>
+            </Tabs.Content>
+          </Tabs.Root>
 
         </div>
       </div>

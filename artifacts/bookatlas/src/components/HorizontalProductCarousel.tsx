@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, ArrowRight, Sparkles } from 'lucide-react';
 import { Book } from '../types';
 import { BookCard } from './BookCard';
@@ -35,12 +35,28 @@ export const HorizontalProductCarousel: React.FC<HorizontalProductCarouselProps>
   currencySymbol = '$',
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  /** Which ends are reached: the arrows switch off there and the edge fade goes away (no scrollbar). */
+  const [edges, setEdges] = useState({ start: true, end: false });
+  const measure = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setEdges({ start: el.scrollLeft <= 4, end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 });
+  }, []);
+  useEffect(() => {
+    measure();
+    const el = scrollRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [measure, books.length]);
 
   const handleScroll = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const scrollAmount = direction === 'left' ? -380 : 380;
-      scrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
+    const el = scrollRef.current;
+    if (!el) return;
+    // About one screen of cards at a time.
+    const step = Math.max(240, Math.round(el.clientWidth * 0.85));
+    el.scrollBy({ left: direction === 'left' ? -step : step, behavior: 'smooth' });
   };
 
   if (!books || books.length === 0) return null;
@@ -84,14 +100,16 @@ export const HorizontalProductCarousel: React.FC<HorizontalProductCarouselProps>
           <div className="hidden sm:flex items-center gap-1.5 ml-2">
             <button
               onClick={() => handleScroll('left')}
-              className="p-2 rounded-full border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 transition-all shadow-2xs cursor-pointer"
+              disabled={edges.start}
+              className="p-2 rounded-full border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 transition-all shadow-2xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-white"
               aria-label="Scroll carousel left"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={() => handleScroll('right')}
-              className="p-2 rounded-full border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 transition-all shadow-2xs cursor-pointer"
+              disabled={edges.end}
+              className="p-2 rounded-full border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 transition-all shadow-2xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-white"
               aria-label="Scroll carousel right"
             >
               <ChevronRight className="w-4 h-4" />
@@ -102,10 +120,17 @@ export const HorizontalProductCarousel: React.FC<HorizontalProductCarouselProps>
 
       {/* Horizontal Scroll Track */}
       <div className="relative group">
+        {/* No scrollbar (owner request 2026-11-17): the arrows, swipe, trackpad and keyboard scroll; the edges fade
+            where more cards follow. */}
         <div
           ref={scrollRef}
-          className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x scroll-px-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent -mx-2 px-2"
-          style={{ scrollSnapType: 'x mandatory' }}
+          onScroll={measure}
+
+          className={`flex gap-4 overflow-x-auto overscroll-x-contain pb-4 pt-1 snap-x snap-mandatory scroll-px-2 scroll-smooth -mx-2 px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden motion-reduce:scroll-auto ${
+            edges.start && edges.end ? '' : edges.start ? '[mask-image:linear-gradient(to_right,black_calc(100%-48px),transparent)]'
+              : edges.end ? '[mask-image:linear-gradient(to_right,transparent,black_48px)]'
+                : '[mask-image:linear-gradient(to_right,transparent,black_48px,black_calc(100%-48px),transparent)]'
+          }`}
         >
           {books.map((book) => (
             <div

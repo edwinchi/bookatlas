@@ -80,8 +80,8 @@ export const BookCard: React.FC<BookCardProps> = ({
           <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'fill-white' : ''}`} />
         </button>
 
-        {/* Quick actions overlay on hover */}
-        <div className="absolute inset-x-2 bottom-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+        {/* Quick actions: on hover and keyboard focus; always shown on touch screens (no hover there). */}
+        <div className="absolute inset-x-2 bottom-2 flex gap-1.5 z-10 translate-y-1 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 [@media(hover:none)]:translate-y-0 [@media(hover:none)]:opacity-100 motion-reduce:transition-none">
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -94,7 +94,8 @@ export const BookCard: React.FC<BookCardProps> = ({
             <span>Preview</span>
           </button>
 
-          {book.audioDurationMinutes && onPlayAudioSample && (
+          {/* Every book has a real audio sample (owner request 2026-11-16). */}
+          {onPlayAudioSample && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -102,21 +103,23 @@ export const BookCard: React.FC<BookCardProps> = ({
               }}
               className="py-1.5 px-2 bg-indigo-900/90 hover:bg-indigo-950 text-white text-xs font-semibold rounded-md flex items-center justify-center gap-1 backdrop-blur-xs transition-colors cursor-pointer"
               title="Listen to Audio Sample"
+              aria-label={`Listen to an audio sample of ${book.title}`}
             >
               <Headphones className="w-3.5 h-3.5 text-indigo-300" />
             </button>
           )}
 
-          {!book.isSample && book.availability !== 'listed' && <button
+          <button
             onClick={(e) => {
               e.stopPropagation();
               onAddToCart(book);
             }}
             className="py-1.5 px-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-md flex items-center justify-center backdrop-blur-xs transition-colors cursor-pointer"
             title="Add to Cart"
+            aria-label={`Add ${book.title} to the cart`}
           >
             <ShoppingBag className="w-3.5 h-3.5 text-amber-300" />
-          </button>}
+          </button>
         </div>
       </div>
 
@@ -200,13 +203,14 @@ export const BookCard: React.FC<BookCardProps> = ({
             )}
           </div>
 
-          {!book.isSample && book.availability !== 'listed' && <button
+          <button
             onClick={() => onAddToCart(book)}
             className="p-1.5 text-slate-700 hover:text-white hover:bg-indigo-600 rounded-lg transition-colors border border-slate-200 hover:border-indigo-600 cursor-pointer"
             title="Add to Cart"
+            aria-label={`Add ${book.title} to the cart`}
           >
             <ShoppingBag className="w-4 h-4" />
-          </button>}
+          </button>
         </div>
       </div>
     </div>
