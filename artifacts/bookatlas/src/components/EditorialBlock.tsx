@@ -2,6 +2,7 @@ import { coverProps } from '../utils/coverImage';
 import React from 'react';
 import { Sparkles, BookOpen, ShoppingBag, Award, Star, Compass, ArrowRight } from 'lucide-react';
 import { Book } from '../types';
+import { hasRealRating } from '../utils/ratings';
 
 interface FeaturedPromotionProps {
   featuredBook: Book;
@@ -16,7 +17,7 @@ export const PromotionalFeatureBanner: React.FC<FeaturedPromotionProps> = ({
   onOpenDetail,
   onReadSample,
   onAddToCart,
-  currencySymbol = '$',
+  currencySymbol = '€',
 }) => {
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl border border-indigo-500/20 my-6">
@@ -53,11 +54,13 @@ export const PromotionalFeatureBanner: React.FC<FeaturedPromotionProps> = ({
               <Award className="w-3.5 h-3.5 text-amber-400" />
               Atlantean Globals Curated Selection • Zwolle
             </span>
-            <div className="flex items-center text-amber-400 text-xs">
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
-              <span className="ml-1 font-bold">{featuredBook.rating}</span>
-              <span className="text-slate-400 ml-1">({featuredBook.reviewCount} reviews)</span>
-            </div>
+            {hasRealRating(featuredBook) && (
+              <div className="flex items-center text-amber-400 text-xs">
+                <Star className="w-3.5 h-3.5 fill-amber-400" />
+                <span className="ml-1 font-bold">{featuredBook.rating}</span>
+                <span className="text-slate-400 ml-1">({featuredBook.reviewCount} reviews)</span>
+              </div>
+            )}
           </div>
 
           <h2
@@ -191,7 +194,7 @@ export const EditorialCuratorBlock: React.FC<{
             Subscription Freedom
           </span>
           <h3 className="text-base font-serif font-extrabold text-slate-900">
-            BooksAtlas Plus: 1.5M Titles
+            BooksAtlas Plus (coming soon)
           </h3>
           <p className="text-xs text-slate-600 leading-relaxed">
             Unlimited reading & listening across all screens and e-Ink devices with full offline eReader support.

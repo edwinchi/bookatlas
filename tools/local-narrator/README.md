@@ -28,7 +28,7 @@ Stopping:
 - Run the same command again to continue.
 - While this computer holds the narration, the cloud narrator leaves it alone, so the book never gets a second voice.
 
-**Speed:** on an 8-core PC, a part of about 50 seconds takes about 80 seconds to record.
+**Speed:** about 2.5 seconds of work per second of audio while narrating a whole book (a 60,000-word book: about 12–15 hours).
 
 ## Audio samples for every book
 

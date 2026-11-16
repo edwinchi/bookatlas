@@ -433,7 +433,7 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
                 : 'Your bookshelf is empty'}
             </h3>
             <p className="text-xs text-slate-500 mb-5">
-              Explore 1.5M+ eBooks and Audiobooks in our catalog and add them to your shelf.
+              Explore the eBooks and audiobooks in our store and add them to your shelf.
             </p>
             <button
               onClick={onExploreStore}

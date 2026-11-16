@@ -2,6 +2,7 @@ import { coverProps } from '../utils/coverImage';
 import React from 'react';
 import { Star, BookOpen, ShoppingBag, Heart, Headphones, Sparkles } from 'lucide-react';
 import { Book } from '../types';
+import { hasRealRating, isSampleTitle } from '../utils/ratings';
 
 interface BookCardProps {
   book: Book;
@@ -22,7 +23,7 @@ export const BookCard: React.FC<BookCardProps> = ({
   onToggleWishlist,
   onPlayAudioSample,
   isWishlisted,
-  currencySymbol = '$',
+  currencySymbol = '€',
 }) => {
   const discountPercent =
     book.originalPrice > book.price
@@ -168,9 +169,9 @@ export const BookCard: React.FC<BookCardProps> = ({
           </p>
 
           {/* Rating: real reader reviews only; sample titles are labelled, never rated */}
-          {book.isSample ? (
+          {isSampleTitle(book) ? (
             <p className="mt-1.5 text-[11px] font-semibold text-slate-500">Sample title</p>
-          ) : book.reviewCount > 0 ? (
+          ) : hasRealRating(book) ? (
             <div className="flex items-center gap-1 text-xs mt-1.5">
               <div className="flex items-center text-amber-500">
                 <Star className="w-3 h-3 fill-amber-400 text-amber-400" />

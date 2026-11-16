@@ -183,9 +183,9 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
       </section>
 
       {/* Audiences */}
-      <section id="solutions" aria-labelledby="landing-audiences" className="scroll-mt-36 lg:scroll-mt-44 bg-[#f8f9fa] px-4 py-20 sm:px-6">
+      <section id="solutions" aria-labelledby="landing-audiences" className="scroll-mt-36 lg:scroll-mt-44 bg-[#f8f9fa] px-4 py-14 sm:py-20 sm:px-6">
         <SectionHeading id="landing-audiences" eyebrow="Who it's for" title="Made for people with something to say" />
-        <div className="mx-auto mt-12 grid max-w-6xl gap-6 md:grid-cols-3">
+        <div className="mx-auto mt-8 sm:mt-12 grid max-w-6xl gap-6 md:grid-cols-3">
           {AUDIENCES.map(({ icon: Icon, title, body }, i) => (
             <Reveal key={title} delay={i * 100}>
               <article className="group relative h-full overflow-hidden rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200 transition-[box-shadow,translate] duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-900/5">
@@ -202,14 +202,14 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
       </section>
 
       {/* Services and prices */}
-      <section id="pricing" aria-labelledby="landing-services" className="scroll-mt-36 lg:scroll-mt-44 bg-white px-4 py-20 sm:px-6">
+      <section id="pricing" aria-labelledby="landing-services" className="scroll-mt-36 lg:scroll-mt-44 bg-white px-4 py-14 sm:py-20 sm:px-6">
         <SectionHeading
           id="landing-services"
           eyebrow="Services"
           title="Everything between the last page and the first sale"
           intro="Fixed prices, no setup fees. Paperbacks print through Amazon KDP or Lulu; your eBook sells here."
         />
-        <div className="mx-auto mt-12 grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto mt-8 sm:mt-12 grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {SERVICES.map(({ icon: Icon, name, price, unit, body, cta, href, target, featured }, i) => {
             const cls = `${primaryButton} w-full ${featured ? 'bg-amber-400 text-slate-950 hover:bg-amber-300' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`;
             return (
@@ -238,7 +238,7 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
       </section>
 
       {/* Audiobook publishing: natural narration of a published eBook */}
-      <section id="audiobook-publishing" aria-labelledby="landing-audiobook" className="scroll-mt-36 lg:scroll-mt-44 bg-white px-4 pt-6 pb-20 sm:px-6">
+      <section id="audiobook-publishing" aria-labelledby="landing-audiobook" className="scroll-mt-36 lg:scroll-mt-44 bg-white px-4 pt-6 pb-14 sm:pb-20 sm:px-6">
         <Reveal className="mx-auto max-w-6xl">
           <div className="grid gap-10 rounded-[2rem] bg-amber-50 p-8 ring-1 ring-amber-200 sm:p-12 lg:grid-cols-[1.1fr_1fr]">
             <div className="space-y-4">
@@ -271,9 +271,9 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
       </section>
 
       {/* One page for every edition */}
-      <section id="book-pages" aria-labelledby="landing-book-page" className="scroll-mt-36 lg:scroll-mt-44 bg-white px-4 pb-20 sm:px-6">
+      <section id="book-pages" aria-labelledby="landing-book-page" className="scroll-mt-36 lg:scroll-mt-44 bg-white px-4 pb-14 sm:pb-20 sm:px-6">
         <Reveal className="mx-auto max-w-6xl">
-          <div className="relative grid items-center gap-10 overflow-hidden rounded-[2rem] bg-gradient-to-br from-indigo-700 via-indigo-800 to-slate-950 p-8 text-white sm:p-12 lg:grid-cols-2">
+          <div className="relative grid grid-cols-1 items-center gap-8 overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-700 via-indigo-800 to-slate-950 p-6 text-white sm:gap-10 sm:rounded-[2rem] sm:p-12 lg:grid-cols-2 [&>*]:min-w-0">
             <AtlasStar className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 text-white/5" />
             <div className="relative space-y-4">
               <Eyebrow light>Book pages</Eyebrow>
@@ -294,7 +294,7 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
               <div className="relative rotate-1 rounded-2xl bg-white p-5 text-slate-900 shadow-2xl transition-transform duration-500 hover:rotate-0">
                 <div className="mb-4 flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-full bg-rose-400" /><span className="h-2.5 w-2.5 rounded-full bg-amber-400" /><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                  <span className="ml-2 flex flex-1 items-center gap-1.5 truncate rounded-full bg-slate-100 px-3 py-1 text-[10px] text-slate-500"><Link2 className="h-3 w-3" /> bookatlas / your-book</span>
+                  <span className="ml-2 flex flex-1 items-center gap-1.5 truncate rounded-full bg-slate-100 px-3 py-1 text-[10px] text-slate-500"><Link2 className="h-3 w-3" /> booksatlas.app/books/your-book</span>
                 </div>
                 <div className="flex gap-4">
                   {sample
@@ -317,21 +317,21 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
       </section>
 
       {/* How it works */}
-      <section id="how-it-works" aria-labelledby="landing-how" className="scroll-mt-36 lg:scroll-mt-44 bg-[#f8f9fa] px-4 py-20 sm:px-6">
+      <section id="how-it-works" aria-labelledby="landing-how" className="scroll-mt-36 lg:scroll-mt-44 bg-[#f8f9fa] px-4 py-14 sm:py-20 sm:px-6">
         <SectionHeading id="landing-how" eyebrow="How it works" title="From finished draft to finished book" intro="Four steps from your final manuscript to a book readers can hold or download." />
-        <div className="mx-auto mt-14 max-w-6xl"><HowItWorks /></div>
+        <div className="mx-auto mt-10 sm:mt-14 max-w-6xl"><HowItWorks /></div>
       </section>
 
       {/* Earnings */}
-      <section id="earnings" aria-labelledby="landing-earnings" className="scroll-mt-36 lg:scroll-mt-44 bg-white px-4 py-20 sm:px-6">
+      <section id="earnings" aria-labelledby="landing-earnings" className="scroll-mt-36 lg:scroll-mt-44 bg-white px-4 py-14 sm:py-20 sm:px-6">
         <SectionHeading id="landing-earnings" eyebrow="Earnings" title="What could your eBook earn?" intro="Move the sliders to compare Standard and Author Pro for your price and sales." />
-        <Reveal className="mx-auto mt-12 max-w-5xl"><EarningsEstimator /></Reveal>
+        <Reveal className="mx-auto mt-8 sm:mt-12 max-w-5xl"><EarningsEstimator /></Reveal>
       </section>
 
       {/* Commitments */}
-      <section id="promise" aria-labelledby="landing-commitments" className="scroll-mt-36 lg:scroll-mt-44 bg-white px-4 pb-20 sm:px-6">
+      <section id="promise" aria-labelledby="landing-commitments" className="scroll-mt-36 lg:scroll-mt-44 bg-white px-4 pb-14 sm:pb-20 sm:px-6">
         <SectionHeading id="landing-commitments" eyebrow="Our promise" title="What you can count on" />
-        <div className="mx-auto mt-12 grid max-w-6xl gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto mt-8 sm:mt-12 grid max-w-6xl gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
           {COMMITMENTS.map(({ icon: Icon, title, body }, i) => (
             <Reveal key={title} delay={i * 80} className="text-center">
               <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 ring-8 ring-indigo-50/50">
@@ -345,9 +345,9 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
       </section>
 
       {/* Trust */}
-      <section id="about" aria-labelledby="landing-trust" className="scroll-mt-36 lg:scroll-mt-44 bg-[#f8f9fa] px-4 py-20 sm:px-6">
+      <section id="about" aria-labelledby="landing-trust" className="scroll-mt-36 lg:scroll-mt-44 bg-[#f8f9fa] px-4 py-14 sm:py-20 sm:px-6">
         <SectionHeading id="landing-trust" eyebrow="Trust" title="Privacy and accessibility, built in" />
-        <div className="mx-auto mt-12 grid max-w-5xl gap-6 md:grid-cols-2">
+        <div className="mx-auto mt-8 sm:mt-12 grid max-w-5xl gap-6 md:grid-cols-2">
           <Reveal>
             <article className="flex h-full flex-col gap-4 rounded-3xl bg-white p-8 ring-1 ring-slate-200 sm:flex-row">
               <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-amber-300"><ShieldCheck className="h-9 w-9" /></span>

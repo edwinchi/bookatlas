@@ -100,7 +100,7 @@ export const TRANSLATIONS: Record<'en' | 'nl', TranslationStrings> = {
     bookatlasPlus: 'BooksAtlas Plus',
     managerStudio: 'Manager Studio',
     blueprint: 'Architecture',
-    searchPlaceholder: 'Search 1.5M+ eBooks, audiobooks, authors, ISBNs...',
+    searchPlaceholder: 'Search eBooks, audiobooks, authors, ISBNs...',
     adminLogin: 'Admin Login',
     adminLocked: 'Locked',
     adminBadge: 'Admin',

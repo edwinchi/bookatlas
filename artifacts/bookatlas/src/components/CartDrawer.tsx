@@ -40,7 +40,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onRemoveItem,
   onCheckout,
   isAuthenticated,
-  currencySymbol = '$',
+  currencySymbol = '€',
 }) => {
   const [promoCode, setPromoCode] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);

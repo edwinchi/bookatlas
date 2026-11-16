@@ -32,7 +32,7 @@ export const HorizontalProductCarousel: React.FC<HorizontalProductCarouselProps>
   onToggleWishlist,
   onPlayAudioSample,
   wishlistIds,
-  currencySymbol = '$',
+  currencySymbol = '€',
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   /** Which ends are reached: the arrows switch off there and the edge fade goes away (no scrollbar). */
@@ -64,8 +64,8 @@ export const HorizontalProductCarousel: React.FC<HorizontalProductCarouselProps>
   return (
     <section className="space-y-4 py-2">
       {/* Header with Title and View All */}
-      <div className="flex items-end justify-between border-b border-slate-200/80 pb-3">
-        <div className="space-y-1">
+      <div className="flex items-end justify-between gap-3 border-b border-slate-200/80 pb-3">
+        <div className="min-w-0 space-y-1">
           <div className="flex items-center gap-2">
             {badge && (
               <span className="text-[11px] font-extrabold uppercase tracking-wider bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-indigo-200/60">
@@ -75,21 +75,21 @@ export const HorizontalProductCarousel: React.FC<HorizontalProductCarouselProps>
             )}
             {icon && <span className="text-slate-600">{icon}</span>}
           </div>
-          <h2 className="text-xl sm:text-2xl font-serif font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+          <h2 className="text-xl sm:text-2xl font-serif font-extrabold text-slate-900 tracking-tight text-balance flex items-center gap-2">
             {title}
           </h2>
           {subtitle && (
-            <p className="text-xs sm:text-sm text-slate-600 font-medium">
+            <p className="text-xs sm:text-sm text-slate-600 font-medium text-pretty line-clamp-2 sm:line-clamp-none">
               {subtitle}
             </p>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {onViewAll && (
             <button
               onClick={onViewAll}
-              className="text-xs sm:text-sm font-bold text-indigo-700 hover:text-indigo-900 flex items-center gap-1 hover:underline cursor-pointer transition-colors px-2 py-1"
+              className="whitespace-nowrap rounded-full text-xs sm:text-sm font-bold text-indigo-700 hover:text-indigo-900 hover:bg-indigo-50 flex items-center gap-1 cursor-pointer transition-colors px-2.5 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             >
               <span>View All</span>
               <ArrowRight className="w-3.5 h-3.5" />

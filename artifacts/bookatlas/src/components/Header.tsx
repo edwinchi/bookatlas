@@ -504,13 +504,14 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Cart Button */}
             <button
               onClick={onOpenCart}
-              className="relative flex min-h-12 min-w-12 items-center justify-center gap-2 px-3 py-1.5 bg-[#0f172a] hover:bg-slate-800 text-white rounded-lg text-sm font-semibold shadow-xs transition-colors cursor-pointer lg:bg-white lg:text-slate-950 lg:hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
+              className="relative flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-xl px-2.5 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-100 cursor-pointer sm:px-3 lg:min-h-12 lg:bg-white lg:text-slate-950 lg:shadow-xs lg:hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
               aria-label={`Open shopping cart${cartCount ? `, ${cartCount} items` : ''}`}
             >
-              <ShoppingBag className="w-4 h-4 text-amber-400 lg:text-indigo-700" />
+              <ShoppingBag className="h-5 w-5 text-slate-800 lg:h-4 lg:w-4 lg:text-indigo-700" />
               <span className="hidden sm:inline">Cart</span>
               {cartCount > 0 && (
-                <span className="bg-amber-400 text-slate-950 text-xs font-bold px-1.5 py-0.2 rounded-full">
+                // A badge on the icon on phones, a pill beside the word from tablet width.
+                <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-amber-400 px-1 text-[11px] font-bold leading-none text-slate-950 ring-2 ring-white sm:static sm:ring-0">
                   {cartCount}
                 </span>
               )}

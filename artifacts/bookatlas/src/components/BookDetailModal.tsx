@@ -177,28 +177,29 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
   };
 
   return (
-    <AppModal onClose={onClose} label={book.title} overlayClassName="z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+    <AppModal onClose={onClose} label={book.title} overlayClassName="z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-6 animate-fade-in motion-reduce:animate-none">
       <div 
-        className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col border border-slate-200"
+        className="relative w-full max-w-4xl bg-white shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-auto sm:my-auto sm:max-h-[92vh] sm:rounded-3xl sm:border sm:border-slate-200 animate-sheet-up sm:animate-none motion-reduce:animate-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top bar with close button */}
-        <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md px-6 py-3.5 border-b border-slate-200 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-            <span>{book.primaryGenre}</span>
-            <span>/</span>
-            <span className="text-slate-900 font-bold truncate max-w-xs">{book.title}</span>
+        <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md pl-4 pr-2 sm:px-6 py-2 sm:py-3.5 pt-[max(0.5rem,env(safe-area-inset-top))] border-b border-slate-200 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2 text-xs font-semibold text-slate-500">
+            <span className="hidden shrink-0 sm:inline">{book.primaryGenre}</span>
+            <span className="hidden sm:inline" aria-hidden>/</span>
+            <span className="text-slate-900 font-bold truncate">{book.title}</span>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-label="Close"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body: Scrollable */}
-        <div className="overflow-y-auto p-6 sm:p-8 space-y-8">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:p-8 space-y-6 sm:space-y-8">
           
           {/* Main Book Hero Grid */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8">
@@ -330,7 +331,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
 
                 <RadioGroup.Root value={selectedFormat} onValueChange={(v) => setSelectedFormat(v as 'ebook' | 'audiobook')} aria-label="Format" className="grid grid-cols-2 gap-2">
                   <RadioGroup.Item value="ebook" className="group relative p-3 rounded-xl border text-left transition-all cursor-pointer bg-white/60 border-slate-200 hover:bg-white hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 data-[state=checked]:bg-white data-[state=checked]:border-indigo-600 data-[state=checked]:ring-2 data-[state=checked]:ring-indigo-600/15 data-[state=checked]:shadow-xs">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
                       <span className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                         <BookOpen className="w-4 h-4 text-indigo-600" /> eBook
                       </span>
@@ -345,7 +346,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                     // Not narrated yet: no audiobook to sell, but a real sample of the book, read aloud.
                     <button type="button" onClick={() => onPlayAudioSample(book)}
                       className="group p-3 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/40 text-left transition-all hover:border-indigo-400 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
                         <span className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                           <Headphones className="w-4 h-4 text-indigo-600" /> Audiobook
                         </span>
@@ -355,7 +356,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                     </button>
                   ) : (
                     <RadioGroup.Item value="audiobook" className="group relative p-3 rounded-xl border text-left transition-all cursor-pointer bg-white/60 border-slate-200 hover:bg-white hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 data-[state=checked]:bg-white data-[state=checked]:border-indigo-600 data-[state=checked]:ring-2 data-[state=checked]:ring-indigo-600/15 data-[state=checked]:shadow-xs">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
                       <span className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                         <Headphones className="w-4 h-4 text-indigo-600" /> Audiobook
                       </span>
@@ -421,13 +422,12 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                 </div>
 
                 {(book.isBookatlasPlus) && (
-                  <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-2.5 flex items-center justify-between text-xs">
+                  // Plus has no checkout yet: say it is coming instead of offering a trial that cannot start.
+                  <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
                     <span className="text-slate-700 font-medium">
-                      Or read for <span className="font-bold text-indigo-700">{currencySymbol}0.00</span> with BooksAtlas Plus
+                      Included with <span className="font-bold text-indigo-700">BooksAtlas Plus</span>
                     </span>
-                    <button className="text-indigo-700 font-bold hover:underline cursor-pointer">
-                      Start 30-Day Free Trial →
-                    </button>
+                    <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-indigo-700 ring-1 ring-inset ring-indigo-200">Coming soon</span>
                   </div>
                 )}
               </div>

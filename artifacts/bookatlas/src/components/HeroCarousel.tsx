@@ -2,6 +2,7 @@ import { coverProps } from '../utils/coverImage';
 import React, { useState, useEffect } from 'react';
 import { BookOpen, ShoppingBag, Sparkles, ChevronRight, ChevronLeft, ShieldCheck, Flame, Star, Award } from 'lucide-react';
 import { Book } from '../types';
+import { hasRealRating, isSampleTitle } from '../utils/ratings';
 
 interface HeroCarouselProps {
   books: Book[];
@@ -93,15 +94,17 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
 
             {/* Ratings & metadata */}
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-slate-300">
-              <div className="flex items-center gap-1 text-amber-400">
-                <div className="flex">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  ))}
+              {hasRealRating(currentBook) ? (
+                <div className="flex items-center gap-1 text-amber-400">
+                  <div className="flex">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    ))}
+                  </div>
+                  <span className="font-bold text-white text-sm ml-1">{currentBook.rating}</span>
+                  <span className="text-slate-400">({currentBook.reviewCount.toLocaleString()} verified reviews)</span>
                 </div>
-                <span className="font-bold text-white text-sm ml-1">{currentBook.rating}</span>
-                <span className="text-slate-400">({currentBook.reviewCount.toLocaleString()} verified reviews)</span>
-              </div>
+              ) : <span className="text-slate-400">{isSampleTitle(currentBook) ? 'Sample title' : 'New · no ratings yet'}</span>}
               <span>•</span>
               <span>{currentBook.pageCount} Pages</span>
               <span>•</span>
@@ -225,7 +228,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
         <div className="flex items-center gap-3">
           <span className="font-serif italic font-bold text-amber-400 text-sm">bookatlas Plus</span>
           <span className="text-slate-300">
-            Unlimited access to over 1.5 million eBooks & Audiobooks across Europe and globally. 30 days free.
+            Read and listen to every Plus title as much as you like. Coming soon.
           </span>
         </div>
         <button

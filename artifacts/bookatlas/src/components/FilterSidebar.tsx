@@ -172,9 +172,9 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
         <div className="space-y-1 text-sm">
           {[
             { id: 'all', label: 'Any Price' },
-            { id: 'free', label: 'Free ($0.00)' },
-            { id: 'under5', label: 'Under $5.00' },
-            { id: 'under10', label: 'Under $10.00' },
+            { id: 'free', label: 'Free' },
+            { id: 'under5', label: 'Under €5.00' },
+            { id: 'under10', label: 'Under €10.00' },
             { id: 'deals', label: 'Deals & Discounts' },
           ].map((item) => (
             <label

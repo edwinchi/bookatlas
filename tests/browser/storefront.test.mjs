@@ -295,3 +295,28 @@ test('the book window: preview opens the reader in front, Buy Now opens the cart
   await dialog.waitFor({ state: 'detached' });
   assert.ok(await page.getByLabel('Font & Theme Settings').isVisible(), 'the reader is in front');
 });
+
+test('phones (360 px): nothing wider than the screen, filters in a sheet, the book window full screen', async () => {
+  const context = await browser.newContext({ viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  await page.goto(base + '/', { waitUntil: 'networkidle' });
+  await page.waitForFunction(() => !document.body.innerText.includes('Loading your BooksAtlas account'), null, { timeout: 10_000 });
+  const width = () => page.evaluate(() => document.documentElement.scrollWidth);
+  assert.equal(await width(), 360, 'no sideways scrolling on the home page');
+  // Filters: a button and a bottom sheet, not three screens of sidebar.
+  const filters = page.getByRole('button', { name: /filters & categories/i });
+  await filters.scrollIntoViewIfNeeded();
+  await filters.click();
+  const sheet = page.getByRole('dialog', { name: 'Filters & categories' });
+  await sheet.waitFor();
+  await sheet.getByRole('button', { name: /^Show \d+ titles$/ }).click();
+  await sheet.waitFor({ state: 'detached' });
+  // The book window fills the screen and fits it.
+  await page.locator('[data-testid="book-card-title"]').first().click();
+  const dialog = page.getByRole('dialog').first();
+  await dialog.waitFor();
+  const box = await dialog.locator('> div').first().boundingBox();
+  assert.ok(box && box.width >= 359 && box.x <= 1, 'full width on phones');
+  assert.equal(await width(), 360);
+  await context.close();
+});

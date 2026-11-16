@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import * as SliderPrimitive from '@radix-ui/react-slider';
 import { 
   X, 
   ChevronLeft, 
@@ -219,6 +220,9 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const totalParas = chapters.reduce((acc, c) => acc + c.content.length, 0);
   const readParas = chapters.slice(0, currentChapterIndex).reduce((acc, c) => acc + c.content.length, 0) + (currentParagraphIndex + 1);
   const progressPercent = Math.min(100, Math.round((readParas / Math.max(1, totalParas)) * 100));
+  /** Real time left in this chapter: the words from the current paragraph on, at about 230 words a minute. */
+  const minutesLeft = Math.max(1, Math.round((currentChapter?.content ?? []).slice(currentParagraphIndex)
+    .reduce((n, para) => n + (String(para).trim().split(/\s+/).filter(Boolean).length), 0) / 230));
 
   // BooksAtlas Reader sync (cycle 7): marks, place, settings and reading time on the account.
   const sync = useReaderSync({
@@ -1104,12 +1108,9 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
               </button>
 
               {(book.isBookatlasPlus) && (
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2.5 bg-white/20 hover:bg-white/30 border border-current/20 font-semibold text-xs sm:text-sm rounded-xl transition-colors cursor-pointer"
-                >
-                  Read on BooksAtlas Plus (Free Trial)
-                </button>
+                <span className="px-4 py-2.5 border border-current/20 font-semibold text-xs sm:text-sm rounded-xl opacity-80">
+                  BooksAtlas Plus: coming soon
+                </span>
               )}
             </div>
           </div>
@@ -1128,34 +1129,36 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       </div>
 
       {/* Bottom eReader Navigation & Scrubber Footer */}
-      <footer className={`px-6 py-2.5 border-t flex items-center justify-between text-xs transition-colors ${
+      <footer className={`px-3 sm:px-6 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] border-t flex items-center justify-between gap-3 text-xs transition-colors ${
         settings.theme === 'night' || settings.theme === 'black'
           ? 'bg-black/70 border-white/10 text-slate-300'
           : 'bg-white/80 border-slate-200 text-slate-700'
       } backdrop-blur-md`}>
-        <div className="flex items-center gap-2">
-          <Clock className="w-3.5 h-3.5 opacity-70" />
-          <span className="font-medium">Estimated 4 mins left in chapter</span>
+        <div className="flex shrink-0 items-center gap-1.5" title="Time left in this chapter">
+          <Clock className="w-3.5 h-3.5 opacity-70" aria-hidden />
+          <span className="font-medium tabular-nums">{minutesLeft} min<span className="hidden sm:inline"> left in chapter</span></span>
         </div>
 
         {/* Reading Progress Slider */}
-        <div className="flex-1 max-w-xs sm:max-w-md mx-4 flex items-center gap-3">
-          <input
-            type="range"
-            min={0}
-            max={chapters.length - 1}
-            value={currentChapterIndex}
-            onChange={(e) => {
-              setCurrentChapterIndex(Number(e.target.value));
-              setCurrentParagraphIndex(0);
-            }}
-            className="w-full h-1.5 bg-current/20 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-          />
-          <span className="font-bold whitespace-nowrap">{progressPercent}%</span>
+        <div className="flex min-w-0 flex-1 max-w-md items-center gap-3">
+          <SliderPrimitive.Root
+            min={0} max={Math.max(0, chapters.length - 1)} step={1} value={[currentChapterIndex]}
+            disabled={chapters.length < 2}
+            onValueChange={([v]) => { setCurrentChapterIndex(v ?? 0); setCurrentParagraphIndex(0); }}
+            aria-label="Go to chapter"
+            className="relative flex h-6 min-w-0 flex-1 touch-none select-none items-center data-[disabled]:opacity-50"
+          >
+            <SliderPrimitive.Track className="relative h-1.5 grow overflow-hidden rounded-full bg-current/20">
+              <SliderPrimitive.Range className="absolute h-full rounded-full bg-indigo-600" />
+            </SliderPrimitive.Track>
+            <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full bg-white shadow ring-2 ring-indigo-600 transition-transform focus-visible:scale-125 focus-visible:outline-none cursor-grab active:cursor-grabbing" />
+          </SliderPrimitive.Root>
+          <span className="shrink-0 font-bold tabular-nums">{progressPercent}%</span>
         </div>
 
-        <div className="text-right">
-          <span>Chapter {currentChapterIndex + 1} of {chapters.length}</span>
+        <div className="shrink-0 text-right tabular-nums">
+          <span className="sm:hidden">{currentChapterIndex + 1}/{chapters.length}</span>
+          <span className="hidden sm:inline">Chapter {currentChapterIndex + 1} of {chapters.length}</span>
         </div>
       </footer>
 

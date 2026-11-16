@@ -7,6 +7,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Header } from './components/Header';
 import { HeroCarousel } from './components/HeroCarousel';
 import { FilterSidebar } from './components/FilterSidebar';
+import { MobileFilters } from './components/MobileFilters';
 import { BookCard } from './components/BookCard';
 import { HorizontalProductCarousel } from './components/HorizontalProductCarousel';
 import { PromotionalFeatureBanner, EditorialCuratorBlock } from './components/EditorialBlock';
@@ -844,13 +845,13 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                     Read & Listen All You Want for €9.99/Month
                   </h1>
                   <p className="text-xs sm:text-sm text-indigo-100">
-                    Over 1.5 million eBooks and 150,000 Audiobooks included. No due dates, no limits. Cancel anytime.
+                    Every title marked Plus, to read and listen to as much as you like. No due dates. Plus is coming soon.
                   </p>
                 </div>
                 <div className="flex gap-3">
-                  <button className="px-6 py-3 bg-white text-indigo-900 hover:bg-slate-100 font-bold text-sm rounded-xl shadow-md cursor-pointer transition-colors">
-                    Start 30-Day Free Trial
-                  </button>
+                  <span className="px-5 py-2.5 bg-white/15 text-white ring-1 ring-inset ring-white/30 font-bold text-sm rounded-xl">
+                    Coming soon
+                  </span>
                 </div>
               </div>
             )}
@@ -953,7 +954,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                 {/* Carousel 2: BooksAtlas Plus Unlimited */}
                 <HorizontalProductCarousel
                   title="BooksAtlas Plus: Unlimited Reading & Listening"
-                  subtitle="Explore 1.5M+ eBooks and Audiobooks included in your subscription"
+                  subtitle="The titles that will be included with BooksAtlas Plus (coming soon)"
                   badge="Included in Plus"
                   icon={<Sparkles className="w-5 h-5 text-indigo-600" />}
                   books={plusPicks}
@@ -1041,14 +1042,23 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
               
               {/* Left Filters Sidebar */}
               <div className="lg:col-span-3">
-                <FilterSidebar
-                  filters={filters}
-                  setFilters={setFilters}
-                  totalResults={catalogPage.total}
-                  languages={(facets?.languages ?? []).map((l) => l.name).sort()}
-                  categoryCounts={facets ? Object.fromEntries(facets.categories.map((c) => [c.name, c.count])) : null}
-                  catalogTotal={facets?.total ?? null}
-                />
+                {(() => {
+                  const sidebar = (
+                    <FilterSidebar
+                      filters={filters}
+                      setFilters={setFilters}
+                      totalResults={catalogPage.total}
+                      languages={(facets?.languages ?? []).map((l) => l.name).sort()}
+                      categoryCounts={facets ? Object.fromEntries(facets.categories.map((c) => [c.name, c.count])) : null}
+                      catalogTotal={facets?.total ?? null}
+                    />
+                  );
+                  // Phones and tablets: a Filters button with a bottom sheet; the sidebar from desktop width.
+                  return (<>
+                    <div className="hidden lg:block">{sidebar}</div>
+                    <MobileFilters total={catalogPage.total}>{sidebar}</MobileFilters>
+                  </>);
+                })()}
               </div>
 
               {/* Right Book Catalog Grid */}
@@ -1155,7 +1165,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
           <div className="space-y-3">
             <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="BooksAtlas" width={319} height={96} loading="lazy" className="h-12 w-auto drop-shadow-[0_0_10px_rgba(250,204,21,0.45)]" />
             <p className="text-slate-400 leading-relaxed text-[11px]">
-              The premier eBook Store and in-browser eReader by Atlantean Globals Services, registered in the Netherlands. Discover millions of curated eBooks, Audiobooks, and AI reading companions.
+              The premier eBook Store and in-browser eReader by Atlantean Globals Services, registered in the Netherlands. Discover curated eBooks, Audiobooks, and AI reading companions.
             </p>
           </div>
 
