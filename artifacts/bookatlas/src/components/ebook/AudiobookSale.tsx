@@ -60,6 +60,8 @@ export function AudiobookSale({ api, bookId, sale, onSaved }: { api: ReturnType<
           {!valid && <p className="pb-1.5 text-[11px] text-rose-700">Enter a price between €0.99 and €999.</p>}
         </div>
       )}
+      {mode === 'addon' && <p className="text-[11px] text-slate-500">Our suggestion: €2–5. Readers know this is an AI voice, so a small add-on sells better than studio audiobook prices. Readers can always listen with their own device’s voice for free; the natural voice is worth paying for because it keeps playing with the screen off and sounds the same everywhere.</p>}
+      {mode === 'included' && <p className="text-[11px] text-slate-500">Including it gives readers one more reason to buy the eBook.</p>}
       {mode === 'addon' && sale.audioPricedAt && <p className="text-[11px] text-slate-500">Readers who bought the eBook before {new Date(sale.audioPricedAt).toLocaleDateString()} keep the whole audiobook.</p>}
       {mode === 'addon' && !sale.audioPricedAt && <p className="text-[11px] text-slate-500">Readers who already bought the eBook keep the whole audiobook.</p>}
       <div className="flex items-center gap-3">

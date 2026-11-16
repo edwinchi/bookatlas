@@ -28,6 +28,7 @@ import { Book } from '../types';
 import { ReaderPublicationAccess } from './publishing/ReaderPublicationAccess';
 import { useAccount } from '../auth/AuthContext';
 import { audioOnSale, audioProductOf, isNarrated } from '../audioEdition';
+import { NaturalVoiceInfo } from './ebook/NaturalVoiceInfo';
 
 interface BookDetailModalProps {
   book: Book | null;
@@ -349,6 +350,12 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                     </p>
                   </button>}
                 </div>
+                {narrated && audioAddOn && !ownsAudio && (
+                  <p className="-mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500">
+                    <span>The audiobook keeps playing with your screen off; reading along with your device’s voice stays free.</span>
+                    <NaturalVoiceInfo />
+                  </p>
+                )}
 
                 {/* The printed book, sold by Amazon or Lulu */}
                 {(book.printLinks?.amazon || book.printLinks?.lulu) && (

@@ -26,7 +26,7 @@ import {
  */
 
 export type NarrationStatus = 'awaiting_payment' | 'paid' | 'approved' | 'running' | 'done' | 'failed' | 'declined' | 'refunded';
-export interface SegmentState extends Segment { seconds?: number; bytes?: number; attempts?: number; provider?: 'chirp-free' | 'gemini' }
+export interface SegmentState extends Segment { seconds?: number; bytes?: number; attempts?: number; provider?: 'chirp-free' | 'gemini'; quotaHits?: number }
 export interface Narration {
   id: string; book_id: string; owner_id: string; title: string; voice: NarrationVoice; status: NarrationStatus;
   price_cents: number; words: number; estimate_micros: number; spent_micros: number;
@@ -55,7 +55,8 @@ async function insert(n: Narration) {
   const r = await db()!.from('narrations').insert(n);
   if (r.error) throw new NarrationError('The order could not be saved.', 503);
 }
-async function update(id: string, patch: Partial<Narration>) {
+/** Exported for tests. */
+export async function update(id: string, patch: Partial<Narration>) {
   const next = { ...patch, updated_at: new Date().toISOString() };
   if (!db()) { const n = memory.get(id); if (n) memory.set(id, { ...n, ...structuredClone(next) }); return; }
   const r = await db()!.from('narrations').update(next).eq('id', id);
@@ -357,7 +358,7 @@ export async function decide(admin: Identity, id: string, decision: 'approve' | 
 // ---------------------------------------------------------------------------------------------- narrating
 
 /** Narrate the next segment of one book (or of the next book waiting); returns whether work remains. */
-export async function step(id?: string): Promise<{ id: string | null; more: boolean }> {
+export async function step(id?: string): Promise<{ id: string | null; more: boolean; resumeAt?: string }> {
   const candidates = id ? [await getNarration(id)].filter(Boolean) as Narration[] : (await listNarrations(['approved', 'running'])).map((n) => n);
   for (const listed of candidates) {
     const n = (id ? listed : await getNarration(listed.id))!;
@@ -380,7 +381,7 @@ export async function step(id?: string): Promise<{ id: string | null; more: bool
       await update(n.id, {
         // Free-tier segments cost nothing; only Gemini segments count against the approved budget.
         segments, done, seconds: n.seconds + seconds, spent_micros: n.spent_micros + (used === 'gemini' ? costMicros(seconds, text.length) : 0),
-        status: done >= n.total ? 'done' : 'running', lease_until: null, lease_token: null,
+        status: done >= n.total ? 'done' : 'running', lease_until: null, lease_token: null, error: null,
       });
       if (done >= n.total) {
         logger.info({ event: 'narration.done', narration: n.id, book: n.book_id }, 'Narration complete');
@@ -390,11 +391,20 @@ export async function step(id?: string): Promise<{ id: string | null; more: bool
     } catch (err) {
       // Google's quota (e.g. the free tier's 10 speech requests a day): retrying cannot help, so pause at once
       // with a plain explanation; nothing is lost and an administrator resumes once the quota allows.
+      // Owner request 2026-11-16: on the free tier, wait for Google's limit to reset and continue by itself.
+      // The narration stays 'running' with its lease held until then, so nothing narrates early; the next
+      // step is started by the step route (a short wait), the daily cron, or anyone opening the narration.
       const quota = quotaProblem(err);
       if (quota) {
-        logger.warn({ event: 'narration.quota_exceeded', narration: n.id, segment: n.done, daily: quota.daily }, 'Narration paused: Gemini quota exceeded');
-        await update(n.id, { status: 'failed', error: quota.message, lease_until: null, lease_token: null });
-        return { id: n.id, more: false };
+        const hits = (seg.quotaHits ?? 0) + 1;
+        const at = quotaResumeAt(err, quota.daily || hits > QUOTA_MINUTE_RETRIES);
+        logger.warn({ event: 'narration.quota_exceeded', narration: n.id, segment: n.done, daily: quota.daily, resumeAt: at.toISOString() }, 'Narration waiting for the Gemini quota');
+        await update(n.id, {
+          status: 'running', lease_token: null, lease_until: at.toISOString(),
+          segments: n.segments.map((s, i) => (i === n.done ? { ...s, quotaHits: hits } : s)),
+          error: waitingMessage(quota, at, n.done, n.total),
+        });
+        return { id: n.id, more: false, resumeAt: at.toISOString() };
       }
       const attempts = (seg.attempts ?? 0) + 1;
       const segments = n.segments.map((s, i) => (i === n.done ? { ...s, attempts } : s));
@@ -405,6 +415,52 @@ export async function step(id?: string): Promise<{ id: string | null; more: bool
     }
   }
   return { id: null, more: false };
+}
+
+/** Per-minute limits are retried this many times for one part before waiting for the daily reset. */
+export const QUOTA_MINUTE_RETRIES = 5;
+
+/** Google's "retry in 17h58m51.04s" as milliseconds. */
+export function retryDelayMs(text: string): number | null {
+  const m = /retry in (?:(\d+)h)?(?:(\d+)m)?(\d+(?:\.\d+)?)s/i.exec(text);
+  if (!m) return null;
+  return ((Number(m[1] ?? 0) * 60 + Number(m[2] ?? 0)) * 60 + Number(m[3])) * 1000;
+}
+
+/**
+ * When to try again after a quota error: Google's own "retry in", plus a margin; otherwise a minute for a
+ * per-minute limit, or 08:10 UTC for a daily one (Gemini's daily quota resets at midnight Pacific time).
+ */
+export function quotaResumeAt(err: unknown, daily: boolean, now = new Date()): Date {
+  const text = err instanceof Error ? err.message : String(err ?? '');
+  const hinted = retryDelayMs(text);
+  if (hinted !== null && (!daily || hinted > 60_000)) return new Date(now.getTime() + hinted + (daily ? 5 * 60_000 : 5_000));
+  if (!daily) return new Date(now.getTime() + 65_000);
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 8, 10));
+  if (next.getTime() <= now.getTime()) next.setUTCDate(next.getUTCDate() + 1);
+  return next;
+}
+
+const waitingMessage = (quota: { daily: boolean }, at: Date, done: number, total: number) => {
+  const when = at.toISOString().replace('T', ' ').slice(0, 16);
+  return quota.daily
+    ? `Waiting for Google's free daily limit to reset. Narration continues by itself at about ${when} UTC (${done} of ${total} parts recorded; nothing is lost). To finish sooner, turn on billing for the Gemini key in Google AI Studio.`
+    : `Waiting a minute for Google's per-minute limit; narration continues by itself at about ${when} UTC.`;
+};
+
+/** Narrations waiting for a quota reset whose time has come, and older quota pauses from before 2026-11-16. */
+export async function narrationsDue(now = Date.now()): Promise<string[]> {
+  const due: string[] = [];
+  for (const listed of await listNarrations(['approved', 'running', 'failed'])) {
+    const n = await getNarration(listed.id);
+    if (!n || n.done >= n.total) continue;
+    if (n.status === 'failed') {
+      if (!/^Paused: .*(quota|free tier)/i.test(n.error ?? '')) continue;
+      await update(n.id, { status: 'running', lease_until: null, lease_token: null });
+      due.push(n.id);
+    } else if (!n.lease_until || Date.parse(n.lease_until) <= now) due.push(n.id);
+  }
+  return due;
 }
 
 /** A Gemini "quota exceeded" (HTTP 429, RESOURCE_EXHAUSTED) as a message an administrator can act on. */

@@ -6,7 +6,7 @@ import { logger } from '../../lib/logger.js';
 import { PrepError } from '../ebookPrep/archive.js';
 import { PaymentError } from '../payments/purchases.js';
 import { confirmCheckout } from '../payments/checkout.js';
-import { NarrationError, decide, getNarration, listNarrations, order, quote, readerManifest, readerSegment, setAudioPrice, step, summary, voiceSample } from './service.js';
+import { NarrationError, decide, getNarration, listNarrations, narrationsDue, order, quote, readerManifest, readerSegment, setAudioPrice, step, summary, voiceSample } from './service.js';
 import { audioAccess } from './edition.js';
 
 /** The key the server uses to call its own next narration step; derived from the session secret. */
@@ -46,6 +46,9 @@ const sendMp3 = (res: Response, bytes: Uint8Array, cache: string) => {
  * Natural audiobook narration (TASK-0008): author quote and order, voice samples, administrator approval,
  * the self-chaining narration step, and the reader's manifest and audio.
  */
+/** The longest wait for a per-minute quota inside one call (Vercel stops the function at 60 s). */
+const KICK_WAIT_MAX_MS = 45_000;
+
 export function mountNarration(app: Express, findBook: (id: string) => Promise<Book | null | undefined>, appUrl: string) {
   const json = express.json({ limit: '16kb' });
 
@@ -54,6 +57,10 @@ export function mountNarration(app: Express, findBook: (id: string) => Promise<B
     waitUntil(fetch(`${appUrl}/api/internal/narration/step`, {
       method: 'POST', headers: { 'content-type': 'application/json', 'x-narration-key': stepKey() }, body: JSON.stringify({ id }),
     }).then(() => undefined).catch((err) => logger.warn({ err, event: 'narration.kick_failed', narration: id }, 'Next narration step could not be started')));
+  };
+  /** After a per-minute quota: start the next step once the minute is over (within this call's time limit). */
+  const kickAfter = (id: string, ms: number) => {
+    waitUntil(new Promise<void>((done) => setTimeout(done, ms)).then(() => kick(id)));
   };
   /** A narration whose chain stopped (expired lease) is resumed when someone looks at it. */
   const resumeIfStalled = (n: { id: string; status: string; lease_until?: string | null }) => {
@@ -105,7 +112,27 @@ export function mountNarration(app: Express, findBook: (id: string) => Promise<B
     if (!validKey(req.get('x-narration-key'))) throw new NarrationError('Not allowed.', 403);
     const result = await step(typeof req.body?.id === 'string' ? req.body.id : undefined);
     if (result.more && result.id) kick(result.id);
+    // A per-minute limit: wait here (the function may run 60 s) rather than until the daily cron.
+    const wait = result.resumeAt ? Date.parse(result.resumeAt) - Date.now() : Infinity;
+    if (result.id && wait <= KICK_WAIT_MAX_MS) kickAfter(result.id, Math.max(0, wait) + 1_000);
     res.json(result);
+  }));
+
+  // Owner request 2026-11-16: once a day (Vercel Cron, vercel.json), continue narrations that waited for
+  // Google's free daily limit. With CRON_SECRET set, Vercel sends "Authorization: Bearer $CRON_SECRET" and it
+  // is required. Without it the call is open but rate-limited (app.ts): it only starts narrations whose wait
+  // is over, which the schedule would do anyway, and never spends beyond an approved budget.
+  app.get('/api/internal/narration/cron', guarded(async (req, res) => {
+    const secret = process.env.CRON_SECRET?.trim();
+    if (secret) {
+      const given = Buffer.from(req.get('authorization') ?? '');
+      const wanted = Buffer.from(`Bearer ${secret}`);
+      if (given.length !== wanted.length || !timingSafeEqual(given, wanted)) throw new NarrationError('Not allowed.', 403);
+    }
+    const due = await narrationsDue();
+    for (const id of due) kick(id);
+    logger.info({ event: 'narration.cron', resumed: due.length }, 'Narration schedule ran');
+    res.json({ resumed: due.length });
   }));
 
   // The narration is the eBook's unless the author sells the audiobook as an add-on (cycle 9).

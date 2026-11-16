@@ -55,7 +55,7 @@ export function NarrationQueue({ api }: { api: ReturnType<typeof useEbookApi> })
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-700">{LABEL[r.status]}</span>
               </div>
               {(r.status === 'approved' || r.status === 'running') && <ProgressBar value={r.total ? (r.done / r.total) * 100 : 0} label={`Part ${r.done} of ${r.total}`} />}
-              {r.error && <p className="text-rose-700">{r.error}</p>}
+              {r.error && <p className={r.status === 'running' ? 'text-amber-800' : 'text-rose-700'}>{r.error}</p>}
               <div className="flex flex-wrap gap-2">
                 {r.status === 'paid' && <>
                   <button type="button" disabled={busy === r.id} onClick={() => setConfirm({ row: r, decision: 'approve' })} className="rounded-lg bg-indigo-600 px-3 py-1.5 font-bold text-white hover:bg-indigo-500 disabled:opacity-60 cursor-pointer">Approve and narrate</button>

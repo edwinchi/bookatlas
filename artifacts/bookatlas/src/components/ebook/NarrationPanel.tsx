@@ -118,6 +118,8 @@ export function NarrationPanel({ api, bookId }: { api: ReturnType<typeof useEboo
           {(current.status === 'approved' || current.status === 'running') && (
             <ProgressBar value={current.total ? (current.done / current.total) * 100 : 0} label={`Narrating: part ${current.done} of ${current.total}…`} />
           )}
+          {/* Waiting for Google's free-tier limit: it continues by itself (owner request 2026-11-16). */}
+          {current.status === 'running' && current.error && <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 p-2 text-amber-900"><Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />{current.error}</p>}
           {current.status === 'done' && <p className="flex items-center gap-1.5 font-semibold text-emerald-800"><CheckCircle2 className="h-4 w-4" aria-hidden />Your natural audiobook is live ({Math.round(current.seconds / 360) / 10} hours). Readers choose “Listen to the book”.</p>}
           {current.status === 'done' && quote?.sale && <AudiobookSale api={api} bookId={bookId} sale={quote.sale} onSaved={() => void load()} />}
           {current.status === 'failed' && (quote?.free ? (

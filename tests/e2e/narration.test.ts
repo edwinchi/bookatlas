@@ -28,10 +28,13 @@ const fakeStripe = {
 
 // A fake Gemini voice: one second of 24 kHz PCM per call, or failures when asked.
 let failing = 0;
+/** A Gemini quota error every call while set. */
+let quotaError: string | null = null;
 const calls: string[] = [];
 const fakeVoice = {
   async speak(text: string) {
     calls.push(text);
+    if (quotaError) throw new Error(quotaError);
     if (failing > 0) { failing -= 1; throw new Error('Gemini overloaded'); }
     return { audio: new Uint8Array(24_000 * 2).map((_, i) => (i % 2 ? 0x10 : 0)), mimeType: 'audio/L16;codec=pcm;rate=24000' };
   },
@@ -189,4 +192,63 @@ test('a Gemini quota error pauses narration with a plain explanation instead of 
   const paid = quotaProblem(new Error('{"error":{"code":429,"status":"RESOURCE_EXHAUSTED","message":"Quota exceeded per minute. Please retry in 41.2s."}}'))!;
   assert.match(paid.message, /per-minute quota.*retry in 41s/);
   assert.equal(quotaProblem(new Error('Gemini overloaded')), null, 'other errors keep the normal retries');
+});
+
+test("on the free tier, narration waits for Google's limit to reset and continues by itself", async () => {
+  const { fetch } = await getSharedTestServer();
+  const bookId = await publishBook(fetch, 'admin');
+  const daily = '{"error":{"code":429,"message":"Quota exceeded for metric: generate_content_free_tier_requests, limit: 10. Please retry in 17h58m51.04s.","status":"RESOURCE_EXHAUSTED","details":[{"quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier"}]}}';
+  quotaError = daily;
+  const order = await (await fetch(`/api/narration/books/${bookId}/order`, json({ voice: 'Charon' }))).json();
+  const id = order.narration.id as string;
+  try {
+    let r = await service.step(id);
+    if (!r.resumeAt) r = await service.step(id); // a background step may have hit the limit first
+    const waiting = (await service.getNarration(id))!;
+    assert.equal(waiting.status, 'running', 'not failed: it is waiting');
+    assert.match(waiting.error!, /continues by itself/);
+    assert.equal(waiting.done, 0, 'nothing is lost or skipped');
+    const wait = Date.parse(waiting.lease_until!) - Date.now();
+    assert.ok(wait > 17.9 * 3600_000 && wait < 18.2 * 3600_000, 'waits as long as Google says, plus a margin');
+
+    const before = calls.length;
+    assert.deepEqual(await service.step(id), { id: null, more: false }, 'no request is made before the reset');
+    assert.equal(calls.length, before);
+    assert.ok(!(await service.narrationsDue()).includes(id));
+    assert.ok((await service.narrationsDue(Date.now() + 19 * 3600_000)).includes(id), 'due after the reset');
+
+    // The daily schedule: with CRON_SECRET set, only the bearer token Vercel Cron sends; nothing is due yet.
+    const cron = (auth?: string) => fetch('/api/internal/narration/cron', { headers: auth ? { authorization: auth } : {} });
+    delete process.env.CRON_SECRET;
+    assert.equal((await cron()).status, 200);
+    assert.equal((await service.getNarration(id))!.lease_until, waiting.lease_until, 'without a secret it only starts what is due, not this one');
+    process.env.CRON_SECRET = 'synthetic-cron-secret-for-tests';
+    assert.equal((await cron()).status, 403);
+    assert.equal((await cron('Bearer wrong')).status, 403);
+    const ran = await cron('Bearer synthetic-cron-secret-for-tests');
+    assert.equal(ran.status, 200);
+
+    // A narration paused the old way (before 2026-11-16) is picked up by the schedule too.
+    await service.update(id, { status: 'failed', lease_until: null, error: "Paused: the Gemini API key is on Google's free tier, which allows only a few narration requests a minute." });
+    assert.ok((await service.narrationsDue()).includes(id));
+    assert.equal((await service.getNarration(id))!.status, 'running');
+
+    // Once the limit has reset, it carries on from where it stopped.
+    quotaError = null;
+    for (let i = 0; i < 200 && (await service.getNarration(id))!.status !== 'done'; i += 1) await service.step(id);
+    const done = (await service.getNarration(id))!;
+    assert.equal(done.status, 'done');
+    assert.equal(done.error, null);
+  } finally { quotaError = null; delete process.env.CRON_SECRET; }
+});
+
+test("quota waits: Google's retry time when given, otherwise a minute or the daily reset (08:10 UTC)", async () => {
+  const { quotaResumeAt, retryDelayMs } = service;
+  assert.equal(retryDelayMs('Please retry in 17h58m51.04s.'), ((17 * 60 + 58) * 60 + 51.04) * 1000);
+  assert.equal(retryDelayMs('retry in 41.2s'), 41_200);
+  const now = new Date('2026-11-16T12:00:00Z');
+  assert.equal(quotaResumeAt(new Error('per minute. Please retry in 20s.'), false, now).toISOString(), '2026-11-16T12:00:25.000Z');
+  assert.equal(quotaResumeAt(new Error('per minute'), false, now).toISOString(), '2026-11-16T12:01:05.000Z');
+  assert.equal(quotaResumeAt(new Error('per day'), true, now).toISOString(), '2026-11-17T08:10:00.000Z');
+  assert.equal(quotaResumeAt(new Error('per day'), true, new Date('2026-11-16T03:00:00Z')).toISOString(), '2026-11-16T08:10:00.000Z');
 });

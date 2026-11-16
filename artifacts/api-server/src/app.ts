@@ -53,6 +53,7 @@ app.use(
     { prefix: "/api/reader/ai", limit: 30 },
     { prefix: "/api/reader/groups", limit: 60 },
     { prefix: "/api/reader/reports", limit: 20 },
+    { prefix: "/api/internal/narration/cron", limit: 5 },
   ]),
 );
 // Without a secret key Clerk throws on every request, taking the public catalog down with it.

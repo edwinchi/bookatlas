@@ -48,6 +48,8 @@ import { ReaderAssistant, type AssistantTab, type WordsRequest } from './reader/
 import { audioProductOf } from '../audioEdition';
 import { ReaderCommunity, type CommunityTab } from './reader/ReaderCommunity';
 import type { ChapterSocial } from './ebook/ebookApi';
+import { clearNowPlaying, setPlaying, showNowPlaying } from './reader/mediaSession';
+import { NaturalVoiceInfo } from './ebook/NaturalVoiceInfo';
 
 import {
   READER_DISPLAY_PREFERENCES_KEY,
@@ -145,6 +147,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  /** The natural audiobook is paused (from the reader, the lock screen or headphones) and can resume where it was. */
+  const [narrationPaused, setNarrationPaused] = useState(false);
   const [selectedHighlightColor, setSelectedHighlightColor] = useState<string>('yellow');
   const [showNotebook, setShowNotebook] = useState(false);
   // Reader Phase 2 (cycle 8): the reading assistant and the toolbar shown over selected text.
@@ -296,7 +300,9 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     synthRef.current?.cancel();
     narrationAudio.current?.pause();
     setIsSpeaking(false);
+    setNarrationPaused(false);
     setSpokenParagraph(null);
+    clearNowPlaying();
   };
 
   const speakFrom = (chapterIdx: number, paragraphIdx: number) => {
@@ -365,8 +371,30 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       let src: string;
       try { src = await url(k)!; } catch { stopSpeech(); return; }
       if (run !== speechRun.current) return;
-      void url(k + 1)?.catch(() => undefined); // load the next part ahead
+      // Load the next two parts ahead, so the next part can start with the screen off and no network wait.
+      void url(k + 1)?.catch(() => undefined);
+      void url(k + 2)?.catch(() => undefined);
       const chapter = chaptersRef.current[seg.chapter];
+      const nextChapter = segs.findIndex((s) => s.chapter > seg.chapter);
+      const thisChapter = segs.findIndex((s) => s.chapter === seg.chapter);
+      const previousChapter = segs.findIndex((s) => s.chapter === segs[Math.max(0, thisChapter - 1)]!.chapter);
+      showNowPlaying(
+        { title: chapter?.title || `Chapter ${seg.chapter + 1}`, artist: book.author, album: book.title, artwork: book.coverImage },
+        {
+          play: () => { void audio.play().catch(() => undefined); },
+          pause: () => audio.pause(),
+          stop: () => { if (run === speechRun.current) stopSpeech(); },
+          next: nextChapter >= 0 ? () => { if (run === speechRun.current) void play(nextChapter); } : undefined,
+          // Back to the start of the part, or to the chapter before when already at its start.
+          previous: () => {
+            if (run !== speechRun.current) return;
+            if (k !== thisChapter) { void play(thisChapter); return; }
+            if (audio.currentTime <= 3 && thisChapter > 0) { void play(previousChapter); return; }
+            audio.currentTime = 0;
+          },
+          seekBy: (d) => { audio.currentTime = Math.max(0, Math.min(audio.duration || 0, audio.currentTime + d)); setPlaying(audio.paused ? 'paused' : 'playing', audio); },
+        },
+      );
       if (speechChapter.current !== seg.chapter) { speechChapter.current = seg.chapter; setCurrentChapterIndex(seg.chapter); }
       const paras = Array.from({ length: seg.to - seg.from + 1 }, (_, i) => seg.from + i);
       const lengths = paras.map((p) => Math.max(1, (chapter?.content[p] ?? '').length));
@@ -382,22 +410,35 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       };
       audio.ontimeupdate = highlight;
       audio.onended = () => void play(k + 1);
-      audio.onerror = () => stopSpeech();
+      audio.onerror = () => { if (run === speechRun.current) stopSpeech(); };
+      audio.onplay = () => { if (run !== speechRun.current) return; setNarrationPaused(false); setPlaying('playing', audio); };
+      audio.onloadedmetadata = () => { if (run === speechRun.current) setPlaying(audio.paused ? 'paused' : 'playing', audio); };
+      // A pause from the lock screen, headphones or another app; the end of a part is not a pause.
+      audio.onpause = () => { if (run !== speechRun.current || audio.ended) return; setNarrationPaused(true); setPlaying('paused', audio); };
       audio.src = src;
       highlight();
-      await audio.play().catch(() => stopSpeech());
+      // A pause (lock screen, headphones) before the part starts aborts play(); only a real failure stops listening.
+      await audio.play().catch((e: unknown) => { if (run === speechRun.current && (e as { name?: string })?.name !== 'AbortError') stopSpeech(); });
     };
     setIsSpeaking(true);
     void play(first);
   };
   useEffect(() => () => {
     narrationAudio.current?.pause();
+    clearNowPlaying();
     for (const p of narrationUrls.current.values()) p.then((u) => URL.revokeObjectURL(u)).catch(() => undefined);
   }, []);
 
   const naturalHere = !!narration?.segments.some((s) => s.chapter >= currentChapterIndex);
   /** Cycle 9: the eBook is open in full but the audiobook is a paid add-on not bought yet. */
   const audioUpsell = !!narration && narration.access === 'preview' && (narration.audioPrice ?? 0) > 0 && !inPreview;
+  /** Natural voice: pause and resume where it was, keeping the lock-screen controls. */
+  const naturalPlaying = isSpeaking && naturalHere && !!narrationAudio.current;
+  const togglePause = () => {
+    const audio = narrationAudio.current;
+    if (!audio) return;
+    if (audio.paused) void audio.play().catch((e: unknown) => { if ((e as { name?: string })?.name !== 'AbortError') stopSpeech(); }); else audio.pause();
+  };
   const toggleSpeech = () => {
     if (isSpeaking) { stopSpeech(); return; }
     // The natural voice where it may be heard (all of it, or the preview of an audiobook add-on); the device voice after.
@@ -921,16 +962,33 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             {(book.hasReaderContent || isSpeaking) && (
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
                 {inPreview && <span className="px-2.5 py-1 rounded-full border border-current/20 opacity-80">Free preview for everyone</span>}
-                <button onClick={toggleSpeech} aria-pressed={isSpeaking} className="px-3 py-1 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors">
-                  {isSpeaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                  {isSpeaking ? 'Stop listening' : inPreview ? 'Listen to the preview' : 'Listen to the book'}
-                  <span className="text-[10px] font-normal opacity-80">{narration && naturalHere ? `· ${narration.voice}, natural voice${audioUpsell ? ' (preview)' : ''}` : '· device voice'}</span>
-                </button>
-                {audioUpsell && (
-                  <button onClick={() => { onAddToCart(audioProductOf({ ...book, audioPrice: narration!.audioPrice })); onClose(); }}
-                    className="px-3 py-1 rounded-full border border-indigo-500/60 font-semibold inline-flex items-center gap-1.5 cursor-pointer hover:bg-indigo-500/10 transition-colors">
-                    <Headphones className="w-3.5 h-3.5" />Whole audiobook in a natural voice: €{narration!.audioPrice!.toFixed(2)}
+                {naturalPlaying ? (
+                  <>
+                    <button onClick={togglePause} aria-pressed={!narrationPaused} className="px-3 py-1 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors">
+                      {narrationPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+                      {narrationPaused ? 'Resume listening' : 'Pause'}
+                      <span className="text-[10px] font-normal opacity-80">· {narration!.voice}, natural voice{audioUpsell ? ' (preview)' : ''}</span>
+                    </button>
+                    <button onClick={stopSpeech} aria-label="Stop listening" className="px-2.5 py-1 rounded-full border border-current/25 font-semibold inline-flex items-center gap-1 cursor-pointer hover:bg-current/5">
+                      <VolumeX className="w-3.5 h-3.5" />Stop
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={toggleSpeech} aria-pressed={isSpeaking} className="px-3 py-1 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors">
+                    {isSpeaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                    {isSpeaking ? 'Stop listening' : inPreview ? 'Listen to the preview' : 'Listen to the book'}
+                    <span className="text-[10px] font-normal opacity-80">{narration && naturalHere ? `· ${narration.voice}, natural voice${audioUpsell ? ' (preview)' : ''}` : '· device voice (free)'}</span>
                   </button>
+                )}
+                {audioUpsell && (
+                  <>
+                    <button onClick={() => { onAddToCart(audioProductOf({ ...book, audioPrice: narration!.audioPrice })); onClose(); }}
+                      className="px-3 py-1 rounded-full border border-indigo-500/60 font-semibold inline-flex items-center gap-1.5 cursor-pointer hover:bg-indigo-500/10 transition-colors">
+                      <Headphones className="w-3.5 h-3.5" />Whole audiobook in a natural voice: €{narration!.audioPrice!.toFixed(2)}
+                      <span className="text-[10px] font-normal opacity-80">· keeps playing with your screen off</span>
+                    </button>
+                    <NaturalVoiceInfo tone="reader" />
+                  </>
                 )}
               </div>
             )}
