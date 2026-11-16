@@ -150,12 +150,25 @@ export function announceBook(bookId: string, appUrl: string) {
     .catch((err) => logger.warn({ err, event: 'seo.indexnow_failed', bookId }, 'IndexNow announcement failed')));
 }
 
+/**
+ * Book and author pages are the web app (with SEO tags), served by the API. They need the web app's policy
+ * (vercel.json, kept the same here): the API's "default-src 'none'" blocked the app's script and styles, so
+ * a shared or search-engine link to a book showed a blank page (found 2026-11-16).
+ */
+const PAGE_CSP = "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'";
+const PAGE_CSP_REPORT_ONLY = "default-src 'self'; script-src 'self' https://*.clerk.accounts.dev https://*.protect.clerk.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://images.unsplash.com https://img.clerk.com; media-src 'self' data: blob: https://commondatastorage.googleapis.com; connect-src 'self' https://*.clerk.accounts.dev https://*.protect.clerk.com:* https://clerk-telemetry.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; manifest-src 'self'";
+function htmlPage(res: Response) {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Content-Security-Policy', PAGE_CSP);
+  res.setHeader('Content-Security-Policy-Report-Only', PAGE_CSP_REPORT_ONLY);
+}
+
 export function mountSeo(app: Express, catalog: CatalogStore, appUrl: string) {
   app.get('/books/:id', async (req, res) => {
     const id = String(req.params.id);
     try {
       const [html, book] = await Promise.all([appShell(appUrl), /^[\w.-]{1,120}$/.test(id) ? catalog.get(id) : Promise.resolve(null)]);
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      htmlPage(res);
       if (!book) {
         // The app still loads and says the book was not found; search engines drop the address.
         res.status(404).setHeader('Cache-Control', 'no-cache');
@@ -216,7 +229,7 @@ export function mountSeo(app: Express, catalog: CatalogStore, appUrl: string) {
     const slug = String(req.params.slug).toLowerCase();
     try {
       const [html, profile] = await Promise.all([appShell(appUrl), authorProfile(catalog, slug)]);
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      htmlPage(res);
       if (!profile) {
         res.status(404).setHeader('Cache-Control', 'no-cache');
         res.send(injectHead(html, `<title>Author not found | ${SITE_NAME}</title>\n    <meta name="robots" content="noindex" />`));

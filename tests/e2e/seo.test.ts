@@ -88,3 +88,17 @@ test('unknown books answer 404 with noindex; demo titles are noindex and left ou
   assert.equal((await fetch('/sitemaps/books-0.xml')).status, 404);
   assert.equal((await fetch('/sitemaps/secrets.xml')).status, 404);
 });
+
+test('book and author pages may load the web app: not the API policy that blocks every script and style', async () => {
+  const { fetch } = await getSharedTestServer();
+  const id = await importListedBook(fetch);
+  const res = await fetch(`/books/${id}`, { headers: { 'x-test-role': 'unauthenticated' } });
+  const csp = res.headers.get('content-security-policy') ?? '';
+  assert.doesNotMatch(csp, /default-src 'none'/, 'a shared link to a book showed a blank page (2026-11-16)');
+  assert.match(csp, /frame-ancestors 'none'/, 'still not frameable');
+  assert.match(res.headers.get('content-security-policy-report-only') ?? '', /script-src 'self'/);
+  const author = await fetch('/author/ada-writer', { headers: { 'x-test-role': 'unauthenticated' } });
+  assert.doesNotMatch(author.headers.get('content-security-policy') ?? '', /default-src 'none'/);
+  const api = await fetch('/api/healthz');
+  assert.match(api.headers.get('content-security-policy') ?? '', /default-src 'none'/, 'API data keeps the strict policy');
+});
