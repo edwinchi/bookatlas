@@ -273,9 +273,11 @@ test('the book window: preview opens the reader in front, Buy Now opens the cart
     assert.ok(await dialog.isVisible(), `${tab} keeps the book open`);
   }
   // Buy Now adds it and opens the cart.
-  await dialog.getByRole('button', { name: /^(Buy Now|Add)/ }).first().click();
-  await page.getByRole('dialog', { name: 'Shopping cart' }).waitFor();
-  await page.keyboard.press('Escape');
+  await dialog.getByRole('button', { name: /^(Buy Now|Buy eBook|Add the Audiobook)/ }).first().click();
+  // A real book goes to the cart; a sample title (demo catalogue) says it is not for sale.
+  const cart = page.getByRole('dialog', { name: 'Shopping cart' });
+  await cart.or(page.getByText(/is a sample title .* It is not for sale/)).first().waitFor();
+  if (await cart.isVisible()) await page.keyboard.press('Escape');
   // Preview: the reader comes to the front and the book window closes.
   await dialog.getByRole('button', { name: /free preview|instant sample|open the book/i }).first().click();
   await page.getByLabel('Font & Theme Settings').waitFor();
