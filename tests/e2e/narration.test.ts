@@ -252,3 +252,58 @@ test("quota waits: Google's retry time when given, otherwise a minute or the dai
   assert.equal(quotaResumeAt(new Error('per day'), true, now).toISOString(), '2026-11-17T08:10:00.000Z');
   assert.equal(quotaResumeAt(new Error('per day'), true, new Date('2026-11-16T03:00:00Z')).toISOString(), '2026-11-16T08:10:00.000Z');
 });
+
+test('the free local Kokoro narrator: token-only API, one voice for the whole book, cloud steps stay away', async () => {
+  const { fetch } = await getSharedTestServer();
+  const bookId = await publishBook(fetch, 'admin');
+  const order = await (await fetch(`/api/narration/books/${bookId}/order`, json({ voice: 'Sulafat' }))).json();
+  const id = order.narration.id as string;
+  process.env.NARRATION_WORKER_TOKEN = 'synthetic-local-narrator-token-for-tests-0123456789';
+  const auth = { authorization: `Bearer ${process.env.NARRATION_WORKER_TOKEN}` };
+  const post = (path: string, body: unknown, headers: Record<string, string> = auth) => fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
+  const mp3 = (size = 400) => { const b = new Uint8Array(size); b[0] = 0xff; b[1] = 0xfb; return b; };
+  const put = (n: number, lease: string, body = mp3(), voice = 'af_heart') => fetch(`/api/internal/narration/local/${id}/parts/${n}`, { method: 'PUT', headers: { ...auth, 'content-type': 'audio/mpeg', 'x-lease-token': lease, 'x-voice': voice, 'x-seconds': '42.5' }, body });
+  try {
+    assert.equal((await fetch('/api/internal/narration/local')).status, 403, 'no token');
+    assert.equal((await fetch('/api/internal/narration/local', { headers: { authorization: 'Bearer wrong' } })).status, 403);
+    const listed = (await (await fetch('/api/internal/narration/local', { headers: auth })).json()).narrations;
+    assert.ok(listed.some((n: { id: string }) => n.id === id));
+
+    // One part is recorded in the cloud voice first: continuing locally would mix voices.
+    await service.step(id);
+    const mixed = await post(`/api/internal/narration/local/${id}/claim`, { voice: 'af_heart' });
+    assert.equal(mixed.status, 409);
+    assert.match((await mixed.json()).error, /from-start/);
+    assert.equal((await post(`/api/internal/narration/local/${id}/claim`, { voice: 'nobody' })).status, 400);
+    const claim = await (await post(`/api/internal/narration/local/${id}/claim`, { voice: 'af_heart', fromStart: true })).json();
+    assert.equal(claim.next.n, 0, 'starts again from part 1');
+    assert.ok(claim.next.text.length > 20, 'the part text comes from the book');
+
+    // While the computer narrates, cloud steps never add a part.
+    const before = calls.length;
+    await service.step(id);
+    assert.equal(calls.length, before, 'no Gemini request');
+    assert.ok(!(await service.narrationsDue(Date.now() + 86_400_000)).includes(id), 'the daily schedule leaves it alone');
+
+    assert.equal((await put(1, claim.leaseToken)).status, 409, 'parts arrive in order');
+    assert.equal((await put(0, 'local:someone-else')).status, 409, 'only the lease holder uploads');
+    assert.equal((await put(0, claim.leaseToken, new TextEncoder().encode('<html>not audio</html>'.repeat(20)))).status, 400, 'MP3 only');
+    let r = await (await put(0, claim.leaseToken)).json();
+    assert.equal(r.done, 1);
+
+    // Stop and continue later: same voice, so no restart is needed.
+    assert.deepEqual(await (await post(`/api/internal/narration/local/${id}/release`, { leaseToken: claim.leaseToken })).json(), { released: true });
+    const again = await (await post(`/api/internal/narration/local/${id}/claim`, { voice: 'af_heart' })).json();
+    assert.equal(again.next.n, 1, 'continues where it stopped');
+    r = { next: again.next };
+    while (r.next) r = await (await put(r.next.n, again.leaseToken)).json();
+
+    const done = (await service.getNarration(id))!;
+    assert.equal(done.status, 'done');
+    assert.ok(done.segments.every((s) => s.provider === 'kokoro-local'));
+    const manifest = await (await fetch(`/api/reader/catalog/${bookId}/narration`, as('admin'))).json();
+    assert.equal(manifest.narration.voice, 'Heart', 'readers see the Kokoro voice name');
+    const book = (await (await fetch(`/api/catalog/books/${bookId}`)).json()).book;
+    assert.equal(book.narrator, 'Heart (BooksAtlas natural voice)');
+  } finally { delete process.env.NARRATION_WORKER_TOKEN; }
+});

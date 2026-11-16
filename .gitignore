@@ -56,3 +56,6 @@ Thumbs.db
 
 # Author manuscripts and generated books (never commit)
 manuscripts/
+
+# Local narrator: voice samples
+tools/local-narrator/sample-*.mp3

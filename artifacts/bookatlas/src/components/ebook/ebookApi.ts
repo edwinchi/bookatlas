@@ -44,7 +44,7 @@ export interface AuthorSales {
 export type NarrationVoice = 'Sulafat' | 'Charon';
 export type NarrationStatus = 'awaiting_payment' | 'paid' | 'approved' | 'running' | 'done' | 'failed' | 'declined' | 'refunded';
 export interface NarrationSummary { id: string; bookId: string; title: string; voice: NarrationVoice; status: NarrationStatus; priceCents: number; words: number; done: number; total: number; seconds: number; error: string | null; createdAt: string; updatedAt: string }
-export interface ReaderNarration { voice: NarrationVoice; seconds: number; access: 'full' | 'preview'; audioPrice?: number; segments: { n: number; chapter: number; from: number; to: number; seconds: number }[] }
+export interface ReaderNarration { /** Sulafat or Charon, or the Kokoro voice name for a book narrated on the owner's computer. */ voice: string; seconds: number; access: 'full' | 'preview'; audioPrice?: number; segments: { n: number; chapter: number; from: number; to: number; seconds: number }[] }
 export interface NarrationQuote { bookId: string; title: string; words: number; priceCents: number; hours: number; voices: NarrationVoice[]; current: NarrationSummary | null; free?: boolean; sale?: NarrationSale | null }
 /** Cycle 9: how readers get the finished audiobook (audioPrice 0 = included with the eBook). */
 export interface NarrationSale { ebookPrice: number; audioPrice: number; audioPricedAt: string | null }

@@ -1,0 +1,18 @@
+{
+  "name": "booksatlas-local-narrator",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Narrate BooksAtlas audiobooks on your own computer with the free, open-source Kokoro voice (no tokens, no account).",
+  "type": "module",
+  "license": "UNLICENSED",
+  "scripts": {
+    "list": "node narrate.mjs --list",
+    "narrate": "node narrate.mjs",
+    "sample": "node narrate.mjs --sample"
+  },
+  "dependencies": {
+    "@breezystack/lamejs": "1.2.7",
+    "kokoro-js": "1.2.1"
+  },
+  "engines": { "node": ">=20" }
+}

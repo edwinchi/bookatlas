@@ -45,9 +45,10 @@ export function withAudioEditions(findBook: (id: string) => Promise<Book | null 
 }
 
 /** The catalogue fields of a narrated book: the 🎧 badge, the Audiobooks filter and shelf, the length. */
-export const narratedFields = (n: { voice: NarrationVoice; seconds: number }) => ({
+/** `voiceLabel`: the Kokoro voice when the book was narrated on the owner's computer (narration/local.ts). */
+export const narratedFields = (n: { voice: NarrationVoice; seconds: number }, voiceLabel?: string | null) => ({
   format: 'bundle' as const,
-  narrator: `${VOICE_LABELS[n.voice]?.split(':')[0] ?? n.voice} (BooksAtlas natural voice)`,
+  narrator: `${voiceLabel ?? VOICE_LABELS[n.voice]?.split(':')[0] ?? n.voice} (BooksAtlas natural voice)`,
   audioDurationMinutes: Math.max(1, Math.round(n.seconds / 60)),
 });
 

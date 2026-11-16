@@ -8,6 +8,7 @@ import { PaymentError } from '../payments/purchases.js';
 import { confirmCheckout } from '../payments/checkout.js';
 import { NarrationError, decide, getNarration, listNarrations, narrationsDue, order, quote, readerManifest, readerSegment, setAudioPrice, step, summary, voiceSample } from './service.js';
 import { audioAccess } from './edition.js';
+import { MAX_PART_BYTES, claimLocal, openForLocal, releaseLocal, uploadLocalPart, workerAllowed } from './local.js';
 
 /** The key the server uses to call its own next narration step; derived from the session secret. */
 export const stepKey = () => createHmac('sha256', process.env.SESSION_SECRET ?? 'bookatlas-local').update('bookatlas-narration-step-v1').digest('hex');
@@ -116,6 +117,27 @@ export function mountNarration(app: Express, findBook: (id: string) => Promise<B
     const wait = result.resumeAt ? Date.parse(result.resumeAt) - Date.now() : Infinity;
     if (result.id && wait <= KICK_WAIT_MAX_MS) kickAfter(result.id, Math.max(0, wait) + 1_000);
     res.json(result);
+  }));
+
+  // Owner request 2026-11-16: the free Kokoro voice on the owner's computer (tools/local-narrator).
+  const worker = (req: Request) => { if (!workerAllowed(req.get('authorization'))) throw new NarrationError('Not allowed.', 403); };
+  app.get('/api/internal/narration/local', guarded(async (req, res) => {
+    worker(req);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ narrations: await openForLocal() });
+  }));
+  app.post('/api/internal/narration/local/:id/claim', json, guarded(async (req, res) => {
+    worker(req);
+    res.json(await claimLocal(String(req.params.id), String(req.body?.voice ?? ''), req.body?.fromStart === true));
+  }));
+  app.put('/api/internal/narration/local/:id/parts/:n', express.raw({ type: 'audio/mpeg', limit: MAX_PART_BYTES }), guarded(async (req, res) => {
+    worker(req);
+    if (!Buffer.isBuffer(req.body)) throw new NarrationError('Send the part as audio/mpeg.');
+    res.json(await uploadLocalPart(String(req.params.id), Number(req.params.n), String(req.get('x-lease-token') ?? ''), String(req.get('x-voice') ?? ''), Number(req.get('x-seconds')), new Uint8Array(req.body)));
+  }));
+  app.post('/api/internal/narration/local/:id/release', json, guarded(async (req, res) => {
+    worker(req);
+    res.json(await releaseLocal(String(req.params.id), String(req.body?.leaseToken ?? '')));
   }));
 
   // Owner request 2026-11-16: once a day (Vercel Cron, vercel.json), continue narrations that waited for

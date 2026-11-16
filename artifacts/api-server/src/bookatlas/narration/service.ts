@@ -14,6 +14,7 @@ import { PaymentError } from '../payments/purchases.js';
 import { createNarrationCheckout, refundPayment, setNarrationPaidHandler } from '../payments/checkout.js';
 import { pcm16ToMp3, pcmSeconds, toPcm16 } from './mp3.js';
 import { MAX_AUDIO_PRICE, MIN_AUDIO_PRICE, forgetAudioAccess, narratedFields } from './edition.js';
+import { isLocalNarration, localVoiceLabel } from './localVoices.js';
 import {
   NARRATION_VOICES, inPreview, narrationEstimate, narrationPrice, planSegments, segmentText, wordCount,
   type Chapter, type NarrationVoice, type Segment,
@@ -26,7 +27,7 @@ import {
  */
 
 export type NarrationStatus = 'awaiting_payment' | 'paid' | 'approved' | 'running' | 'done' | 'failed' | 'declined' | 'refunded';
-export interface SegmentState extends Segment { seconds?: number; bytes?: number; attempts?: number; provider?: 'chirp-free' | 'gemini'; quotaHits?: number }
+export interface SegmentState extends Segment { seconds?: number; bytes?: number; attempts?: number; provider?: 'chirp-free' | 'gemini' | 'kokoro-local'; kokoroVoice?: string; quotaHits?: number }
 export interface Narration {
   id: string; book_id: string; owner_id: string; title: string; voice: NarrationVoice; status: NarrationStatus;
   price_cents: number; words: number; estimate_micros: number; spent_micros: number;
@@ -209,7 +210,7 @@ async function speakToMp3(text: string, voice: NarrationVoice, language = 'Engli
   return { mp3: pcm16ToMp3(pcm, sampleRate), seconds, provider: 'gemini' as const };
 }
 const languages = new Map<string, string>();
-async function bookLanguage(bookId: string) {
+export async function bookLanguage(bookId: string) {
   if (!languages.has(bookId)) languages.set(bookId, (await submissionForBook(bookId))?.data.intake.language ?? 'English');
   return languages.get(bookId)!;
 }
@@ -221,20 +222,23 @@ export interface NarrationCatalog { get(id: string): Promise<Book | null>; save(
 let catalogAccess: NarrationCatalog | null = null;
 export function setNarrationCatalog(c: NarrationCatalog | null) { catalogAccess = c; }
 
-async function listNarrated(n: Pick<Narration, 'book_id' | 'voice' | 'seconds'>) {
+async function listNarrated(n: Pick<Narration, 'book_id' | 'voice' | 'seconds'> & Partial<Pick<Narration, 'segments'>>) {
   if (!catalogAccess) return null;
   const book = await catalogAccess.get(n.book_id);
   if (!book) return null;
-  const fields = narratedFields(n);
+  const fields = narratedFields(n, n.segments ? localVoiceLabel(n as Pick<Narration, 'segments'>) : null);
   if (book.format === fields.format && book.narrator === fields.narrator && book.audioDurationMinutes === fields.audioDurationMinutes) return book;
   const next = { ...book, ...fields };
   await catalogAccess.save(next);
   return next;
 }
 
+/** List the finished audiobook in the store (used by the local narrator too). */
+export const markNarrated = (n: Narration) => listNarrated(n);
+
 // ---------------------------------------------------------------------------------------------- author
 
-const segKey = (id: string, n: number) => `narrations/${id}/seg-${String(n).padStart(4, '0')}.mp3`;
+export const segKey = (id: string, n: number) => `narrations/${id}/seg-${String(n).padStart(4, '0')}.mp3`;
 
 async function ownedPublishedBook(who: Identity, bookId: string) {
   if (!/^atlas-ebook-[0-9a-f]{8}$/.test(bookId)) throw new NarrationError('Book not found.', 404);
@@ -363,6 +367,8 @@ export async function step(id?: string): Promise<{ id: string | null; more: bool
   for (const listed of candidates) {
     const n = (id ? listed : await getNarration(listed.id))!;
     if (!['approved', 'running'].includes(n.status) || n.done >= n.total) continue;
+    // Narrated on the owner's computer (Kokoro): never add a part in a second, cloud voice.
+    if (isLocalNarration(n)) continue;
     const token = await claim(n);
     if (!token) continue;
     const seg = n.segments[n.done]!;
@@ -385,7 +391,7 @@ export async function step(id?: string): Promise<{ id: string | null; more: bool
       });
       if (done >= n.total) {
         logger.info({ event: 'narration.done', narration: n.id, book: n.book_id }, 'Narration complete');
-        await listNarrated({ ...n, seconds: n.seconds + seconds }).catch((err) => logger.warn({ err, event: 'narration.listing_failed' }, 'Audiobook listing failed'));
+        await listNarrated({ ...n, segments, seconds: n.seconds + seconds }).catch((err) => logger.warn({ err, event: 'narration.listing_failed' }, 'Audiobook listing failed'));
       }
       return { id: n.id, more: done < n.total };
     } catch (err) {
@@ -453,7 +459,7 @@ export async function narrationsDue(now = Date.now()): Promise<string[]> {
   const due: string[] = [];
   for (const listed of await listNarrations(['approved', 'running', 'failed'])) {
     const n = await getNarration(listed.id);
-    if (!n || n.done >= n.total) continue;
+    if (!n || n.done >= n.total || isLocalNarration(n)) continue;
     if (n.status === 'failed') {
       if (!/^Paused: .*(quota|free tier)/i.test(n.error ?? '')) continue;
       await update(n.id, { status: 'running', lease_until: null, lease_token: null });
@@ -508,7 +514,7 @@ export async function readerManifest(bookId: string, access: 'full' | 'preview')
   const preview = access === 'full' ? null : previewChapters(chapters as never) as unknown as Chapter[];
   const segments = n.segments.map((s, i) => ({ n: i, chapter: s.chapter, from: s.from, to: s.to, seconds: s.seconds ?? 0 }))
     .filter((s) => !preview || inPreview(n.segments[s.n]!, preview));
-  return { voice: n.voice, seconds: Math.round(n.seconds), access, segments };
+  return { voice: localVoiceLabel(n) ?? n.voice, seconds: Math.round(n.seconds), access, segments };
 }
 
 export async function readerSegment(bookId: string, index: number, access: 'full' | 'preview') {

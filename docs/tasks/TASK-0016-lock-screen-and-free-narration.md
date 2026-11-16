@@ -55,3 +55,21 @@
 | Gemini free tier (now automatic) | €0 | about 10 parts (about 12,000 characters, about 2,000 words) a day, so a 60,000-word book takes about a month | nothing more |
 | Google Cloud Text-to-Speech, Chirp 3 HD (already built in: `GOOGLE_TTS_API_KEY`) | €0 up to 1,000,000 characters a month; the code stops at 950,000 | a whole book in a few hours, with the same Sulafat and Charon voices | a Google Cloud project with a billing account attached (free-tier use is not charged) and the Text-to-Speech API key in Vercel |
 | Open-source voice (e.g. Kokoro, Piper) run on the owner's computer | €0, no account | depends on the computer | a local script that uploads the parts; different voices; not built |
+
+## Built after that: the local Kokoro narrator (owner request 2026-11-16)
+
+**What it is:**
+- `tools/local-narrator` is a standalone tool, deliberately not part of the pnpm workspace, so Vercel never installs it. See its README.
+- It records each part on the owner's computer with Kokoro-82M (Apache-2.0) and uploads it to production through `/api/internal/narration/local` (`narration/local.ts`).
+- The API uses the `NARRATION_WORKER_TOKEN` bearer token, and it is rate-limited.
+
+**One voice per book:**
+- While the computer holds the narration (a `local:` lease) or any part is Kokoro, cloud steps and the daily schedule skip the book.
+- Continuing over parts recorded in another voice needs `--from-start`.
+- Readers and the store see the Kokoro voice name, for example "Heart (BooksAtlas natural voice)".
+
+**Measured:** on an 8-core PC, 53 s of audio took 85 s to record.
+
+**Test:** `tests/e2e/narration.test.ts` ("the free local Kokoro narrator").
+
+**Not usable here:** Google Cloud's free Chirp voices refuse the AI Studio Gemini key ("API keys are not supported by this API"). They would need a Google Cloud service account.
