@@ -1257,7 +1257,8 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
       <BookDetailModal
         book={selectedBookForDetail}
         onClose={() => setSelectedBookForDetail(null)}
-        onReadSample={handleReadSample}
+        // The reader replaces the book window; it used to open behind it (found 2026-11-16).
+        onReadSample={(b) => { setSelectedBookForDetail(null); void handleReadSample(b); }}
         onAddToCart={handleAddToCart}
         onToggleWishlist={handleToggleWishlist}
         onPlayAudioSample={(b) => setActiveAudiobook(b)}

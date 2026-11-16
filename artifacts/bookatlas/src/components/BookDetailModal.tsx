@@ -91,6 +91,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
   const audioTotal = (owned || readsFree ? 0 : book.price) + audioPrice;
   const [aiSummary, setAiSummary] = useState<any>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
   const [previewVibe, setPreviewVibe] = useState<'cinematic' | 'bedtime' | 'suspense'>('cinematic');
   const [generatedPreview, setGeneratedPreview] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -104,6 +105,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
   const fetchAISummary = async () => {
     if (aiSummary) return;
     setAiLoading(true);
+    setAiError('');
     try {
       const res = await fetch('/api/ai/book-summary', {
         method: 'POST',
@@ -114,19 +116,11 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
         const data = await res.json();
         setAiSummary(data.data);
       } else {
-        throw new Error('Fallback needed');
+        throw new Error(res.status === 401 ? 'Sign in to get the AI briefing.' : 'The AI briefing could not be made right now.');
       }
-    } catch {
-      setAiSummary({
-        executiveSummary: `A standout masterpiece in ${book.primaryGenre} by ${book.author}, offering nuanced character arcs and captivating world-building.`,
-        coreTakeaways: ['Human resilience', 'Identity and legacy', 'Moral complexity', 'Courage under pressure'],
-        targetAudience: `Ideal for readers who appreciate high-depth narratives, rich European and global storytelling, and atmospheric writing.`,
-        philosophicalQuestion: `What does it truly mean to persevere when the world around you offers no clear answers?`,
-        keyQuotes: [],
-        similarMasterpieces: [],
-        estimatedReadingTime: `${Math.round(book.pageCount * 1.5)} mins (approx ${Math.ceil(book.pageCount / 40)} reading sessions)`,
-        vibeRating: book.aiVibe || 'Thought-provoking & Cinematic'
-      });
+    } catch (e) {
+      // Never invented text presented as AI analysis: say it failed and offer a retry.
+      setAiError(e instanceof Error && e.message.startsWith('Sign in') ? e.message : 'The AI briefing could not be made right now. Please try again in a moment.');
     } finally {
       setAiLoading(false);
     }
@@ -463,6 +457,8 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                     setActiveTab('ai_summary');
                     fetchAISummary();
                   };
+                  // Visitors stay on the book: the tab explains and offers sign-in (back to this book).
+                  if (!account) { setActiveTab('ai_summary'); return; }
                   if (hasAiAccess || !onRequireAiAccess) {
                     openAiSummary();
                   } else {
@@ -550,7 +546,22 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
             {/* Tab: AI Summary & Generator */}
             {activeTab === 'ai_summary' && (
               <div className="space-y-6">
-                {aiLoading ? (
+                {!account ? (
+                  <div className="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-5 text-center space-y-3">
+                    <Sparkles className="mx-auto h-6 w-6 text-indigo-600" aria-hidden />
+                    <p className="text-sm font-semibold text-slate-900">An AI briefing of this book: summary, key themes and who it is for.</p>
+                    <p className="text-xs text-slate-600">Free with a BooksAtlas account. You come straight back to this book.</p>
+                    <button type="button" onClick={() => requireSignIn('the AI briefing', `/books/${encodeURIComponent(book.id)}`)}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500 cursor-pointer">
+                      Sign in for the AI briefing
+                    </button>
+                  </div>
+                ) : aiError ? (
+                  <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-center space-y-2">
+                    <p className="text-xs text-rose-800">{aiError}</p>
+                    <button type="button" onClick={() => void fetchAISummary()} className="rounded-full bg-rose-700 px-3.5 py-1.5 text-[11px] font-bold text-white hover:bg-rose-600 cursor-pointer">Try again</button>
+                  </div>
+                ) : aiLoading ? (
                   <div className="p-8 text-center space-y-3">
                     <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
                     <p className="text-xs font-semibold text-slate-600">Gemini AI is analyzing narrative arcs and themes...</p>

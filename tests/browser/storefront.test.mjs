@@ -256,3 +256,29 @@ test('no Content Security Policy violations or page errors occurred', () => {
   assert.deepEqual([...new Set(cspViolations)], []);
   assert.deepEqual(pageErrors, []);
 });
+
+test('the book window: preview opens the reader in front, Buy Now opens the cart, AI briefing keeps visitors on the book', async () => {
+  const page = await open('/');
+  const title = page.locator('[data-testid="book-card-title"]').first();
+  const name = (await title.getAttribute('title')) ?? '';
+  await title.click();
+  const dialog = page.getByRole('dialog', { name, exact: true });
+  await dialog.waitFor();
+  // AI briefing: visitors see a sign-in offer in the tab, not a jump to another page.
+  await dialog.getByRole('button', { name: /AI Briefing/ }).click();
+  await dialog.getByRole('button', { name: /sign in for the ai briefing/i }).waitFor();
+  assert.match(new URL(page.url()).pathname, /^\/books\//, 'still on the book');
+  for (const tab of [/Reader Reviews/, /^About /, /Synopsis/]) {
+    await dialog.getByRole('button', { name: tab }).click();
+    assert.ok(await dialog.isVisible(), `${tab} keeps the book open`);
+  }
+  // Buy Now adds it and opens the cart.
+  await dialog.getByRole('button', { name: /^(Buy Now|Add)/ }).first().click();
+  await page.getByRole('dialog', { name: 'Shopping cart' }).waitFor();
+  await page.keyboard.press('Escape');
+  // Preview: the reader comes to the front and the book window closes.
+  await dialog.getByRole('button', { name: /free preview|instant sample|open the book/i }).first().click();
+  await page.getByLabel('Font & Theme Settings').waitFor();
+  await dialog.waitFor({ state: 'detached' });
+  assert.ok(await page.getByLabel('Font & Theme Settings').isVisible(), 'the reader is in front');
+});
