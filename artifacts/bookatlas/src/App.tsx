@@ -11,6 +11,7 @@ import { MobileFilters } from './components/MobileFilters';
 import { BookCard } from './components/BookCard';
 import { HorizontalProductCarousel } from './components/HorizontalProductCarousel';
 import { PromotionalFeatureBanner, EditorialCuratorBlock } from './components/EditorialBlock';
+import { honestSample, isSampleTitle } from './utils/ratings';
 import { BookDetailModal } from './components/BookDetailModal';
 import { EReaderModal } from './components/EReaderModal';
 import { AudiobookPlayerDock } from './components/AudiobookPlayerDock';
@@ -131,7 +132,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
   pendingReaderService?: string;
 }) {
   const { account, tier: accountTier, requireSignIn, requireAdmin, signOut, loading: accountLoading } = useAccount();
-  const [books, setBooks] = useState<Book[]>(INITIAL_BOOKS);
+  const [books, setBooks] = useState<Book[]>(() => INITIAL_BOOKS.map(honestSample));
   const [activeTab, setActiveTabState] = useState<ReaderTab>(initialTab);
   const setActiveTab = (tab: typeof activeTab) => {
     if (tab === 'library' && !requireSignIn('library', '/user-portal')) return;
@@ -210,7 +211,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
       })
       .then((data) => {
         if (!controller.signal.aborted && Array.isArray(data.books)) {
-          setBooks(data.books.map((card: Partial<Book>) => ({ sampleChapters: [], reviews: [], editorialReview: '', authorBio: '', ...card }) as Book));
+          setBooks(data.books.map((card: Partial<Book>) => honestSample({ sampleChapters: [], reviews: [], editorialReview: '', authorBio: '', ...card } as Book)));
         }
       })
       .catch((err) => {
@@ -406,7 +407,8 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
   const thrillerPicks = shelves.thriller ?? [];
   const featuredSpotlight = useMemo(() => {
     const hero = shelves.hero ?? [];
-    return hero.find(b => b.isBestseller) || hero[0] || books[0];
+    // A book that is for sale comes first; a sample title is featured only when there is none.
+    return hero.find(b => !isSampleTitle(b)) || books.find(b => !isSampleTitle(b)) || hero[0] || books[0];
   }, [shelves.hero, books]);
 
   // Cart & Wishlist Actions

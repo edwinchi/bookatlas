@@ -24,6 +24,19 @@ async function open(path, { mobile = false } = {}) {
   return page;
 }
 
+/** Adds the first book that is for sale. Sample titles answer "not for sale", and the catalogue's order differs
+ * between local and production, so the first card is not always one that can be bought. */
+async function addSellableToCart(page) {
+  const buttons = page.getByRole('button', { name: /add to cart/i });
+  const n = Math.min(await buttons.count(), 40);
+  for (let i = 0; i < n; i += 1) {
+    if (!(await buttons.nth(i).isVisible())) continue;
+    await buttons.nth(i).click();
+    try { await page.getByLabel('Close shopping cart').waitFor({ timeout: 1500 }); return; } catch { /* a sample title */ }
+  }
+  throw new Error('no book for sale found');
+}
+
 before(async () => { browser = await chromium.launch(); });
 after(async () => { await browser?.close(); });
 
@@ -39,7 +52,7 @@ test('mobile navigation, cart badge and cart drawer work together', async () => 
   assert.ok(await nav.isVisible());
   const cart = nav.locator('[aria-label^="Cart ("]');
   assert.equal(await cart.getAttribute('aria-label'), 'Cart (0 items)');
-  await page.getByRole('button', { name: /add to cart/i }).first().click();
+  await addSellableToCart(page);
   assert.ok(await page.getByLabel('Close shopping cart').isVisible(), 'adding opens the cart');
   await page.getByLabel('Close shopping cart').click();
   assert.equal(await cart.getAttribute('aria-label'), 'Cart (1 items)');
@@ -49,7 +62,7 @@ test('mobile navigation, cart badge and cart drawer work together', async () => 
 
 test('pop-ups are Radix dialogs: Escape and a click outside close them, and they are labelled', async () => {
   const page = await open('/');
-  await page.getByRole('button', { name: /add to cart/i }).first().click();
+  await addSellableToCart(page);
   const cart = page.getByRole('dialog', { name: 'Shopping cart' });
   await cart.waitFor();
   await page.keyboard.press('Escape');
@@ -262,6 +275,16 @@ test('the app shell and catalog load from the service worker cache when offline'
   // The cached catalog renders offline.
   await page.getByRole('button', { name: /add to cart/i }).first().waitFor({ timeout: 10_000 });
   await page.context().setOffline(false);
+});
+
+test('sample titles never show a discount, a struck-through price or a bestseller label', async () => {
+  const page = await open('/');
+  const bad = await page.evaluate(() => [...document.querySelectorAll('[data-testid="book-card-title"]')]
+    .map((t) => t.closest('.group'))
+    .filter((card) => card && /sample title/i.test(card.innerText))
+    .filter((card) => /-\d+%|% OFF|bestseller/i.test(card.innerText) || card.querySelector('.line-through'))
+    .map((card) => card.querySelector('[data-testid="book-card-title"]').getAttribute('title')));
+  assert.deepEqual(bad, []);
 });
 
 test('no Content Security Policy violations or page errors occurred', () => {

@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { catalogQueryParams, type CatalogQuery, type ShelfId } from '@workspace/bookatlas-catalog/query';
 import type { Book } from '../types';
+import { honestSample } from '../utils/ratings';
 
 /**
  * The storefront asks the API for small pages (TASK-0005); it never downloads or filters the
  * whole catalogue. Cards lack the heavy fields, so they get safe empty defaults until the book
  * page loads the full record.
  */
-const asBook = (card: Partial<Book>): Book => ({ sampleChapters: [], reviews: [], editorialReview: '', authorBio: '', ...card }) as Book;
+const asBook = (card: Partial<Book>): Book => honestSample({ sampleChapters: [], reviews: [], editorialReview: '', authorBio: '', ...card } as Book);
 
 export interface CatalogFacets {
   total: number;
@@ -94,7 +95,7 @@ export async function fetchFullBook(id: string): Promise<Book | null> {
   if (cached) return cached;
   const res = await fetch(`/api/catalog/books/${encodeURIComponent(id)}`);
   if (!res.ok) return null;
-  const { book } = await res.json() as { book: Book };
+  const book = honestSample((await res.json() as { book: Book }).book);
   if (fullBooks.size > 200) fullBooks.delete(fullBooks.keys().next().value!);
   fullBooks.set(id, book);
   return book;

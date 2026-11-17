@@ -46,8 +46,9 @@ async function openNarratedReader() {
   });
   const page = await context.newPage();
   let bookId = null;
-  // The first book in the store becomes a prepared, narrated eBook.
-  const mark = (b) => (b && b.id === bookId ? { ...b, hasReaderContent: true, format: 'bundle' } : b);
+  // Every book becomes a prepared, narrated eBook, so whichever preview the test opens (the store's order differs
+  // between local and production) plays the mocked narration.
+  const mark = (b) => (b ? { ...b, hasReaderContent: true, format: 'bundle' } : b);
   await page.route(/\/api\/catalog\/(search|books\/[^/?]+)/, async (route) => {
     const res = await route.fetch();
     const body = await res.json();
