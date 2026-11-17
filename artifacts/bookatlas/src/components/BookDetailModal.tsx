@@ -1,6 +1,7 @@
 import { authorPath } from './AuthorProfileModal';
 import { ReviewsPanel, Stars } from './ebook/ReviewsPanel';
 import { coverProps } from '../utils/coverImage';
+import { isSampleTitle } from '../utils/ratings';
 import React, { useEffect, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import * as RadioGroup from '@radix-ui/react-radio-group';
@@ -251,7 +252,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
               <div>
                 {/* Badges */}
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  {book.isBestseller && (
+                  {book.isBestseller && !isSampleTitle(book) && (
                     <span className="bg-slate-900 text-white text-xs font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wide">
                       #1 Bestseller
                     </span>
@@ -489,7 +490,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                   </p>
                 </div>
 
-                {book.editorialReview && (
+                {book.editorialReview && !isSampleTitle(book) && (
                   <div className="p-4 bg-amber-50/70 border-l-4 border-amber-600 rounded-r-xl">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 mb-1">
                       BooksAtlas Editorial Review

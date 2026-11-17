@@ -113,7 +113,7 @@ export interface FilterOptions {
   language?: string;
 }
 
-export type ReaderTheme = 'day' | 'sepia' | 'night' | 'mint' | 'black';
+export type ReaderTheme = 'day' | 'sepia' | 'night' | 'mint' | 'black' | 'custom';
 export type ReaderFont = 'literata' | 'sans' | 'mono';
 
 export interface ReaderSettings {

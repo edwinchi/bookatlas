@@ -93,7 +93,7 @@ test('lock-screen controls: title and cover, pause and resume, next chapter, sto
   assert.equal(await page.evaluate(() => navigator.mediaSession.playbackState), 'paused');
   const at = await page.evaluate(() => window.__audio.currentTime);
   await page.evaluate(() => window.__handlers.play());
-  await page.getByRole('button', { name: /^pause · /i }).waitFor();
+  await page.getByRole('button', { name: /^pause listening$/i }).waitFor();
   assert.ok(await page.evaluate((t) => window.__audio.currentTime >= t, at), 'resumes where it was');
 
   // Next chapter from the lock screen.

@@ -64,6 +64,20 @@ const SECTIONS: { id: string; title: string; blocks: Block[] }[] = [
     ],
   },
   {
+    id: 'reader', title: 'The reader and the listening player', blocks: [
+      { p: 'What readers get, so you can answer their questions.' },
+      { steps: [
+        'Pages or scroll: real pages, two side by side on wide screens. Swipe, tap a side or use the arrow keys to turn; tap the middle to hide the toolbars.',
+        'Reading preferences (the T button): font, size, line spacing, margins and alignment; pages or scroll and brightness; five themes or any background and text colour.',
+        'Contents lists every chapter with its reading time. “Go to” (the page number at the bottom left) opens a page or any place in the book.',
+        'Listening (the headphones button) opens a pop-up player: play, pause, stop, back and forward, previous and next chapter, speed 0.5x–3x, and Voice & language with a sample for each language.',
+        'Other languages: the device voice reads a translation, paragraph by paragraph. Chrome on a computer translates on the device for free; elsewhere the reader signs in and it counts towards their 40 AI requests a day.',
+        'A recorded narration plays in the book’s own language. Another language switches to the device voice.',
+      ] },
+      { note: 'Emotion: the cloud studio voices (Sulafat, Charon) are told to let the emotion of each passage colour the delivery. Kokoro recordings made on your PC read evenly and do not follow that instruction.' },
+    ],
+  },
+  {
     id: 'settings', title: 'Settings and secrets (Vercel)', blocks: [
       { p: 'These live in Vercel → bookatlas → Settings → Environment Variables (Production). After changing one, redeploy so production reads it. Never paste their values in chats, issues or code.' },
       { steps: [

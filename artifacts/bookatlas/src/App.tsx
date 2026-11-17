@@ -863,12 +863,10 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                     Today’s Daily Deals & Free eBooks
                   </h1>
                   <p className="text-xs text-amber-100 mt-0.5">
-                    Bestsellers discounted up to 80% off for a limited time.
+                    Titles with a lower price right now.
                   </p>
                 </div>
-                <span className="bg-white/20 text-xs font-bold px-3 py-1.5 rounded-lg">
-                  Updated Daily at Midnight
-                </span>
+
               </div>
             )}
 
@@ -1023,7 +1021,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                 <HorizontalProductCarousel
                   title="Atmospheric Thrillers & Crime Fiction"
                   subtitle="Page-turners, psychological suspense, and gripping whodunits"
-                  badge="Bestsellers"
+                  badge="Page-turners"
                   books={thrillerPicks}
                   onViewAll={() => handleViewAllCategory('Mystery & Suspense')}
                   onOpenDetail={(b) => setSelectedBookForDetail(b)}
@@ -1209,14 +1207,14 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
           </div>
 
           <div className="space-y-2">
-            <h4 className="font-bold text-white uppercase tracking-wider text-[11px]">Dutch & Global Assurance</h4>
+            <h4 className="font-bold text-white uppercase tracking-wider text-[11px]">Buying on BooksAtlas</h4>
             <p className="text-[11px] text-slate-400">
-              Instant digital delivery with DRM-compliant EPUB3 formatting, 30-day money-back guarantee, and 24/7 customer assistance.
+              Your book opens in the BooksAtlas reader right after payment. Prices include VAT. Payments are handled by Stripe.
             </p>
-            <div className="pt-2 flex items-center gap-1.5 text-emerald-400 font-semibold text-[11px]">
+            <a href={`${import.meta.env.BASE_URL}refunds`} className="pt-2 inline-flex items-center gap-1.5 text-emerald-400 font-semibold text-[11px] hover:text-emerald-300 underline-offset-2 hover:underline">
               <ShieldCheck className="w-4 h-4" />
-              <span>Certified Atlantean Globals Secure Store</span>
-            </div>
+              <span>Read our refund policy</span>
+            </a>
           </div>
 
         </div>

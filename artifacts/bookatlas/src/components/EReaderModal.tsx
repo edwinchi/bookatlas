@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 import { 
   X, 
@@ -36,7 +36,8 @@ import {
   StickyNote,
   GraduationCap,
   Users,
-  Flame
+  Flame,
+  MoreVertical
 } from 'lucide-react';
 import { StudioNarrationPanel } from './voice/StudioNarrationPanel';
 import { Book, Chapter, ReaderSettings, ReaderTheme, ReaderFont } from '../types';
@@ -51,6 +52,17 @@ import { ReaderCommunity, type CommunityTab } from './reader/ReaderCommunity';
 import type { ChapterSocial } from './ebook/ebookApi';
 import { clearNowPlaying, setPlaying, showNowPlaying } from './reader/mediaSession';
 import { NaturalVoiceInfo } from './ebook/NaturalVoiceInfo';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { ListenPlayer, type PlayerStatus } from './reader/ListenPlayer';
+import { ReaderPreferences } from './reader/ReaderPreferences';
+import { ReaderContents, GoToPopover } from './reader/ReaderNavigation';
+import { useDeviceVoice, type Translated } from './reader/useDeviceVoice';
+import { usePagedLayout } from './reader/usePagedLayout';
+import { readLayout, saveLayout, isDarkColour, DEFAULT_LAYOUT, type ReaderLayout } from './reader/readerLayout';
+import {
+  LISTEN_LANGUAGES, WORDS_PER_MINUTE, baseLang, bookLanguageCode, formatClock, pickVoice, readListenPrefs, sampleLine, saveListenPrefs,
+  translateOnDevice, voiceName, type ListenPrefs,
+} from './reader/listening';
 
 import {
   READER_DISPLAY_PREFERENCES_KEY,
@@ -236,9 +248,12 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const bookmarked = !!bookmarkHere;
   const tryMark = (fn: () => Promise<unknown>) => { setMarkError(''); fn().catch((e) => setMarkError(e instanceof Error ? e.message : 'Could not save. Please retry.')); };
   const toggleBookmark = () => tryMark(() => bookmarkHere ? sync.remove(bookmarkHere.id) : sync.add('bookmark', { chapterIndex: currentChapterIndex, paragraphIndex: currentParagraphIndex }));
+  /** In page mode, opens the page that holds a paragraph (set once the page layout exists). */
+  const pagedJump = useRef<((p: number) => void) | null>(null);
   const jumpTo = (c: number, p: number) => {
     setCurrentChapterIndex(c);
     setCurrentParagraphIndex(p);
+    if (pagedJump.current) { pagedJump.current(p); return; }
     requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector(`[data-para="${p}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })));
   };
   // Reader Phase 3 (cycle 10): other readers' shared notes and popular passages in this chapter; reading groups.
@@ -287,61 +302,66 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     };
   }, []);
 
-  // Listening: the device voice reads sentence by sentence (browsers cut off long utterances),
-  // follows the text with a highlight and carries on into the next chapter until the book ends.
+  // Listening (owner request 2026-11-17): one pop-up player for the natural narration and the free device voice,
+  // with play/pause, back and forward, chapters, speed, voice and other languages.
   const [spokenParagraph, setSpokenParagraph] = useState<number | null>(null);
   const speechRun = useRef(0);
   const speechChapter = useRef<number | null>(null);
   const chaptersRef = useRef<Chapter[]>([]);
   chaptersRef.current = chapters;
-  const SPEECH_LANG: Record<string, string> = { English: 'en', Dutch: 'nl', French: 'fr', German: 'de', Spanish: 'es', Portuguese: 'pt', Swahili: 'sw', Yoruba: 'yo', Hausa: 'ha', Zulu: 'zu', Amharic: 'am', Arabic: 'ar' };
+  const bookLang = bookLanguageCode(book.language);
+  const [listen, setListenState] = useState<ListenPrefs>(readListenPrefs);
+  const listenRef = useRef(listen);
+  listenRef.current = listen;
+  const setListen = (p: ListenPrefs) => { setListenState(p); saveListenPrefs(p); };
+  const [listenMode, setListenMode] = useState<'natural' | 'device' | null>(null);
+  /** The natural narration's place: time in the part, its length, and which part. */
+  const [clock, setClock] = useState({ t: 0, d: 0, k: 0 });
+
+  const translateForListening = async (text: string, to: string): Promise<Translated> => {
+    const local = await translateOnDevice(text, bookLang, to);
+    if (local) return { text: local, via: 'device' };
+    if (!account) throw new Error('Sign in to hear this book in another language.');
+    const r = await ebookApi.translatePassage({ bookId: book.id, text: text.slice(0, 2000), target: to });
+    return { text: r.translation, via: 'ai' };
+  };
+  const device = useDeviceVoice({
+    chapters: () => chaptersRef.current,
+    bookLang,
+    prefs: listen,
+    translate: translateForListening,
+    onPosition: (c, p) => {
+      if (speechChapter.current !== c) { speechChapter.current = c; setCurrentChapterIndex(c); }
+      setSpokenParagraph(p);
+      setCurrentParagraphIndex(p);
+    },
+    onEnd: () => stopSpeech(),
+  });
 
   const narrationAudio = useRef<HTMLAudioElement | null>(null);
   const narrationUrls = useRef(new globalThis.Map<number, Promise<string>>());
   const stopSpeech = () => {
     speechRun.current += 1;
     speechChapter.current = null;
-    synthRef.current?.cancel();
+    device.stop();
     narrationAudio.current?.pause();
     setIsSpeaking(false);
     setNarrationPaused(false);
     setSpokenParagraph(null);
+    setListenMode(null);
     clearNowPlaying();
   };
 
+  /** The free device voice from a paragraph, in the chosen voice, speed and language. */
   const speakFrom = (chapterIdx: number, paragraphIdx: number) => {
-    const synth = synthRef.current;
-    if (!synth) return;
-    synth.cancel();
-    const run = ++speechRun.current;
-    const sentences = (text: string) => text.match(/[^.!?…]+[.!?…]+["'”’)]*\s*|[^.!?…]+$/g)?.map((s) => s.trim()).filter(Boolean) ?? [text];
-    const step = (c: number, p: number) => {
-      if (run !== speechRun.current) return;
-      const list = chaptersRef.current;
-      const chapter = list[c];
-      if (!chapter) { stopSpeech(); return; }
-      if (p >= chapter.content.length) {
-        if (c + 1 < list.length) step(c + 1, 0); else stopSpeech();
-        return;
-      }
-      if (speechChapter.current !== c) { speechChapter.current = c; setCurrentChapterIndex(c); }
-      setSpokenParagraph(p);
-      setCurrentParagraphIndex(p);
-      const parts = sentences(chapter.content[p] ?? '');
-      const say = (i: number) => {
-        if (run !== speechRun.current) return;
-        if (i >= parts.length) { step(c, p + 1); return; }
-        const utterance = new SpeechSynthesisUtterance(parts[i]!);
-        utterance.rate = 0.95;
-        utterance.lang = SPEECH_LANG[book.language] ?? 'en';
-        utterance.onend = () => say(i + 1);
-        utterance.onerror = (e) => { if (e.error !== 'interrupted' && e.error !== 'canceled') stopSpeech(); };
-        synth.speak(utterance);
-      };
-      say(0);
-    };
+    speechRun.current += 1;
+    narrationAudio.current?.pause();
+    clearNowPlaying();
+    setNarrationPaused(false);
+    speechChapter.current = chapterIdx;
     setIsSpeaking(true);
-    step(chapterIdx, paragraphIdx);
+    setListenMode('device');
+    device.start(chapterIdx, paragraphIdx);
   };
 
   /**
@@ -372,6 +392,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       if (run !== speechRun.current) return;
       const seg = segs[k];
       if (!seg) { stopSpeech(); return; }
+      setClock({ t: 0, d: seg.seconds, k });
       let src: string;
       try { src = await url(k)!; } catch { stopSpeech(); return; }
       if (run !== speechRun.current) return;
@@ -406,6 +427,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       const highlight = () => {
         if (run !== speechRun.current) return;
         const fraction = audio.duration ? audio.currentTime / audio.duration : 0;
+        setClock({ t: audio.currentTime || 0, d: audio.duration || seg.seconds, k });
         let acc = 0;
         for (let i = 0; i < paras.length; i += 1) {
           acc += lengths[i]! / total;
@@ -420,11 +442,15 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       // A pause from the lock screen, headphones or another app; the end of a part is not a pause.
       audio.onpause = () => { if (run !== speechRun.current || audio.ended) return; setNarrationPaused(true); setPlaying('paused', audio); };
       audio.src = src;
+      // The chosen speed (a new source resets it).
+      audio.defaultPlaybackRate = listenRef.current.rate;
+      audio.playbackRate = listenRef.current.rate;
       highlight();
       // A pause (lock screen, headphones) before the part starts aborts play(); only a real failure stops listening.
       await audio.play().catch((e: unknown) => { if (run === speechRun.current && (e as { name?: string })?.name !== 'AbortError') stopSpeech(); });
     };
     setIsSpeaking(true);
+    setListenMode('natural');
     void play(first);
   };
   useEffect(() => () => {
@@ -434,10 +460,12 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   }, []);
 
   const naturalHere = !!narration?.segments.some((s) => s.chapter >= currentChapterIndex);
+  /** The recorded narration is in the book's language; another language uses the device voice with translation. */
+  const listeningInBookLanguage = !listen.lang || listen.lang === bookLang;
+  const useNatural = naturalHere && listeningInBookLanguage;
   /** Cycle 9: the eBook is open in full but the audiobook is a paid add-on not bought yet. */
   const audioUpsell = !!narration && narration.access === 'preview' && (narration.audioPrice ?? 0) > 0 && !inPreview;
   /** Natural voice: pause and resume where it was, keeping the lock-screen controls. */
-  const naturalPlaying = isSpeaking && naturalHere && !!narrationAudio.current;
   const togglePause = () => {
     const audio = narrationAudio.current;
     if (!audio) return;
@@ -446,10 +474,89 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const toggleSpeech = () => {
     if (isSpeaking) { stopSpeech(); return; }
     // The natural voice where it may be heard (all of it, or the preview of an audiobook add-on); the device voice after.
-    if (naturalHere) { playNarrationFrom(currentChapterIndex); return; }
-    if (!synthRef.current) return;
-    speakFrom(currentChapterIndex, 0);
+    if (useNatural) { playNarrationFrom(currentChapterIndex); return; }
+    speakFrom(currentChapterIndex, currentParagraphIndex);
   };
+
+  // A new speed, voice or language applies at once.
+  useEffect(() => {
+    const audio = narrationAudio.current;
+    if (audio) { audio.defaultPlaybackRate = listen.rate; audio.playbackRate = listen.rate; }
+    if (listenMode === 'device') device.refresh();
+  }, [listen.rate, listen.voiceURI]);
+  useEffect(() => {
+    if (!isSpeaking) return;
+    if (listenMode === 'natural' && !listeningInBookLanguage) speakFrom(currentChapterIndex, currentParagraphIndex);
+    else if (listenMode === 'device' && listeningInBookLanguage && naturalHere) playNarrationFrom(currentChapterIndex);
+    else if (listenMode === 'device') device.refresh();
+  }, [listen.lang]);
+
+  /** The player's controls, for whichever voice is reading. */
+  const natural = listenMode === 'natural';
+  const segs = narration?.segments ?? [];
+  const playerToggle = () => {
+    if (natural) { togglePause(); return; }
+    if (device.state === 'paused') device.resume(); else device.pause();
+  };
+  const playerBack = () => {
+    const a = narrationAudio.current;
+    if (natural && a) { a.currentTime = Math.max(0, a.currentTime - 15); return; }
+    device.skip(-1);
+  };
+  const playerForward = () => {
+    const a = narrationAudio.current;
+    if (natural && a) { a.currentTime = Math.min((a.duration || 0) - 0.25, a.currentTime + 15); return; }
+    device.skip(1);
+  };
+  const listeningChapter = natural ? (segs[clock.k]?.chapter ?? currentChapterIndex) : device.where.c;
+  const playerChapter = (dir: 1 | -1) => {
+    const to = listeningChapter + dir;
+    if (to < 0 || to >= chapters.length) return;
+    if (natural) {
+      if (segs.some((s) => s.chapter >= to)) playNarrationFrom(to); else speakFrom(to, 0);
+      return;
+    }
+    speechChapter.current = to;
+    device.goTo(to, 0);
+  };
+  const previewVoice = (v: SpeechSynthesisVoice) => {
+    if (natural) narrationAudio.current?.pause(); else if (device.state === 'playing' || device.state === 'loading') device.pause();
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(sampleLine(baseLang(v.lang)));
+    u.voice = v;
+    u.lang = v.lang;
+    u.rate = listen.rate;
+    synth.speak(u);
+  };
+  const playerStatus: PlayerStatus = natural
+    ? (narrationPaused ? 'paused' : clock.t === 0 && !narrationAudio.current?.currentTime && narrationAudio.current?.paused ? 'loading' : 'playing')
+    : device.state === 'loading' ? 'loading' : device.state === 'paused' ? 'paused' : 'playing';
+  const devicePlace = (() => {
+    const content = chapters[device.where.c]?.content ?? [];
+    const left = content.slice(device.where.p).reduce((n, para) => n + String(para).trim().split(/\s+/).filter(Boolean).length, 0);
+    return {
+      progress: content.length > 1 ? device.where.p / (content.length - 1) : 0,
+      elapsed: `Paragraph ${device.where.p + 1} of ${Math.max(1, content.length)}`,
+      remaining: `${Math.max(1, Math.round(left / (WORDS_PER_MINUTE * listen.rate)))} min left`,
+    };
+  })();
+  const naturalPlace = (() => {
+    const before = segs.slice(0, clock.k).reduce((a, s) => a + s.seconds, 0);
+    const total = narration?.seconds || segs.reduce((a, s) => a + s.seconds, 0);
+    return {
+      progress: clock.d ? Math.min(1, clock.t / clock.d) : 0,
+      elapsed: `${formatClock(clock.t)} · part ${clock.k + 1} of ${segs.length}`,
+      remaining: `${formatClock(Math.max(0, total - before - clock.t) / listen.rate)} left`,
+    };
+  })();
+  const playerSeek = (f: number) => {
+    const a = narrationAudio.current;
+    if (natural && a && a.duration) { a.currentTime = f * a.duration; return; }
+    const len = chapters[device.where.c]?.content.length ?? 1;
+    device.goTo(device.where.c, Math.round(f * Math.max(0, len - 1)));
+  };
+  const deviceVoice = pickVoice(device.voices, listen.lang || bookLang, listen.voiceURI);
 
   // Run AI Copilot
   const runAICopilot = async (type: 'explain' | 'themes' | 'historical_context' | 'character_dynamics', passageText?: string) => {
@@ -649,47 +756,12 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     } catch (err) {
       setVoiceDialogueMessages((prev) => [
         ...prev,
-        { speaker: 'assistant', text: `In "${book.title}", ${book.author} weaves intricate layers of wisdom. That particular passage highlights the intersection between personal awakening and collective destiny.` }
+        { speaker: 'assistant', text: 'The voice companion could not answer just now. Please try again in a moment.' }
       ]);
     } finally {
       setVoiceLoading(false);
     }
   };
-
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Typing a note, a search or a question must not turn the page.
-      const t = e.target as HTMLElement | null;
-      const typing = !!t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName));
-      if (typing && e.key !== 'Escape') return;
-      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
-        nextPage();
-      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
-        prevPage();
-      } else if (e.key === 'Escape') {
-        if (selectionBar) setSelectionBar(null);
-        else if (showCommunity) setShowCommunity(false);
-        else if (showAssistant) setShowAssistant(false);
-        else if (showNotebook) setShowNotebook(false);
-        else if (showSettings) setShowSettings(false);
-        else if (showToc) setShowToc(false);
-        else if (showAICopilot) setShowAICopilot(false);
-        else onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentChapterIndex, chapters.length, showSettings, showToc, showAICopilot, showNotebook, showAssistant, selectionBar, showCommunity]);
-
-  // Turning the page yourself stops the voice; listening turns pages on its own.
-  useEffect(() => {
-    if (isSpeaking && speechChapter.current !== null && currentChapterIndex !== speechChapter.current) stopSpeech();
-  }, [currentChapterIndex]);
-  useEffect(() => {
-    if (spokenParagraph === null) return;
-    document.querySelector(`[data-para="${spokenParagraph}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [spokenParagraph, currentChapterIndex]);
 
   const nextPage = () => {
     if (currentChapterIndex < chapters.length - 1) {
@@ -718,6 +790,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
         return 'bg-[#e8f4ec] text-[#1e3a29] border-[#c8e2d0]';
       case 'black':
         return 'bg-[#000000] text-[#e5e7eb] border-[#222222]';
+      case 'custom':
+        return 'border-black/10';
       default:
         return 'bg-[#fbf0d9] text-[#3e2723]';
     }
@@ -760,45 +834,172 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     return highlights.find((h) => h.chapter_index === currentChapterIndex && h.paragraph_index === pIndex);
   };
 
+  // Pages, preferences and chrome (owner request 2026-11-17: "look like the best eBook reader").
+  const [layout, setLayoutState] = useState<ReaderLayout>(readLayout);
+  const setLayout = (l: ReaderLayout) => { setLayoutState(l); saveLayout(l); };
+  const paged = layout.mode === 'page';
+  const [portal, setPortal] = useState<HTMLDivElement | null>(null);
+  const containerRef = useCallback((el: HTMLDivElement | null) => {
+    (readerContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+    setPortal(el);
+  }, []);
+  const pg = usePagedLayout(paged, layout.spread, currentChapterIndex, [
+    chapters, settings.fontSize, settings.lineHeight, settings.fontFamily, settings.marginWidth, layout.align, inPreview, fullError, isSpeaking,
+  ]);
+  const [chromeHidden, setChromeHidden] = useState(false);
+  const chromeOff = paged && chromeHidden;
+  const darkChrome = settings.theme === 'night' || settings.theme === 'black' || (settings.theme === 'custom' && isDarkColour(layout.customBg));
+
+  /** Turn a page (or, scrolling, a chapter); past the last page the next chapter opens, before the first the previous one at its end. */
+  const turn = (dir: 1 | -1) => {
+    if (!paged) { if (dir > 0) nextPage(); else prevPage(); return; }
+    if (dir > 0) {
+      if (pg.page < pg.pages - 1) pg.setPage(pg.page + 1);
+      else if (currentChapterIndex < chapters.length - 1) { setCurrentChapterIndex(currentChapterIndex + 1); setCurrentParagraphIndex(0); }
+    } else if (pg.page > 0) pg.setPage(pg.page - 1);
+    else if (currentChapterIndex > 0) { pg.openAtEnd(); setCurrentChapterIndex(currentChapterIndex - 1); setCurrentParagraphIndex(0); }
+  };
+  const canTurnBack = paged ? pg.page > 0 || currentChapterIndex > 0 : currentChapterIndex > 0;
+  const canTurnForward = paged ? pg.page < pg.pages - 1 || currentChapterIndex < chapters.length - 1 : currentChapterIndex < chapters.length - 1;
+
+  // Swipe to turn; tap the left or right side to turn, the middle to hide the toolbars.
+  const gesture = useRef<{ x: number; y: number; t: number; type: string } | null>(null);
+  const onPagePointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    gesture.current = { x: e.clientX, y: e.clientY, t: Date.now(), type: e.pointerType };
+  };
+  const onPagePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    const g = gesture.current;
+    gesture.current = null;
+    if (!g) return;
+    const dx = e.clientX - g.x;
+    const dy = e.clientY - g.y;
+    if (g.type !== 'mouse' && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) { turn(dx < 0 ? 1 : -1); return; }
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8 || Date.now() - g.t > 500 || activeHighlightMode) return;
+    if ((e.target as HTMLElement).closest('button, a, input, select, textarea, figure, [role="button"]')) return;
+    if (window.getSelection()?.toString()) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const fx = (e.clientX - r.left) / r.width;
+    if (fx < 0.28) turn(-1);
+    else if (fx > 0.72) turn(1);
+    else if (layout.tapToHide) setChromeHidden((h) => !h);
+  };
+
+  // The reading place follows the page shown (unless the voice is leading).
+  useEffect(() => {
+    if (!paged || isSpeaking) return;
+    const id = requestAnimationFrame(() => { const p = pg.firstParagraph(); if (p !== null) setCurrentParagraphIndex(p); });
+    return () => cancelAnimationFrame(id);
+  }, [paged, pg.page, pg.pages, currentChapterIndex]);
+  // Open at the saved place.
+  const openedAt = useRef(false);
+  useEffect(() => {
+    if (openedAt.current || !paged) return;
+    openedAt.current = true;
+    if (initialParagraphIndex > 0) pg.openAt(initialParagraphIndex);
+  }, [paged]);
+
+  /** Any place in the book by percentage. */
+  const goToPercent = (pct: number) => {
+    let target = Math.round((pct / 100) * Math.max(0, totalParas - 1));
+    for (let c = 0; c < chapters.length; c += 1) {
+      const n = chapters[c]!.content.length;
+      if (target < n || c === chapters.length - 1) { jumpTo(c, Math.min(Math.max(0, n - 1), target)); return; }
+      target -= n;
+    }
+  };
+
+  const toggleCopilot = () => {
+    setShowAICopilot(!showAICopilot);
+    if (!showAICopilot && !copilotResponse) runAICopilot('explain', currentChapter.content[0]);
+  };
+  const toggleCommunity = () => { setShowCommunity(!showCommunity); setShowNotebook(false); setShowAssistant(false); setShowAICopilot(false); };
+  const toggleNotebook = () => { setShowNotebook(!showNotebook); setShowAICopilot(false); setShowAssistant(false); setShowCommunity(false); };
+
+  // Keyboard: arrows and space turn pages; Escape closes the top panel, then the reader.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Typing a note, a search or a question, moving a slider or using a menu must not turn the page.
+      const t = e.target as HTMLElement | null;
+      const typing = !!t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName));
+      if (typing && e.key !== 'Escape') return;
+      // A window or menu of the reader (preferences, contents, voice, speed) handles its own keys.
+      if (e.defaultPrevented) return;
+      const layer = readerContainerRef.current?.querySelector('[role="dialog"][data-state="open"], [role="menu"][data-state="open"], [data-radix-popper-content-wrapper]');
+      if (layer) return;
+      if (t?.closest('[role="slider"], [role="tablist"], [role="radiogroup"]') && e.key !== 'Escape') return;
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || (e.key === ' ' && !(t instanceof HTMLButtonElement))) {
+        e.preventDefault();
+        turn(1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        turn(-1);
+      } else if (e.key === 'Escape') {
+        if (selectionBar) setSelectionBar(null);
+        else if (showCommunity) setShowCommunity(false);
+        else if (showAssistant) setShowAssistant(false);
+        else if (showNotebook) setShowNotebook(false);
+        else if (showAICopilot) setShowAICopilot(false);
+        else if (chromeHidden) setChromeHidden(false);
+        else onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
+
+  // Turning the chapter yourself stops the voice; listening turns pages on its own.
+  useEffect(() => {
+    if (isSpeaking && speechChapter.current !== null && currentChapterIndex !== speechChapter.current) stopSpeech();
+  }, [currentChapterIndex]);
+  // The page (or the scroll) follows the paragraph being read.
+  useEffect(() => {
+    if (spokenParagraph === null) return;
+    if (paged) { requestAnimationFrame(() => pg.goToParagraph(spokenParagraph)); return; }
+    document.querySelector(`[data-para="${spokenParagraph}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [spokenParagraph, currentChapterIndex]);
+
+  pagedJump.current = paged ? (p: number) => { pg.openAt(p); requestAnimationFrame(() => requestAnimationFrame(() => pg.goToParagraph(p))); } : null;
+
   return (
-    <div 
-      ref={readerContainerRef}
+    <div
+      ref={containerRef}
       role="dialog"
       aria-modal="true"
       aria-label={`Reader: ${book.title}`}
       className={`fixed inset-0 z-50 flex flex-col transition-colors duration-200 select-text ${getThemeClasses(settings.theme)}`}
+      style={settings.theme === 'custom' ? { backgroundColor: layout.customBg, color: layout.customText } : undefined}
     >
       {/* Top eReader Control Header */}
-      <header className={`flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-2 py-2 border-b transition-colors sm:flex-nowrap sm:px-6 sm:py-3 ${
-        settings.theme === 'night' || settings.theme === 'black'
+      <header className={`flex items-center justify-between gap-1 px-1.5 py-1.5 border-b transition-[opacity,colors] duration-200 sm:gap-2 sm:px-6 sm:py-3 ${
+        darkChrome
           ? 'bg-black/70 border-white/10 text-slate-200'
           : 'bg-white/80 border-slate-200 text-slate-800'
-      } backdrop-blur-md`}>
-        
+      } backdrop-blur-md ${chromeOff ? 'pointer-events-none opacity-0' : ''}`}>
+
         {/* Left: Close & Table of Contents */}
-        <div className="flex min-w-0 items-center gap-1 sm:gap-3">
+        <div className="flex min-w-0 items-center gap-0.5 sm:gap-3">
           <button
             onClick={onClose}
             aria-label="Exit reader"
-            className="grid min-h-12 min-w-12 shrink-0 place-items-center rounded-lg hover:bg-black/10 transition-colors cursor-pointer"
+            className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-lg hover:bg-black/10 transition-colors cursor-pointer sm:min-h-12 sm:min-w-12"
             title="Exit Reader"
           >
             <X className="w-5 h-5" />
           </button>
 
           <button
-            onClick={() => setShowToc(!showToc)}
+            onClick={() => setShowToc(true)}
             aria-label="Open table of contents"
-            className="flex min-h-12 min-w-12 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors hover:bg-black/10 cursor-pointer"
+            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition-colors hover:bg-black/10 cursor-pointer sm:min-h-12 sm:min-w-12 sm:px-2.5"
             title="Table of Contents"
           >
             <List className="w-4 h-4" />
             <span className="hidden sm:inline">Contents</span>
           </button>
 
-          <div className="hidden md:flex flex-col">
+          <div className="hidden md:flex flex-col min-w-0">
             <span className="text-xs font-bold truncate max-w-xs">{book.title}</span>
-            <span className="text-[11px] opacity-75">{book.author} · BooksAtlas</span>
+            <span className="text-[11px] opacity-75 truncate max-w-xs">{book.author} · BooksAtlas</span>
           </div>
         </div>
 
@@ -813,32 +1014,27 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
         </div>
 
         {/* Right: Tools & Settings */}
-        <div className="ml-auto flex basis-full items-center justify-end gap-1 overflow-x-auto sm:ml-0 sm:basis-auto sm:gap-2 sm:overflow-visible">
+        <div className="flex shrink-0 items-center justify-end gap-0.5 sm:gap-2">
           {/* Gemini AI Co-Pilot Button */}
           <button
-            onClick={() => {
-              setShowAICopilot(!showAICopilot);
-              if (!showAICopilot && !copilotResponse) {
-                runAICopilot('explain', currentChapter.content[0]);
-              }
-            }}
+            onClick={toggleCopilot}
             aria-label={showAICopilot ? 'Close AI reading assistant' : 'Open AI reading assistant'}
-            className={`flex min-h-12 min-w-12 items-center justify-center gap-1 rounded-lg px-2.5 text-xs font-bold transition-all cursor-pointer ${
-              showAICopilot 
-                ? 'bg-indigo-600 text-white shadow-xs' 
+            className={`hidden min-h-12 min-w-12 items-center justify-center gap-1 rounded-lg px-2.5 text-xs font-bold transition-all cursor-pointer sm:flex ${
+              showAICopilot
+                ? 'bg-indigo-600 text-white shadow-xs'
                 : 'bg-indigo-50 text-indigo-900 border border-indigo-200 hover:bg-indigo-100'
             }`}
             title="Gemini AI Reader Co-Pilot (Literary Analysis)"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-            <span className="hidden sm:inline">AI Co-Pilot</span>
+            <span className="hidden lg:inline">AI Co-Pilot</span>
           </button>
 
           {/* Highlight Marker Mode */}
           <button
             onClick={() => setActiveHighlightMode(!activeHighlightMode)}
             aria-label={activeHighlightMode ? 'Turn off highlight mode' : 'Turn on highlight mode'}
-            className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${
+            className={`hidden min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer sm:grid ${
               activeHighlightMode ? 'bg-amber-400 text-slate-950 font-bold shadow-xs' : 'hover:bg-black/10'
             }`}
             title="Highlight Mode (Click paragraph to highlight)"
@@ -850,7 +1046,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           <button
             onClick={toggleBookmark}
             aria-label={bookmarked ? 'Remove page bookmark' : 'Bookmark this page'}
-            className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${
+            className={`hidden min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer sm:grid ${
               bookmarked ? 'text-indigo-600' : 'hover:bg-black/10 opacity-75'
             }`}
             title={bookmarked ? 'Bookmark Saved' : 'Bookmark this page'}
@@ -863,7 +1059,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             onClick={() => (showAssistant ? setShowAssistant(false) : openAssistant('ask'))}
             aria-label={showAssistant ? 'Close reading assistant' : 'Open reading assistant: ask the book, study, translate and define'}
             aria-expanded={showAssistant}
-            className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${showAssistant ? 'bg-indigo-600 text-white' : 'hover:bg-black/10 opacity-75'}`}
+            className={`hidden min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer sm:grid ${showAssistant ? 'bg-indigo-600 text-white' : 'hover:bg-black/10 opacity-75'}`}
             title="Ask the book and study"
           >
             <GraduationCap className="w-4 h-4" />
@@ -872,10 +1068,10 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           {/* Readers: shared notes, popular passages and reading groups */}
           {book.hasReaderContent && (
             <button
-              onClick={() => { setShowCommunity(!showCommunity); setShowNotebook(false); setShowAssistant(false); setShowAICopilot(false); }}
+              onClick={toggleCommunity}
               aria-label={showCommunity ? 'Close readers panel' : 'Open readers panel: shared notes, popular highlights and reading groups'}
               aria-expanded={showCommunity}
-              className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${showCommunity ? 'bg-indigo-600 text-white' : 'hover:bg-black/10 opacity-75'}`}
+              className={`hidden min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer sm:grid ${showCommunity ? 'bg-indigo-600 text-white' : 'hover:bg-black/10 opacity-75'}`}
               title="Readers and reading groups"
             >
               <Users className="w-4 h-4" />
@@ -884,38 +1080,65 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
           {/* Notebook: highlights, bookmarks, notes, search, export and reading stats */}
           <button
-            onClick={() => { setShowNotebook(!showNotebook); setShowAICopilot(false); setShowAssistant(false); setShowCommunity(false); }}
+            onClick={toggleNotebook}
             aria-label={showNotebook ? 'Close notebook' : 'Open notebook: highlights, bookmarks, notes and reading stats'}
             aria-expanded={showNotebook}
-            className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${showNotebook ? 'bg-indigo-600 text-white' : 'hover:bg-black/10 opacity-75'}`}
+            className={`hidden min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer sm:grid ${showNotebook ? 'bg-indigo-600 text-white' : 'hover:bg-black/10 opacity-75'}`}
             title="Notebook"
           >
             <NotebookPen className="w-4 h-4" />
           </button>
 
-          {/* Text to Speech toggle */}
+          {/* Listen: opens the pop-up player */}
           <button
             onClick={toggleSpeech}
-            className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${
-              isSpeaking ? 'text-indigo-600 animate-pulse bg-indigo-50' : 'hover:bg-black/10 opacity-75'
+            className={`grid min-h-11 min-w-11 place-items-center rounded-lg transition-colors cursor-pointer sm:min-h-12 sm:min-w-12 ${
+              isSpeaking ? 'text-indigo-600 bg-indigo-50' : 'hover:bg-black/10 opacity-75'
             }`}
-            title={isSpeaking ? 'Stop device read-aloud' : 'Read chapter with device voice'}
-            aria-label={isSpeaking ? 'Stop device read-aloud' : 'Read chapter with device voice'}
+            title={isSpeaking ? 'Stop reading aloud' : 'Read aloud (opens the player)'}
+            aria-label={isSpeaking ? 'Stop reading aloud' : 'Read aloud'}
           >
-            {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Headphones className="w-4 h-4" />}
           </button>
 
           {/* Display Settings Toggle */}
           <button
-            onClick={() => setShowSettings(!showSettings)}
+            onClick={() => setShowSettings(true)}
             aria-label="Font & Theme Settings"
-            className={`grid min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer ${
+            className={`grid min-h-11 min-w-11 place-items-center rounded-lg transition-colors cursor-pointer sm:min-h-12 sm:min-w-12 ${
               showSettings ? 'bg-black/15' : 'hover:bg-black/10'
             }`}
             title="Font & Theme Settings"
           >
-            <Sliders className="w-4 h-4" />
+            <Type className="w-4 h-4" />
           </button>
+
+          {/* Phones: the other tools in a menu */}
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+              <button type="button" aria-label="More reading tools" className="grid min-h-11 min-w-11 place-items-center rounded-lg hover:bg-black/10 transition-colors cursor-pointer sm:hidden">
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal container={portal ?? undefined}>
+              <DropdownMenu.Content align="end" sideOffset={6} collisionPadding={8}
+                className="z-[80] min-w-56 rounded-2xl bg-white p-1.5 text-slate-800 shadow-2xl ring-1 ring-slate-900/10 data-[state=open]:animate-fade-in">
+                {[
+                  { label: bookmarked ? 'Remove bookmark' : 'Bookmark this page', icon: Bookmark, on: toggleBookmark, show: true },
+                  { label: activeHighlightMode ? 'Stop highlighting' : 'Highlight paragraphs', icon: Highlighter, on: () => setActiveHighlightMode(!activeHighlightMode), show: true },
+                  { label: 'AI Co-Pilot', icon: Sparkles, on: toggleCopilot, show: true },
+                  { label: 'Ask the book, study, translate', icon: GraduationCap, on: () => openAssistant('ask'), show: true },
+                  { label: 'Readers and reading groups', icon: Users, on: toggleCommunity, show: !!book.hasReaderContent },
+                  { label: 'Notebook', icon: NotebookPen, on: toggleNotebook, show: true },
+                ].filter((i) => i.show).map((i) => (
+                  <DropdownMenu.Item key={i.label} onSelect={i.on}
+                    className="flex min-h-11 cursor-pointer select-none items-center gap-3 rounded-xl px-3 text-sm font-medium outline-none data-[highlighted]:bg-indigo-50 data-[highlighted]:text-indigo-900">
+                    <i.icon className="h-4 w-4 text-indigo-600" aria-hidden />{i.label}
+                  </DropdownMenu.Item>
+                ))}
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
 
           {/* Fullscreen toggle */}
           <button
@@ -929,7 +1152,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
               }
             }}
             aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-            className="p-1.5 rounded-lg hover:bg-black/10 transition-colors hidden sm:block cursor-pointer opacity-75"
+            className="hidden min-h-12 min-w-12 place-items-center rounded-lg hover:bg-black/10 transition-colors sm:grid cursor-pointer opacity-75"
             title="Toggle Fullscreen"
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -938,23 +1161,38 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       </header>
 
       {/* Main Reading Canvas & Lateral Arrows */}
-      <div className="flex-1 relative overflow-y-auto flex items-stretch">
-        
+      <div
+        className={`relative flex flex-1 items-stretch ${paged ? 'overflow-hidden' : 'overflow-y-auto'}`}
+        style={layout.brightness < 100 ? { filter: `brightness(${layout.brightness / 100})` } : undefined}
+      >
+
         {/* Left Page Turn Button / Margin Click */}
         <button
-          onClick={prevPage}
-          disabled={currentChapterIndex === 0}
-          className={`w-12 sm:w-16 flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity cursor-pointer disabled:opacity-0 disabled:pointer-events-none z-10`}
-          aria-label="Previous Chapter"
+          onClick={() => turn(-1)}
+          disabled={!canTurnBack}
+          className={`w-12 sm:w-16 items-center justify-center opacity-30 hover:opacity-100 transition-opacity cursor-pointer disabled:opacity-0 disabled:pointer-events-none z-10 ${paged ? 'hidden sm:flex' : 'flex'}`}
+          aria-label={paged ? 'Previous page' : 'Previous Chapter'}
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
 
-        {/* Center: Scrollable/Paginated Text Body */}
-        <div className={`flex-1 py-8 sm:py-12 mx-auto ${getMarginClass(settings.marginWidth)}`}>
-          
+        {/* Center: the page (or the scrolling chapter) */}
+        <div className={`mx-auto min-w-0 flex-1 ${paged ? 'h-full py-5 sm:py-8' : 'py-8 sm:py-12'} ${getMarginClass(settings.marginWidth)} ${paged && layout.spread ? 'lg:max-w-6xl lg:px-10' : ''}`}>
+          <div
+            ref={paged ? pg.wrapRef : undefined}
+            className={paged ? 'h-full w-full [touch-action:pinch-zoom]' : undefined}
+            onPointerDown={paged ? onPagePointerDown : undefined}
+            onPointerUp={paged ? onPagePointerUp : undefined}
+          >
+          <div
+            ref={paged ? pg.flowRef : undefined}
+            lang={bookLang}
+            className={paged ? 'overflow-hidden [&_figure]:break-inside-avoid [&_h2]:break-after-avoid [&_h3]:break-after-avoid [&_img]:max-h-[var(--page-h)] [&_img]:w-auto' : undefined}
+            style={paged ? { width: pg.size.w || undefined, height: pg.size.h || undefined, columnCount: pg.cols, columnGap: pg.gap, columnFill: 'auto', ['--page-h' as string]: `${Math.max(120, pg.size.h - 48)}px` } : undefined}
+          >
+
           {/* Chapter Header */}
-          <div className="text-center mb-8 pb-6 border-b border-current/15">
+          <div className="text-center mb-8 pb-6 border-b border-current/15 break-inside-avoid">
             <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight mb-2 ${getFontFamilyClass(settings.fontFamily)}`}>
               {currentChapter.title}
             </h2>
@@ -963,25 +1201,19 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                 {currentChapter.subtitle}
               </p>
             )}
-            {(book.hasReaderContent || isSpeaking) && (
+            {(book.hasReaderContent || isSpeaking || device.supported) && (
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
                 {inPreview && <span className="px-2.5 py-1 rounded-full border border-current/20 opacity-80">Free preview for everyone</span>}
-                {naturalPlaying ? (
-                  <>
-                    <button onClick={togglePause} aria-pressed={!narrationPaused} className="px-3 py-1 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors">
-                      {narrationPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
-                      {narrationPaused ? 'Resume listening' : 'Pause'}
-                      <span className="text-[10px] font-normal opacity-80">· {narration!.voice}, natural voice{audioUpsell ? ' (preview)' : ''}</span>
-                    </button>
-                    <button onClick={stopSpeech} aria-label="Stop listening" className="px-2.5 py-1 rounded-full border border-current/25 font-semibold inline-flex items-center gap-1 cursor-pointer hover:bg-current/5">
-                      <VolumeX className="w-3.5 h-3.5" />Stop
-                    </button>
-                  </>
+                {isSpeaking ? (
+                  <span className="px-3 py-1 rounded-full bg-indigo-600/10 text-current font-semibold inline-flex items-center gap-1.5">
+                    <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-500 opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-600" /></span>
+                    {natural ? `Listening · ${narration?.voice}, natural voice` : `Listening · ${voiceName(deviceVoice)}`}
+                  </span>
                 ) : (
-                  <button onClick={toggleSpeech} aria-pressed={isSpeaking} className="px-3 py-1 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors">
-                    {isSpeaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                    {isSpeaking ? 'Stop listening' : inPreview ? 'Listen to the preview' : 'Listen to the book'}
-                    <span className="text-[10px] font-normal opacity-80">{narration && naturalHere ? `· ${narration.voice}, natural voice${audioUpsell ? ' (preview)' : ''}` : '· device voice (free)'}</span>
+                  <button onClick={toggleSpeech} aria-pressed={false} className="px-3 py-1 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors">
+                    <Volume2 className="w-3.5 h-3.5" />
+                    {inPreview ? 'Listen to the preview' : 'Listen to the book'}
+                    <span className="text-[10px] font-normal opacity-80">{narration && useNatural ? `· ${narration.voice}, natural voice${audioUpsell ? ' (preview)' : ''}` : listeningInBookLanguage ? '· device voice (free)' : `· in ${LISTEN_LANGUAGES[listen.lang] ?? listen.lang}`}</span>
                   </button>
                 )}
                 {audioUpsell && (
@@ -1003,7 +1235,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             onMouseUp={() => setTimeout(onTextSelected, 0)}
             onTouchEnd={() => setTimeout(onTextSelected, 250)}
             onKeyUp={(e) => { if (e.shiftKey) onTextSelected(); }}
-            className={`space-y-6 ${getFontFamilyClass(settings.fontFamily)}`}
+            className={`space-y-6 [orphans:2] [widows:2] ${getFontFamilyClass(settings.fontFamily)} ${layout.align === 'justify' ? 'text-justify hyphens-auto' : ''}`}
             style={{
               fontSize: `${settings.fontSize}px`,
               lineHeight: settings.lineHeight,
@@ -1070,7 +1302,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           </div>
 
           {inPreview && currentChapterIndex === chapters.length - 1 && (book.price === 0 ? !account && (
-            <div className="mt-14 p-6 rounded-2xl border border-current/20 bg-current/5 text-center space-y-3">
+            <div className="mt-14 p-6 rounded-2xl break-inside-avoid border border-current/20 bg-current/5 text-center space-y-3">
               <h4 className="font-bold text-base">Read the whole of {book.title} free</h4>
               <p className="text-xs sm:text-sm opacity-80 max-w-md mx-auto">Sign in with a free BooksAtlas account to continue past this preview.</p>
               <button onClick={() => requireSignIn('reading the full book')} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-colors cursor-pointer">
@@ -1078,7 +1310,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
               </button>
             </div>
           ) : (
-            <div className="mt-14 p-6 rounded-2xl border border-current/20 bg-current/5 text-center space-y-3">
+            <div className="mt-14 p-6 rounded-2xl break-inside-avoid border border-current/20 bg-current/5 text-center space-y-3">
               <h4 className="font-bold text-base">You have reached the end of the free preview</h4>
               <p className="text-xs sm:text-sm opacity-80 max-w-md mx-auto">Buy {book.title} to read and listen to the whole book.</p>
               <button onClick={() => { onAddToCart(book); onClose(); }} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm rounded-xl inline-flex items-center gap-2 shadow-md transition-colors cursor-pointer">
@@ -1090,10 +1322,10 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
           {/* End of Preview Banner */}
           {!book.hasReaderContent && (
-          <div className="mt-14 p-6 rounded-2xl border border-current/20 bg-current/5 text-center space-y-3">
+          <div className="mt-14 p-6 rounded-2xl break-inside-avoid border border-current/20 bg-current/5 text-center space-y-3">
             <h4 className="font-bold text-base">Enjoying this excerpt of {book.title}?</h4>
             <p className="text-xs sm:text-sm opacity-80 max-w-md mx-auto">
-              Get instant full access to all {book.pageCount} pages, offline downloads, and automatic reading progress syncing across your BooksAtlas eReaders and mobile apps.
+              Buy the book to read all {book.pageCount} pages in the BooksAtlas reader on any device, with your place, highlights and notes kept in sync when you sign in.
             </p>
             <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
               <button
@@ -1115,29 +1347,37 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             </div>
           </div>
           )}
+          </div>
+          </div>
         </div>
 
         {/* Right Page Turn Button / Margin Click */}
         <button
-          onClick={nextPage}
-          disabled={currentChapterIndex === chapters.length - 1}
-          className={`w-12 sm:w-16 flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity cursor-pointer disabled:opacity-0 disabled:pointer-events-none z-10`}
-          aria-label="Next Chapter"
+          onClick={() => turn(1)}
+          disabled={!canTurnForward}
+          className={`w-12 sm:w-16 items-center justify-center opacity-30 hover:opacity-100 transition-opacity cursor-pointer disabled:opacity-0 disabled:pointer-events-none z-10 ${paged ? 'hidden sm:flex' : 'flex'}`}
+          aria-label={paged ? 'Next page' : 'Next Chapter'}
         >
           <ChevronRight className="w-6 h-6" />
         </button>
       </div>
 
       {/* Bottom eReader Navigation & Scrubber Footer */}
-      <footer className={`px-3 sm:px-6 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] border-t flex items-center justify-between gap-3 text-xs transition-colors ${
-        settings.theme === 'night' || settings.theme === 'black'
+      <footer className={`px-3 sm:px-6 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] border-t flex items-center justify-between gap-3 text-xs transition-[opacity,colors] duration-200 ${
+        darkChrome
           ? 'bg-black/70 border-white/10 text-slate-300'
           : 'bg-white/80 border-slate-200 text-slate-700'
-      } backdrop-blur-md`}>
-        <div className="flex shrink-0 items-center gap-1.5" title="Time left in this chapter">
-          <Clock className="w-3.5 h-3.5 opacity-70" aria-hidden />
-          <span className="font-medium tabular-nums">{minutesLeft} min<span className="hidden sm:inline"> left in chapter</span></span>
-        </div>
+      } backdrop-blur-md ${chromeOff ? 'pointer-events-none opacity-0' : ''}`}>
+        <GoToPopover container={portal} page={pg.page} pages={paged ? pg.pages : null} onPage={(n) => pg.setPage(n)} percent={progressPercent} onPercent={goToPercent}>
+          <button type="button" aria-label={paged ? `Page ${pg.page + 1} of ${pg.pages} in this chapter. Go to a page` : 'Go to a place in the book'}
+            className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg px-2 font-semibold tabular-nums hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
+            {paged ? (
+              <><BookOpen className="w-3.5 h-3.5 opacity-70" aria-hidden />{pg.page + 1}<span className="opacity-80">/ {pg.pages}</span></>
+            ) : (
+              <><Clock className="w-3.5 h-3.5 opacity-70" aria-hidden />{minutesLeft} min<span className="hidden sm:inline font-medium"> left in chapter</span></>
+            )}
+          </button>
+        </GoToPopover>
 
         {/* Reading Progress Slider */}
         <div className="flex min-w-0 flex-1 max-w-md items-center gap-3">
@@ -1145,76 +1385,29 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             min={0} max={Math.max(0, chapters.length - 1)} step={1} value={[currentChapterIndex]}
             disabled={chapters.length < 2}
             onValueChange={([v]) => { setCurrentChapterIndex(v ?? 0); setCurrentParagraphIndex(0); }}
-            aria-label="Go to chapter"
             className="relative flex h-6 min-w-0 flex-1 touch-none select-none items-center data-[disabled]:opacity-50"
           >
             <SliderPrimitive.Track className="relative h-1.5 grow overflow-hidden rounded-full bg-current/20">
               <SliderPrimitive.Range className="absolute h-full rounded-full bg-indigo-600" />
             </SliderPrimitive.Track>
-            <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full bg-white shadow ring-2 ring-indigo-600 transition-transform focus-visible:scale-125 focus-visible:outline-none cursor-grab active:cursor-grabbing" />
+            <SliderPrimitive.Thumb aria-label="Go to chapter" className="block h-4 w-4 rounded-full bg-white shadow ring-2 ring-indigo-600 transition-transform focus-visible:scale-125 focus-visible:outline-none cursor-grab active:cursor-grabbing" />
           </SliderPrimitive.Root>
           <span className="shrink-0 font-bold tabular-nums">{progressPercent}%</span>
         </div>
 
         <div className="shrink-0 text-right tabular-nums">
-          <span className="sm:hidden">{currentChapterIndex + 1}/{chapters.length}</span>
+          <span className="sm:hidden">Ch. {currentChapterIndex + 1}/{chapters.length}</span>
           <span className="hidden sm:inline">Chapter {currentChapterIndex + 1} of {chapters.length}</span>
         </div>
       </footer>
 
-      {/* Table of Contents Drawer */}
-      {showToc && (
-        <div className="absolute inset-y-0 left-0 z-50 w-full max-w-80 overflow-y-auto bg-slate-950 p-4 text-white shadow-2xl animate-in slide-in-from-left duration-200">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-            <h3 className="font-bold text-sm uppercase tracking-wider text-slate-300 flex items-center gap-2">
-              <List className="w-4 h-4" /> Table of Contents
-            </h3>
-            <button onClick={() => setShowToc(false)} aria-label="Close table of contents" className="grid min-h-12 min-w-12 place-items-center rounded-lg hover:text-slate-400">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="mt-4 space-y-1">
-            {chapters.map((ch, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  setCurrentChapterIndex(idx);
-                  setCurrentParagraphIndex(0);
-                  setShowToc(false);
-                }}
-                className={`min-h-12 w-full text-left p-3 rounded-xl text-xs sm:text-sm font-medium transition-colors cursor-pointer flex items-center justify-between ${
-                  currentChapterIndex === idx
-                    ? 'bg-indigo-600 text-white font-bold'
-                    : 'text-slate-300 hover:bg-slate-900 hover:text-white'
-                }`}
-              >
-                <div>
-                  <div>{ch.title}</div>
-                  {ch.subtitle && <div className="text-[11px] opacity-75 font-normal">{ch.subtitle}</div>}
-                </div>
-                {currentChapterIndex === idx && <Check className="w-4 h-4" />}
-              </button>
-            ))}
-          </div>
-
-          {highlights.length > 0 && (
-            <div className="mt-8 pt-4 border-t border-slate-800">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-3 flex items-center gap-1.5">
-                <Highlighter className="w-3.5 h-3.5" /> Saved Highlights ({highlights.length})
-              </h4>
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                {highlights.map((h) => (
-                  <button type="button" key={h.id} onClick={() => { jumpTo(h.chapter_index, h.paragraph_index); setShowToc(false); }} className="block w-full p-2.5 bg-slate-900/90 rounded-lg text-left text-xs space-y-1 border border-slate-800 hover:border-slate-600 cursor-pointer">
-                    <p className="line-clamp-2 italic text-slate-300">"{h.excerpt}"</p>
-                    <span className="text-[10px] text-slate-500">Ch. {h.chapter_index + 1} • {new Date(h.created_at).toLocaleDateString('en-GB')}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Table of Contents */}
+      <ReaderContents
+        open={showToc} onOpenChange={setShowToc} container={portal}
+        chapters={chapters} current={currentChapterIndex}
+        onChapter={(i) => { setCurrentChapterIndex(i); setCurrentParagraphIndex(0); }}
+        highlights={highlights} onHighlight={jumpTo} preview={inPreview}
+      />
 
       {activeHighlightMode && (
         <div role="group" aria-label="Highlight colour" className="absolute left-1/2 top-[4.5rem] z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-lg">
@@ -1667,115 +1860,52 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
         </div>
       )}
 
-      {/* Reader Settings Floating Popup */}
-      {showSettings && (
-        <div className="absolute top-16 right-2 sm:right-6 w-[calc(100vw-1rem)] max-w-80 bg-white text-slate-900 rounded-2xl shadow-2xl border border-slate-200 p-4 sm:p-5 z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-5">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-              <Type className="w-4 h-4 text-indigo-600" /> Reading Display
-            </h3>
-            <button onClick={() => setShowSettings(false)} aria-label="Close reading settings" className="grid min-h-12 min-w-12 place-items-center text-slate-400 hover:text-slate-700">
-              <X className="w-4 h-4" />
+      {/* Reading preferences: text, page and colours */}
+      <ReaderPreferences
+        open={showSettings} onOpenChange={setShowSettings} container={portal}
+        settings={settings} setSettings={setSettings} layout={layout} setLayout={setLayout}
+        onReset={() => { setSettings({ ...DEFAULT_READER_SETTINGS }); setLayout({ ...DEFAULT_LAYOUT }); }}
+        wide={pg.size.w >= 900}
+      />
+
+      {/* The pop-up listening player */}
+      {isSpeaking && listenMode && (
+        <ListenPlayer
+          container={portal}
+          mode={listenMode}
+          status={playerStatus}
+          bookTitle={book.title}
+          cover={book.coverImage}
+          chapterTitle={chapters[listeningChapter]?.title ?? currentChapter.title}
+          voiceLabel={natural ? `${narration?.voice ?? 'Narrator'}, natural voice` : `${voiceName(deviceVoice)}${listeningInBookLanguage ? '' : ` · ${LISTEN_LANGUAGES[listen.lang] ?? listen.lang}`}`}
+          progress={natural ? naturalPlace.progress : devicePlace.progress}
+          elapsed={natural ? naturalPlace.elapsed : devicePlace.elapsed}
+          remaining={natural ? naturalPlace.remaining : devicePlace.remaining}
+          onSeek={playerSeek}
+          caption={!natural && device.caption ? { text: device.caption.text, note: device.caption.via === 'ai' ? `Translated into ${LISTEN_LANGUAGES[listen.lang] ?? listen.lang} by BooksAtlas AI` : `Translated into ${LISTEN_LANGUAGES[listen.lang] ?? listen.lang} on your device` } : null}
+          error={natural ? '' : device.error}
+          prefs={listen}
+          onPrefs={setListen}
+          onToggle={playerToggle}
+          onStop={stopSpeech}
+          onBack={playerBack}
+          onForward={playerForward}
+          backLabel={natural ? 'Back 15 seconds' : 'Previous paragraph'}
+          forwardLabel={natural ? 'Forward 15 seconds' : 'Next paragraph'}
+          onPrevChapter={listeningChapter > 0 ? () => playerChapter(-1) : undefined}
+          onNextChapter={listeningChapter < chapters.length - 1 ? () => playerChapter(1) : undefined}
+          voices={device.voices}
+          bookLang={bookLang}
+          onPreview={previewVoice}
+          naturalVoice={narration?.voice ?? null}
+          footer={audioUpsell ? (
+            <button type="button" onClick={() => { onAddToCart(audioProductOf({ ...book, audioPrice: narration!.audioPrice })); onClose(); }}
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-indigo-50 py-2 text-xs font-bold text-indigo-800 ring-1 ring-inset ring-indigo-200 hover:bg-indigo-100 cursor-pointer">
+              <Headphones className="h-3.5 w-3.5" />Whole audiobook in a natural voice: €{narration!.audioPrice!.toFixed(2)}
             </button>
-          </div>
-
-          {/* Color Themes */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Theme</label>
-            <div className="grid grid-cols-5 gap-2">
-              {[
-                { id: 'day', name: 'Day', bg: 'bg-white', text: 'text-black', border: 'border-slate-300' },
-                { id: 'sepia', name: 'Sepia', bg: 'bg-[#fbf0d9]', text: 'text-[#3e2723]', border: 'border-[#e8d7b8]' },
-                { id: 'mint', name: 'Mint', bg: 'bg-[#e8f4ec]', text: 'text-[#1e3a29]', border: 'border-[#c8e2d0]' },
-                { id: 'night', name: 'Night', bg: 'bg-[#18191c]', text: 'text-slate-200', border: 'border-slate-700' },
-                { id: 'black', name: 'OLED', bg: 'bg-black', text: 'text-slate-300', border: 'border-slate-800' },
-              ].map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setSettings((s) => ({ ...s, theme: t.id as ReaderTheme }))}
-                  className={`min-h-12 rounded-lg flex flex-col items-center justify-center text-[10px] font-bold border transition-all cursor-pointer ${t.bg} ${t.text} ${t.border} ${
-                    settings.theme === t.id ? 'ring-2 ring-indigo-600 shadow-sm scale-105' : 'opacity-80 hover:opacity-100'
-                  }`}
-                >
-                  <span>{t.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Font Family */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Font</label>
-            <div className="grid grid-cols-3 gap-1.5 text-xs font-semibold">
-              {[
-                { id: 'literata', label: 'Literata Serif' },
-                { id: 'sans', label: 'Plus Sans' },
-                { id: 'mono', label: 'Dyslexic / Mono' },
-              ].map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setSettings((s) => ({ ...s, fontFamily: f.id as ReaderFont }))}
-                  className={`min-h-12 py-2 px-2 rounded-lg border transition-colors cursor-pointer text-center ${
-                    settings.fontFamily === f.id
-                      ? 'bg-slate-900 text-white border-slate-900 font-bold'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Font Size Slider */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
-              <span>Text Size</span>
-              <span className="text-slate-900 font-extrabold">{settings.fontSize}px</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-serif font-bold">A</span>
-              <input
-                type="range"
-                min={14}
-                max={26}
-                value={settings.fontSize}
-                onChange={(e) => setSettings((s) => ({ ...s, fontSize: Number(e.target.value) }))}
-                className="w-full accent-indigo-600"
-              />
-              <span className="text-xl font-serif font-bold">A</span>
-            </div>
-          </div>
-
-          {/* Margins */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Margins</label>
-            <div className="grid grid-cols-3 gap-1.5 text-xs font-semibold">
-              {(['narrow', 'normal', 'wide'] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setSettings((s) => ({ ...s, marginWidth: m }))}
-                  className={`min-h-12 py-1.5 capitalize rounded-md border cursor-pointer ${
-                    settings.marginWidth === m
-                      ? 'bg-slate-900 text-white border-slate-900'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSettings({ ...DEFAULT_READER_SETTINGS })}
-            className="min-h-12 w-full rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-          >
-            Reset to defaults
-          </button>
-        </div>
+          ) : undefined}
+        />
       )}
     </div>
   );
 };
-

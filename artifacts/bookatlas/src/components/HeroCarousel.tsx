@@ -109,7 +109,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
               <span>{currentBook.pageCount} Pages</span>
               <span>•</span>
               <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> DRM-Free & In-Browser eReader
+                <ShieldCheck className="w-3.5 h-3.5" /> Read in your browser
               </span>
             </div>
 

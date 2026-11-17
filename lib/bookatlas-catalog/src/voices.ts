@@ -28,5 +28,5 @@ export function studioVoice(value: string) {
 export function narrationDirection(voiceId: string) {
   const voice = studioVoice(voiceId);
   if (!voice) throw new Error('Unsupported studio voice.');
-  return `${voice.direction} Keep the same vocal identity and recording tone throughout. Read the supplied script exactly, without additions, explanations, sound effects or background music. Pronounce the script in its written language.`;
+  return `${voice.direction} Let the emotion of each passage colour the delivery (tender, tense, joyful, solemn or hopeful, as the text calls for) without overacting. Keep the same vocal identity and recording tone throughout. Read the supplied script exactly, without additions, explanations, sound effects or background music. Pronounce the script in its written language.`;
 }

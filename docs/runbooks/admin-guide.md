@@ -62,7 +62,7 @@ To hear a voice first, run `npm run sample -- --voice bm_george`. It writes `sam
 
 **First-time setup (already done on this PC):**
 1. In `tools/local-narrator`, run `npm install`.
-2. Put `NARRATION_WORKER_TOKEN` in `.env.local` and in Vercel, with the same value (see section 6).
+2. Put `NARRATION_WORKER_TOKEN` in `.env.local` and in Vercel, with the same value (see section 7).
 3. The first run downloads the voice model, about 90 MB.
 
 ## 3. Audio samples for every book
@@ -113,7 +113,30 @@ Advice for authors:
 
 The lock-screen controls themselves are tested in a desktop browser (`tests/browser/narration-background.test.mjs`).
 
-## 6. Settings and secrets (Vercel)
+## 6. The reader and the listening player
+
+What readers get, so you can answer their questions:
+
+- **Pages or scroll:** the reader shows real pages, two side by side on wide screens. Readers turn them with a swipe, a tap at the side or the arrow keys. A tap in the middle hides the toolbars.
+- **Reading preferences** (the **T** button):
+  - **Text:** font, size, line spacing, margins, left or justified.
+  - **Page:** pages or scroll, two pages, the tap setting, brightness.
+  - **Colours:** five themes, or any background and text colour.
+- **Contents** lists every chapter with its reading time. **Go to** (the page number at the bottom left) opens a page or any place in the book.
+- **Listening** (the headphones button or *Listen to the book*) opens a pop-up player:
+  - play and pause, stop;
+  - back and forward (15 seconds for a narration, a paragraph for the device voice);
+  - previous and next chapter;
+  - speed from 0.5x to 3x;
+  - **Voice & language**, where each language card plays a sample.
+- **Other languages:**
+  - The device voice can read the book in another language, translating each paragraph first.
+  - Chrome on a computer translates on the device for free. Elsewhere BooksAtlas's AI translator is used: the reader must be signed in, and it counts towards their 40 AI requests a day.
+  - Only languages the device has a voice for are offered.
+- A recorded natural narration always plays in the book's own language. Choosing another language switches to the device voice.
+- **Emotion:** the cloud studio voices (Sulafat, Charon) are told to let the emotion of each passage colour the delivery. Kokoro recordings made on your PC read evenly and do not follow that instruction.
+
+## 7. Settings and secrets (Vercel)
 
 These settings live in Vercel → bookatlas → Settings → Environment Variables (Production).
 - After changing one, redeploy so production reads it.
@@ -131,7 +154,7 @@ These settings live in Vercel → bookatlas → Settings → Environment Variabl
 - Run it in the Supabase SQL editor before deploying that release.
 - Migrations are safe to run twice.
 
-## 7. House rules for the store
+## 8. House rules for the store
 
 - **Reviews and ratings:** only real ones, from readers. Never write or import reviews (EU Omnibus rules).
 - **Labels:** "Bestseller" and editorial-review labels are shown only when they are true and sourced.
@@ -139,7 +162,7 @@ These settings live in Vercel → bookatlas → Settings → Environment Variabl
 - **Demo catalogue:** sample titles are marked "Sample title · not for sale". Their cart buttons explain that instead of selling.
 - **Commission:** authors keep 67% of every sale after VAT; BooksAtlas keeps 33%.
 
-## 8. Releases
+## 9. Releases
 
 - Each change is built and tested on the working branch first.
 - It reaches booksatlas.app only after the owner says "deploy". Then the branch is pushed to `main` and Vercel publishes it in about a minute.

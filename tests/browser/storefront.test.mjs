@@ -95,6 +95,7 @@ test('reader display settings persist across reloads', async () => {
   const page = await open('/', { mobile: true });
   await page.locator('[title="Read Free Preview in Browser"]').first().click();
   await page.getByLabel('Font & Theme Settings').click();
+  await page.getByRole('tab', { name: 'Colours' }).click();
   await page.getByRole('button', { name: /sepia/i }).first().click();
   const saved = await page.evaluate(() => localStorage.getItem('bookatlas:reader-display:v1'));
   assert.match(saved ?? '', /"theme":"sepia"/);
@@ -212,12 +213,12 @@ test('listening reads sentence by sentence, highlights the paragraph and stops o
   const page = await context.newPage();
   await page.goto(base + '/', { waitUntil: 'networkidle' });
   await page.locator('[title="Read Free Preview in Browser"]').first().click();
-  const toolbar = page.getByRole('button', { name: 'Read chapter with device voice' });
+  const toolbar = page.getByRole('button', { name: 'Read aloud' });
   await toolbar.click();
   await page.waitForFunction(() => window.__spoken.length >= 1, null, { timeout: 10_000 });
   assert.ok(await page.locator('[data-para][aria-current="true"]').count() === 1, 'the paragraph being read is highlighted');
-  await page.getByRole('button', { name: 'Stop device read-aloud' }).click();
-  await page.getByRole('button', { name: 'Read chapter with device voice' }).waitFor();
+  await page.getByRole('button', { name: 'Stop reading aloud' }).click();
+  await page.getByRole('button', { name: 'Read aloud' }).waitFor();
   const stoppedAt = await page.evaluate(() => window.__spoken.length);
   await page.waitForTimeout(1000);
   assert.equal(await page.evaluate(() => window.__spoken.length), stoppedAt, 'stop really stops');

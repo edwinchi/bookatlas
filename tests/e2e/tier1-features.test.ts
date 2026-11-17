@@ -192,7 +192,7 @@ test('F3-2: eReader font sizes validate within acceptable bounds [14, 26]', () =
 });
 
 test('F3-3: eReader themes cover day, sepia, night, mint, and black modes', () => {
-  assert.deepEqual(READER_THEMES, ['day', 'sepia', 'night', 'mint', 'black']);
+  assert.deepEqual(READER_THEMES, ['day', 'sepia', 'night', 'mint', 'black', 'custom']);
   for (const theme of READER_THEMES) {
     assert.ok(READER_THEMES.includes(theme));
   }
