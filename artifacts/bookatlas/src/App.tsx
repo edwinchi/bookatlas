@@ -14,25 +14,12 @@ import { PromotionalFeatureBanner, EditorialCuratorBlock } from './components/Ed
 import { honestSample, isSampleTitle } from './utils/ratings';
 import { StartBookDialog } from './components/StartBookDialog';
 import { BookDetailModal } from './components/BookDetailModal';
-import { EReaderModal } from './components/EReaderModal';
 import { AudiobookPlayerDock } from './components/AudiobookPlayerDock';
-import { MyLibraryView } from './components/MyLibraryView';
 import { CartDrawer } from './components/CartDrawer';
-import { AIMatchmakerModal } from './components/AIMatchmakerModal';
-import { ArchitectureGuideModal } from './components/ArchitectureGuideModal';
-import { ManagerPortal } from './components/ManagerPortal';
-import { GeminiChatbotModal } from './components/GeminiChatbotModal';
-import { LiveVoiceCompanionModal } from './components/LiveVoiceCompanionModal';
-import { VeoVideoAnimatorModal } from './components/VeoVideoAnimatorModal';
-import { GoogleSearchGroundingModal } from './components/GoogleSearchGroundingModal';
-import { ExportDocsModal } from './components/ExportDocsModal';
-import { AIStudioHub } from './components/AIStudioHub';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { useAccount, useAccountList } from './auth/AuthContext';
-import { UnsubscribePageModal } from './components/UnsubscribePageModal';
 import { AIAccessGateModal } from './components/AIAccessGateModal';
 import { PublishingLanding } from './components/landing/PublishingLanding';
-import { EbookPublishing } from './components/ebook/EbookPublishing';
 import { safeReaderReturnPath } from './auth/navigation';
 import { TRANSLATIONS } from './data/translations';
 import { INITIAL_BOOKS } from './data/booksData';
@@ -57,6 +44,23 @@ import {
   Globe,
   Compass
 } from 'lucide-react';
+
+// Loaded when first opened, so the storefront's first script stays small (measured 2026-11-18: 1.59 MB in one file).
+const AIMatchmakerModal = React.lazy(() => import('./components/AIMatchmakerModal').then((m) => ({ default: m.AIMatchmakerModal })));
+const ArchitectureGuideModal = React.lazy(() => import('./components/ArchitectureGuideModal').then((m) => ({ default: m.ArchitectureGuideModal })));
+const AIStudioHub = React.lazy(() => import('./components/AIStudioHub').then((m) => ({ default: m.AIStudioHub })));
+const GeminiChatbotModal = React.lazy(() => import('./components/GeminiChatbotModal').then((m) => ({ default: m.GeminiChatbotModal })));
+const LiveVoiceCompanionModal = React.lazy(() => import('./components/LiveVoiceCompanionModal').then((m) => ({ default: m.LiveVoiceCompanionModal })));
+const VeoVideoAnimatorModal = React.lazy(() => import('./components/VeoVideoAnimatorModal').then((m) => ({ default: m.VeoVideoAnimatorModal })));
+const GoogleSearchGroundingModal = React.lazy(() => import('./components/GoogleSearchGroundingModal').then((m) => ({ default: m.GoogleSearchGroundingModal })));
+const ExportDocsModal = React.lazy(() => import('./components/ExportDocsModal').then((m) => ({ default: m.ExportDocsModal })));
+const UnsubscribePageModal = React.lazy(() => import('./components/UnsubscribePageModal').then((m) => ({ default: m.UnsubscribePageModal })));
+const EReaderModal = React.lazy(() => import('./components/EReaderModal').then((m) => ({ default: m.EReaderModal })));
+const MyLibraryView = React.lazy(() => import('./components/MyLibraryView').then((m) => ({ default: m.MyLibraryView })));
+const ManagerPortal = React.lazy(() => import('./components/ManagerPortal').then((m) => ({ default: m.ManagerPortal })));
+const EbookPublishing = React.lazy(() => import('./components/ebook/EbookPublishing').then((m) => ({ default: m.EbookPublishing })));
+/** Renders its children only once `when` is true, loading their code then. */
+const Deferred = ({ when, children }: { when: unknown; children: React.ReactNode }) => (when ? <React.Suspense fallback={null}>{children}</React.Suspense> : null);
 
 const GUEST_CART_KEY = 'bookatlas:guest-cart:v1';
 const STORE_PREFERENCES_KEY = 'bookatlas:store-preferences:v1';
@@ -734,6 +738,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-8 pb-24 lg:pb-8">
+        <React.Suspense fallback={<p role="status" className="py-16 text-center text-sm text-slate-500">Loading…</p>}>
         
         {/* VIEW 1: SINGLE MANAGER OPERATIONS STUDIO (SECURED ADMIN ZONE) */}
         {activeTab === 'manager' ? (
@@ -1157,6 +1162,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
           </>
         )}
 
+        </React.Suspense>
       </main>
 
       {/* Footer */}
@@ -1283,6 +1289,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
 
       {/* In-Browser eReader Modal */}
       {activeReadingBook && (
+        <React.Suspense fallback={null}>
         <EReaderModal
           book={activeReadingBook.book}
           onClose={() => { setActiveReadingBook(null); setJoinGroupId(null); }}
@@ -1294,6 +1301,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
           hasAiAccess={hasAiAccess}
           onRequireAiAccess={requireAiAccess}
         />
+        </React.Suspense>
       )}
 
       {/* Slide-out Cart Drawer */}
@@ -1330,14 +1338,16 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
       )}
 
       {/* AI Book Matchmaker Modal */}
-      <AIMatchmakerModal
-        isOpen={isAIMatchmakerOpen}
-        onClose={() => setIsAIMatchmakerOpen(false)}
-        books={books}
-        onOpenBookDetail={(b) => setSelectedBookForDetail(b)}
-        onReadSample={handleReadSample}
-        onAddToCart={handleAddToCart}
-      />
+      <Deferred when={isAIMatchmakerOpen}>
+        <AIMatchmakerModal
+          isOpen={isAIMatchmakerOpen}
+          onClose={() => setIsAIMatchmakerOpen(false)}
+          books={books}
+          onOpenBookDetail={(b) => setSelectedBookForDetail(b)}
+          onReadSample={handleReadSample}
+          onAddToCart={handleAddToCart}
+        />
+      </Deferred>
 
       {/* AI Feature Subscription Gate — Member/VIP Patron only */}
       <AIAccessGateModal
@@ -1348,68 +1358,84 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
       />
 
       {/* Architecture Guide Blueprint Modal */}
-      <ArchitectureGuideModal
-        isOpen={isArchitectureGuideOpen}
-        onClose={() => setIsArchitectureGuideOpen(false)}
-      />
+      <Deferred when={isArchitectureGuideOpen}>
+        <ArchitectureGuideModal
+          isOpen={isArchitectureGuideOpen}
+          onClose={() => setIsArchitectureGuideOpen(false)}
+        />
+      </Deferred>
 
       {/* AI Studio Unified Hub */}
-      <AIStudioHub
-        isOpen={isAIHubOpen}
-        onClose={() => setIsAIHubOpen(false)}
-        onOpenChat={() => requireAiAccess('Interactive Literary Assistant', 'Chat with our persona-driven AI literary companion.', () => setIsChatOpen(true))}
-        onOpenVoice={() => requireAiAccess('Live Voice Companion', 'Have a real-time spoken conversation with our AI voice companion.', () => setIsVoiceOpen(true))}
-        onOpenVideo={() => setIsVideoOpen(true)}
-        onOpenSearch={() => requireAiAccess('Search Grounding Literary Radar', 'Get real-time bestseller trends and literary news grounded in live Google Search.', () => setIsSearchOpen(true))}
-        onOpenDocs={() => setIsDocsOpen(true)}
-        booksCount={books.length}
-        isAdminAuthenticated={false}
-        onOpenAdminAuth={openAdminAuthForFeature}
-      />
+      <Deferred when={isAIHubOpen}>
+        <AIStudioHub
+          isOpen={isAIHubOpen}
+          onClose={() => setIsAIHubOpen(false)}
+          onOpenChat={() => requireAiAccess('Interactive Literary Assistant', 'Chat with our persona-driven AI literary companion.', () => setIsChatOpen(true))}
+          onOpenVoice={() => requireAiAccess('Live Voice Companion', 'Have a real-time spoken conversation with our AI voice companion.', () => setIsVoiceOpen(true))}
+          onOpenVideo={() => setIsVideoOpen(true)}
+          onOpenSearch={() => requireAiAccess('Search Grounding Literary Radar', 'Get real-time bestseller trends and literary news grounded in live Google Search.', () => setIsSearchOpen(true))}
+          onOpenDocs={() => setIsDocsOpen(true)}
+          booksCount={books.length}
+          isAdminAuthenticated={false}
+          onOpenAdminAuth={openAdminAuthForFeature}
+        />
+      </Deferred>
 
       {/* Multi-Turn Gemini Literary Chatbot Modal */}
-      <GeminiChatbotModal
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-        books={books}
-        onOpenBookDetail={(b) => setSelectedBookForDetail(b)}
-        onReadSample={handleReadSample}
-      />
+      <Deferred when={isChatOpen}>
+        <GeminiChatbotModal
+          isOpen={isChatOpen}
+          onClose={() => setIsChatOpen(false)}
+          books={books}
+          onOpenBookDetail={(b) => setSelectedBookForDetail(b)}
+          onReadSample={handleReadSample}
+        />
+      </Deferred>
 
       {/* Real-Time Live Voice Companion Modal */}
-      <LiveVoiceCompanionModal
-        isOpen={isVoiceOpen}
-        onClose={() => setIsVoiceOpen(false)}
-      />
+      <Deferred when={isVoiceOpen}>
+        <LiveVoiceCompanionModal
+          isOpen={isVoiceOpen}
+          onClose={() => setIsVoiceOpen(false)}
+        />
+      </Deferred>
 
       {/* Veo Image-to-Video Animator Modal */}
-      <VeoVideoAnimatorModal
-        isOpen={isVideoOpen}
-        onClose={() => setIsVideoOpen(false)}
-        books={books}
-      />
+      <Deferred when={isVideoOpen}>
+        <VeoVideoAnimatorModal
+          isOpen={isVideoOpen}
+          onClose={() => setIsVideoOpen(false)}
+          books={books}
+        />
+      </Deferred>
 
       {/* Google Search Grounding Modal */}
-      <GoogleSearchGroundingModal
-        isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-      />
+      <Deferred when={isSearchOpen}>
+        <GoogleSearchGroundingModal
+          isOpen={isSearchOpen}
+          onClose={() => setIsSearchOpen(false)}
+        />
+      </Deferred>
 
       {/* Platform Specification & Docs Export Modal (Word .docx + PDF .pdf) */}
-      <ExportDocsModal
-        isOpen={isDocsOpen}
-        onClose={() => setIsDocsOpen(false)}
-        books={books}
-      />
+      <Deferred when={isDocsOpen}>
+        <ExportDocsModal
+          isOpen={isDocsOpen}
+          onClose={() => setIsDocsOpen(false)}
+          books={books}
+        />
+      </Deferred>
 
       {/* 1-Click Unsubscribe & Preference Center Modal */}
-      <UnsubscribePageModal
-        isOpen={isUnsubscribeModalOpen}
-        onClose={() => setIsUnsubscribeModalOpen(false)}
-        initialEmail={unsubTargetEmail || registeredUser?.email}
-        token={unsubTargetToken}
-        language={language}
-      />
+      <Deferred when={isUnsubscribeModalOpen}>
+        <UnsubscribePageModal
+          isOpen={isUnsubscribeModalOpen}
+          onClose={() => setIsUnsubscribeModalOpen(false)}
+          initialEmail={unsubTargetEmail || registeredUser?.email}
+          token={unsubTargetToken}
+          language={language}
+        />
+      </Deferred>
 
       {/* Mobile-First Sticky Bottom Navigation Bar (Thumb Reachable) */}
       <MobileBottomNav

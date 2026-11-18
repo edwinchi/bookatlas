@@ -54,7 +54,7 @@
 |---|---|---|---|
 | Gemini free tier (now automatic) | €0 | about 10 parts (about 12,000 characters, about 2,000 words) a day, so a 60,000-word book takes about a month | nothing more |
 | Google Cloud Text-to-Speech, Chirp 3 HD (already built in: `GOOGLE_TTS_API_KEY`) | €0 up to 1,000,000 characters a month; the code stops at 950,000 | a whole book in a few hours, with the same Sulafat and Charon voices | a Google Cloud project with a billing account attached (free-tier use is not charged) and the Text-to-Speech API key in Vercel |
-| Open-source voice (e.g. Kokoro, Piper) run on the owner's computer | €0, no account | depends on the computer | a local script that uploads the parts; different voices; not built |
+| Open-source voice (e.g. Kokoro, Piper) run on the owner's computer | €0, no account | depends on the computer | a local script that uploads the parts; different voices; built, see below |
 
 ## Built after that: the local Kokoro narrator (owner request 2026-11-16)
 

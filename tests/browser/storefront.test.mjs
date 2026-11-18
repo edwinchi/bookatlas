@@ -265,6 +265,37 @@ test('the storefront has no serious or critical accessibility violations (WCAG 2
   }
 });
 
+test('the book page, the publishing page, How it works and the Start my book form pass WCAG 2.2 AA (TASK-0007)', async () => {
+  const tags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+  const check = async (page, label, include) => {
+    let axe = new AxeBuilder({ page }).withTags(tags);
+    if (include) axe = axe.include(include);
+    const serious = (await axe.analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    assert.deepEqual(serious.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes[0]?.target.join(' ')}`), [], label);
+  };
+  const books = await (await fetch(base + '/api/books?limit=1')).json();
+  const id = books.books?.[0]?.id;
+  assert.ok(id, 'the catalogue has a book');
+  for (const mobile of [false, true]) {
+    const context = await browser.newContext(mobile ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    const m = mobile ? 'mobile' : 'desktop';
+    await page.goto(base + '/', { waitUntil: 'networkidle' });
+    await page.locator('#how-step-0').scrollIntoViewIfNeeded();
+    await check(page, `${m}: How it works`, 'section:has(#how-step-0)');
+    await page.goto(base + '/#start-book', { waitUntil: 'networkidle' });
+    await page.getByRole('dialog').waitFor({ timeout: 10_000 });
+    await check(page, `${m}: Start my book`, '[role="dialog"]');
+    await page.goto(base + '/books/' + encodeURIComponent(id), { waitUntil: 'networkidle' });
+    await page.waitForTimeout(1000);
+    await check(page, `${m}: book page`);
+    await page.goto(base + '/user-portal?view=publish', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(1000);
+    await check(page, `${m}: publishing page`);
+    await context.close();
+  }
+});
+
 test('listening reads sentence by sentence, highlights the paragraph and stops on request', async () => {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   // A fake voice: each sentence "ends" after 400 ms, so the test can stop it mid-way.

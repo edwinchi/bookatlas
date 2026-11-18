@@ -19,6 +19,7 @@
 | 10 Compliance | Data export missed purchases and submissions; deletion kept authors' emails | Done in [TASK-0006](TASK-0006-supabase-security.md) |
 | 9 Performance | Not measured at scale | 1.5M-title load test in [TASK-0005](TASK-0005-catalogue-at-scale.md); lighter reader images in [TASK-0003](TASK-0003-ebook-preparation-pipeline.md) |
 | 11 Resilience | Stale browser caches replayed API answers | Service worker v6 ([TASK-0004](TASK-0004-stripe-payments.md) incident) |
+| 6 Accessibility (2026-11-18) | Only the storefront and reader were checked | The axe test also covers the book page, the publishing page, How it works and the Start my book form, desktop and mobile: no serious or critical violations on booksatlas.app |
 
 Deployed `bookatlas-10bybel4r` (`13b46ed`): `/api/healthz/ready` live with database 104 ms, category counts and payments ok; security 5/5, browser 14/14 (accessibility included).
 
@@ -32,7 +33,6 @@ Deployed `bookatlas-10bybel4r` (`13b46ed`): `/api/healthz/ready` live with datab
 | EPUBCheck worker hosting | Hosting account (Fly.io, Railway or a small VPS) and a worker token |
 | Supabase plan for 1.5M titles | Billing decision (Pro includes 8 GB) |
 | TASK-0002 planning documents (PRD, architecture, 90-day plan, success metrics) | Business decisions: mission, pricing, target customers |
-| Remaining contrast and accessibility on pages other than the storefront | Next cycle: extend the axe test to the publishing page, reader and book page |
 
 ## Recursive improvement (directive 15)
 

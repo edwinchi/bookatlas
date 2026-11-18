@@ -6,7 +6,6 @@ import App from '../App';
 import { AccountProvider, useAccount } from './AuthContext';
 import { ReadingUpdatePreferences } from '../components/ReadingUpdatePreferences';
 import { readerReturnUrl, safeReaderReturnPath, clerkRouterPath } from './navigation';
-import { AdminEntry } from './AdminWorkspace';
 import { AccountPrivacy } from '../components/AccountPrivacy';
 import { AccountInvoices } from '../components/AccountInvoices';
 import { LegalNotice } from '../components/LegalNotice';
@@ -17,6 +16,8 @@ import React, { useEffect, useState } from 'react';
 import { BookOpen, Crown, LayoutDashboard, LifeBuoy, LogIn, LogOut, UserPlus, type LucideIcon } from 'lucide-react';
 import { utilityPill } from '../components/UtilityMenu';
 
+// The admin workspace (manager portal, subscriber tools, reader preview) loads only on /admin.
+const AdminEntry = React.lazy(() => import('./AdminWorkspace').then((m) => ({ default: m.AdminEntry })));
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || publishableKeyFromHost(
   window.location.hostname,
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
@@ -140,7 +141,7 @@ function Store({ portal = false, resumeCheckout = false }: { portal?: boolean; r
   );
   const currentPath = stripBase(window.location.pathname);
   const isAdmin = currentPath === '/admin';
-  if (isAdmin) return <AdminEntry />;
+  if (isAdmin) return <React.Suspense fallback={<p role="status" className="py-16 text-center text-sm text-slate-500">Loading…</p>}><AdminEntry /></React.Suspense>;
   const libraryTab = portal && new URLSearchParams(window.location.search).get('view') === 'wishlist' ? 'wishlist' as const : 'reading' as const;
   const pendingReaderService = portal && new URLSearchParams(window.location.search).get('view') === 'ai'
     ? new URLSearchParams(window.location.search).get('service') || 'studio' : undefined;

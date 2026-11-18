@@ -1,6 +1,6 @@
 # TASK-0014: Natural audiobook as a paid add-on (cycle 9)
 
-**Date:** 2026-11-15 · **Status:** built, tested; ready to deploy
+**Date:** 2026-11-15 · **Status:** ✅ live (deployed with `ddb8723`; since 2026-11-18 a narration follows the book's current text)
 
 ## Why
 
