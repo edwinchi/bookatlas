@@ -25,6 +25,7 @@ const sections: { title: string; body: ReactNode }[] = [
       <li><strong>Author payouts:</strong> if you sell books, the bank account (IBAN, account holder, BIC), address, country and optional tax and VAT numbers you enter under Author hub → Payout setup. We use them only to pay your share and for the yearly seller report to the Dutch tax authority required by EU Directive 2021/514 (DAC7), and keep them while you sell and as long as tax law requires afterwards.</li>
       <li><strong>Reviews:</strong> if you review a book, your rating and text are public with your first name and initial; you can edit or delete them at any time.</li>
       <li><strong>Authors you follow:</strong> which authors you follow and your email address, with the time you chose to follow, so we can email you once when they publish a new book. Every email has a one-click unsubscribe link.</li>
+      <li><strong>Book enquiries:</strong> if you send the “Start my book” or contact form, your name, email address, what you tell us about your book and the time, so we can reply. We do not use them for anything else and delete them 12 months after you send them.</li>
       <li><strong>On your device only:</strong> your cart, wishlist, reading progress and reader settings are stored in your browser, not on our servers.</li>
     </ul>,
   },

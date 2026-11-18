@@ -147,6 +147,33 @@ test('the privacy notice is linked from the footer and explains rights and reten
   assert.ok(await page.locator('a[href="mailto:getintouch@apps-pilot.nl"]').first().isVisible());
 });
 
+test('"Start my book" opens a form on the site (no email app needed) and sends the enquiry', async () => {
+  const page = await open('/');
+  let sent = null;
+  await page.route('**/api/book-enquiries', async (route) => { sent = route.request().postDataJSON(); await route.fulfill({ status: 201, json: { id: '20261118000000-abcdef12' } }); });
+  const start = page.getByRole('link', { name: /start my book/i }).last();
+  assert.equal(await start.getAttribute('href'), '#start-book');
+  await start.click();
+  const form = page.getByRole('dialog', { name: 'Tell us about your book' });
+  await form.waitFor();
+  await form.getByRole('radio', { name: 'Paperback' }).or(form.getByRole('button', { name: 'Paperback' })).first().click();
+  await form.getByText('Trim size').waitFor();
+  await form.getByLabel('Your name').fill('Ada Writer');
+  await form.getByLabel('Email for our reply').fill('ada@example.com');
+  await form.getByLabel('About your book').fill('A finished memoir of about 250 pages.');
+  await form.getByRole('button', { name: 'Send' }).click();
+  await form.getByText('Thank you, we have your message').waitFor();
+  assert.equal(sent.topic, 'start');
+  assert.deepEqual(sent.formats, ['paperback']);
+  assert.equal(sent.email, 'ada@example.com');
+  await form.getByRole('button', { name: 'Done' }).click();
+  await form.waitFor({ state: 'hidden' });
+  assert.equal(new URL(page.url()).hash, '', 'closing clears the link');
+  // The link opens the form directly, for adverts and emails.
+  await page.goto(base + '/#enquiry-print', { waitUntil: 'networkidle' });
+  await page.getByRole('dialog', { name: 'Tell us about your book' }).getByText('Trim size').waitFor();
+});
+
 test('the legal notice is linked from the footer and names the operator', async () => {
   const page = await open('/');
   await page.locator('footer a', { hasText: 'Legal Notice' }).click();
@@ -169,7 +196,7 @@ test('sign-up requires the age and privacy confirmation before the form', async 
 test('the publishing landing leads the front page and its estimator responds', async () => {
   const page = await open('/');
   assert.ok(await page.getByRole('heading', { level: 1, name: /ready for every shelf/i }).isVisible());
-  assert.equal(await page.getByRole('link', { name: /prepare my book/i }).getAttribute('href'), 'mailto:getintouch@apps-pilot.nl?subject=Prepare%20my%20book%20(early%20access)');
+  assert.equal(await page.getByRole('link', { name: /prepare my book/i }).getAttribute('href'), '#start-book');
   const copies = page.getByLabel('Copies sold a month');
   await copies.scrollIntoViewIfNeeded();
   await copies.fill('5');

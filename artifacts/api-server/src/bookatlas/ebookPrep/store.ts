@@ -112,3 +112,13 @@ export async function removeFile(key: string, parts: number) {
 /** Small single objects (reader content, images, covers). */
 export async function putObject(key: string, bytes: Uint8Array, contentType: string) { await store().put(key, bytes, contentType); }
 export async function getObject(key: string) { return store().get(key); }
+export async function removeObject(key: string) { await store().remove([key]); }
+
+/** Keys directly inside a folder, newest name first (used for small folders, such as book enquiries). */
+export async function listObjects(folder: string, limit = 200): Promise<string[]> {
+  if (!supabase) return [...memory.keys()].filter((k) => k.startsWith(`${folder}/`) && !k.slice(folder.length + 1).includes('/')).sort().reverse().slice(0, limit);
+  await ensureBucket();
+  const result = await supabase.storage.from(BUCKET).list(folder, { limit, sortBy: { column: 'name', order: 'desc' } });
+  if (result.error) throw new PrepError('Stored files could not be listed.', 503);
+  return (result.data ?? []).filter((f) => f.id).map((f) => `${folder}/${f.name}`);
+}

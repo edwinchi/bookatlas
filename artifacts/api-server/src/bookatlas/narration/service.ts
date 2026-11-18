@@ -376,9 +376,24 @@ export async function step(id?: string): Promise<{ id: string | null; more: bool
     if (isLocalNarration(n)) continue;
     const token = await claim(n);
     if (!token) continue;
-    const seg = n.segments[n.done]!;
+    let seg = n.segments[n.done]!;
     const { chapters } = await bookContent(n.book_id);
-    const text = segmentText(chapters as unknown as Chapter[], seg);
+    let text = segmentText(chapters as unknown as Chapter[], seg);
+    // The author changed the book after the order, so the plan points at paragraphs that moved or are gone.
+    // Before the first part, plan again from the current text; later, stop rather than record silence or
+    // skip text (2026-11-18, The Revelation Protocol).
+    if (!text.trim()) {
+      const fresh = planSegments(chapters as unknown as Chapter[]);
+      if (n.done === 0 && fresh.length) {
+        await update(n.id, { segments: fresh as Narration['segments'], total: fresh.length });
+        n.segments = fresh as Narration['segments']; n.total = fresh.length;
+        seg = n.segments[0]!;
+        text = segmentText(chapters as unknown as Chapter[], seg);
+      } else {
+        await update(n.id, { status: 'failed', lease_until: null, lease_token: null, error: 'The book changed after this narration was planned, so the remaining parts no longer match its text. Nothing more was spent. Narrate it again from part 1 on the owner’s computer (--from-start).' });
+        return { id: n.id, more: false };
+      }
+    }
     const budget = Math.ceil(n.estimate_micros * 1.5);
     if (n.spent_micros + costMicros(seg.chars / 15, seg.chars) > budget) {
       await update(n.id, { status: 'failed', error: 'The approved budget would be exceeded; nothing more was spent.', lease_until: null, lease_token: null });

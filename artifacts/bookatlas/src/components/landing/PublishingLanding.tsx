@@ -11,6 +11,7 @@ import { CoverMarquee } from './CoverMarquee';
 import { EarningsEstimator } from './EarningsEstimator';
 import { HowItWorks } from './HowItWorks';
 import { Reveal } from './Reveal';
+import { enquiryHref } from '../StartBookDialog';
 
 interface PublishingLandingProps {
   books: Book[];
@@ -20,7 +21,6 @@ interface PublishingLandingProps {
 }
 
 // Publishing services are in early access: every call to action opens an email to the team.
-const contact = (subject: string) => `mailto:${OPERATOR.email}?subject=${encodeURIComponent(subject)}`;
 const base = import.meta.env.BASE_URL;
 
 const AUDIENCES = [
@@ -49,7 +49,7 @@ const SERVICES = [
     unit: 'per book',
     body: 'Interior PDF and a full wrap-around cover with spine, sized and checked for Amazon KDP and Lulu, plus an upload checklist.',
     cta: 'Order a package',
-    href: contact('Print-ready package (€99)'),
+    href: enquiryHref('print'),
   },
   {
     icon: Palette,
@@ -58,7 +58,7 @@ const SERVICES = [
     unit: 'per book',
     body: 'Everything in the print-ready package, with an original cover designed for your title, genre and readers.',
     cta: 'Get a designed cover',
-    href: contact('Premium package with designed cover (€249)'),
+    href: enquiryHref('premium'),
     featured: true,
   },
   {
@@ -68,7 +68,7 @@ const SERVICES = [
     unit: 'of every sale is yours',
     body: 'Sell your eBook on BooksAtlas to readers worldwide, including every country in Africa. No upfront cost.',
     cta: 'Sell your eBook',
-    href: contact('Sell my eBook on BooksAtlas'),
+    href: enquiryHref('ebook'),
   },
   {
     icon: Crown,
@@ -167,7 +167,7 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
             </p>
           </Reveal>
           <Reveal delay={240} className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a href={contact('Prepare my book (early access)')} className={`${primaryButton} bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/20 hover:bg-amber-300`}>
+            <a href={enquiryHref('start')} className={`${primaryButton} bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/20 hover:bg-amber-300`}>
               Prepare my book <ArrowRight className="h-4 w-4" />
             </a>
             <button type="button" onClick={onBrowseStore} className={`${primaryButton} border border-white/20 bg-white/5 text-white backdrop-blur hover:bg-white/10`}>
@@ -390,10 +390,10 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
             Tell us about your book. We'll reply by email with what it needs and what it costs, before any work starts.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a href={contact('Start my book')} className={`${primaryButton} bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/20 hover:bg-amber-300`}>
+            <a href={enquiryHref('start')} className={`${primaryButton} bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/20 hover:bg-amber-300`}>
               <BookOpenCheck className="h-4 w-4" /> Start my book
             </a>
-            <a href={contact('Publishing question')} className={`${primaryButton} border border-white/20 text-white hover:bg-white/10`}>
+            <a href={enquiryHref('question')} className={`${primaryButton} border border-white/20 text-white hover:bg-white/10`}>
               <Building2 className="h-4 w-4" /> Ask a question
             </a>
           </div>

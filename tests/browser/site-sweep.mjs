@@ -120,7 +120,7 @@ for (const [menu, item, check] of [
     await page.keyboard.press('Escape');
   }
   for (const [item, href] of Object.entries(hrefs)) {
-    const good = /Privacy|Legal/.test(item) ? /^\/(privacy|legal)$/.test(href) : href.startsWith('mailto:getintouch@apps-pilot.nl?subject=');
+    const good = /Privacy|Legal/.test(item) ? /^\/(privacy|legal)$/.test(href) : /^#(start-book|enquiry-[a-z]+)$/.test(href);
     ok(`${item} link target`, good, href);
   }
   await openMenu(page, 'Author hub');
@@ -133,7 +133,7 @@ for (const [menu, item, check] of [
     ok(`${path} serves`, r.ok(), String(r.status()));
   }
   const startBook = await page.getByRole('link', { name: 'Start a book', exact: true }).first().getAttribute('href');
-  ok('Start a book pill is a mailto', startBook?.startsWith('mailto:'), startBook);
+  ok('Start a book pill opens the enquiry form', startBook === '#start-book', startBook);
   // Language and currency.
   await page.getByLabel('Currency').first().selectOption('USD');
   await page.waitForTimeout(200);

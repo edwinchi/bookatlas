@@ -10,6 +10,7 @@ import { AuthorHub } from './AuthorHub';
 import { NarrationPanel } from './NarrationPanel';
 import { NarrationQueue } from './NarrationQueue';
 import { AdminGuide } from './AdminGuide';
+import { EnquiriesInbox } from './EnquiriesInbox';
 import { SubmissionForm } from './SubmissionForm';
 import { SubmissionCard } from './SubmissionCard';
 import { FeedImport } from './FeedImport';
@@ -227,6 +228,7 @@ export const EbookPublishing: React.FC = () => {
               <div className="mt-3"><PrintCalculator {...calc} onChange={setCalc} /></div>
             </section>
           )}
+          {isAdmin && <EnquiriesInbox />}
           {isAdmin && <AdminGuide />}
           {isAdmin && <NarrationQueue api={api} />}
           {isAdmin && <ReaderReportsQueue api={api} />}

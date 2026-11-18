@@ -42,10 +42,10 @@ import {
 import { HeaderNavMenu } from './HeaderNavMenu';
 import { AtlasStar } from './landing/AtlasStar';
 import { OPERATOR } from './LegalDocument';
+import { enquiryHref } from './StartBookDialog';
 
 import { GENRES, AFRICAN_LITERATURE_GENRES, CONSCIOUSNESS_COMMUNITY_GENRES, GENERAL_GENRES } from '../data/booksData';
 
-const contactHref = (subject: string) => `mailto:${OPERATOR.email}?subject=${encodeURIComponent(subject)}`;
 
 interface HeaderProps {
   activeTab: 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager' | 'publish';
@@ -208,7 +208,7 @@ export const Header: React.FC<HeaderProps> = ({
                 { label: 'Print-ready files', description: 'For Amazon KDP and Lulu, from €99', icon: Ruler, onSelect: () => onNavigateSection('pricing') },
                 { label: 'Pricing and royalties', description: 'Compare Standard and Author Pro', icon: Calculator, onSelect: () => onNavigateSection('earnings') },
                 { label: 'Upload your eBook', description: 'EPUB checked and made store-ready', icon: Upload, onSelect: () => onNavigateSection('publish') },
-                { label: 'Start a book', description: 'Tell us about your book', icon: Mail, href: contactHref('Start my book') },
+                { label: 'Start a book', description: 'Tell us about your book', icon: Mail, href: enquiryHref('start') },
               ] },
               { items: [
                 { label: 'Audiobook publishing', description: 'Natural studio voice, from €24.99', icon: Headphones, badge: 'New', onSelect: () => onNavigateSection('audiobook-publishing') },
@@ -223,7 +223,7 @@ export const Header: React.FC<HeaderProps> = ({
                 { label: 'Payout setup', description: 'Bank account and tax details', icon: ShieldCheck, onSelect: () => onNavigateSection('author-hub:payout') },
               ] },
               { items: [
-                { label: 'Questions?', description: OPERATOR.email, icon: Mail, href: contactHref('Author hub question') },
+                { label: 'Questions?', description: OPERATOR.email, icon: Mail, href: enquiryHref('question') },
               ] },
             ]} />
             <HeaderNavMenu label="Resources" groups={[{ items: [
@@ -231,13 +231,13 @@ export const Header: React.FC<HeaderProps> = ({
               { label: 'Who it is for', description: 'Authors, educators and publishers', icon: GraduationCap, onSelect: () => onNavigateSection('solutions') },
               { label: 'Book pages', description: 'One link for every edition', icon: Link2, onSelect: () => onNavigateSection('book-pages') },
               { label: 'EPUB and technical specs', description: 'Formats, reader and platform details', icon: FileText, onSelect: onOpenArchitectureGuide },
-              { label: 'Help', description: 'Email the BooksAtlas team', icon: HelpCircle, href: contactHref('Help with BooksAtlas') },
+              { label: 'Help', description: 'Send the BooksAtlas team a message', icon: HelpCircle, href: enquiryHref('help') },
             ] }]} />
             <HeaderNavMenu label="About" groups={[
               { items: [
                 { label: 'About BooksAtlas', description: `${OPERATOR.name}, Zwolle, the Netherlands`, icon: Building2, onSelect: () => onNavigateSection('about') },
                 { label: 'Our promise', description: 'What authors can count on', icon: BadgeCheck, onSelect: () => onNavigateSection('promise') },
-                { label: 'Contact us', description: OPERATOR.email, icon: Mail, href: contactHref('Question for BooksAtlas') },
+                { label: 'Contact us', description: OPERATOR.email, icon: Mail, href: enquiryHref('question') },
               ] },
               { items: [
                 { label: 'Privacy notice', icon: ShieldCheck, href: `${import.meta.env.BASE_URL}privacy` },
@@ -419,7 +419,7 @@ export const Header: React.FC<HeaderProps> = ({
               </PopoverPrimitive.Root>
             </div>
 
-            <a href={contactHref('Start my book')} className="hidden lg:inline-flex shrink-0 whitespace-nowrap rounded-full bg-amber-400 px-3.5 py-1.5 text-xs font-bold text-slate-950 shadow-sm shadow-amber-500/20 transition-colors hover:bg-amber-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300">Start a book</a>
+            <a href={enquiryHref('start')} className="hidden lg:inline-flex shrink-0 whitespace-nowrap rounded-full bg-amber-400 px-3.5 py-1.5 text-xs font-bold text-slate-950 shadow-sm shadow-amber-500/20 transition-colors hover:bg-amber-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300">Start a book</a>
           </div>
 
           {/* Search bar */}
@@ -750,7 +750,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <Icon className="w-4 h-4 text-indigo-600" /> {label}
               </button>
             ))}
-            <a href={contactHref('Start my book')} className="flex min-h-12 w-full items-center gap-2 rounded-lg bg-amber-400 px-3 font-bold text-slate-950">
+            <a href={enquiryHref('start')} className="flex min-h-12 w-full items-center gap-2 rounded-lg bg-amber-400 px-3 font-bold text-slate-950">
               <Mail className="w-4 h-4" /> Start my book
             </a>
           </div>

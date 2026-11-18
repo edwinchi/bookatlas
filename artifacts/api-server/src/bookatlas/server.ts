@@ -24,6 +24,7 @@ import { withAudioEditions } from './narration/edition.js';
 import { mountReviews } from './reviews/routes.js';
 import { businessSummary } from './payments/business.js';
 import { mountFollows } from './follows/routes.js';
+import { mountEnquiries } from './enquiries/routes.js';
 import { mountReader } from './reader/routes.js';
 import { eraseReaderData, readerDataOf } from './reader/service.js';
 import { eraseGroupData, groupDataOf } from './reader/groups.js';
@@ -501,6 +502,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
   mountReviews(app, catalog);
   // Follow authors and new-book e-mails (cycle 5c).
   mountFollows(app, catalog);
+  mountEnquiries(app);
   mountReader(app, catalog, (opts) => generateAiText(opts));
   // The owner's business dashboard (cycle 5): revenue, commission, VAT, narration margin, author payouts owed.
   app.get('/api/manager/business', async (req, res) => {

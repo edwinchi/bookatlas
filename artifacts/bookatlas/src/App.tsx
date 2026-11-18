@@ -12,6 +12,7 @@ import { BookCard } from './components/BookCard';
 import { HorizontalProductCarousel } from './components/HorizontalProductCarousel';
 import { PromotionalFeatureBanner, EditorialCuratorBlock } from './components/EditorialBlock';
 import { honestSample, isSampleTitle } from './utils/ratings';
+import { StartBookDialog } from './components/StartBookDialog';
 import { BookDetailModal } from './components/BookDetailModal';
 import { EReaderModal } from './components/EReaderModal';
 import { AudiobookPlayerDock } from './components/AudiobookPlayerDock';
@@ -1004,8 +1005,8 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
 
                 {/* Carousel 4: Immersive Audiobooks with Narrator Previews */}
                 <HorizontalProductCarousel
-                  title="Audiobooks with Studio Narration"
-                  subtitle="Listen to professionally mastered voice previews on any device"
+                  title="Audiobooks"
+                  subtitle="Hear a free sample of every audiobook on any device"
                   badge="Audio Exclusive"
                   icon={<Headphones className="w-5 h-5 text-purple-600" />}
                   books={audioPicks}
@@ -1296,6 +1297,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
       )}
 
       {/* Slide-out Cart Drawer */}
+      <StartBookDialog />
       <CartDrawer
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}

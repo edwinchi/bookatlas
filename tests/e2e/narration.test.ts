@@ -331,6 +331,28 @@ test('the local narrator follows the current text: a plan made before the author
   } finally { delete process.env.NARRATION_WORKER_TOKEN; }
 });
 
+test('the cloud narrator never records an outdated plan: replanned before part 1, stopped later', async () => {
+  const { fetch } = await getSharedTestServer();
+  const bookId = await publishBook(fetch, 'admin');
+  const id = (await (await fetch(`/api/narration/books/${bookId}/order`, json({ voice: 'Sulafat' }))).json()).narration.id as string;
+  const n = (await service.getNarration(id))!;
+  const stale = n.segments.map((s) => ({ ...s, from: 9000, to: 9001 }));
+  await service.update(id, { segments: stale, total: n.total + 3 });
+  await service.step(id);
+  let now = (await service.getNarration(id))!;
+  assert.equal(now.total, n.total, 'planned again from the current text');
+  assert.equal(now.done, 1);
+  assert.ok(calls.at(-1)!.trim().length > 20, 'the first part has the book’s text');
+
+  await service.update(id, { segments: now.segments.map((s, i) => (i >= 1 ? { ...s, from: 9000, to: 9001 } : s)) });
+  const before = calls.length;
+  await service.step(id);
+  now = (await service.getNarration(id))!;
+  assert.equal(calls.length, before, 'nothing recorded or spent');
+  assert.equal(now.status, 'failed');
+  assert.match(now.error ?? '', /book changed/);
+});
+
 test('every book has a real audio sample for everyone: the opening of the book, recorded once', async () => {
   const { fetch } = await getSharedTestServer();
   const bookId = await publishBook(fetch, 'admin');

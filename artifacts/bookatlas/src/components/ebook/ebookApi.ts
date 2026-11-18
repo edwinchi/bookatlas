@@ -132,6 +132,12 @@ export interface StudyResult {
 }
 export interface Definition { word: string; pronunciation: string; partOfSpeech: string; definitions: string[]; synonyms: string[]; example: string; origin: string }
 
+/** A visitor's message from the "Start my book" form (owner request 2026-11-18). */
+export interface BookEnquiry {
+  id: string; createdAt: string; topic: string; name: string; email: string; title: string; formats: string[];
+  trimSize: string; paper: string; pages: number | null; message: string; status: 'new' | 'answered'; answeredAt: string | null;
+}
+
 export function useEbookApi() {
   const { getToken } = useAuth();
   const tokenRef = useRef(getToken);
@@ -266,6 +272,8 @@ export function useEbookApi() {
     publish: (id: string) => json<Submission>(`/api/ebook-submissions/${id}/publish`, 'POST', {}),
     reject: (id: string, reason: string) => json<Submission>(`/api/ebook-submissions/${id}/reject`, 'POST', { reason }),
     feedback: () => json<FeedbackOverview>('/api/ebook-prep/feedback'),
+    enquiries: () => json<{ enquiries: BookEnquiry[] }>('/api/manager/book-enquiries').then((r) => r.enquiries),
+    setEnquiryAnswered: (id: string, answered: boolean) => json<{ enquiry: BookEnquiry }>(`/api/manager/book-enquiries/${id}/answered`, 'POST', { answered }).then((r) => r.enquiry),
     addFeedback: (store: string, message: string, submissionId?: string) =>
       json<{ matched_rules: string[] }>('/api/ebook-prep/feedback', 'POST', { store, message, submissionId }),
     /** The book's natural narration, if any: every segment for entitled readers, the preview part otherwise. */

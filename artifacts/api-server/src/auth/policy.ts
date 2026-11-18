@@ -66,6 +66,8 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (method === 'POST' && normalized === '/api/internal/narration/step') return 'self-service';
   // The daily narration schedule (Vercel Cron); the route checks CRON_SECRET itself.
   if (method === 'GET' && normalized === '/api/internal/narration/cron') return 'self-service';
+  // Book enquiries (owner request 2026-11-18): anyone may send one; reading them stays with administrators.
+  if (method === 'POST' && normalized === '/api/book-enquiries') return 'public';
   // Audio samples of every book, for everyone (owner request 2026-11-16).
   if (method === 'GET' && /^\/api\/audio-samples\/[\w.-]{1,120}$/.test(normalized)) return 'public';
   if (method === 'GET' && /^\/api\/book-outline\/atlas-ebook-[0-9a-f]{8}$/.test(normalized)) return 'public';
