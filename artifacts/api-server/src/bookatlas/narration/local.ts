@@ -4,7 +4,7 @@ import { logger } from '../../lib/logger.js';
 import { bookContent } from '../ebookPrep/service.js';
 import { putObject } from '../ebookPrep/store.js';
 import { NarrationError, getNarration, listNarrations, segKey, update, markNarrated, bookLanguage, type Narration } from './service.js';
-import { segmentText } from './plan.js';
+import { planSegments, segmentText } from './plan.js';
 import { KOKORO_VOICES, LOCAL_PROVIDER } from './localVoices.js';
 
 /**
@@ -63,13 +63,26 @@ export async function claimLocal(id: string, voice: string, fromStart: boolean) 
   }
   const leaseToken = `local:${randomUUID()}`;
   const done = fromStart ? 0 : n.done;
+  // Starting again follows the book as it is now: when the author changed the text after the order, the old
+  // plan points at paragraphs that moved or no longer exist (silent parts, skipped text).
+  let replanned: Pick<Narration, 'segments' | 'total'> | null = null;
+  if (fromStart) {
+    const { chapters } = await bookContent(n.book_id);
+    const segments = planSegments(chapters as unknown as Chapter[]);
+    if (!segments.length) throw new NarrationError('This book has no text to narrate.', 422);
+    replanned = { segments: segments as Narration['segments'], total: segments.length };
+  } else if (done < n.total && !(await partText(n, done)).trim()) {
+    throw new NarrationError('The book changed since this narration was planned. Start again from part 1 (--from-start) to follow the current text.', 409);
+  }
+  const current = replanned ? { ...n, ...replanned } : n;
   await update(n.id, {
+    ...(replanned ?? {}),
     status: 'running', lease_token: leaseToken, lease_until: new Date(Date.now() + LEASE_MS).toISOString(),
     done, seconds: fromStart ? 0 : n.seconds,
     error: `Being narrated on the owner's computer with the free Kokoro voice ${KOKORO_VOICES[voice]}.`,
   });
-  logger.info({ event: 'narration.local_claimed', narration: n.id, voice, fromStart, done }, 'Local narration started');
-  return { leaseToken, total: n.total, next: done < n.total ? { n: done, text: await partText(n, done) } : null };
+  logger.info({ event: 'narration.local_claimed', narration: n.id, voice, fromStart, done, total: current.total, replanned: !!replanned }, 'Local narration started');
+  return { leaseToken, total: current.total, next: done < current.total ? { n: done, text: await partText(current, done) } : null };
 }
 
 /** Store one recorded part, advance, and hand back the next part's text. */

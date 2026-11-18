@@ -308,6 +308,29 @@ test('the free local Kokoro narrator: token-only API, one voice for the whole bo
   } finally { delete process.env.NARRATION_WORKER_TOKEN; }
 });
 
+test('the local narrator follows the current text: a plan made before the author changed the book is redone', async () => {
+  const { fetch } = await getSharedTestServer();
+  const bookId = await publishBook(fetch, 'admin');
+  const order = await (await fetch(`/api/narration/books/${bookId}/order`, json({ voice: 'Sulafat' }))).json();
+  const id = order.narration.id as string;
+  process.env.NARRATION_WORKER_TOKEN = 'synthetic-local-narrator-token-for-tests-0123456789';
+  const auth = { authorization: `Bearer ${process.env.NARRATION_WORKER_TOKEN}`, 'content-type': 'application/json' };
+  const claim = (body: unknown) => fetch(`/api/internal/narration/local/${id}/claim`, { method: 'POST', headers: auth, body: JSON.stringify(body) });
+  try {
+    const n = (await service.getNarration(id))!;
+    // The plan points at paragraphs that no longer exist, as after the author shortened the book.
+    await service.update(id, { segments: n.segments.map((s) => ({ ...s, from: 9000, to: 9001 })), total: n.total + 5 });
+    const stale = await claim({ voice: 'af_heart' });
+    assert.equal(stale.status, 409, 'no silent parts');
+    assert.match((await stale.json()).error, /book changed.*from-start/);
+    const fresh = await (await claim({ voice: 'af_heart', fromStart: true })).json();
+    assert.equal(fresh.total, n.total, 'planned again from the current text');
+    assert.ok(fresh.next.text.length > 20, 'the first part has the book’s text');
+    const now = (await service.getNarration(id))!;
+    assert.deepEqual(now.segments.map((s) => [s.chapter, s.from, s.to]), n.segments.map((s) => [s.chapter, s.from, s.to]));
+  } finally { delete process.env.NARRATION_WORKER_TOKEN; }
+});
+
 test('every book has a real audio sample for everyone: the opening of the book, recorded once', async () => {
   const { fetch } = await getSharedTestServer();
   const bookId = await publishBook(fetch, 'admin');

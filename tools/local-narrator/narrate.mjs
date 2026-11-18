@@ -102,15 +102,24 @@ export function chunks(paragraph) {
 async function speak(text) {
   const model = await voiceModel();
   const parts = [];
+  let voiced = 0;
   const silence = (s) => new Float32Array(Math.round(s * SAMPLE_RATE));
   const paragraphs = text.split(/\n\s*\n/).map((p) => p.replace(/\s+/g, ' ').trim()).filter(Boolean);
   for (const [pi, paragraph] of paragraphs.entries()) {
     for (const chunk of chunks(paragraph)) {
       const audio = await model.generate(chunk, { voice });
+      voiced += audio.audio.length / SAMPLE_RATE;
       parts.push(audio.audio, silence(PAUSE_SENTENCE));
     }
     if (pi < paragraphs.length - 1) parts.push(silence(PAUSE_PARAGRAPH));
   }
+  // A part with (almost) no words, such as a scene break "* * *", would be too short for the server (at least
+  // 0.3 s); it becomes a one-second pause.
+  const spoken = parts.reduce((n, p) => n + p.length, 0);
+  const words = (text.match(/\p{L}{2,}/gu) ?? []).length;
+  // Words that came out silent would make a silent audiobook: stop and show them instead of uploading.
+  if (words >= 3 && voiced < words * 0.1) throw new Error(`the voice made no sound for this text (${words} words): ${JSON.stringify(text.slice(0, 300))}`);
+  if (spoken < SAMPLE_RATE) parts.push(new Float32Array(SAMPLE_RATE - spoken));
   const total = parts.reduce((n, p) => n + p.length, 0);
   const pcm = new Int16Array(total);
   let o = 0;
@@ -179,6 +188,7 @@ async function narrate() {
   const started = Date.now();
   let audioSeconds = 0, recorded = 0;
   while (next && !stopping && recorded < limit) {
+    if (!next.text.trim()) throw new Error(`part ${next.n + 1} has no text: the book changed since this narration was planned. Run again with --from-start.`);
     const t0 = Date.now();
     const pcm = await speak(next.text);
     const seconds = pcm.length / SAMPLE_RATE;
@@ -191,6 +201,7 @@ async function narrate() {
     const speed = audioSeconds / ((Date.now() - started) / 1000);
     const left = (r.total - r.done) * (seconds / Math.max(0.01, speed));
     console.log(`Part ${r.done}/${r.total}: ${seconds.toFixed(0)} s of audio in ${((Date.now() - t0) / 1000).toFixed(0)} s · about ${minutes(left)} left at this speed`);
+    if (seconds <= 1.05) console.log(`   (almost no words, recorded as a short pause: ${JSON.stringify(next.text.slice(0, 80))})`);
     next = r.next;
   }
   if (!next) { console.log(`Done: the audiobook is live on BooksAtlas (${minutes(audioSeconds)} recorded this run).`); return; }
