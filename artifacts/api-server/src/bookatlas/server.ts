@@ -502,7 +502,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
   mountReviews(app, catalog);
   // Follow authors and new-book e-mails (cycle 5c).
   mountFollows(app, catalog);
-  mountEnquiries(app);
+  mountEnquiries(app, APP_URL);
   mountReader(app, catalog, (opts) => generateAiText(opts));
   // The owner's business dashboard (cycle 5): revenue, commission, VAT, narration margin, author payouts owed.
   app.get('/api/manager/business', async (req, res) => {

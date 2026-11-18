@@ -26,7 +26,7 @@ export async function downloadWordDocument(books: Book[]) {
         children: [
           // Document Title
           new Paragraph({
-            text: 'BOOKATLAS™ — ENTERPRISE DIGITAL BOOKSTORE & EREADER PLATFORM',
+            text: 'BOOKSATLAS — ENTERPRISE DIGITAL BOOKSTORE & EREADER PLATFORM',
             heading: HeadingLevel.TITLE,
             alignment: AlignmentType.CENTER,
             spacing: { after: 200 },
@@ -219,7 +219,7 @@ export async function downloadWordDocument(books: Book[]) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Bookatlas_Complete_Platform_Architecture_and_Specifications_${new Date().toISOString().slice(0, 10)}.docx`;
+  a.download = `BooksAtlas_Complete_Platform_Architecture_and_Specifications_${new Date().toISOString().slice(0, 10)}.docx`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -253,7 +253,7 @@ export async function downloadPDFDocument(books: Book[]) {
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
-  doc.text('BOOKATLAS™ — ENTERPRISE DIGITAL BOOKSTORE', 15, 14);
+  doc.text('BOOKSATLAS — ENTERPRISE DIGITAL BOOKSTORE', 15, 14);
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
@@ -348,7 +348,7 @@ export async function downloadPDFDocument(books: Book[]) {
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  doc.text('BOOKATLAS™ — CATALOG MANIFEST & LEGAL COMPLIANCE', 15, 12);
+  doc.text('BOOKSATLAS — CATALOG MANIFEST & LEGAL COMPLIANCE', 15, 12);
 
   y = 28;
   doc.setTextColor(30, 30, 30);
@@ -410,5 +410,5 @@ export async function downloadPDFDocument(books: Book[]) {
   doc.setTextColor(100, 100, 100);
   doc.text('© 2026 Atlantean Globals Services (Zwolle, Netherlands) | Confidential Technical Report', 15, 282);
 
-  doc.save(`Bookatlas_Complete_Platform_Architecture_and_Specifications_${new Date().toISOString().slice(0, 10)}.pdf`);
+  doc.save(`BooksAtlas_Complete_Platform_Architecture_and_Specifications_${new Date().toISOString().slice(0, 10)}.pdf`);
 }

@@ -43,7 +43,7 @@ const sections: { title: string; body: ReactNode }[] = [
   {
     title: 'Who processes it for us',
     body: <>
-      <p>Clerk (sign-in and email verification), Stripe (card payments and refunds), CoinGate UAB, Lithuania (crypto payments, only if you choose them), Supabase (database hosting), Vercel (application hosting), Resend (email delivery, only if you opt in), and AI providers (OpenRouter, Google Gemini) for text you choose to submit to AI features. Pages load fonts from Google Fonts and cover images from Unsplash, which receive your IP address. We do not sell your personal data, use advertising trackers or run third-party analytics.</p>
+      <p>Clerk (sign-in and email verification), Stripe (card payments and refunds), CoinGate UAB, Lithuania (crypto payments, only if you choose them), Supabase (database hosting), Vercel (application hosting), Resend (email delivery: e-mails you opt in to, and forwarding your enquiry to our team), and AI providers (OpenRouter, Google Gemini) for text you choose to submit to AI features. Pages load fonts from Google Fonts and cover images from Unsplash, which receive your IP address. We do not sell your personal data, use advertising trackers or run third-party analytics.</p>
       <p className="mt-3">Some of these providers are based in the United States. Transfers outside the European Economic Area rely on the safeguards the GDPR requires, such as the EU–US Data Privacy Framework or the European Commission's standard contractual clauses.</p>
     </>,
   },

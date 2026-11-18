@@ -29,7 +29,7 @@ const clean = (v: unknown, max: number) => String(v ?? '').replace(/[\u0000-\u00
 const newId = () => `${new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)}-${randomUUID().slice(0, 8)}`;
 const ID = /^\d{14}-[0-9a-f]{8}$/;
 
-export async function submitEnquiry(body: Record<string, unknown>): Promise<{ id: string }> {
+export async function submitEnquiry(body: Record<string, unknown>): Promise<{ id: string; enquiry?: Enquiry }> {
   // A field people never see: bots fill it in. Pretend it worked.
   if (clean(body.website, 200)) return { id: 'received' };
   const name = clean(body.name, 120);
@@ -48,7 +48,7 @@ export async function submitEnquiry(body: Record<string, unknown>): Promise<{ id
     status: 'new', answeredAt: null, answeredBy: null,
   };
   await putObject(key(enquiry.id), new TextEncoder().encode(JSON.stringify(enquiry)), 'application/json');
-  return { id: enquiry.id };
+  return { id: enquiry.id, enquiry };
 }
 
 async function read(id: string): Promise<Enquiry> {

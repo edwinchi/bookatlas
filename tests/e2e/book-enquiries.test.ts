@@ -62,3 +62,36 @@ test('enquiries are deleted 12 months after they arrive', async () => {
   await purgeOldEnquiries(Date.now() + 370 * 86_400_000);
   assert.ok(!(await listEnquiries()).some((e) => e.id === id), 'gone after 12 months');
 });
+
+test('the team email answers the visitor on reply, escapes what they wrote, and is skipped until Resend is set up', async () => {
+  const { enquiryEmail, notifyTeam } = await import('../../artifacts/api-server/src/bookatlas/enquiries/notify.ts');
+  const { enquiry } = await submitEnquiry({ ...valid, name: 'Ada\r\nBcc: x@evil.example', message: 'Hello <script>alert(1)</script> & welcome' });
+  assert.ok(enquiry);
+  const mail = enquiryEmail(enquiry, 'https://booksatlas.app');
+  assert.equal(mail.reply_to, 'ada@example.com');
+  assert.ok(!/[\r\n]/.test(mail.subject), 'no line breaks in the subject');
+  assert.match(mail.subject, /Print-ready files – The Long Road/);
+  assert.ok(!mail.html.includes('<script>'));
+  assert.ok(mail.html.includes('&lt;script&gt;'));
+  assert.ok(mail.html.includes('https://booksatlas.app/user-portal?view=publish'));
+
+  const saved = { ...process.env };
+  try {
+    delete process.env.RESEND_API_KEY; delete process.env.EMAIL_FROM; delete process.env.ENQUIRY_NOTIFY_TO; delete process.env.BOOKATLAS_OWNER_EMAIL;
+    let called = false;
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async () => { called = true; return new Response('{}'); }) as typeof fetch;
+    try {
+      assert.equal(await notifyTeam(enquiry, 'https://booksatlas.app'), false);
+      assert.equal(called, false, 'nothing is sent without configuration');
+      Object.assign(process.env, { RESEND_API_KEY: 'test-key', EMAIL_FROM: 'BooksAtlas <hello@booksatlas.app>', BOOKATLAS_OWNER_EMAIL: 'owner@example.com' });
+      let body: { to: string[]; reply_to: string } | undefined;
+      globalThis.fetch = (async (_u: unknown, init?: RequestInit) => { body = JSON.parse(String(init?.body)); return new Response('{}', { status: 200 }); }) as typeof fetch;
+      assert.equal(await notifyTeam(enquiry, 'https://booksatlas.app'), true);
+      assert.deepEqual(body?.to, ['owner@example.com']);
+      assert.equal(body?.reply_to, 'ada@example.com');
+      globalThis.fetch = (async () => { throw new Error('network down'); }) as typeof fetch;
+      assert.equal(await notifyTeam(enquiry, 'https://booksatlas.app'), false, 'a failed notice never breaks the form');
+    } finally { globalThis.fetch = realFetch; }
+  } finally { process.env = saved; }
+});

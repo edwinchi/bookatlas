@@ -205,6 +205,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </p>
             )}
             
+            {live && <p className="flex items-center gap-1.5 text-[11px] text-gray-500"><Tag className="h-3 w-3" aria-hidden />Have a promo code? Pay by card and enter it on the secure payment page.</p>}
             {/* Promo Code Form (demo only; with Stripe, promotion codes are entered on the payment page) */}
             {!live && (
             <form onSubmit={applyPromo} className="space-y-1.5">

@@ -48,8 +48,8 @@ export async function exportUserLibraryPDF(stats: LibraryExportStats, language: 
   doc.setFontSize(16);
   doc.text(
     language === 'nl'
-      ? 'BOOKATLAS™ — PERSOONLIJK DIGITAAL LEESRAPPORT'
-      : 'BOOKATLAS™ — PERSONAL READING & LIBRARY REPORT',
+      ? 'BOOKSATLAS — PERSOONLIJK DIGITAAL LEESRAPPORT'
+      : 'BOOKSATLAS — PERSONAL READING & LIBRARY REPORT',
     14,
     14
   );
@@ -275,6 +275,5 @@ export async function exportUserLibraryPDF(stats: LibraryExportStats, language: 
   );
 
   // Trigger download
-  const cleanEmail = stats.userEmail.replace(/[^a-zA-Z0-9]/g, '_');
-  doc.save(`Bookatlas_Reading_Report_${cleanEmail}_${new Date().toISOString().slice(0, 10)}.pdf`);
+  doc.save(`BooksAtlas_Reading_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
