@@ -21,6 +21,13 @@ export type Topic = typeof TOPICS[number]['id'] | 'help';
 
 /** The link that opens the form on a topic. */
 export const enquiryHref = (topic: Topic = 'start') => (topic === 'start' ? '#start-book' : `#enquiry-${topic}`);
+/** What a page already knows about the book, filled into the form (e.g. from the dropped manuscript). */
+export interface EnquiryPrefill { title?: string; pages?: number; formats?: string[]; trimSize?: string; paper?: string; message?: string }
+const PREFILL_EVENT = 'bookatlas:enquiry';
+/** Opens the form on a topic with some answers already filled in. */
+export const openEnquiry = (topic: Topic, prefill: EnquiryPrefill = {}) =>
+  window.dispatchEvent(new CustomEvent(PREFILL_EVENT, { detail: { topic, prefill } }));
+
 const topicFromHash = (hash: string): Topic | null => {
   if (hash === '#start-book') return 'start';
   const m = /^#enquiry-([a-z]+)$/.exec(hash);
@@ -46,8 +53,18 @@ export function StartBookDialog() {
 
   useEffect(() => {
     const onHash = () => { const t = topicFromHash(window.location.hash); if (t) { setTopic(t); setState('idle'); setError(''); } };
+    const onPrefill = (e: Event) => {
+      const { topic: t, prefill } = (e as CustomEvent<{ topic: Topic; prefill: EnquiryPrefill }>).detail;
+      setForm((f) => ({
+        ...f, title: prefill.title ?? f.title, trimSize: prefill.trimSize ?? f.trimSize, paper: prefill.paper ?? f.paper,
+        pages: prefill.pages ? String(prefill.pages) : f.pages, message: prefill.message ?? f.message,
+      }));
+      if (prefill.formats) setFormats(prefill.formats);
+      setTopic(t); setState('idle'); setError('');
+    };
     window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
+    window.addEventListener(PREFILL_EVENT, onPrefill);
+    return () => { window.removeEventListener('hashchange', onHash); window.removeEventListener(PREFILL_EVENT, onPrefill); };
   }, []);
 
   const close = () => {

@@ -5,7 +5,7 @@
 | Objective | Replace the robotic device voice with a natural Gemini narration that authors add to their published eBook, generated once per book and streamed to every reader |
 | Source brief | Owner, 2026-11-14: "use gemini for audio book, the current one sounds like a robot voice"; "provide a description of these services as well, use tailwind and radix for GUI" |
 | Approval level | Spending and payments: owner decisions below. Production deploys: owner sign-off per release |
-| Status | ⏳ Built and tested on the working branch; needs `migrations-2026-11-15-narrations.sql`, `GEMINI_API_KEY` in Vercel and the owner's deploy sign-off |
+| Status | ✅ Live. *SCROLL OF SOVEREIGNTY* narrated on the owner's PC (Kokoro, 6 h 35 min) and on sale. 2026-11-18: a narration now follows the book's current text (`--from-start` plans again; the cloud narrator plans again before part 1 and stops later). Open: lock-screen check on a real phone |
 
 ## Owner decisions (2026-11-14)
 

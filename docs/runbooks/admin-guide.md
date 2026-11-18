@@ -10,6 +10,7 @@ Open **Publish** while signed in as an administrator and work through it from to
 2. **Natural audiobook orders:** approve paid orders, usually within 2 working days. An amber note means a narration is waiting for Google's free daily limit. It continues by itself.
 3. **Reported reader notes and group posts:** three reports from different readers hide an item automatically. Restore it if it is fine, or keep it hidden.
 4. **Store feedback:** what readers and authors told you.
+5. **Book enquiries** (top of the Publish page): messages from “Start my book” and the contact buttons. Reply by email (the button fills in the subject), then press *Mark answered*. Enquiries are deleted after 12 months. A link to `booksatlas.app/#start-book` opens the form directly, for adverts and emails.
 
 ## 2. Narrate a book for free on your computer (Kokoro)
 

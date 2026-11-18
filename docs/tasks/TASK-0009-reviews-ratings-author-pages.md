@@ -5,7 +5,7 @@
 | Objective | Real reader reviews and star ratings on BooksAtlas books, and a public page per author, both visible to search engines and AI assistants |
 | Source brief | Owner, 2026-11-14 (priority list, cycle 4: "Reviews, ratings, author pages"); master.md MVP: ratings, author profile, Author Brand Hub |
 | Approval level | 2 (new table, public content); production deploy 3 |
-| Status | ✅ Built and tested; needs `migrations-2026-11-15b-reviews.sql` and the owner's deploy sign-off |
+| Status | ✅ Live: the reviews endpoint answers on booksatlas.app |
 
 ## Rules
 

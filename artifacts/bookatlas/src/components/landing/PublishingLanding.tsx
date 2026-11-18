@@ -322,7 +322,7 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
       {/* How it works */}
       <section id="how-it-works" aria-labelledby="landing-how" className="scroll-mt-36 lg:scroll-mt-44 bg-[#f8f9fa] px-4 py-14 sm:py-20 sm:px-6">
         <SectionHeading id="landing-how" eyebrow="How it works" title="From finished draft to finished book" intro="Four steps from your final manuscript to a book readers can hold or download." />
-        <div className="mx-auto mt-10 sm:mt-14 max-w-6xl"><HowItWorks /></div>
+        <div className="mx-auto mt-10 sm:mt-14 max-w-6xl"><HowItWorks onNavigateSection={onNavigateSection} /></div>
       </section>
 
       {/* Earnings */}

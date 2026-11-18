@@ -174,6 +174,33 @@ test('"Start my book" opens a form on the site (no email app needed) and sends t
   await page.getByRole('dialog', { name: 'Tell us about your book' }).getByText('Trim size').waitFor();
 });
 
+test('"How it works" tools: a dropped PDF gives its page count and spine, the checklist ticks, print opens the form', async () => {
+  const { createRequire } = await import('node:module');
+  const { PDFDocument } = createRequire(new URL('../../artifacts/api-server/package.json', import.meta.url))('pdf-lib');
+  const pdf = await PDFDocument.create();
+  for (let i = 0; i < 300; i += 1) pdf.addPage([432, 648]);
+  const buffer = Buffer.from(await pdf.save());
+  const page = await open('/');
+  const steps = page.locator('#how-it-works');
+  await steps.getByLabel('Manuscript file').setInputFiles({ name: 'my_memoir.pdf', mimeType: 'application/pdf', buffer });
+  await steps.getByText('300 pages').waitFor({ timeout: 30_000 });
+  assert.equal(await steps.getByLabel('Pages').inputValue(), '300', 'the spine follows the manuscript');
+  const spine = async () => (await steps.getByText(/^Spine [\d.]+ mm$/).innerText());
+  const cream = await spine();
+  assert.match(cream, /Spine 19 mm/, '300 cream pages: 0.75 in');
+  await steps.getByLabel('Paper').selectOption('white');
+  assert.notEqual(await spine(), cream, 'white paper is thinner');
+  const box = steps.getByRole('checkbox', { name: 'Cover PDF with spine' });
+  await box.click();
+  assert.equal(await box.getAttribute('aria-checked'), 'true');
+  await steps.getByText('1 of 4 done').waitFor();
+  await steps.getByRole('button', { name: 'Get print-ready files' }).click();
+  const form = page.getByRole('dialog', { name: 'Tell us about your book' });
+  await form.waitFor();
+  assert.equal(await form.getByLabel(/Book title/).inputValue(), 'my memoir');
+  assert.equal(await form.getByLabel('Pages, about').inputValue(), '300');
+});
+
 test('the legal notice is linked from the footer and names the operator', async () => {
   const page = await open('/');
   await page.locator('footer a', { hasText: 'Legal Notice' }).click();

@@ -15,6 +15,7 @@ const SECTIONS: { id: string; title: string; blocks: Block[] }[] = [
         'Natural audiobook orders: approve paid orders (usually within 2 working days). An amber note means a narration is waiting for Google’s free daily limit and continues by itself.',
         'Reported reader notes and group posts: three reports hide an item automatically. Restore it if it is fine, or keep it hidden.',
         'Store feedback: read what readers and authors told you.',
+        'Book enquiries (above this guide): answer new messages from “Start my book” by email, then press Mark answered. A link to booksatlas.app/#start-book opens the form directly.',
       ] },
     ],
   },
