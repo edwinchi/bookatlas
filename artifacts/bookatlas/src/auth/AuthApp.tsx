@@ -5,7 +5,7 @@ import { Router as WouterRouter, Switch, Route, Redirect, Link, useLocation } fr
 import App from '../App';
 import { AccountProvider, useAccount } from './AuthContext';
 import { ReadingUpdatePreferences } from '../components/ReadingUpdatePreferences';
-import { readerReturnUrl, safeReaderReturnPath, clerkRouterPath } from './navigation';
+import { readerReturnUrl, safeReaderReturnPath, clerkRouterPath, likelySignedIn } from './navigation';
 import { AccountPrivacy } from '../components/AccountPrivacy';
 import { AccountInvoices } from '../components/AccountInvoices';
 import { LegalNotice } from '../components/LegalNotice';
@@ -125,7 +125,11 @@ function Store({ portal = false, resumeCheckout = false }: { portal?: boolean; r
     return () => clearTimeout(timer);
   }, [isLoaded]);
   const authUnavailable = clerkStatus === 'error' || (authSlow && !isLoaded);
-  if (!authUnavailable && (!isLoaded || (isSignedIn && loading))) return <div className="flex min-h-screen items-center justify-center text-indigo-950" role="status">Loading your BooksAtlas account…</div>;
+  // Signed-out visitors see the store at once instead of waiting for Clerk's script (measured 2026-11-19: the
+  // largest image appeared at 4 s on a phone). Clerk keeps a non-zero __client_uat cookie while someone is signed in,
+  // so they, account pages and checkout still wait; a wrong guess only means the store re-draws once.
+  const waiting = !isLoaded ? portal || resumeCheckout || likelySignedIn() : !!isSignedIn && loading;
+  if (!authUnavailable && waiting) return <div className="flex min-h-screen items-center justify-center text-indigo-950" role="status">Loading your BooksAtlas account…</div>;
   if (portal && !isSignedIn) return <Redirect to="/" />;
   if (isSignedIn && (!account || error)) return <main className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center gap-5 p-6 text-center">
     <img src={`${basePath}/logo-192.webp`} alt="BooksAtlas" width={638} height={192} className="h-12 w-auto max-w-full" />

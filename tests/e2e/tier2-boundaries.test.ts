@@ -788,3 +788,12 @@ test('F16-B5: resolving Object prototype pollution property throws error', () =>
   assert.throws(() => bookatlasTable('__proto__' as any), /Unknown/);
   assert.throws(() => bookatlasTable('constructor' as any), /Unknown/);
 });
+
+test('the store draws at once for signed-out visitors; a Clerk session cookie means wait for sign-in (2026-11-19)', async () => {
+  const { likelySignedIn } = await import('../../artifacts/bookatlas/src/auth/navigation.ts');
+  assert.equal(likelySignedIn(''), false, 'first visit');
+  assert.equal(likelySignedIn('__client_uat=0; theme=light'), false, 'signed out');
+  assert.equal(likelySignedIn('theme=light; __client_uat=1795028470'), true, 'signed in');
+  assert.equal(likelySignedIn('__client_uat_Ab3dE=1795028470'), true, 'suffixed cookie name');
+  assert.equal(likelySignedIn('x__client_uat=17950'), false);
+});

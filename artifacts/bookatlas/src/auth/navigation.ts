@@ -58,3 +58,8 @@ export function clerkRouterPath(candidate: string, origin: string, basePath: str
     ? url.pathname.slice(base.length) || '/' : url.pathname;
   return `${pathname}${url.search}${url.hash}`;
 }
+
+/** True when Clerk's cookie says someone may be signed in (or cookies cannot be read). */
+export const likelySignedIn = (cookie = typeof document === 'undefined' ? '' : document.cookie) => {
+  try { return cookie.split(/;\s*/).some((c) => /^__client_uat(_[^=]+)?=[1-9]\d*$/.test(c)); } catch { return true; }
+};

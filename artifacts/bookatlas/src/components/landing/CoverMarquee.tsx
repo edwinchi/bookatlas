@@ -28,7 +28,8 @@ export const CoverMarquee: React.FC<CoverMarqueeProps> = ({ books, onOpenBook })
         <img
           {...coverProps(book.coverImage, 160)}
           alt=""
-          loading="lazy"
+          // The first covers are on the first screen: load them at once (they were the slowest image, 2026-11-19).
+          loading={!copy && i < 5 ? 'eager' : 'lazy'}
           decoding="async"
           width={160}
           height={240}
