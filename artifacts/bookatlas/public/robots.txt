@@ -1,4 +1,4 @@
-# BookAtlas (booksatlas.app): search engines and AI assistants are welcome to read and cite the public store.
+# BooksAtlas (booksatlas.app): search engines and AI assistants are welcome to read and cite the public store.
 User-agent: *
 Allow: /
 Disallow: /admin

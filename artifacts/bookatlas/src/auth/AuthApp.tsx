@@ -1,3 +1,4 @@
+import { lazyPage } from '../utils/lazyPage';
 import { ClerkProvider, SignIn, SignUp, useClerk, useUser } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
@@ -15,9 +16,10 @@ import { readSignupConsent, saveSignupConsent } from './signupConsent';
 import React, { useEffect, useState } from 'react';
 import { BookOpen, Crown, LayoutDashboard, LifeBuoy, LogIn, LogOut, UserPlus, type LucideIcon } from 'lucide-react';
 import { utilityPill } from '../components/UtilityMenu';
+import { enquiryHref } from '../components/StartBookDialog';
 
 // The admin workspace (manager portal, subscriber tools, reader preview) loads only on /admin.
-const AdminEntry = React.lazy(() => import('./AdminWorkspace').then((m) => ({ default: m.AdminEntry })));
+const AdminEntry = lazyPage(() => import('./AdminWorkspace').then((m) => m.AdminEntry));
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || publishableKeyFromHost(
   window.location.hostname,
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
@@ -93,7 +95,7 @@ function SessionBar({ authUnavailable = false }: { authUnavailable?: boolean }) 
           </div>
           : <span role="status" className="font-medium text-slate-700">Your next chapter starts here.</span>}
       <nav aria-label="Account" className="ml-auto flex flex-wrap items-center gap-1 rounded-full bg-slate-100/70 p-1 ring-1 ring-slate-200/70">
-        {authUnavailable ? <a href="mailto:getintouch@apps-pilot.nl?subject=Help%20with%20BookAtlas" className={utilityPill}><LifeBuoy className="h-3.5 w-3.5" aria-hidden />Help</a>
+        {authUnavailable ? <a href={enquiryHref('help')} className={utilityPill}><LifeBuoy className="h-3.5 w-3.5" aria-hidden />Help</a>
           : account ? <>
             <SessionLink href="/user-portal" icon={BookOpen}>My Bookshelf</SessionLink>
             {account.role === 'admin' && <SessionLink href="/admin" icon={LayoutDashboard}>Admin</SessionLink>}

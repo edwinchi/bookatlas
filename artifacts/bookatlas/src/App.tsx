@@ -1,3 +1,4 @@
+import { lazyPage } from './utils/lazyPage';
 import { AuthorProfileModal } from './components/AuthorProfileModal';
 import { useEbookApi } from './components/ebook/ebookApi';
 import { AUDIO_SUFFIX, audioOnSale, audioProductOf, isAudioAddOn } from './audioEdition';
@@ -46,19 +47,19 @@ import {
 } from 'lucide-react';
 
 // Loaded when first opened, so the storefront's first script stays small (measured 2026-11-18: 1.59 MB in one file).
-const AIMatchmakerModal = React.lazy(() => import('./components/AIMatchmakerModal').then((m) => ({ default: m.AIMatchmakerModal })));
-const ArchitectureGuideModal = React.lazy(() => import('./components/ArchitectureGuideModal').then((m) => ({ default: m.ArchitectureGuideModal })));
-const AIStudioHub = React.lazy(() => import('./components/AIStudioHub').then((m) => ({ default: m.AIStudioHub })));
-const GeminiChatbotModal = React.lazy(() => import('./components/GeminiChatbotModal').then((m) => ({ default: m.GeminiChatbotModal })));
-const LiveVoiceCompanionModal = React.lazy(() => import('./components/LiveVoiceCompanionModal').then((m) => ({ default: m.LiveVoiceCompanionModal })));
-const VeoVideoAnimatorModal = React.lazy(() => import('./components/VeoVideoAnimatorModal').then((m) => ({ default: m.VeoVideoAnimatorModal })));
-const GoogleSearchGroundingModal = React.lazy(() => import('./components/GoogleSearchGroundingModal').then((m) => ({ default: m.GoogleSearchGroundingModal })));
-const ExportDocsModal = React.lazy(() => import('./components/ExportDocsModal').then((m) => ({ default: m.ExportDocsModal })));
-const UnsubscribePageModal = React.lazy(() => import('./components/UnsubscribePageModal').then((m) => ({ default: m.UnsubscribePageModal })));
-const EReaderModal = React.lazy(() => import('./components/EReaderModal').then((m) => ({ default: m.EReaderModal })));
-const MyLibraryView = React.lazy(() => import('./components/MyLibraryView').then((m) => ({ default: m.MyLibraryView })));
-const ManagerPortal = React.lazy(() => import('./components/ManagerPortal').then((m) => ({ default: m.ManagerPortal })));
-const EbookPublishing = React.lazy(() => import('./components/ebook/EbookPublishing').then((m) => ({ default: m.EbookPublishing })));
+const AIMatchmakerModal = lazyPage(() => import('./components/AIMatchmakerModal').then((m) => m.AIMatchmakerModal));
+const ArchitectureGuideModal = lazyPage(() => import('./components/ArchitectureGuideModal').then((m) => m.ArchitectureGuideModal));
+const AIStudioHub = lazyPage(() => import('./components/AIStudioHub').then((m) => m.AIStudioHub));
+const GeminiChatbotModal = lazyPage(() => import('./components/GeminiChatbotModal').then((m) => m.GeminiChatbotModal));
+const LiveVoiceCompanionModal = lazyPage(() => import('./components/LiveVoiceCompanionModal').then((m) => m.LiveVoiceCompanionModal));
+const VeoVideoAnimatorModal = lazyPage(() => import('./components/VeoVideoAnimatorModal').then((m) => m.VeoVideoAnimatorModal));
+const GoogleSearchGroundingModal = lazyPage(() => import('./components/GoogleSearchGroundingModal').then((m) => m.GoogleSearchGroundingModal));
+const ExportDocsModal = lazyPage(() => import('./components/ExportDocsModal').then((m) => m.ExportDocsModal));
+const UnsubscribePageModal = lazyPage(() => import('./components/UnsubscribePageModal').then((m) => m.UnsubscribePageModal));
+const EReaderModal = lazyPage(() => import('./components/EReaderModal').then((m) => m.EReaderModal));
+const MyLibraryView = lazyPage(() => import('./components/MyLibraryView').then((m) => m.MyLibraryView));
+const ManagerPortal = lazyPage(() => import('./components/ManagerPortal').then((m) => m.ManagerPortal));
+const EbookPublishing = lazyPage(() => import('./components/ebook/EbookPublishing').then((m) => m.EbookPublishing));
 /** Renders its children only once `when` is true, loading their code then. */
 const Deferred = ({ when, children }: { when: unknown; children: React.ReactNode }) => (when ? <React.Suspense fallback={null}>{children}</React.Suspense> : null);
 

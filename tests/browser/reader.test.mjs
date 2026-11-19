@@ -147,3 +147,24 @@ test('the reader and its player have no serious or critical accessibility violat
     await context.close();
   }
 });
+
+test('after a release, a tab opened earlier reloads once when the reader file is gone, then the reader opens', async () => {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: 'block' });
+  await context.addInitScript(fakeVoice);
+  const page = await context.newPage();
+  let blocked = 0;
+  // The first request for the reader's code gets what Vercel answers for a removed file: the HTML page.
+  await page.route(/EReaderModal[^/]*\.(js|tsx)(\?.*)?$/, async (route) => {
+    if (blocked++ === 0) return route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><p>gone</p>' });
+    return route.continue();
+  });
+  await page.goto(base + '/', { waitUntil: 'networkidle' });
+  const reloaded = page.waitForEvent('framenavigated', { predicate: (f) => f === page.mainFrame(), timeout: 15_000 });
+  await page.locator('[title="Read Free Preview in Browser"]').first().click({ force: true });
+  await reloaded;
+  await page.waitForLoadState('networkidle');
+  await page.locator('[title="Read Free Preview in Browser"]').first().click({ force: true });
+  await page.getByLabel('Font & Theme Settings').waitFor({ timeout: 15_000 });
+  assert.ok(blocked >= 2, 'the reader was fetched again after the reload');
+  await context.close();
+});
