@@ -296,6 +296,20 @@ test('the book page, the publishing page, How it works and the Start my book for
   }
 });
 
+test('the store carousel opens on a book that is for sale, never on a sample title with awards', async () => {
+  const sellable = (await (await fetch(base + '/api/books?limit=50')).json()).books.filter((b) => !b.isSample && b.hasReaderContent);
+  if (!sellable.length) return;
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage();
+  await page.goto(base + '/', { waitUntil: 'networkidle' });
+  const hero = page.locator('div.rounded-3xl:has-text("Spotlight of the Week")').first();
+  await hero.scrollIntoViewIfNeeded();
+  const text = await hero.innerText();
+  assert.ok(sellable.some((b) => text.includes(b.title)), 'first slide is a book for sale');
+  assert.ok(!/Award (Winner|Finalist)/.test(text));
+  await context.close();
+});
+
 test('an old or mistyped book link says the book was not found and shows the store', async () => {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();

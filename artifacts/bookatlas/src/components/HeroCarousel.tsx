@@ -21,7 +21,8 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
   onExploreBookatlasPlus,
   currency = 'EUR',
 }) => {
-  const featuredBooks = books.slice(0, 4);
+  // Books for sale lead the carousel; sample titles only fill the remaining slides (found 2026-11-20).
+  const featuredBooks = [...books.filter((b) => !isSampleTitle(b)), ...books.filter((b) => isSampleTitle(b))].slice(0, 4);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const getCurrencySymbol = (c: string) => {

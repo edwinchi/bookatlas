@@ -13,7 +13,7 @@ export const hasRealRating = (book: Pick<Book, 'isSample' | 'hasReaderContent' |
 
 /**
  * Sample titles are not for sale, so they never show a discount, a struck-through price or a bestseller label
- * (owner request 2026-11-17; EU Omnibus). Applied wherever catalogue records enter the store.
+ * or award (owner request 2026-11-17; EU Omnibus; fictional books named real awards, found 2026-11-20). Applied wherever catalogue records enter the store.
  */
 export const honestSample = <T extends Book>(book: T): T =>
-  isSampleTitle(book) ? { ...book, originalPrice: book.price, isDeal: false, isBestseller: false } : book;
+  isSampleTitle(book) ? { ...book, originalPrice: book.price, isDeal: false, isBestseller: false, awards: [] } : book;
