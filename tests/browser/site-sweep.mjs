@@ -158,10 +158,17 @@ for (const [menu, item, check] of [
 {
   const page = await fresh({ width: 390, height: 844 });
   ok('Site menu row hidden on mobile', !(await site(page).isVisible()));
-  for (const [label, id] of [['Services and pricing', 'pricing'], ['How it works', 'how-it-works'], ['Earnings calculator', 'earnings'], ['Bookstore', 'bookstore']]) {
+  // The phone menu has the same five menus as the desktop row, each opening to the same items.
+  await page.getByRole('button', { name: 'Open bookstore menu' }).click();
+  const menu = page.locator('#bookstore-mobile-menu');
+  const sections = await menu.locator('nav[aria-label="Site menu"] > div > button').allInnerTexts();
+  ok('Mobile menu lists Store, Publish, Author hub, Resources, About', sections.map((t) => t.trim()).join('|') === 'Store|Publish|Author hub|Resources|About', sections.join('|'));
+  await page.getByRole('button', { name: 'Close bookstore menu' }).click();
+  for (const [section, label, id] of [['Publish', 'eBook publishing', 'pricing'], ['Publish', 'Create and self-publish', 'how-it-works'], ['Publish', 'Pricing and royalties', 'earnings'], ['Store', 'All eBooks', 'bookstore'], ['About', 'About BooksAtlas', 'about'], ['Resources', 'Who it is for', 'solutions']]) {
     await page.getByRole('button', { name: 'Open bookstore menu' }).click();
-    await page.locator('#bookstore-mobile-menu').getByRole('button', { name: label, exact: true }).click();
-    ok(`Mobile › ${label} scrolls to #${id}`, await inView(page, id));
+    await menu.getByRole('button', { name: section, exact: true }).click();
+    await menu.getByRole('button', { name: new RegExp(`^${label}`) }).click();
+    ok(`Mobile › ${section} › ${label} scrolls to #${id}`, await inView(page, id));
   }
   await page.close();
 }

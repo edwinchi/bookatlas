@@ -163,3 +163,61 @@ export const HeaderNavMenu: React.FC<HeaderNavMenuProps> = ({ label, groups, ali
     </div>
   );
 };
+
+/**
+ * One section of the phone menu (Store, Publish, Author hub, Resources, About): a button that shows or
+ * hides the same items as the matching menu on large screens. `onDone` closes the phone menu after a choice.
+ */
+export const MobileNavSection: React.FC<{ label: string; groups: NavMenuGroup[]; onDone: () => void }> = ({ label, groups, onDone }) => {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  return (
+    <div>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((o) => !o)}
+        className={`flex min-h-12 w-full items-center justify-between px-1 text-left text-base font-semibold ${open ? 'text-indigo-700' : 'text-slate-900'}`}
+      >
+        {label}
+        <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} aria-hidden />
+      </button>
+      <div id={panelId} hidden={!open} className="pb-2">
+        {groups.map((group, g) => (
+          <div key={group.heading ?? g} className={g ? 'mt-1 border-t border-slate-100 pt-1' : ''}>
+            {group.heading && <p className="px-2 pb-1 pt-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">{group.heading}</p>}
+            <ul>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const body = (
+                  <>
+                    {Icon && (
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                        <Icon className="h-4 w-4" aria-hidden />
+                      </span>
+                    )}
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-slate-900">{item.label}</span>
+                      {item.description && <span className="block text-xs leading-snug text-slate-500">{item.description}</span>}
+                    </span>
+                    {item.badge && <span className="ml-auto shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800">{item.badge}</span>}
+                  </>
+                );
+                const cls = 'flex min-h-12 w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left hover:bg-slate-50 focus-visible:bg-slate-50';
+                if (item.badge && !item.onSelect && !item.href) return <li key={item.label} className={`${cls} opacity-70`}>{body}</li>;
+                return (
+                  <li key={item.label}>
+                    {item.href
+                      ? <a href={item.href} onClick={onDone} className={cls}>{body}</a>
+                      : <button type="button" onClick={() => { onDone(); item.onSelect?.(); }} className={cls}>{body}</button>}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
