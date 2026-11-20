@@ -328,7 +328,11 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
         if (current?.id === id) return current;
         fetchFullBook(id).then((full) => {
           if (full) setDetailBook(full);
-          else window.history.replaceState(null, '', import.meta.env.BASE_URL);
+          else {
+            // An old or mistyped link: say so instead of silently showing the front page (found 2026-11-20).
+            window.history.replaceState(null, '', import.meta.env.BASE_URL);
+            setCheckoutNotice({ tone: 'info', text: 'We could not find that book. It may have been renamed or removed; search the store to find it.' });
+          }
         }).catch(() => undefined);
         return current;
       });

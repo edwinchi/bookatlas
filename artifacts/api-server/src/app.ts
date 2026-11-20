@@ -62,14 +62,16 @@ app.use(
 // Without a secret key Clerk throws on every request, taking the public catalog down with it.
 // Skip it instead: public routes keep working and account routes fail closed with 503.
 if (process.env.CLERK_SECRET_KEY?.trim()) {
-  app.use(
-    clerkMiddleware((req) => ({
-      publishableKey: process.env.CLERK_PUBLISHABLE_KEY || publishableKeyFromHost(
-        getClerkProxyHost(req) ?? "",
-        process.env.CLERK_PUBLISHABLE_KEY,
-      ),
-    })),
-  );
+  // Only the API reads the session. On book and author pages (shared links, search results) Clerk would
+  // otherwise redirect a first-time visitor through its handshake before the page loads (found 2026-11-20).
+  const clerk = clerkMiddleware((req) => ({
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY || publishableKeyFromHost(
+      getClerkProxyHost(req) ?? "",
+      process.env.CLERK_PUBLISHABLE_KEY,
+    ),
+  }));
+  // Mounted at the root (Clerk sees the full path) but skipped for pages.
+  app.use((req, res, next) => (req.path === "/api" || req.path.startsWith("/api/") ? clerk(req, res, next) : next()));
 } else {
   logger.error({ event: "auth.provider_unconfigured" }, "CLERK_SECRET_KEY is not set: sign-in and account routes are unavailable");
 }

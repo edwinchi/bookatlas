@@ -296,6 +296,15 @@ test('the book page, the publishing page, How it works and the Start my book for
   }
 });
 
+test('an old or mistyped book link says the book was not found and shows the store', async () => {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage();
+  await page.goto(base + '/books/no-such-book-20261120', { waitUntil: 'domcontentloaded' });
+  await page.getByText('We could not find that book').waitFor({ timeout: 20_000 });
+  assert.equal(new URL(page.url()).pathname, '/');
+  await context.close();
+});
+
 test('listening reads sentence by sentence, highlights the paragraph and stops on request', async () => {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   // A fake voice: each sentence "ends" after 400 ms, so the test can stop it mid-way.
