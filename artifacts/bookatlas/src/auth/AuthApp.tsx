@@ -232,10 +232,24 @@ function ProviderWithRoutes() {
         <Route path="/books/:id"><Store /></Route>
         <Route path="/author/:slug"><Store /></Route>
         <Route path="/"><Store /></Route>
-        <Route><main className="p-10 text-center"><h1 className="text-2xl font-bold">Page not found</h1><Link href="/">Return to BooksAtlas</Link></main></Route>
+        <Route><NotFound /></Route>
       </Switch>
     </AccountProvider>
   </ClerkProvider>;
+}
+
+/** An address the app does not know: say so, and keep it out of search results (the host serves every path the app). */
+function NotFound() {
+  useEffect(() => {
+    const meta = document.createElement('meta');
+    meta.name = 'robots';
+    meta.content = 'noindex';
+    document.head.appendChild(meta);
+    const title = document.title;
+    document.title = 'Page not found | BooksAtlas';
+    return () => { meta.remove(); document.title = title; };
+  }, []);
+  return <main className="p-10 text-center"><h1 className="text-2xl font-bold">Page not found</h1><Link href="/">Return to BooksAtlas</Link></main>;
 }
 
 export default function AuthApp() {

@@ -3368,7 +3368,7 @@ Rules for voice responses:
       res.json({
         success: true,
         source: 'fallback',
-        spokenText: `I heard your thought. At BooksAtlas, we have curated over 1.5 million titles. Let me guide you to something truly captivating right now!`,
+        spokenText: `I heard you, but I could not answer just now. Try again in a moment, or browse the store to find your next book.`,
       });
     }
   });

@@ -395,6 +395,16 @@ test('sample titles never show a discount, a struck-through price or a bestselle
   assert.deepEqual(bad, []);
 });
 
+test('an unknown address says the page was not found and asks search engines not to index it', async () => {
+  const page = await open('/no-such-page-here');
+  await page.getByRole('heading', { level: 1, name: 'Page not found' }).waitFor({ timeout: 10_000 });
+  assert.equal(await page.locator('meta[name="robots"][content="noindex"]').count(), 1);
+  assert.match(await page.title(), /not found/i);
+  await page.getByRole('link', { name: /return to booksatlas/i }).click();
+  await page.waitForURL(`${base}/`);
+  assert.equal(await page.locator('meta[name="robots"][content="noindex"]').count(), 0);
+});
+
 test('no Content Security Policy violations or page errors occurred', () => {
   assert.deepEqual([...new Set(cspViolations)], []);
   assert.deepEqual(pageErrors, []);
