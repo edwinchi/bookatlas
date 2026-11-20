@@ -405,6 +405,13 @@ test('an unknown address says the page was not found and asks search engines not
   assert.equal(await page.locator('meta[name="robots"][content="noindex"]').count(), 0);
 });
 
+test('the store spells its name BooksAtlas everywhere it is shown (never "bookatlas")', async () => {
+  const page = await open('/');
+  await page.getByRole('heading', { level: 1 }).first().waitFor({ timeout: 10_000 });
+  const text = await page.evaluate(() => document.body.innerText);
+  assert.deepEqual(text.match(/book ?atlas/gi) ?? [], []);
+});
+
 test('no Content Security Policy violations or page errors occurred', () => {
   assert.deepEqual([...new Set(cspViolations)], []);
   assert.deepEqual(pageErrors, []);

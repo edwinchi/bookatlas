@@ -585,7 +585,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'border-transparent text-slate-700 hover:text-slate-950 hover:border-slate-300'
               }`}
             >
-              <span className="font-serif italic font-bold text-indigo-800">bookatlas</span>
+              <span className="font-serif italic font-bold text-indigo-800">BooksAtlas</span>
               <span className="font-bold text-slate-900">Plus</span>
               <span className="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wide">Unlimited</span>
             </button>

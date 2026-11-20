@@ -227,7 +227,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
       {/* Bottom Promo bar */}
       <div className="bg-slate-950 border-t border-slate-800/80 px-6 sm:px-10 py-3.5 flex flex-wrap items-center justify-between gap-4 text-xs">
         <div className="flex items-center gap-3">
-          <span className="font-serif italic font-bold text-amber-400 text-sm">bookatlas Plus</span>
+          <span className="font-serif italic font-bold text-amber-400 text-sm">BooksAtlas Plus</span>
           <span className="text-slate-300">
             Read and listen to every Plus title as much as you like. Coming soon.
           </span>
