@@ -185,7 +185,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={goToStoreHome}
             className="shrink-0 py-2 group focus-visible:outline-2 focus-visible:outline-indigo-600 cursor-pointer"
           >
-            <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="BooksAtlas" width={319} height={96} className="h-10 w-auto transition-opacity group-hover:opacity-85 xl:h-11" />
+            <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="BooksAtlas" width={344} height={96} className="h-10 w-auto transition-opacity group-hover:opacity-85 xl:h-11" />
           </button>
           <nav aria-label="Site" className="flex items-center gap-0.5">
             <HeaderNavMenu label="Store" groups={[
@@ -292,7 +292,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={goToStoreHome}
               className="flex min-w-0 items-center gap-1.5 sm:gap-2.5 text-left group focus-visible:outline-2 focus-visible:outline-indigo-600 cursor-pointer lg:hidden"
             >
-              <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="BooksAtlas" width={319} height={96} className="h-9 w-auto shrink-0 sm:h-10 transition-opacity group-hover:opacity-85" />
+              <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="BooksAtlas" width={344} height={96} className="h-9 w-auto shrink-0 sm:h-10 transition-opacity group-hover:opacity-85" />
             </button>
 
             {/* Categories selector button */}

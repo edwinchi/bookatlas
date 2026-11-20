@@ -1,6 +1,7 @@
 // Bookatlas Offline-First Service Worker
 // v6: API answers are no longer cached first (stale prices, payment settings and submissions).
-const CACHE_VERSION = 'bookatlas-v6';
+// v7: the logo reads BOOKSATLAS; visitors drop the cached BOOKATLAS image.
+const CACHE_VERSION = 'bookatlas-v7';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DATA_CACHE = `data-${CACHE_VERSION}`;
 
