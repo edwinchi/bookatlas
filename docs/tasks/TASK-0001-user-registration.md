@@ -180,4 +180,4 @@ Events, alert rules and the uptime probe are defined in the [runbook](../runbook
 | Legal review of the Privacy Notice and Legal Notice; supply the full street address and VAT number | You or counsel | Contact details and KvK 89423496 added 2026-11-08; legal form corrected from "B.V." to the registered name. Other in-app copy still says "B.V."/Amsterdam (admin reports, AI persona, PDF exports) |
 | Enforce the full CSP after observing signed-in flows; add the production Clerk domain | Agent | Runbook §CSP |
 | Self-host Google Fonts (F11) | Agent | Small follow-up |
-| Uptime probe and log alerts in the hosting dashboard | Operator | Requires dashboard access |
+| Uptime probe and log alerts in the hosting dashboard | Operator | **Uptime probe added 2026-11-22:** `.github/workflows/uptime.yml` checks `/` and `/api/healthz` every 5 minutes and GitHub emails on failure (runs once on main). Log alerts still need dashboard access |
