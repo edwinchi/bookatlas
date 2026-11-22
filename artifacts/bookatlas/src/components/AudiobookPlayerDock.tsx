@@ -125,11 +125,13 @@ export const AudiobookPlayerDock: React.FC<AudiobookPlayerDockProps> = ({
   );
   const playIcon = state === 'loading' ? <Loader2 className="h-6 w-6 animate-spin" /> : playing ? <Pause className="h-6 w-6 fill-current" /> : <Play className="h-6 w-6 translate-x-0.5 fill-current" />;
 
+  // One <audio> for both views, kept first in the same fragment so React never remounts it: shrinking or opening the
+  // player must not stop the sound or rewind it (found testing the live site, 2026-11-22).
   if (minimized) {
     return (
+      <>{audioEl}
       <div role="region" data-floating-player aria-label={`Audio sample: ${book.title}`}
         className="pointer-events-auto fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-3 z-[60] flex items-center gap-1 rounded-full bg-slate-900 p-1.5 text-white shadow-2xl ring-1 ring-white/10 animate-fade-in sm:right-6">
-        {audioEl}
         <img {...coverProps(book.coverImage, 64)} alt="" className="h-9 w-9 rounded-full object-cover ring-2 ring-white/20" referrerPolicy="no-referrer" />
         <button type="button" onClick={toggle} disabled={state !== 'ready'} aria-label={playing ? 'Pause the sample' : 'Play the sample'}
           className="grid h-11 w-11 place-items-center rounded-full bg-indigo-500 hover:bg-indigo-400 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer">
@@ -145,14 +147,15 @@ export const AudiobookPlayerDock: React.FC<AudiobookPlayerDockProps> = ({
           <X className="h-4 w-4" />
         </button>
       </div>
+      </>
     );
   }
 
   return (
+    <>{audioEl}
     <Tooltip.Provider delayDuration={400}>
       <section role="region" data-floating-player aria-label={`Audio sample: ${book.title}`} onKeyDown={onKeyDown}
         className="pointer-events-auto fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-[60] rounded-3xl bg-white/95 text-slate-900 shadow-[0_24px_60px_-12px_rgba(15,23,42,0.5)] ring-1 ring-slate-900/10 backdrop-blur-md animate-sheet-up motion-reduce:animate-none sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[420px]">
-        {audioEl}
         {/* Book */}
         <div className="flex items-start gap-3 px-4 pt-4">
           <button type="button" onClick={() => onOpenDetail(book)} aria-label={`Details of ${book.title}`}
@@ -271,5 +274,6 @@ export const AudiobookPlayerDock: React.FC<AudiobookPlayerDockProps> = ({
         </div>
       </section>
     </Tooltip.Provider>
+    </>
   );
 };

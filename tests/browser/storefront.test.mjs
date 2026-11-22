@@ -131,6 +131,16 @@ test('the audio sample pops up in its own player, plays, and changes speed there
     await page.getByRole('radio', { name: '1.5x' }).click();
     await page.keyboard.press('Escape');
     assert.match(await player.getByRole('button', { name: /Listening speed/ }).innerText(), /1\.5x/);
+    // Shrinking the player keeps the same sound going: no restart, same place, same speed.
+    const now = () => page.evaluate(() => { const a = document.querySelector('audio'); return { t: a.currentTime, rate: a.playbackRate, src: a.src }; });
+    const before = await now();
+    await player.getByRole('button', { name: 'Shrink the player' }).click();
+    await page.getByRole('button', { name: 'Open the player' }).waitFor();
+    const after = await now();
+    assert.equal(after.src, before.src);
+    assert.equal(after.rate, 1.5);
+    assert.ok(after.t >= before.t, `kept its place (${before.t} -> ${after.t})`);
+    await page.getByRole('button', { name: 'Open the player' }).click();
   } else {
     // Not recorded yet and the cloud voice's free quota is used up: a plain message, no broken player.
     assert.equal(sample.status(), 503);
