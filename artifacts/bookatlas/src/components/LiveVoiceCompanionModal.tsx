@@ -17,6 +17,7 @@ import {
 import { VoiceConversationMessage } from '../types';
 import { useDeviceVoices, pickDefaultDeviceVoice, deviceVoiceLabel } from './voice/useDeviceVoices';
 
+import { SelectBox } from './ui/select-box';
 interface LiveVoiceCompanionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -289,7 +290,7 @@ export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionM
           {!ttsSupported || deviceVoices.length === 0 ? (
             <span className="text-xs text-slate-400">{ttsSupported ? 'No device voices reported yet. Replies stay as text.' : 'Read-aloud is not supported in this browser. Replies stay as text.'}</span>
           ) : (
-            <select
+            <SelectBox
               id="companion-device-voice"
               value={deviceVoice?.voiceURI ?? ''}
               onChange={(e) => { setDeviceVoiceUri(e.target.value); }}
@@ -297,7 +298,7 @@ export function LiveVoiceCompanionModal({ isOpen, onClose }: LiveVoiceCompanionM
               className="flex-1 min-w-0 bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
             >
               {deviceVoices.map((v) => <option key={v.voiceURI} value={v.voiceURI}>{deviceVoiceLabel(v)}</option>)}
-            </select>
+            </SelectBox>
           )}
           <span className="flex items-center gap-1 text-[10px] text-slate-500 whitespace-nowrap"><Headphones className="w-3 h-3" /> Studio female and male voices: Reader TTS Studio</span>
         </div>

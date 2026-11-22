@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Search, Check, X } from 'lucide-react';
 import type { WorkforceRole, WorkforceTeam } from '@workspace/api-client-react';
 
+import { SelectBox } from '../ui/select-box';
 export const MAX_WORKERS = 5;
 
 type Props = {
@@ -57,7 +58,7 @@ export const RoleRoster: React.FC<Props> = ({ roles, teams, selected, setSelecte
             className="w-full rounded-xl border border-[#d9cfbd] bg-[#fbf8f1] pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1d4f4a]"
           />
         </label>
-        <select
+        <SelectBox
           value={dept}
           onChange={(e) => setDept(e.target.value)}
           aria-label="Filter by department"
@@ -66,7 +67,7 @@ export const RoleRoster: React.FC<Props> = ({ roles, teams, selected, setSelecte
         >
           <option value="all">All departments</option>
           {departments.map((d) => <option key={d} value={d}>{d}</option>)}
-        </select>
+        </SelectBox>
       </div>
       {team && (
         <div className="mt-3 flex items-center justify-between rounded-xl bg-[#123c3a] text-[#f3ecdc] px-4 py-2 text-[12px]">

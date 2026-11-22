@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { SubscriberCleanupCriteria, SubscriberCleanupReport } from '../../types';
 
+import { CheckBox } from '../ui/select-box';
 interface SubscriberCleanupModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -157,8 +158,7 @@ export const SubscriberCleanupModal: React.FC<SubscriberCleanupModalProps> = ({
 
               <div className="space-y-3">
                 <label className="flex items-start gap-3 p-3.5 bg-slate-50 hover:bg-slate-100/80 rounded-2xl border border-slate-200 cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
+                  <CheckBox
                     checked={criteria.removeBounced}
                     onChange={(e) => setCriteria({ ...criteria, removeBounced: e.target.checked })}
                     className="w-4 h-4 text-indigo-600 rounded-sm mt-0.5"
@@ -174,8 +174,7 @@ export const SubscriberCleanupModal: React.FC<SubscriberCleanupModalProps> = ({
                 </label>
 
                 <label className="flex items-start gap-3 p-3.5 bg-slate-50 hover:bg-slate-100/80 rounded-2xl border border-slate-200 cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
+                  <CheckBox
                     checked={criteria.removeUnsubscribed}
                     onChange={(e) => setCriteria({ ...criteria, removeUnsubscribed: e.target.checked })}
                     className="w-4 h-4 text-indigo-600 rounded-sm mt-0.5"
@@ -191,8 +190,7 @@ export const SubscriberCleanupModal: React.FC<SubscriberCleanupModalProps> = ({
                 </label>
 
                 <label className="flex items-start gap-3 p-3.5 bg-slate-50 hover:bg-slate-100/80 rounded-2xl border border-slate-200 cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
+                  <CheckBox
                     checked={criteria.removeInactive90Days}
                     onChange={(e) => setCriteria({ ...criteria, removeInactive90Days: e.target.checked })}
                     className="w-4 h-4 text-indigo-600 rounded-sm mt-0.5"
@@ -208,8 +206,7 @@ export const SubscriberCleanupModal: React.FC<SubscriberCleanupModalProps> = ({
                 </label>
 
                 <label className="flex items-start gap-3 p-3.5 bg-slate-50 hover:bg-slate-100/80 rounded-2xl border border-slate-200 cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
+                  <CheckBox
                     checked={criteria.flagSyntaxErrors}
                     onChange={(e) => setCriteria({ ...criteria, flagSyntaxErrors: e.target.checked })}
                     className="w-4 h-4 text-indigo-600 rounded-sm mt-0.5"

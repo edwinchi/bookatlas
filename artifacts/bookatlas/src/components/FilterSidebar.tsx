@@ -3,6 +3,7 @@ import { Filter, Star, Sparkles, Tag, Check, Headphones, BookOpen, X } from 'luc
 import { FilterOptions } from '../types';
 import { CategoryBrowser } from './CategoryBrowser';
 
+import { CheckBox, SelectBox } from './ui/select-box';
 interface FilterSidebarProps {
   filters: FilterOptions;
   setFilters: React.Dispatch<React.SetStateAction<FilterOptions>>;
@@ -98,18 +99,17 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
       <label className="block text-sm font-semibold text-slate-900">
         Language
-        <select aria-label="Book language" value={filters.language || 'all'}
+        <SelectBox aria-label="Book language" value={filters.language || 'all'}
           onChange={event => setFilters(previous => ({ ...previous, language: event.target.value }))}
           className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 focus:ring-2 focus:ring-indigo-600">
           <option value="all">All languages</option>
           {languages.map(language => <option key={language} value={language}>{language}</option>)}
-        </select>
+        </SelectBox>
       </label>
       {/* BooksAtlas Plus Toggle */}
       <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200/80 rounded-xl p-3.5">
         <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
+          <CheckBox
             checked={filters.bookatlasPlusOnly}
             onChange={(e) => setFilters((prev) => ({ ...prev, bookatlasPlusOnly: e.target.checked }))}
             className="mt-1 w-4 h-4 text-indigo-600 rounded-sm focus:ring-indigo-600 border-slate-300"

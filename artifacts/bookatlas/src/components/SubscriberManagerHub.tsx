@@ -52,6 +52,7 @@ import { CSVValidationModal } from './subscriber/CSVValidationModal';
 import { SubscriberCleanupModal } from './subscriber/SubscriberCleanupModal';
 import { TierAccessGate } from './subscriber/TierAccessGate';
 
+import { CheckBox, SelectBox } from './ui/select-box';
 interface SubscriberManagerHubProps {
   books?: Book[];
   currencySymbol?: string;
@@ -895,8 +896,7 @@ The BooksAtlas Editorial Board`
                   </span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
+                  <CheckBox
                     checked={isABTesting}
                     onChange={(e) => setIsABTesting(e.target.checked)}
                     className="sr-only peer"
@@ -976,7 +976,7 @@ The BooksAtlas Editorial Board`
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Target Audience Segment
                 </label>
-                <select
+                <SelectBox
                   value={campaignTargetFilter}
                   onChange={(e) => setCampaignTargetFilter(e.target.value as any)}
                   className="w-full p-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
@@ -986,14 +986,14 @@ The BooksAtlas Editorial Board`
                   <option value="members_only">✨ BooksAtlas Plus Members Only</option>
                   <option value="free_tier">📖 Free Readers Only</option>
                   <option value="custom_tags">🏷️ Specific Tag Segment</option>
-                </select>
+                </SelectBox>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Featured Book Attachment
                 </label>
-                <select
+                <SelectBox
                   value={selectedBookId}
                   onChange={(e) => setSelectedBookId(e.target.value)}
                   className="w-full p-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
@@ -1003,7 +1003,7 @@ The BooksAtlas Editorial Board`
                       {b.title.slice(0, 24)}...
                     </option>
                   ))}
-                </select>
+                </SelectBox>
               </div>
             </div>
 
@@ -1196,7 +1196,7 @@ The BooksAtlas Editorial Board`
               </div>
 
               {/* Status Filter */}
-              <select
+              <SelectBox
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value as any);
@@ -1207,10 +1207,10 @@ The BooksAtlas Editorial Board`
                 <option value="all">All Statuses</option>
                 <option value="subscribed">Subscribed Only</option>
                 <option value="unsubscribed">Unsubscribed / Suppressed</option>
-              </select>
+              </SelectBox>
 
               {/* Tier Filter */}
-              <select
+              <SelectBox
                 value={tierFilter}
                 onChange={(e) => {
                   setTierFilter(e.target.value as any);
@@ -1222,7 +1222,7 @@ The BooksAtlas Editorial Board`
                 <option value="vip_patron">👑 VIP Patron Circle (40% Perk)</option>
                 <option value="member_subscriber">✨ BooksAtlas Plus Members</option>
                 <option value="free_reader">📖 Free Readers</option>
-              </select>
+              </SelectBox>
             </div>
 
             <div className="flex items-center gap-2">
@@ -1421,7 +1421,7 @@ The BooksAtlas Editorial Board`
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Subscriber Tier</label>
-                <select
+                <SelectBox
                   value={singleTier}
                   onChange={(e) => setSingleTier(e.target.value as SubscriberTier)}
                   className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500"
@@ -1429,7 +1429,7 @@ The BooksAtlas Editorial Board`
                   <option value="free_reader">📖 Free Reader</option>
                   <option value="member_subscriber">✨ BooksAtlas Plus Member</option>
                   <option value="vip_patron">👑 VIP Patron Circle (40% Perk)</option>
-                </select>
+                </SelectBox>
               </div>
 
               <div>

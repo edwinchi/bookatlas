@@ -47,6 +47,7 @@ import { enquiryHref } from './StartBookDialog';
 import { GENRES, AFRICAN_LITERATURE_GENRES, CONSCIOUSNESS_COMMUNITY_GENRES, GENERAL_GENRES } from '../data/booksData';
 
 
+import { SelectBox } from './ui/select-box';
 interface HeaderProps {
   activeTab: 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager' | 'publish';
   setActiveTab: (tab: 'store' | 'library' | 'deals' | 'audiobooks' | 'bookatlasplus' | 'manager' | 'publish') => void;
@@ -264,21 +265,21 @@ export const Header: React.FC<HeaderProps> = ({
               <label className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-700 hover:border-slate-300">
                 <Globe className="h-3.5 w-3.5 text-indigo-600" aria-hidden />
                 <span className="sr-only">Language</span>
-                <select value={language} onChange={(e) => setLanguage(e.target.value as 'en' | 'nl')} className="bg-transparent text-xs font-semibold focus:outline-hidden cursor-pointer">
+                <SelectBox value={language} onChange={(e) => setLanguage(e.target.value as 'en' | 'nl')} className="bg-transparent text-xs font-semibold focus:outline-hidden cursor-pointer">
                   <option value="en">English</option>
                   <option value="nl">Nederlands</option>
-                </select>
+                </SelectBox>
               </label>
             )}
             <label className="flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-700 hover:border-slate-300">
               <span className="sr-only">Currency</span>
-              <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="bg-transparent text-xs font-semibold focus:outline-hidden cursor-pointer">
+              <SelectBox value={currency} onChange={(e) => setCurrency(e.target.value)} className="bg-transparent text-xs font-semibold focus:outline-hidden cursor-pointer">
                 <option value="EUR">EUR (€) Netherlands</option>
                 <option value="USD">USD ($) Global</option>
                 <option value="GBP">GBP (£) UK</option>
                 <option value="CAD">CAD ($) Canada</option>
                 <option value="JPY">JPY (¥) Japan</option>
-              </select>
+              </SelectBox>
             </label>
           </div>
         </div>
@@ -660,15 +661,15 @@ export const Header: React.FC<HeaderProps> = ({
           <button onClick={() => { onOpenWishlist(); setMobileMenuOpen(false); }} className="min-h-12 w-full rounded-lg bg-slate-50 px-3 text-left font-semibold text-slate-900">Wishlist{wishlistCount ? ` (${wishlistCount})` : ''}</button>
           {setLanguage && <label className="flex min-h-12 items-center justify-between gap-3 rounded-lg px-3 text-sm font-medium text-slate-800">
             <span>Language</span>
-            <select value={language} onChange={event => setLanguage(event.target.value as 'en' | 'nl')} aria-label="Language" className="min-h-11 rounded-lg border border-slate-300 bg-white px-2">
+            <SelectBox value={language} onChange={event => setLanguage(event.target.value as 'en' | 'nl')} aria-label="Language" className="min-h-11 rounded-lg border border-slate-300 bg-white px-2">
               <option value="en">English</option><option value="nl">Nederlands</option>
-            </select>
+            </SelectBox>
           </label>}
           <label className="flex min-h-12 items-center justify-between gap-3 rounded-lg px-3 text-sm font-medium text-slate-800">
             <span>Currency</span>
-            <select value={currency} onChange={event => setCurrency(event.target.value)} aria-label="Currency" className="min-h-11 max-w-40 rounded-lg border border-slate-300 bg-white px-2">
+            <SelectBox value={currency} onChange={event => setCurrency(event.target.value)} aria-label="Currency" className="min-h-11 max-w-40 rounded-lg border border-slate-300 bg-white px-2">
               <option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CAD">CAD ($)</option><option value="JPY">JPY (¥)</option>
-            </select>
+            </SelectBox>
           </label>
           {/* Admin Session Mobile Bar */}
           {isAdminAuthenticated ? (

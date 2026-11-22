@@ -1,4 +1,5 @@
 import { coverProps } from '../utils/coverImage';
+import { isNarrated } from '../audioEdition';
 import { libraryStats } from '../libraryStats';
 import React, { useState, useEffect } from 'react';
 import { useAccount } from '../auth/AuthContext';
@@ -36,6 +37,8 @@ interface MyLibraryViewProps {
   library: UserLibraryItem[];
   wishlist: Book[];
   onOpenReader: (item: UserLibraryItem) => void;
+  /** Opens the book with its narration playing in the pop-up player (narrated books). */
+  onListen?: (item: UserLibraryItem) => void;
   onOpenBookDetail: (book: Book) => void;
   onRemoveFromLibrary: (bookId: string) => void;
   onRemoveFromWishlist: (bookId: string) => void;
@@ -49,6 +52,7 @@ interface MyLibraryViewProps {
 
 export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
   library,
+  onListen,
   wishlist,
   onOpenReader,
   onOpenBookDetail,
@@ -522,6 +526,17 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
                     <BookOpen className="w-3.5 h-3.5 text-amber-400" />
                     <span>{item.progressPercent > 0 ? 'Continue Reading' : 'Start Reading'}</span>
                   </button>
+                  {onListen && isNarrated(item.book) && (
+                    <button
+                      type="button"
+                      onClick={() => onListen(item)}
+                      aria-label={`Listen to ${item.book.title}`}
+                      className="py-2.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Headphones className="w-3.5 h-3.5" />
+                      <span>Listen</span>
+                    </button>
+                  )}
 
                   <button
                     onClick={() => onRemoveFromLibrary(item.book.id)}

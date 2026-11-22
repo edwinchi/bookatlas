@@ -7,6 +7,7 @@ import type { ConvertedManuscript } from './convert/convert';
 import type { ManuscriptExcerpt } from './convert/excerpt';
 import { LaunchPanel } from './LaunchPanel';
 
+import { CheckBox, SelectBox } from '../ui/select-box';
 /** The fields "fill from your book" may set; the form never overwrites what the author typed. */
 const FILLABLE = ['title', 'subtitle', 'author', 'language', 'description', 'categories', 'keywords', 'copyrightHolder', 'copyrightYear', 'authorBio', 'backCoverBlurb'] as const;
 type Fillable = typeof FILLABLE[number];
@@ -252,9 +253,9 @@ export const SubmissionForm: React.FC<{
           <label className={label}>Subtitle (optional){badge('subtitle')}<input className={field} value={intake.subtitle ?? ''} onChange={(e) => set('subtitle', e.target.value)} /></label>
           <label className={label}>Author name{badge('author')}<input className={field} value={intake.author} onChange={(e) => set('author', e.target.value)} />{error('author')}</label>
           <label className={label}>Language{badge('language')}
-            <select className={field} value={intake.language} onChange={(e) => set('language', e.target.value)}>
+            <SelectBox className={field} value={intake.language} onChange={(e) => set('language', e.target.value)}>
               {LANGUAGES.map((l) => <option key={l}>{l}</option>)}
-            </select>
+            </SelectBox>
           </label>
         </div>
         <label className={label}>Description{badge('description')} <span className="font-normal text-slate-500">({intake.description.trim().length} of 150–4,000 characters)</span>
@@ -297,13 +298,13 @@ export const SubmissionForm: React.FC<{
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className={label}>eBook ISBN (optional)<input className={field} value={intake.ebookIsbn ?? ''} onChange={(e) => set('ebookIsbn', e.target.value)} />{error('ebookIsbn')}</label>
           <label className={label}>AI-generated content
-            <select className={field} value={intake.aiContent} onChange={(e) => set('aiContent', e.target.value as SubmissionIntake['aiContent'])}>
+            <SelectBox className={field} value={intake.aiContent} onChange={(e) => set('aiContent', e.target.value as SubmissionIntake['aiContent'])}>
               <option value="none">None</option><option value="assisted">AI-assisted (I wrote it, AI helped)</option><option value="generated">AI-generated text or images</option>
-            </select>
+            </SelectBox>
           </label>
         </div>
         <label className="flex items-start gap-2 text-sm text-slate-700">
-          <input type="checkbox" className="mt-1" checked={intake.rightsConfirmed} onChange={(e) => set('rightsConfirmed', e.target.checked)} />
+          <CheckBox className="mt-1" checked={intake.rightsConfirmed} onChange={(e) => set('rightsConfirmed', e.target.checked)} />
           I own the rights to the text, images and fonts in this book, or have permission to publish them.
         </label>
         {error('rightsConfirmed')}
@@ -312,16 +313,16 @@ export const SubmissionForm: React.FC<{
       <fieldset className="space-y-4">
         <legend className="font-serif text-lg font-bold text-slate-900">Print edition</legend>
         <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" checked={!!intake.wantsPrint} onChange={(e) => set('wantsPrint', e.target.checked)} />
+          <CheckBox checked={!!intake.wantsPrint} onChange={(e) => set('wantsPrint', e.target.checked)} />
           I also want a paperback or hardcover
         </label>
         {intake.wantsPrint && (
           <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className={label}>Binding
-                <select className={field} value={intake.binding} onChange={(e) => set('binding', e.target.value as 'paperback' | 'hardcover')}>
+                <SelectBox className={field} value={intake.binding} onChange={(e) => set('binding', e.target.value as 'paperback' | 'hardcover')}>
                   <option value="paperback">Paperback</option><option value="hardcover">Hardcover</option>
-                </select>{error('binding')}
+                </SelectBox>{error('binding')}
               </label>
               <label className={label}>Print ISBN (one per format)<input className={field} value={intake.printIsbn ?? ''} onChange={(e) => set('printIsbn', e.target.value)} />{error('printIsbn')}</label>
             </div>

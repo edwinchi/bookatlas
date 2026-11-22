@@ -5,6 +5,8 @@ import type { Chapter } from '../../types';
 import type { ChapterSocial, GroupDetail, GroupSummary, useEbookApi } from '../ebook/ebookApi';
 import { HIGHLIGHT_BG } from './ReaderNotebook';
 
+import { SelectBox } from '../ui/select-box';
+import { useConfirm } from '../ui/confirm';
 type Api = ReturnType<typeof useEbookApi>;
 export type CommunityTab = 'chapter' | 'groups';
 
@@ -20,13 +22,15 @@ export function ReaderCommunity(props: {
   const { api, signedIn, social, chapters, chapterIndex } = props;
   const tabCls = 'flex-1 whitespace-nowrap rounded-full px-2 py-1.5 text-[11px] font-bold text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm cursor-pointer';
   const [reported, setReported] = useState<Set<string>>(new Set());
+  const { confirm, dialog } = useConfirm();
   const reportNote = async (id: string) => {
-    if (!window.confirm('Report this note to BooksAtlas as spam, abusive or a spoiler?')) return;
+    if (!(await confirm({ title: 'Report this note?', body: 'BooksAtlas will review it as spam, abuse or a spoiler.', action: 'Report', destructive: true }))) return;
     await api.report('annotation', id).catch(() => undefined);
     setReported((s) => new Set(s).add(id));
   };
 
   return (
+    <>{dialog}
     <aside className="absolute inset-y-0 right-0 z-40 flex w-full max-w-sm flex-col border-l border-slate-200 bg-white text-slate-900 shadow-2xl" aria-label="Readers community">
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
         <p className="flex items-center gap-2 text-sm font-bold"><Users className="h-4 w-4 text-indigo-600" aria-hidden />Readers</p>
@@ -94,6 +98,7 @@ export function ReaderCommunity(props: {
         </Tabs.Root>
       )}
     </aside>
+    </>
   );
 }
 
@@ -151,6 +156,7 @@ function Groups({ api, bookId, bookTitle, chapters, chapterIndex, openGroupId }:
 }
 
 function GroupView({ api, id, chapters, chapterIndex, onBack }: { api: Api; id: string; chapters: Chapter[]; chapterIndex: number; onBack: () => void }) {
+  const { confirm, dialog } = useConfirm();
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [error, setError] = useState('');
   const [text, setText] = useState('');
@@ -176,6 +182,7 @@ function GroupView({ api, id, chapters, chapterIndex, onBack }: { api: Api; id: 
   );
   return (
     <div className="space-y-3 text-xs">
+      {dialog}
       <button type="button" onClick={onBack} className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"><ArrowLeft className="h-3 w-3" aria-hidden />Groups</button>
       <div>
         <h3 className="text-sm font-bold text-slate-900">{group.name}</h3>
@@ -193,11 +200,11 @@ function GroupView({ api, id, chapters, chapterIndex, onBack }: { api: Api; id: 
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} maxLength={2000} aria-label="Write to the group" placeholder="What do you think so far?"
           className="w-full rounded-lg border border-slate-200 p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
         <div className="flex items-center justify-between gap-2">
-          <select value={about} onChange={(e) => setAbout(e.target.value as 'chapter' | 'general')} aria-label="About"
+          <SelectBox value={about} onChange={(e) => setAbout(e.target.value as 'chapter' | 'general')} aria-label="About"
             className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-1.5 py-1 text-[11px]">
             <option value="chapter">About {chapterName(chapterIndex).slice(0, 40)}</option>
             <option value="general">About the whole book (no spoilers)</option>
-          </select>
+          </SelectBox>
           <button type="submit" disabled={busy || !text.trim()} className="inline-flex items-center gap-1 rounded-full bg-indigo-600 px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-50 cursor-pointer"><Send className="h-3 w-3" aria-hidden />Post</button>
         </div>
       </form>
@@ -212,7 +219,7 @@ function GroupView({ api, id, chapters, chapterIndex, onBack }: { api: Api; id: 
                   <span><b className="text-slate-800">{p.mine ? 'You' : p.name}</b> · {p.chapterIndex === null ? 'whole book' : chapterName(p.chapterIndex).slice(0, 30)} · {new Date(p.date).toLocaleDateString('en-GB')}</span>
                   <span className="flex items-center gap-1.5">
                     {!p.mine && (reported.has(p.id) ? <span className="text-slate-400">Reported</span>
-                      : <button type="button" aria-label="Report post" onClick={() => { if (window.confirm('Report this post to BooksAtlas?')) void api.report('post', p.id).then(() => setReported((s) => new Set(s).add(p.id))).catch(() => undefined); }} className="hover:text-rose-600 cursor-pointer"><Flag className="h-3 w-3" /></button>)}
+                      : <button type="button" aria-label="Report post" onClick={() => { void confirm({ title: 'Report this post?', body: 'BooksAtlas will review it.', action: 'Report', destructive: true }).then((ok) => { if (ok) void api.report('post', p.id).then(() => setReported((s) => new Set(s).add(p.id))).catch(() => undefined); }); }} className="hover:text-rose-600 cursor-pointer"><Flag className="h-3 w-3" /></button>)}
                     {p.canDelete && <button type="button" aria-label="Delete post" onClick={() => void act(async () => { await api.deleteGroupPost(id, p.id); await load(); })} className="hover:text-rose-600 cursor-pointer"><Trash2 className="h-3 w-3" /></button>}
                   </span>
                 </div>
@@ -228,7 +235,9 @@ function GroupView({ api, id, chapters, chapterIndex, onBack }: { api: Api; id: 
         </ul>
       ) : <p className="rounded-xl bg-slate-50 p-3 text-center text-[11px] text-slate-500">No posts yet. Start the conversation.</p>}
       <button type="button" disabled={busy}
-        onClick={() => { if (window.confirm(group.role === 'owner' ? 'Delete this group and its whole discussion for everyone?' : 'Leave this group? Your posts in it are removed.')) void act(async () => { await api.leaveGroup(id); onBack(); }); }}
+        onClick={() => { void confirm(group.role === 'owner'
+          ? { title: 'Delete this group?', body: 'The group and its whole discussion are deleted for everyone.', action: 'Delete group', destructive: true }
+          : { title: 'Leave this group?', body: 'Your posts in it are removed.', action: 'Leave', destructive: true }).then((ok) => { if (ok) void act(async () => { await api.leaveGroup(id); onBack(); }); }); }}
         className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700 hover:underline cursor-pointer">
         <LogOut className="h-3 w-3" aria-hidden />{group.role === 'owner' ? 'Delete group' : 'Leave group'}
       </button>

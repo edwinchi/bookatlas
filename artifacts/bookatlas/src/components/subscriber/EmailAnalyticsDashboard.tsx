@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { SubscriberCampaign, CampaignAnalytics } from '../../types';
 
+import { SelectBox } from '../ui/select-box';
 interface EmailAnalyticsDashboardProps {
   campaigns: SubscriberCampaign[];
   onRefreshCampaigns: () => void;
@@ -178,7 +179,7 @@ export const EmailAnalyticsDashboard: React.FC<EmailAnalyticsDashboardProps> = (
             </div>
 
             <div className="flex items-center gap-2">
-              <select
+              <SelectBox
                 value={selectedCampaignId}
                 onChange={(e) => setSelectedCampaignId(e.target.value)}
                 className="p-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer max-w-xs"
@@ -188,7 +189,7 @@ export const EmailAnalyticsDashboard: React.FC<EmailAnalyticsDashboardProps> = (
                     {c.title.slice(0, 35)}... ({c.totalRecipients?.toLocaleString()} sent)
                   </option>
                 ))}
-              </select>
+              </SelectBox>
               <button
                 onClick={() => fetchCampaignAnalytics(selectedCampaignId)}
                 className="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-600 cursor-pointer"

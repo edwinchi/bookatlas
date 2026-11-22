@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { PAPERS, TRIM_SIZES, inchesToMm, printCoverSpec, type PaperId, type TrimSizeId } from '@workspace/bookatlas-catalog/publishing';
 
+import { SelectBox } from '../ui/select-box';
 const fmt = (inches: number) => `${inches.toFixed(3)} in · ${inchesToMm(inches)} mm`;
 
 /** Full-wrap cover dimensions for a trim, paper and final page count, drawn to scale. */
@@ -19,14 +20,14 @@ export const PrintCalculator: React.FC<{
       {onChange && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <label className="text-xs font-semibold text-slate-700">Trim size
-            <select className={field} value={trimSize} onChange={(e) => onChange({ trimSize: e.target.value as TrimSizeId, paper, pageCount })}>
+            <SelectBox className={field} value={trimSize} onChange={(e) => onChange({ trimSize: e.target.value as TrimSizeId, paper, pageCount })}>
               {TRIM_SIZES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
-            </select>
+            </SelectBox>
           </label>
           <label className="text-xs font-semibold text-slate-700">Paper
-            <select className={field} value={paper} onChange={(e) => onChange({ trimSize, paper: e.target.value as PaperId, pageCount })}>
+            <SelectBox className={field} value={paper} onChange={(e) => onChange({ trimSize, paper: e.target.value as PaperId, pageCount })}>
               {PAPERS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
-            </select>
+            </SelectBox>
           </label>
           <label className="text-xs font-semibold text-slate-700">Pages after layout
             <input className={field} type="number" min={24} max={828} value={pageCount || ''} onChange={(e) => onChange({ trimSize, paper, pageCount: Number(e.target.value) })} />

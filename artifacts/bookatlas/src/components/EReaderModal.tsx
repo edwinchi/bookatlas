@@ -82,6 +82,8 @@ interface EReaderModalProps {
   onRequireAiAccess?: (featureTitle: string, featureDescription: string, action: () => void) => void;
   /** Open the readers panel on this reading group (after joining from an invite link). */
   openGroupId?: string | null;
+  /** Start listening as soon as the book is ready, with the pop-up player open (the "Listen" buttons). */
+  autoListen?: boolean;
 }
 
 export const EReaderModal: React.FC<EReaderModalProps> = ({
@@ -95,6 +97,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   hasAiAccess = true,
   onRequireAiAccess,
   openGroupId = null,
+  autoListen = false,
 }) => {
   const [currentChapterIndex, setCurrentChapterIndex] = useState(initialChapterIndex);
   const [currentParagraphIndex, setCurrentParagraphIndex] = useState(initialParagraphIndex);
@@ -118,10 +121,16 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       })
       .catch(() => { if (!cancelled) setFullError('The book could not be loaded, so the free sample is shown. Please retry later.'); });
     // A natural Gemini narration (TASK-0008) replaces the device voice when the book has one.
-    ebookApi.readerNarration(book.id).then((n) => { if (!cancelled) setNarration(n && n.segments.length ? n : null); }).catch(() => undefined);
+    setNarrationChecked(false);
+    ebookApi.readerNarration(book.id)
+      .then((n) => { if (!cancelled) setNarration(n && n.segments.length ? n : null); })
+      .catch(() => undefined)
+      .finally(() => { if (!cancelled) setNarrationChecked(true); });
     return () => { cancelled = true; };
   }, [book.id, book.hasReaderContent, account?.id]);
   const [narration, setNarration] = useState<ReaderNarration | null>(null);
+  /** The narration request has answered (with or without one), so "Listen" knows which voice to start. */
+  const [narrationChecked, setNarrationChecked] = useState(false);
   const inPreview = !!book.hasReaderContent && access === 'preview';
   const [showToc, setShowToc] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -447,7 +456,13 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       audio.playbackRate = listenRef.current.rate;
       highlight();
       // A pause (lock screen, headphones) before the part starts aborts play(); only a real failure stops listening.
-      await audio.play().catch((e: unknown) => { if (run === speechRun.current && (e as { name?: string })?.name !== 'AbortError') stopSpeech(); });
+      await audio.play().catch((e: unknown) => {
+        if (run !== speechRun.current) return;
+        const name = (e as { name?: string })?.name;
+        // The browser wants a tap before sound starts: keep the player open, paused, so one press of Play starts it.
+        if (name === 'NotAllowedError') { setNarrationPaused(true); setPlaying('paused', audio); return; }
+        if (name !== 'AbortError') stopSpeech();
+      });
     };
     setIsSpeaking(true);
     setListenMode('natural');
@@ -477,6 +492,19 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     if (useNatural) { playNarrationFrom(currentChapterIndex); return; }
     speakFrom(currentChapterIndex, currentParagraphIndex);
   };
+
+  /** The narration's volume (the device voice has none to set). */
+  const [listenVolume, setListenVolume] = useState(1);
+  useEffect(() => { if (narrationAudio.current) narrationAudio.current.volume = listenVolume; }, [listenVolume, listenMode]);
+
+  // "Listen" (owner request 2026-11-22): once the book and its narration have loaded, start reading aloud in the pop-up player.
+  const autoListened = useRef(false);
+  const contentReady = !book.hasReaderContent || ((!!fullChapters || !!fullError) && narrationChecked);
+  useEffect(() => {
+    if (!autoListen || autoListened.current || !contentReady || chapters.length === 0) return;
+    autoListened.current = true;
+    if (!isSpeaking) toggleSpeech();
+  }, [autoListen, contentReady, chapters.length]);
 
   // A new speed, voice or language applies at once.
   useEffect(() => {
@@ -509,8 +537,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     device.skip(1);
   };
   const listeningChapter = natural ? (segs[clock.k]?.chapter ?? currentChapterIndex) : device.where.c;
-  const playerChapter = (dir: 1 | -1) => {
-    const to = listeningChapter + dir;
+  const playerChapter = (dir: 1 | -1) => playerGoTo(listeningChapter + dir);
+  const playerGoTo = (to: number) => {
     if (to < 0 || to >= chapters.length) return;
     if (natural) {
       if (segs.some((s) => s.chapter >= to)) playNarrationFrom(to); else speakFrom(to, 0);
@@ -1898,6 +1926,11 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           bookLang={bookLang}
           onPreview={previewVoice}
           naturalVoice={narration?.voice ?? null}
+          chapters={chapters.map((c) => c.title)}
+          currentChapter={listeningChapter}
+          onChapter={playerGoTo}
+          volume={listenVolume}
+          onVolume={natural ? setListenVolume : undefined}
           footer={audioUpsell ? (
             <button type="button" onClick={() => { onAddToCart(audioProductOf({ ...book, audioPrice: narration!.audioPrice })); onClose(); }}
               className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-indigo-50 py-2 text-xs font-bold text-indigo-800 ring-1 ring-inset ring-indigo-200 hover:bg-indigo-100 cursor-pointer">

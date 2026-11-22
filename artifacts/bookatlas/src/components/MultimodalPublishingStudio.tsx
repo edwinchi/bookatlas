@@ -16,6 +16,7 @@ import { PublishingReadinessPanel } from './PublishingReadinessPanel';
 import { PublishingJobDetail, STATUS_STYLE } from './publishing/PublishingJobDetail';
 import { describeError } from './publishing/AuthedAudioPlayer';
 
+import { CheckBox, SelectBox } from './ui/select-box';
 interface MultimodalPublishingStudioProps {
   onBookPublished: (book: Book) => void;
   language?: 'en' | 'nl';
@@ -231,18 +232,18 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
               <div><label htmlFor="s-title" className={lbl}>Title</label><input id="s-title" maxLength={180} value={title} onChange={(e) => setTitle(e.target.value)} className={input} /></div>
               <div><label htmlFor="s-author" className={lbl}>Author</label><input id="s-author" maxLength={120} value={author} onChange={(e) => setAuthor(e.target.value)} className={input} /></div>
               <div><label htmlFor="s-lang" className={lbl}>Book language</label>
-                <select id="s-lang" value={bookLanguage} onChange={(e) => setBookLanguage(e.target.value as 'en' | 'nl')} className={input}>
+                <SelectBox id="s-lang" value={bookLanguage} onChange={(e) => setBookLanguage(e.target.value as 'en' | 'nl')} className={input}>
                   <option value="en">English</option><option value="nl">Nederlands</option>
-                </select>
+                </SelectBox>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label htmlFor="s-cat" className="text-xs font-bold text-slate-700">Category</label>
                   <button type="button" onClick={() => setShowAddCategory((v) => !v)} aria-expanded={showAddCategory} className="text-[11px] text-indigo-600 font-bold flex items-center gap-1 cursor-pointer"><Plus className="w-3 h-3" aria-hidden />{t.addCategory}</button>
                 </div>
-                <select id="s-cat" value={category} onChange={(e) => setCategory(e.target.value)} className={input}>
+                <SelectBox id="s-cat" value={category} onChange={(e) => setCategory(e.target.value)} className={input}>
                   {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                </SelectBox>
               </div>
             </div>
             {showAddCategory && (
@@ -264,16 +265,16 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
               <div><label htmlFor="s-w" className={lbl}>Words / chapter</label><input id="s-w" type="number" min={100} max={800} step={50} value={wordsPerChapter} onChange={(e) => setWordsPerChapter(Math.min(800, Math.max(100, Number(e.target.value) || 100)))} className={input} /></div>
             </div>
             <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer">
-              <input type="checkbox" checked={includeAudio} onChange={(e) => setIncludeAudio(e.target.checked)} className="w-4 h-4" />Narrate each chapter
+              <CheckBox checked={includeAudio} onChange={(e) => setIncludeAudio(e.target.checked)} className="w-4 h-4" />Narrate each chapter
             </label>
             {includeAudio && (
               <div><label htmlFor="s-voice" className={lbl}>Narration voice</label>
-                <select id="s-voice" value={voice} onChange={(e) => setVoice(e.target.value as PublishingJobInputVoice)} className={input}>
+                <SelectBox id="s-voice" value={voice} onChange={(e) => setVoice(e.target.value as PublishingJobInputVoice)} className={input}>
                   {['Female', 'Male'].map(gender => <optgroup key={gender} label={gender}>
                     {STUDIO_VOICES.filter(v => v.gender === gender).map(v =>
                       <option key={v.id} value={v.id}>{v.name} — {v.style}{v.recommended ? ' · Recommended' : ''}</option>)}
                   </optgroup>)}
-                </select>
+                </SelectBox>
                 <p className="mt-2 text-xs text-slate-500">Gemini 3.8 Flash TTS. Recommended: Sulafat (warm female) or Charon (informative male). Chapter narration uses your approved publishing-job budget.</p>
               </div>
             )}
@@ -282,7 +283,7 @@ export const MultimodalPublishingStudio: React.FC<MultimodalPublishingStudioProp
           <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
             <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5"><FlaskConical className="w-4 h-4 text-violet-600" aria-hidden />Run type and cost cap</h4>
             <label className="flex items-start gap-2 text-xs text-slate-800 cursor-pointer">
-              <input type="checkbox" checked={isTest} onChange={(e) => setIsTest(e.target.checked)} className="w-4 h-4 mt-0.5" />
+              <CheckBox checked={isTest} onChange={(e) => setIsTest(e.target.checked)} className="w-4 h-4 mt-0.5" />
               <span><strong>Test run.</strong> Output can only be published to the isolated test catalog, never the public storefront.</span>
             </label>
             <div>

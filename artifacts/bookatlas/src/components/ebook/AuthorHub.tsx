@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { EbookApiError, saveBlob, type PayoutInput, type PayoutView, type Submission, type useEbookApi } from './ebookApi';
 import { authorPath } from '../AuthorProfileModal';
 
+import { CheckBox, SelectBox } from '../ui/select-box';
 /** The header's Author hub items open one of these tiles (event detail = tile id). */
 export const OPEN_AUTHOR_HUB_EVENT = 'bookatlas:author-hub';
 export type AuthorHubTile = 'books' | 'sales' | 'statements' | 'page' | 'payout';
@@ -107,9 +108,9 @@ export function AuthorHub({ api, submissions, onShowBooks }: { api: ReturnType<t
             <ReceiptText className="h-5 w-5 text-amber-600" aria-hidden />
             <span className="text-sm font-bold text-slate-900">Royalty statements</span>
             <label className="sr-only" htmlFor="statement-month">Month</label>
-            <select id="statement-month" value={month} onChange={(e) => setMonth(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs">
+            <SelectBox id="statement-month" value={month} onChange={(e) => setMonth(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs">
               {lastMonths(24).map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-            </select>
+            </SelectBox>
             <button type="button" onClick={() => void openStatement()} disabled={busy === 'statement' || !published.length}
               className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-full bg-amber-400 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-300 disabled:opacity-50 cursor-pointer">
               {busy === 'statement' ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <ExternalLink className="h-3.5 w-3.5" aria-hidden />}Open statement
@@ -192,7 +193,7 @@ function PayoutDialog({ open, current, onClose, onSave }: { open: boolean; curre
             {field('bic', 'BIC (optional)', { placeholder: 'ABNANL2A', spellCheck: false })}
             <label className="block space-y-1 text-xs font-semibold text-slate-700">
               <span>Country of residence</span>
-              <select value={form.country} onChange={set('country')} className={input}>{COUNTRIES.map(([c, n]) => <option key={c} value={c}>{n}</option>)}</select>
+              <SelectBox value={form.country} onChange={set('country')} className={input}>{COUNTRIES.map(([c, n]) => <option key={c} value={c}>{n}</option>)}</SelectBox>
             </label>
           </div>
           <label className="block space-y-1 text-xs font-semibold text-slate-700">
@@ -204,7 +205,7 @@ function PayoutDialog({ open, current, onClose, onSave }: { open: boolean; curre
             {field('taxId', known?.taxId ? `Tax ID (BSN/TIN, now ${known.taxId})` : 'Tax ID (BSN/TIN, optional for now)', { autoComplete: 'off', spellCheck: false })}
             {field('vatId', 'VAT number (businesses)', { placeholder: 'NL123456789B01', spellCheck: false })}
           </div>
-          <label className="flex items-center gap-2 text-xs text-slate-700"><input type="checkbox" checked={form.business} onChange={set('business')} className="h-4 w-4 accent-indigo-600" />I publish as a business</label>
+          <label className="flex items-center gap-2 text-xs text-slate-700"><CheckBox checked={form.business} onChange={(e) => setForm((f) => ({ ...f, business: e.target.checked }))} className="h-4 w-4 accent-indigo-600" />I publish as a business</label>
           {errors.form && <p role="alert" className="text-xs font-semibold text-rose-700">{errors.form}</p>}
           <p className="flex items-start gap-1.5 text-[11px] text-slate-500"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />Stored encrypted at rest with our database host and only used for payouts and tax reporting; you see it masked.</p>
           <DialogFooter className="gap-2 sm:gap-2">

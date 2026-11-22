@@ -11,6 +11,7 @@ import {
 import type { PublishingJob, PublishingJobAction } from '@workspace/api-client-react';
 import { AuthedAudioPlayer, BlobDownloadButton, assetName, describeError, useAuthedRequest } from './AuthedAudioPlayer';
 
+import { CheckBox } from '../ui/select-box';
 export const STATUS_STYLE: Record<PublishingJob['status'], string> = {
   queued: 'bg-slate-100 text-slate-700 border-slate-200',
   running: 'bg-sky-50 text-sky-800 border-sky-200',
@@ -150,7 +151,7 @@ export const PublishingJobDetail: React.FC<Props> = ({ jobId, onPublished }) => 
           {j.canPublish && (
             <>
               <label className="flex items-start gap-2 text-xs text-slate-800 cursor-pointer">
-                <input type="checkbox" checked={confirmPublish} onChange={(e) => setConfirmPublish(e.target.checked)} className="mt-0.5 w-4 h-4" />
+                <CheckBox checked={confirmPublish} onChange={(e) => setConfirmPublish(e.target.checked)} className="mt-0.5 w-4 h-4" />
                 I have reviewed the chapter text{j.chapters.some((c) => c.audioUrl) ? ' and narration' : ''}.
               </label>
               <button type="button" disabled={busy || !confirmPublish} onClick={() => run({ action: 'publish' })} className={`${btn} bg-emerald-700 text-white hover:bg-emerald-800`}>
@@ -174,13 +175,13 @@ export const PublishingJobDetail: React.FC<Props> = ({ jobId, onPublished }) => 
           <p className="text-xs font-extrabold uppercase tracking-wider text-slate-900 flex items-center gap-1.5"><Send className="w-4 h-4 text-indigo-600" aria-hidden />Launch announcements</p>
           <p className="text-[11px] text-slate-600">Both options are off by default. Messages are only sent through the configured email provider after you confirm.</p>
           <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer">
-            <input type="checkbox" checked={notifyPublisher} onChange={(e) => { setNotifyPublisher(e.target.checked); setConfirmLaunch(false); }} className="w-4 h-4" />Notify publisher
+            <CheckBox checked={notifyPublisher} onChange={(e) => { setNotifyPublisher(e.target.checked); setConfirmLaunch(false); }} className="w-4 h-4" />Notify publisher
           </label>
           {notifyPublisher && (
             <input type="email" value={publisherEmail} onChange={(e) => { setPublisherEmail(e.target.value); setConfirmLaunch(false); }} placeholder="publisher@example.com" aria-label="Publisher email address" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs" />
           )}
           <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer">
-            <input type="checkbox" checked={readerCampaign} onChange={(e) => { setReaderCampaign(e.target.checked); setConfirmLaunch(false); }} className="w-4 h-4" />Send reader announcement to opted-in readers
+            <CheckBox checked={readerCampaign} onChange={(e) => { setReaderCampaign(e.target.checked); setConfirmLaunch(false); }} className="w-4 h-4" />Send reader announcement to opted-in readers
           </label>
           {(notifyPublisher || readerCampaign) && (
             !confirmLaunch ? (

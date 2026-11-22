@@ -10,6 +10,9 @@ import { cn } from '../../lib/utils';
  *
  * Mount it only while open (as the old overlays were); `onClose` runs when the visitor dismisses it.
  */
+/** Clicks on a floating player (the audio sample) must not close the window behind it. */
+const onFloatingPlayer = (e: Event) => !!(e.target as Element | null)?.closest?.('[data-floating-player]');
+
 export function AppModal({
   onClose, label, overlayClassName, dismissible = true, children,
 }: {
@@ -29,8 +32,8 @@ export function AppModal({
           <DialogPrimitive.Content
             aria-describedby={undefined}
             className="contents"
-            onPointerDownOutside={dismissible ? undefined : (e) => e.preventDefault()}
-            onInteractOutside={dismissible ? undefined : (e) => e.preventDefault()}
+            onPointerDownOutside={(e) => { if (!dismissible || onFloatingPlayer(e)) e.preventDefault(); }}
+            onInteractOutside={(e) => { if (!dismissible || onFloatingPlayer(e)) e.preventDefault(); }}
           >
             <DialogPrimitive.Title className="sr-only">{label}</DialogPrimitive.Title>
             {children}

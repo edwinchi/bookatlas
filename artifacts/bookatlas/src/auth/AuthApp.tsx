@@ -18,6 +18,7 @@ import { BookOpen, Crown, LayoutDashboard, LifeBuoy, LogIn, LogOut, UserPlus, ty
 import { utilityPill } from '../components/UtilityMenu';
 import { enquiryHref } from '../components/StartBookDialog';
 
+import { CheckBox } from '../components/ui/select-box';
 // The admin workspace (manager portal, subscriber tools, reader preview) loads only on /admin.
 const AdminEntry = lazyPage(() => import('./AdminWorkspace').then((m) => m.AdminEntry));
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || publishableKeyFromHost(
@@ -164,7 +165,7 @@ function SignupConsentStep({ onAccept }: { onAccept: () => void }) {
     <h2 className="font-serif text-xl font-bold text-slate-950">Before you create your account</h2>
     <p className="mt-2 text-sm leading-relaxed text-slate-600">BooksAtlas accounts are for readers aged 16 or older. Marketing emails stay off unless you opt in later.</p>
     <label className="mt-5 flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
-      <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} required className="mt-0.5 h-5 w-5 shrink-0 accent-indigo-700" />
+      <CheckBox checked={checked} onChange={(e) => setChecked(e.target.checked)} required className="mt-0.5 h-5 w-5 shrink-0 accent-indigo-700" />
       <span>I am 16 or older and I have read the <a href={`${basePath}/privacy`} target="_blank" rel="noreferrer" className="font-semibold text-indigo-700 underline">Privacy Notice</a>.</span>
     </label>
     <button type="submit" disabled={!checked} className="mt-5 min-h-12 w-full rounded-xl bg-indigo-700 px-5 font-bold text-white disabled:opacity-50">Continue to sign up</button>

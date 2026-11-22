@@ -1,7 +1,7 @@
 import { lazyPage } from './utils/lazyPage';
 import { AuthorProfileModal } from './components/AuthorProfileModal';
 import { useEbookApi } from './components/ebook/ebookApi';
-import { AUDIO_SUFFIX, audioOnSale, audioProductOf, isAudioAddOn } from './audioEdition';
+import { AUDIO_SUFFIX, audioOnSale, audioProductOf, isAudioAddOn, isNarrated } from './audioEdition';
 import { fetchFullBook, needsFullRecord, useCatalogFacets, useCatalogSearch, useShelves } from './hooks/useCatalog';
 import { AppModal } from './components/ui/app-modal';
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -46,6 +46,7 @@ import {
   Compass
 } from 'lucide-react';
 
+import { SelectBox } from './components/ui/select-box';
 // Loaded when first opened, so the storefront's first script stays small (measured 2026-11-18: 1.59 MB in one file).
 const AIMatchmakerModal = lazyPage(() => import('./components/AIMatchmakerModal').then((m) => m.AIMatchmakerModal));
 const ArchitectureGuideModal = lazyPage(() => import('./components/ArchitectureGuideModal').then((m) => m.ArchitectureGuideModal));
@@ -127,6 +128,7 @@ const bookIdFromPath = () => {
   const m = /^\/books\/([^/]+)\/?$/.exec(path);
   return m ? decodeURIComponent(m[1]!) : null;
 };
+type NoticeAction = { label: string; onClick: () => void };
 const bookPath = (id: string) => `${import.meta.env.BASE_URL}books/${encodeURIComponent(id)}`;
 /** The author slug in /author/<slug>, if the address is an author page (TASK-0009). */
 const authorSlugFromPath = () => /^\/author\/([a-z0-9-]{2,80})\/?$/.exec(window.location.pathname.slice(import.meta.env.BASE_URL.length - 1))?.[1] ?? null;
@@ -347,7 +349,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
     document.title = `${selectedBookForDetail.title} by ${selectedBookForDetail.author} | BooksAtlas`;
     return () => { document.title = before; };
   }, [selectedBookForDetail?.id]);
-  const [activeReadingBook, setActiveReadingBook] = useState<{ book: Book; chapterIndex: number; paragraphIndex: number } | null>(null);
+  const [activeReadingBook, setActiveReadingBook] = useState<{ book: Book; chapterIndex: number; paragraphIndex: number; listen?: boolean } | null>(null);
   const [activeAudiobook, setActiveAudiobook] = useState<Book | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAIMatchmakerOpen, setIsAIMatchmakerOpen] = useState(false);
@@ -460,20 +462,26 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
     setActiveTab('library');
   };
 
-  const handleReadSample = async (card: Book) => {
+  const handleReadSample = async (card: Book, opts?: { listen?: boolean }) => {
     const book = needsFullRecord(card) ? (await fetchFullBook(card.id).catch(() => null)) ?? card : card;
     const existingLib = library.find((i) => i.book.id === book.id);
+    setActiveAudiobook(null);
     setActiveReadingBook({
       book,
       chapterIndex: existingLib ? existingLib.currentChapterIndex : 0,
       paragraphIndex: existingLib ? existingLib.currentParagraphIndex : 0,
+      listen: !!opts?.listen,
     });
   };
+  /** Listening (owner request 2026-11-22): the reader opens with the pop-up player already playing. */
+  const handleListen = (b: Book) => { setSelectedBookForDetail(null); void handleReadSample(b, { listen: true }); };
+  /** The sample player pops up on its own; the book window closes so nothing sits over it. */
+  const playAudioSample = (b: Book) => { setSelectedBookForDetail(null); setActiveAudiobook(b); };
 
   // Payments (TASK-0004): the books this account bought, and the return from Stripe Checkout.
   const payments = usePayments();
   const [ownedBookIds, setOwnedBookIds] = useState<string[]>([]);
-  const [checkoutNotice, setCheckoutNotice] = useState<{ tone: 'ok' | 'info' | 'error'; text: string } | null>(null);
+  const [checkoutNotice, setCheckoutNotice] = useState<{ tone: 'ok' | 'info' | 'error'; text: string; actions?: NoticeAction[] } | null>(null);
   const booksRef = useRef(books);
   booksRef.current = books;
   useEffect(() => {
@@ -545,8 +553,15 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
               ...prev,
             ]);
             const audioOnly = !ebookIds.length;
-            setCheckoutNotice({ tone: 'ok', text: audioOnly
-              ? 'Payment received, thank you. Open the book and choose “Listen to the book” to hear the whole audiobook. Your invoice is under "Orders & invoices".'
+            // Straight from the payment to the book (owner request 2026-11-22): one press to read or to listen.
+            const audioIds = result.bookIds.filter(isAudioAddOn).map((id) => id.slice(0, -AUDIO_SUFFIX.length));
+            const target = bought.length === 1 ? bought[0]! : audioOnly && audioIds.length === 1 ? booksRef.current.find((b) => b.id === audioIds[0]) : undefined;
+            const actions: NoticeAction[] = target ? [
+              ...(audioOnly ? [] : [{ label: 'Read now', onClick: () => { setCheckoutNotice(null); void handleReadSample(target); } }]),
+              ...(isNarrated(target) ? [{ label: 'Listen now', onClick: () => { setCheckoutNotice(null); void handleReadSample(target, { listen: true }); } }] : []),
+            ] : [{ label: 'Go to my library', onClick: () => { setCheckoutNotice(null); setLibraryDefaultTab('reading'); setActiveTab('library'); } }];
+            setCheckoutNotice({ tone: 'ok', actions, text: audioOnly
+              ? 'Payment received, thank you. The whole audiobook is yours: press “Listen now”, or open the book any time and choose “Listen to the audiobook”. Your invoice is under "Orders & invoices".'
               : `Payment received, thank you. ${bought.length === 1 ? `"${bought[0]!.title}" is` : 'Your books are'} in your library, ready to read${result.bookIds.length > ebookIds.length ? ' and listen to' : ''}. Your invoice is under "Orders & invoices".` });
             clearParams();
             return;
@@ -693,7 +708,19 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
           checkoutNotice.tone === 'ok' ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
             : checkoutNotice.tone === 'error' ? 'border-amber-200 bg-amber-50 text-amber-950' : 'border-slate-200 bg-white text-slate-800'
         }`}>
-          <p className="flex-1">{checkoutNotice.text}</p>
+          <div className="flex-1">
+            <p>{checkoutNotice.text}</p>
+            {checkoutNotice.actions && checkoutNotice.actions.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {checkoutNotice.actions.map((a, i) => (
+                  <button key={a.label} type="button" onClick={a.onClick}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer ${i === 0 ? 'bg-emerald-700 text-white hover:bg-emerald-800' : 'bg-white text-emerald-900 ring-1 ring-inset ring-emerald-300 hover:bg-emerald-100'}`}>
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button onClick={() => setCheckoutNotice(null)} className="text-xs font-semibold opacity-70 hover:opacity-100 cursor-pointer" aria-label="Dismiss">Close</button>
         </div>
       )}
@@ -819,6 +846,10 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                 paragraphIndex: item.currentParagraphIndex,
               });
             }}
+            onListen={(item) => {
+              setActiveAudiobook(null);
+              setActiveReadingBook({ book: item.book, chapterIndex: item.currentChapterIndex, paragraphIndex: item.currentParagraphIndex, listen: true });
+            }}
             onOpenBookDetail={(book) => setSelectedBookForDetail(book)}
             onRemoveFromLibrary={(id) => setLibrary((prev) => prev.filter((i) => i.book.id !== id))}
             onRemoveFromWishlist={(id) => setWishlist((prev) => prev.filter((b) => b.id !== id))}
@@ -923,7 +954,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                   onReadSample={handleReadSample}
                   onAddToCart={handleAddToCart}
                   onToggleWishlist={handleToggleWishlist}
-                  onPlayAudioSample={(b) => setActiveAudiobook(b)}
+                  onPlayAudioSample={playAudioSample}
                   wishlistIds={wishlist.map((w) => w.id)}
                   currencySymbol={currencySymbol}
                 />
@@ -940,7 +971,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                   onReadSample={handleReadSample}
                   onAddToCart={handleAddToCart}
                   onToggleWishlist={handleToggleWishlist}
-                  onPlayAudioSample={(b) => setActiveAudiobook(b)}
+                  onPlayAudioSample={playAudioSample}
                   wishlistIds={wishlist.map((w) => w.id)}
                   currencySymbol={currencySymbol}
                 />
@@ -957,7 +988,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                   onReadSample={handleReadSample}
                   onAddToCart={handleAddToCart}
                   onToggleWishlist={handleToggleWishlist}
-                  onPlayAudioSample={(b) => setActiveAudiobook(b)}
+                  onPlayAudioSample={playAudioSample}
                   wishlistIds={wishlist.map((w) => w.id)}
                   currencySymbol={currencySymbol}
                 />
@@ -974,7 +1005,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                   onReadSample={handleReadSample}
                   onAddToCart={handleAddToCart}
                   onToggleWishlist={handleToggleWishlist}
-                  onPlayAudioSample={(b) => setActiveAudiobook(b)}
+                  onPlayAudioSample={playAudioSample}
                   wishlistIds={wishlist.map((w) => w.id)}
                   currencySymbol={currencySymbol}
                 />
@@ -1002,7 +1033,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                   onReadSample={handleReadSample}
                   onAddToCart={handleAddToCart}
                   onToggleWishlist={handleToggleWishlist}
-                  onPlayAudioSample={(b) => setActiveAudiobook(b)}
+                  onPlayAudioSample={playAudioSample}
                   wishlistIds={wishlist.map((w) => w.id)}
                   currencySymbol={currencySymbol}
                 />
@@ -1025,7 +1056,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                   onReadSample={handleReadSample}
                   onAddToCart={handleAddToCart}
                   onToggleWishlist={handleToggleWishlist}
-                  onPlayAudioSample={(b) => setActiveAudiobook(b)}
+                  onPlayAudioSample={playAudioSample}
                   wishlistIds={wishlist.map((w) => w.id)}
                   currencySymbol={currencySymbol}
                 />
@@ -1041,7 +1072,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                   onReadSample={handleReadSample}
                   onAddToCart={handleAddToCart}
                   onToggleWishlist={handleToggleWishlist}
-                  onPlayAudioSample={(b) => setActiveAudiobook(b)}
+                  onPlayAudioSample={playAudioSample}
                   wishlistIds={wishlist.map((w) => w.id)}
                   currencySymbol={currencySymbol}
                 />
@@ -1091,7 +1122,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                     <span className="text-slate-500 font-medium flex items-center gap-1">
                       <ArrowUpDown className="w-3.5 h-3.5" /> Sort By:
                     </span>
-                    <select
+                    <SelectBox
                       aria-label="Sort by"
                       value={filters.sortBy}
                       onChange={(e) => setFilters((f) => ({ ...f, sortBy: e.target.value as any }))}
@@ -1103,7 +1134,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                       <option value="priceAsc">Price: Low to High</option>
                       <option value="priceDesc">Price: High to Low</option>
                       <option value="newest">New Releases</option>
-                    </select>
+                    </SelectBox>
                   </div>
                 </div>
 
@@ -1149,7 +1180,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                         onReadSample={handleReadSample}
                         onAddToCart={handleAddToCart}
                         onToggleWishlist={handleToggleWishlist}
-                        onPlayAudioSample={(b) => setActiveAudiobook(b)}
+                        onPlayAudioSample={playAudioSample}
                         isWishlisted={wishlist.some((w) => w.id === book.id)}
                         currencySymbol={currencySymbol}
                       />
@@ -1267,6 +1298,10 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
           book={activeAudiobook}
           onClose={() => setActiveAudiobook(null)}
           onOpenDetail={(b) => setSelectedBookForDetail(b)}
+          onReadSample={(b) => void handleReadSample(b)}
+          onAddToCart={handleAddToCart}
+          owned={ownedBookIds.includes(activeAudiobook.id)}
+          currencySymbol={currencySymbol}
         />
       )}
 
@@ -1281,9 +1316,10 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
         onClose={() => setSelectedBookForDetail(null)}
         // The reader replaces the book window; it used to open behind it (found 2026-11-16).
         onReadSample={(b) => { setSelectedBookForDetail(null); void handleReadSample(b); }}
+        onListen={handleListen}
         onAddToCart={handleAddToCart}
         onToggleWishlist={handleToggleWishlist}
-        onPlayAudioSample={(b) => setActiveAudiobook(b)}
+        onPlayAudioSample={playAudioSample}
         isWishlisted={selectedBookForDetail ? wishlist.some((w) => w.id === selectedBookForDetail.id) : false}
         owned={selectedBookForDetail ? ownedBookIds.includes(selectedBookForDetail.id) : false}
         ownsAudio={selectedBookForDetail ? ownedBookIds.includes(`${selectedBookForDetail.id}.audio`) : false}
@@ -1302,6 +1338,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
           openGroupId={joinGroupId}
           initialChapterIndex={activeReadingBook.chapterIndex}
           initialParagraphIndex={activeReadingBook.paragraphIndex}
+          autoListen={!!activeReadingBook.listen}
           onSaveProgress={handleSaveProgress}
           hasAiAccess={hasAiAccess}
           onRequireAiAccess={requireAiAccess}

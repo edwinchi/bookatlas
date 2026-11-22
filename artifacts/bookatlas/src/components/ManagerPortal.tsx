@@ -52,6 +52,7 @@ import { SubscriberManagerHub } from './SubscriberManagerHub';
 import { TRANSLATIONS } from '../data/translations';
 import { AITeamWorkspace } from './workforce/AITeamWorkspace';
 
+import { CheckBox, SelectBox } from './ui/select-box';
 interface ManagerPortalProps {
   books: Book[];
   onUpdateBook: (book: Book) => void;
@@ -1036,7 +1037,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                 />
               </div>
 
-              <select
+              <SelectBox
                 value={selectedGenre}
                 onChange={(e) => setSelectedGenre(e.target.value)}
                 className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-medium text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 cursor-pointer"
@@ -1046,7 +1047,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                     {g}
                   </option>
                 ))}
-              </select>
+              </SelectBox>
             </div>
 
             <div className="flex items-center gap-2">
@@ -1251,7 +1252,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Target Bookstore Category
                 </label>
-                <select
+                <SelectBox
                   value={genCategory}
                   onChange={(e) => setGenCategory(e.target.value)}
                   className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
@@ -1261,7 +1262,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                       {g}
                     </option>
                   ))}
-                </select>
+                </SelectBox>
               </div>
 
               {/* Tone Preset */}
@@ -1416,7 +1417,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Focus Genre / Epistemology
                 </label>
-                <select
+                <SelectBox
                   value={radarGenre}
                   onChange={(e) => setRadarGenre(e.target.value)}
                   className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
@@ -1424,14 +1425,14 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                   {GENRES.filter(g => g !== 'All Genres').map(g => (
                     <option key={g} value={g}>{g}</option>
                   ))}
-                </select>
+                </SelectBox>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Target Geographic Region
                 </label>
-                <select
+                <SelectBox
                   value={radarRegion}
                   onChange={(e) => setRadarRegion(e.target.value)}
                   className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
@@ -1439,7 +1440,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                   {['Global & Diaspora', 'Western Europe (NL, UK, FR, DE)', 'North America (US, CA)', 'Pan-African (NG, KE, ZA, GH, ET)', 'Latin America & Caribbean (BR, JM)'].map(r => (
                     <option key={r} value={r}>{r}</option>
                   ))}
-                </select>
+                </SelectBox>
               </div>
 
               <div>
@@ -1589,7 +1590,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Select Source Title
                 </label>
-                <select
+                <SelectBox
                   value={selectedTranslateBookId}
                   onChange={(e) => setSelectedTranslateBookId(e.target.value)}
                   className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
@@ -1599,7 +1600,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                       {b.title} ({b.author})
                     </option>
                   ))}
-                </select>
+                </SelectBox>
               </div>
 
               <div>
@@ -1894,7 +1895,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                 Select Book
               </label>
-              <select
+              <SelectBox
                 value={selectedMarketingBookId}
                 onChange={(e) => setSelectedMarketingBookId(e.target.value)}
                 className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
@@ -1904,7 +1905,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                     {b.title} ({b.author}) — {b.primaryGenre}
                   </option>
                 ))}
-              </select>
+              </SelectBox>
             </div>
 
             <button
@@ -2330,7 +2331,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Primary Category</label>
-                <select
+                <SelectBox
                   value={editingBook?.primaryGenre || 'Fiction & Literature'}
                   onChange={(e) => setEditingBook((prev) => ({ ...prev, primaryGenre: e.target.value }))}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 cursor-pointer"
@@ -2340,7 +2341,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                       {g}
                     </option>
                   ))}
-                </select>
+                </SelectBox>
               </div>
 
               <div>
@@ -2389,8 +2390,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
 
               <div className="sm:col-span-2 flex items-center gap-6 pt-2">
                 <label className="flex items-center gap-2 cursor-pointer font-semibold">
-                  <input
-                    type="checkbox"
+                  <CheckBox
                     checked={editingBook?.isBookatlasPlus ?? true}
                     onChange={(e) => setEditingBook((prev) => ({ ...prev, isBookatlasPlus: e.target.checked }))}
                     className="w-4 h-4 text-indigo-600 rounded-sm"
@@ -2399,8 +2399,7 @@ export const ManagerPortal: React.FC<ManagerPortalProps> = ({
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer font-semibold">
-                  <input
-                    type="checkbox"
+                  <CheckBox
                     checked={editingBook?.isDeal ?? false}
                     onChange={(e) => setEditingBook((prev) => ({ ...prev, isDeal: e.target.checked }))}
                     className="w-4 h-4 text-amber-600 rounded-sm"

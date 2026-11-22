@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Book, SubscriberTier } from '../../types';
 
+import { CheckBox, SelectBox } from '../ui/select-box';
 export interface VisualTemplateState {
   id: string;
   name: string;
@@ -402,7 +403,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Featured Book Title
                 </label>
-                <select
+                <SelectBox
                   value={templateConfig.featuredBookId}
                   onChange={(e) => setTemplateConfig({ ...templateConfig, featuredBookId: e.target.value })}
                   className="w-full p-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
@@ -412,7 +413,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
                       {b.title.slice(0, 28)}...
                     </option>
                   ))}
-                </select>
+                </SelectBox>
               </div>
             </div>
 
@@ -479,8 +480,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
               </div>
               <div className="flex items-center gap-2 pt-6">
                 <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
-                  <input
-                    type="checkbox"
+                  <CheckBox
                     checked={templateConfig.highlightStats}
                     onChange={(e) => setTemplateConfig({ ...templateConfig, highlightStats: e.target.checked })}
                     className="w-4 h-4 text-indigo-600 rounded-sm"
@@ -513,7 +513,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
                 <Eye className="w-3.5 h-3.5" />
                 Live Recipient Simulation:
               </span>
-              <select
+              <SelectBox
                 value={sampleRecipientTier}
                 onChange={(e) => setSampleRecipientTier(e.target.value as SubscriberTier)}
                 className="px-2.5 py-1 text-xs bg-slate-800 text-emerald-300 font-bold rounded-lg border border-slate-700 focus:outline-hidden cursor-pointer"
@@ -521,7 +521,7 @@ export const VisualTemplateDesigner: React.FC<VisualTemplateDesignerProps> = ({
                 <option value="vip_patron">👑 Eddy Teddy (VIP Patron - 40% Tier)</option>
                 <option value="member_subscriber">✨ Sanne van Dijk (Plus Member)</option>
                 <option value="free_reader">📖 Sophie Laurent (Free Reader)</option>
-              </select>
+              </SelectBox>
             </div>
 
             {/* Device Switcher */}

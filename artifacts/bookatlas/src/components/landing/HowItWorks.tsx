@@ -6,6 +6,7 @@ import { PAPERS, TRIM_SIZES, inchesToMm, printCoverSpec, type PaperId, type Trim
 import { AtlasStar } from './AtlasStar';
 import { enquiryHref, openEnquiry } from '../StartBookDialog';
 
+import { SelectBox } from '../ui/select-box';
 /**
  * "How it works" (owner request 2026-11-18, "code and set this up"): each step's picture is a working tool.
  * 1 reads the dropped manuscript in the browser (nothing is uploaded), 2 calculates the spine and cover from it,
@@ -81,9 +82,9 @@ function PrintTool({ print, onChange }: { print: Print; onChange: (p: Print) => 
       </ToggleGroup.Root>
       <div className="grid grid-cols-2 gap-2">
         <label className="text-[11px] font-semibold text-slate-600">Paper
-          <select value={print.paper} onChange={(e) => onChange({ ...print, paper: e.target.value as PaperId })} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <SelectBox value={print.paper} onChange={(e) => onChange({ ...print, paper: e.target.value as PaperId })} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
             {PAPERS.map((p) => <option key={p.id} value={p.id}>{p.id === 'color' ? 'Colour' : p.id === 'white' ? 'White' : 'Cream'}</option>)}
-          </select>
+          </SelectBox>
         </label>
         <label className="text-[11px] font-semibold text-slate-600">Pages
           <input type="number" inputMode="numeric" min={24} max={828} value={print.pages || ''} onChange={(e) => onChange({ ...print, pages: Number(e.target.value) })}

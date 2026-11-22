@@ -4,6 +4,7 @@ import { BookOpenCheck, Check, GraduationCap, Languages, Loader2, MessageCircleQ
 import type { Chapter } from '../../types';
 import type { AskResult, Definition, StudyKind, StudyResult, useEbookApi } from '../ebook/ebookApi';
 
+import { SelectBox } from '../ui/select-box';
 type Api = ReturnType<typeof useEbookApi>;
 export type AssistantTab = 'ask' | 'study' | 'words';
 /** What the selection toolbar asked for; the Words tab runs it. */
@@ -159,9 +160,9 @@ function StudyTab({ api, bookId, chapters, chapterIndex, onRemaining }: { api: A
     <div className="space-y-3">
       <label className="block text-[11px] font-bold text-slate-700">
         Chapter
-        <select value={ci} onChange={(e) => setCi(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-normal">
+        <SelectBox value={ci} onChange={(e) => setCi(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-normal">
           {chapters.map((c, i) => <option key={i} value={i}>{i + 1}. {c.title}</option>)}
-        </select>
+        </SelectBox>
       </label>
       <div role="radiogroup" aria-label="Study tool" className="grid grid-cols-4 gap-1.5">
         {kinds.map(([k, label]) => (
@@ -258,10 +259,10 @@ function WordsTab({ api, bookId, languages, request, onRemaining }: { api: Api; 
       {request?.action === 'translate' && (
         <label className="flex items-center gap-2 text-[11px] font-bold text-slate-700">
           Translate into
-          <select value={target} onChange={(e) => { setTarget(e.target.value); try { localStorage.setItem(LAST_LANG, e.target.value); } catch { /* ignore */ } void go(request, e.target.value); }}
+          <SelectBox value={target} onChange={(e) => { setTarget(e.target.value); try { localStorage.setItem(LAST_LANG, e.target.value); } catch { /* ignore */ } void go(request, e.target.value); }}
             className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-normal">
             {Object.entries(languages).sort((a, b) => a[1].localeCompare(b[1])).map(([code, name]) => <option key={code} value={code}>{name}</option>)}
-          </select>
+          </SelectBox>
         </label>
       )}
       {busy && <Spinner label="Working…" />}

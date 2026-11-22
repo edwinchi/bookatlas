@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@clerk/react';
 import { Headphones, Download, RefreshCw, AlertCircle } from 'lucide-react';
 
+import { SelectBox } from '../ui/select-box';
 /** Returns a request-init factory that attaches a Clerk bearer token as a header (never in a URL). */
 export function useAuthedRequest() {
   const { getToken } = useAuth();
@@ -82,9 +83,9 @@ export const AuthedAudioPlayer: React.FC<{ load: LoadBlob; label: string; durati
       <audio ref={audioRef} src={url} controls preload="metadata" aria-label={label} className="w-full sm:flex-1 h-10" />
       <label className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
         Speed
-        <select value={rate} onChange={(e) => setRate(Number(e.target.value))} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs">
+        <SelectBox value={rate} onChange={(e) => setRate(Number(e.target.value))} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs">
           {[0.75, 1, 1.25, 1.5, 2].map((r) => <option key={r} value={r}>{r}x</option>)}
-        </select>
+        </SelectBox>
       </label>
     </div>
   );

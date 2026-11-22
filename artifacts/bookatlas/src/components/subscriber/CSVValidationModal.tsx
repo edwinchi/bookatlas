@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { CSVValidationPreview, CSVColumnMapping, SubscriberTier } from '../../types';
 
+import { SelectBox } from '../ui/select-box';
 interface CSVValidationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -173,7 +174,7 @@ export const CSVValidationModal: React.FC<CSVValidationModalProps> = ({
                   <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
                     Email Address Column <span className="text-rose-600">* (Required)</span>
                   </label>
-                  <select
+                  <SelectBox
                     value={columnMapping.emailCol}
                     onChange={(e) => setColumnMapping({ ...columnMapping, emailCol: e.target.value })}
                     className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500"
@@ -183,7 +184,7 @@ export const CSVValidationModal: React.FC<CSVValidationModalProps> = ({
                         {h}
                       </option>
                     ))}
-                  </select>
+                  </SelectBox>
                   <span className="text-[11px] text-slate-500 block">Identifies the primary recipient inbox</span>
                 </div>
 
@@ -192,7 +193,7 @@ export const CSVValidationModal: React.FC<CSVValidationModalProps> = ({
                   <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
                     Full Name / First Name Column
                   </label>
-                  <select
+                  <SelectBox
                     value={columnMapping.nameCol}
                     onChange={(e) => setColumnMapping({ ...columnMapping, nameCol: e.target.value })}
                     className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500"
@@ -203,7 +204,7 @@ export const CSVValidationModal: React.FC<CSVValidationModalProps> = ({
                         {h}
                       </option>
                     ))}
-                  </select>
+                  </SelectBox>
                   <span className="text-[11px] text-slate-500 block">Used for {`{{subscriber_name}}`} interpolation</span>
                 </div>
 
@@ -212,7 +213,7 @@ export const CSVValidationModal: React.FC<CSVValidationModalProps> = ({
                   <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
                     Subscriber Tier Column
                   </label>
-                  <select
+                  <SelectBox
                     value={columnMapping.tierCol}
                     onChange={(e) => setColumnMapping({ ...columnMapping, tierCol: e.target.value })}
                     className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500"
@@ -223,7 +224,7 @@ export const CSVValidationModal: React.FC<CSVValidationModalProps> = ({
                         {h}
                       </option>
                     ))}
-                  </select>
+                  </SelectBox>
                   <span className="text-[11px] text-slate-500 block">Values: free_reader, member_subscriber, vip_patron</span>
                 </div>
 
@@ -232,7 +233,7 @@ export const CSVValidationModal: React.FC<CSVValidationModalProps> = ({
                   <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
                     Segmentation Tags Column
                   </label>
-                  <select
+                  <SelectBox
                     value={columnMapping.tagsCol}
                     onChange={(e) => setColumnMapping({ ...columnMapping, tagsCol: e.target.value })}
                     className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500"
@@ -243,7 +244,7 @@ export const CSVValidationModal: React.FC<CSVValidationModalProps> = ({
                         {h}
                       </option>
                     ))}
-                  </select>
+                  </SelectBox>
                   <span className="text-[11px] text-slate-500 block">Comma-separated tags for custom audience targeting</span>
                 </div>
               </div>
@@ -254,7 +255,7 @@ export const CSVValidationModal: React.FC<CSVValidationModalProps> = ({
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Default Fallback Subscriber Tier
                   </label>
-                  <select
+                  <SelectBox
                     value={defaultTier}
                     onChange={(e) => setDefaultTier(e.target.value as SubscriberTier)}
                     className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500"
@@ -262,7 +263,7 @@ export const CSVValidationModal: React.FC<CSVValidationModalProps> = ({
                     <option value="free_reader">📖 Free Reader Tier</option>
                     <option value="member_subscriber">✨ BooksAtlas Plus Member</option>
                     <option value="vip_patron">👑 VIP Patron Circle (40% discount perk)</option>
-                  </select>
+                  </SelectBox>
                 </div>
 
                 <div>

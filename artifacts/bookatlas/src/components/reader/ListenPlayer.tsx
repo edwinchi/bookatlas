@@ -1,11 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Slider from '@radix-ui/react-slider';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import * as ScrollArea from '@radix-ui/react-scroll-area';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
-  ChevronDown, Gauge, Languages, Loader2, Maximize2, Minus, Pause, Play, Plus, Rewind, FastForward, SkipBack, SkipForward, Square, Volume2, X, Check,
+  ChevronDown, Gauge, ListOrdered, Moon, Volume1, VolumeX, Languages, Loader2, Maximize2, Minus, Pause, Play, Plus, Rewind, FastForward, SkipBack, SkipForward, Square, Volume2, X, Check,
 } from 'lucide-react';
 import {
   LISTEN_LANGUAGES, MAX_RATE, MIN_RATE, WORDS_PER_MINUTE, clampRate, groupVoices, pickVoice, voiceName, type ListenPrefs,
@@ -48,6 +49,32 @@ export interface ListenPlayerProps {
   naturalVoice?: string | null;
   /** Shown under the controls (the audiobook add-on offer). */
   footer?: React.ReactNode;
+  /** Chapter titles and the one being read, for the chapter list. */
+  chapters?: string[];
+  currentChapter?: number;
+  onChapter?: (index: number) => void;
+  /** 0..1; only offered where the voice can be made quieter (the natural narration). */
+  volume?: number;
+  onVolume?: (v: number) => void;
+}
+
+type Sleep = { kind: 'off' } | { kind: 'time'; until: number } | { kind: 'chapter'; chapter: string };
+const SLEEP_MINUTES = [5, 10, 15, 30, 45, 60];
+
+/** Sleep timer: pauses after a number of minutes, or at the end of the chapter being read. */
+function useSleepTimer(p: ListenPlayerProps) {
+  const [sleep, setSleep] = useState<Sleep>({ kind: 'off' });
+  const [now, setNow] = useState(() => Date.now());
+  const pRef = useRef(p); pRef.current = p;
+  const fire = () => { setSleep({ kind: 'off' }); if (pRef.current.status === 'playing') pRef.current.onToggle(); };
+  useEffect(() => {
+    if (sleep.kind !== 'time') return;
+    const id = window.setInterval(() => { const t = Date.now(); setNow(t); if (t >= sleep.until) fire(); }, 1000);
+    return () => window.clearInterval(id);
+  }, [sleep]);
+  useEffect(() => { if (sleep.kind === 'chapter' && p.chapterTitle !== sleep.chapter) fire(); }, [p.chapterTitle]);
+  const label = sleep.kind === 'time' ? `${Math.max(1, Math.ceil((sleep.until - now) / 60000))} min` : sleep.kind === 'chapter' ? 'End of chapter' : '';
+  return { sleep, setSleep, label, setNow };
 }
 
 const iconBtn = 'grid h-10 w-10 shrink-0 place-items-center rounded-full text-slate-700 transition-colors hover:bg-slate-100 active:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-35 disabled:pointer-events-none cursor-pointer';
@@ -72,6 +99,7 @@ function Tip({ label, children, container }: { label: string; children: React.Re
  */
 export function ListenPlayer(p: ListenPlayerProps) {
   const [minimized, setMinimized] = useState(false);
+  const timer = useSleepTimer(p);
   const playing = p.status === 'playing';
   const toggleLabel = p.status === 'paused' ? 'Resume listening' : 'Pause listening';
 
@@ -158,17 +186,119 @@ export function ListenPlayer(p: ListenPlayerProps) {
           <VoiceLanguageDialog {...p} />
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-3 py-1.5">
-          <button type="button" onClick={p.onStop} className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
+        {/* Chapters, sleep timer, volume, stop */}
+        <div className="flex items-center gap-1 border-t border-slate-100 px-2 py-1.5">
+          <button type="button" onClick={p.onStop} className="inline-flex items-center gap-1.5 rounded-full px-2 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
             <Square className="h-3 w-3 fill-current" />Stop
           </button>
-          {p.error
-            ? <p role="alert" className="min-w-0 truncate text-[11px] font-medium text-rose-700">{p.error}</p>
-            : <p className="min-w-0 truncate text-[11px] text-slate-500">{p.mode === 'natural' ? 'Keeps playing with your screen off' : 'Free device voice · follows the text'}</p>}
+          <span className="flex-1" />
+          {p.chapters && p.chapters.length > 1 && p.onChapter && <ChapterMenu {...p} />}
+          <SleepMenu container={p.container} timer={timer} chapterTitle={p.chapterTitle} />
+          {p.onVolume && <VolumeControl container={p.container} volume={p.volume ?? 1} onVolume={p.onVolume} />}
         </div>
+        {p.error
+          ? <p role="alert" className="truncate px-3 pb-2 text-[11px] font-medium text-rose-700">{p.error}</p>
+          : <p className="truncate px-3 pb-2 text-[11px] text-slate-500">{p.mode === 'natural' ? 'Keeps playing with your screen off' : 'Free device voice · follows the text'}</p>}
         {p.footer && <div className="border-t border-slate-100 px-3 py-2">{p.footer}</div>}
       </section>
     </Tooltip.Provider>
+  );
+}
+
+const smallBtn = 'inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-2 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 data-[state=open]:bg-slate-100 cursor-pointer';
+const menuItem = 'flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-2 text-sm outline-none data-[highlighted]:bg-indigo-50 data-[highlighted]:text-indigo-900 data-[state=checked]:font-semibold';
+
+/** Every chapter, to jump straight to one. */
+function ChapterMenu(p: ListenPlayerProps) {
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button type="button" aria-label="Chapters" className={smallBtn}><ListOrdered className="h-4 w-4" />Chapters</button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal container={p.container ?? undefined}>
+        <DropdownMenu.Content side="top" align="end" sideOffset={8} collisionPadding={12}
+          className="z-[80] w-72 rounded-2xl bg-white p-1.5 text-slate-900 shadow-2xl ring-1 ring-slate-900/10 data-[state=open]:animate-fade-in">
+          <DropdownMenu.Label className="px-2.5 pb-1 pt-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">Go to a chapter</DropdownMenu.Label>
+          <ScrollArea.Root type="auto" className="overflow-hidden">
+            <ScrollArea.Viewport className="max-h-72">
+              <DropdownMenu.RadioGroup value={String(p.currentChapter ?? 0)} onValueChange={(v) => p.onChapter?.(Number(v))}>
+                {p.chapters!.map((title, i) => (
+                  <DropdownMenu.RadioItem key={i} value={String(i)} className={menuItem}>
+                    <span className="w-6 shrink-0 text-right text-[11px] tabular-nums text-slate-400">{i + 1}</span>
+                    <span className="min-w-0 flex-1 truncate">{title || `Chapter ${i + 1}`}</span>
+                    <DropdownMenu.ItemIndicator><Check className="h-4 w-4 text-indigo-600" /></DropdownMenu.ItemIndicator>
+                  </DropdownMenu.RadioItem>
+                ))}
+              </DropdownMenu.RadioGroup>
+            </ScrollArea.Viewport>
+            <ScrollArea.Scrollbar orientation="vertical" className="flex w-2 touch-none select-none p-0.5"><ScrollArea.Thumb className="relative flex-1 rounded-full bg-slate-300" /></ScrollArea.Scrollbar>
+          </ScrollArea.Root>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+
+function SleepMenu({ container, timer, chapterTitle }: { container: HTMLElement | null; timer: ReturnType<typeof useSleepTimer>; chapterTitle: string }) {
+  const value = timer.sleep.kind === 'off' ? 'off' : timer.sleep.kind === 'chapter' ? 'chapter' : '';
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button type="button" aria-label={timer.label ? `Sleep timer: ${timer.label}` : 'Sleep timer'} className={`${smallBtn} ${timer.label ? 'text-indigo-700' : ''}`}>
+          <Moon className="h-4 w-4" />{timer.label || <span className="sr-only sm:not-sr-only">Sleep</span>}
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal container={container ?? undefined}>
+        <DropdownMenu.Content side="top" align="end" sideOffset={8} collisionPadding={12}
+          className="z-[80] w-56 rounded-2xl bg-white p-1.5 text-slate-900 shadow-2xl ring-1 ring-slate-900/10 data-[state=open]:animate-fade-in">
+          <DropdownMenu.Label className="px-2.5 pb-1 pt-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">Stop playing after</DropdownMenu.Label>
+          <DropdownMenu.RadioGroup value={value} onValueChange={(v) => {
+            if (v === 'off') timer.setSleep({ kind: 'off' });
+            else if (v === 'chapter') timer.setSleep({ kind: 'chapter', chapter: chapterTitle });
+            else { const t = Date.now(); timer.setNow(t); timer.setSleep({ kind: 'time', until: t + Number(v) * 60000 }); }
+          }}>
+            {SLEEP_MINUTES.map((m) => (
+              <DropdownMenu.RadioItem key={m} value={String(m)} className={menuItem}>
+                <span className="flex-1">{m} minutes</span>
+              </DropdownMenu.RadioItem>
+            ))}
+            <DropdownMenu.RadioItem value="chapter" className={menuItem}>
+              <span className="flex-1">End of this chapter</span><DropdownMenu.ItemIndicator><Check className="h-4 w-4 text-indigo-600" /></DropdownMenu.ItemIndicator>
+            </DropdownMenu.RadioItem>
+            <DropdownMenu.Separator className="my-1 h-px bg-slate-100" />
+            <DropdownMenu.RadioItem value="off" className={menuItem}>
+              <span className="flex-1">Off</span><DropdownMenu.ItemIndicator><Check className="h-4 w-4 text-indigo-600" /></DropdownMenu.ItemIndicator>
+            </DropdownMenu.RadioItem>
+          </DropdownMenu.RadioGroup>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+
+function VolumeControl({ container, volume, onVolume }: { container: HTMLElement | null; volume: number; onVolume: (v: number) => void }) {
+  const last = useRef(volume || 1);
+  const Icon = volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
+  return (
+    <Popover.Root>
+      <Popover.Trigger asChild>
+        <button type="button" aria-label="Volume" className={smallBtn}><Icon className="h-4 w-4" /></button>
+      </Popover.Trigger>
+      <Popover.Portal container={container ?? undefined}>
+        <Popover.Content side="top" align="end" sideOffset={8} collisionPadding={12}
+          className="z-[80] flex w-56 items-center gap-2 rounded-2xl bg-white p-3 shadow-2xl ring-1 ring-slate-900/10 data-[state=open]:animate-fade-in focus-visible:outline-none">
+          <button type="button" aria-label={volume === 0 ? 'Unmute' : 'Mute'} aria-pressed={volume === 0}
+            onClick={() => { if (volume === 0) onVolume(last.current); else { last.current = volume; onVolume(0); } }}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer"><Icon className="h-4 w-4" /></button>
+          <Slider.Root value={[Math.round(volume * 100)]} max={100} step={5} onValueChange={([v]) => onVolume((v ?? 100) / 100)}
+            className="relative flex h-5 flex-1 touch-none select-none items-center cursor-pointer">
+            <Slider.Track className="relative h-1.5 grow overflow-hidden rounded-full bg-slate-200"><Slider.Range className="absolute h-full rounded-full bg-indigo-600" /></Slider.Track>
+            <Slider.Thumb aria-label="Volume" className="block h-3.5 w-3.5 rounded-full bg-white shadow ring-2 ring-indigo-600 focus-visible:outline-none focus-visible:ring-4" />
+          </Slider.Root>
+          <Popover.Arrow className="fill-white" />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 

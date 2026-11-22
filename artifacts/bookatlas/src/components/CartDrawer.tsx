@@ -23,6 +23,7 @@ import {
 } from '../utils/cart';
 import { usePayments } from './checkout/usePayments';
 
+import { CheckBox } from './ui/select-box';
 interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -285,7 +286,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
             {live && isAuthenticated && (
               <label className="flex items-start gap-2 rounded-lg border border-indigo-100 bg-indigo-50/50 p-3 text-xs leading-relaxed text-slate-800 cursor-pointer">
-                <input type="checkbox" checked={waiver} onChange={(e) => setWaiver(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-indigo-600" />
+                <CheckBox checked={waiver} onChange={(e) => setWaiver(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-indigo-600" />
                 <span>I want my eBooks to open immediately after payment, and I understand that I then lose my 14-day right of withdrawal. Faulty books are always refunded; see the <a href={`${import.meta.env.BASE_URL}refunds`} target="_blank" rel="noreferrer" className="font-semibold text-indigo-700 underline">Refund Policy</a>.</span>
               </label>
             )}

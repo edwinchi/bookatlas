@@ -116,25 +116,28 @@ test('reader display settings persist across reloads', async () => {
   assert.equal(await page.evaluate(() => localStorage.getItem('bookatlas:reader-display:v1')), saved);
 });
 
-test('the audiobook dock plays samples and cycles playback speed', async () => {
+test('the audio sample pops up in its own player, plays, and changes speed there', async () => {
   const page = await open('/');
   // A real recording of the book's opening (it used to be a timer with no sound).
   const pending = page.waitForResponse((r) => r.url().includes('/api/audio-samples/'), { timeout: 60_000 });
   await page.locator('[title="Listen to Audio Sample"]').first().click();
   const sample = await pending;
+  const player = page.locator('section[aria-label^="Audio sample"]');
+  await player.waitFor();
   if (sample.status() === 200) {
     assert.equal(sample.headers()['content-type'], 'audio/mpeg');
-    await page.getByRole('button', { name: /^(Pause|Play) the sample$/ }).waitFor({ timeout: 15_000 });
+    await player.getByRole('button', { name: /^(Pause|Play) the sample$/ }).waitFor({ timeout: 15_000 });
+    await player.getByRole('button', { name: /Listening speed/ }).click();
+    await page.getByRole('radio', { name: '1.5x' }).click();
+    await page.keyboard.press('Escape');
+    assert.match(await player.getByRole('button', { name: /Listening speed/ }).innerText(), /1\.5x/);
   } else {
     // Not recorded yet and the cloud voice's free quota is used up: a plain message, no broken player.
     assert.equal(sample.status(), 503);
     await page.getByText(/audio sample is being prepared/i).waitFor();
   }
-  const speed = page.locator('[title="Change Playback Speed"]');
-  const before = await speed.innerText();
-  await speed.click();
-  assert.notEqual(await speed.innerText(), before);
-  await page.locator('[title="Close Audiobook Player"]').click();
+  await player.getByRole('button', { name: 'Close the audio sample' }).click();
+  await player.waitFor({ state: 'detached' });
 });
 
 test('the privacy notice is linked from the footer and explains rights and retention', async () => {
@@ -188,7 +191,9 @@ test('"How it works" tools: a dropped PDF gives its page count and spine, the ch
   const spine = async () => (await steps.getByText(/^Spine [\d.]+ mm$/).innerText());
   const cream = await spine();
   assert.match(cream, /Spine 19 mm/, '300 cream pages: 0.75 in');
-  await steps.getByLabel('Paper').selectOption('white');
+  // Radix Select (2026-11-22): open the list, pick the option.
+  await steps.getByLabel('Paper').click();
+  await page.getByRole('option', { name: 'White' }).click();
   assert.notEqual(await spine(), cream, 'white paper is thinner');
   const box = steps.getByRole('checkbox', { name: 'Cover PDF with spine' });
   await box.click();

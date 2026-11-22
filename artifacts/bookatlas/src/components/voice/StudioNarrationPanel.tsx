@@ -7,6 +7,7 @@ import { describeError } from '../publishing/AuthedAudioPlayer';
 import { useDeviceVoices, pickDefaultDeviceVoice, deviceVoiceLabel } from './useDeviceVoices';
 import { narrationRequestId } from './requestIdentity';
 
+import { SelectBox } from '../ui/select-box';
 const MAX_CHARS = 500;
 const CAP_USD = 0.1;
 
@@ -171,9 +172,9 @@ export const StudioNarrationPanel: React.FC<Props> = ({ bookId, chapterTitle, te
               <p className="text-[11px] text-emerald-700 font-semibold">Studio audio: {clip.voice}, {clip.duration.toFixed(1)}s, reserved up to US${clip.reserved.toFixed(3)}</p>
               <audio ref={audioRef} src={clip.url} controls className="w-full" onPlay={() => { if (supported) { window.speechSynthesis.cancel(); setDeviceSpeaking(false); } }} />
               <label className="flex items-center gap-2 text-[11px] text-slate-600">Speed
-                <select value={rate} onChange={(e) => setRate(Number(e.target.value))} data-testid="select-studio-rate" className="rounded-lg border border-slate-200 bg-white px-2 py-1">
+                <SelectBox value={rate} onChange={(e) => setRate(Number(e.target.value))} data-testid="select-studio-rate" className="rounded-lg border border-slate-200 bg-white px-2 py-1">
                   {[0.75, 1, 1.25, 1.5].map((r) => <option key={r} value={r}>{r}x</option>)}
-                </select>
+                </SelectBox>
               </label>
             </div>
           )}
@@ -187,9 +188,9 @@ export const StudioNarrationPanel: React.FC<Props> = ({ bookId, chapterTitle, te
           <p className="text-[11px] text-slate-600">{supported ? 'No device voices reported yet.' : 'This browser does not support read-aloud.'}</p>
         ) : (
           <>
-            <select value={deviceVoice?.voiceURI ?? ''} onChange={(e) => setDeviceVoiceUri(e.target.value)} aria-label="Device voice" data-testid="select-device-voice" className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs">
+            <SelectBox value={deviceVoice?.voiceURI ?? ''} onChange={(e) => setDeviceVoiceUri(e.target.value)} aria-label="Device voice" data-testid="select-device-voice" className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs">
               {voices.map((v) => <option key={v.voiceURI} value={v.voiceURI}>{deviceVoiceLabel(v)}</option>)}
-            </select>
+            </SelectBox>
             <button type="button" onClick={toggleDevice} data-testid="button-device-read-aloud" className="w-full py-2 rounded-xl border border-slate-300 text-slate-800 text-xs font-bold flex items-center justify-center gap-2 hover:bg-slate-50 cursor-pointer">
               {deviceSpeaking ? <Square className="w-3.5 h-3.5" aria-hidden /> : <Volume2 className="w-3.5 h-3.5" aria-hidden />}
               {deviceSpeaking ? 'Stop device read-aloud' : 'Read chapter with device voice'}

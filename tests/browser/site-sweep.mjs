@@ -135,10 +135,12 @@ for (const [menu, item, check] of [
   const startBook = await page.getByRole('link', { name: 'Start a book', exact: true }).first().getAttribute('href');
   ok('Start a book pill opens the enquiry form', startBook === '#start-book', startBook);
   // Language and currency.
-  await page.getByLabel('Currency').first().selectOption('USD');
+  await page.getByLabel('Currency').first().click();
+  await page.getByRole('option', { name: 'USD ($)' }).click();
   await page.waitForTimeout(200);
   ok('Currency switch updates prices', /\$\d/.test(await page.locator('main').innerText()));
-  await page.getByLabel('Language').first().selectOption('nl');
+  await page.getByLabel('Language').first().click();
+  await page.getByRole('option', { name: 'Nederlands' }).click();
   await page.waitForTimeout(200);
   const prefs = await page.evaluate(() => Object.entries(localStorage).find(([k]) => /prefer/i.test(k))?.[1] ?? '');
   ok('Language and currency persist', /"nl"/.test(prefs) && /USD/.test(prefs), prefs);

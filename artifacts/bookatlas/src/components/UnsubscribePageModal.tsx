@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AppModal } from './ui/app-modal';
 import { Mail, CheckCircle2, AlertCircle, RefreshCw, ArrowLeft, ShieldCheck, Heart, Volume2 } from 'lucide-react';
 
+import { SelectBox } from './ui/select-box';
 interface UnsubscribePageModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -224,7 +225,7 @@ export const UnsubscribePageModal: React.FC<UnsubscribePageModalProps> = ({
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   {isNl ? 'Reden (optioneel):' : 'Reason for unsubscribing (optional):'}
                 </label>
-                <select
+                <SelectBox
                   value={selectedReason}
                   onChange={(e) => setSelectedReason(e.target.value)}
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-rose-500"
@@ -233,7 +234,7 @@ export const UnsubscribePageModal: React.FC<UnsubscribePageModalProps> = ({
                   <option value="Not interested in current genres">{isNl ? 'Niet geïnteresseerd in huidige genres' : 'Not interested in current genres'}</option>
                   <option value="Never signed up">{isNl ? 'Nooit zelf aangemeld' : 'Never signed up'}</option>
                   <option value="Temporary pause">{isNl ? 'Tijdelijke pauze' : 'Temporary reading break'}</option>
-                </select>
+                </SelectBox>
               </div>
 
               {status === 'error' && (

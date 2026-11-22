@@ -40,6 +40,8 @@ interface BookDetailModalProps {
   book: Book | null;
   onClose: () => void;
   onReadSample: (book: Book) => void;
+  /** Opens the reader with the narration already playing in the pop-up player (owner request 2026-11-22). */
+  onListen?: (book: Book) => void;
   /** Bought by this account (TASK-0004): the whole book opens in the reader. */
   owned?: boolean;
   /** Bought the natural audiobook add-on (cycle 9). */
@@ -62,6 +64,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
   book,
   onClose,
   onReadSample,
+  onListen,
   owned = false,
   ownsAudio = false,
   onAddToCart,
@@ -237,7 +240,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                 {/* Owner request 2026-11-16: every book has a real audio sample, for everyone. */}
                 {(
                   <button
-                    onClick={() => (narrated ? onReadSample(book) : onPlayAudioSample(book))}
+                    onClick={() => (narrated ? (onListen ?? onReadSample)(book) : onPlayAudioSample(book))}
                     className="w-full py-2.5 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 font-semibold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
                   >
                     <Headphones className="w-4 h-4 text-indigo-600" />
@@ -297,7 +300,8 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                   ) : (
                     <button onClick={() => setActiveTab('author')} className="font-bold text-indigo-600 hover:underline cursor-pointer">{book.author}</button>
                   )}
-                  {book.narrator && (
+                  {/* Sample titles are fictional: naming a real actor as their narrator would mislead (2026-11-22). */}
+                  {book.narrator && !isSampleTitle(book) && (
                     <span className="text-slate-500 ml-2">
                       • Narrated by <span className="font-medium text-slate-800">{book.narrator}</span>
                     </span>
