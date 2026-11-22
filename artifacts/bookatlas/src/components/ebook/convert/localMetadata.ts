@@ -32,7 +32,7 @@ const ABOUT_AUTHOR = /^about the author\b/i;
 /** Headings every book has; they say nothing about this one. */
 const FRONT_MATTER = /^(dedication|epigraph|(a )?note to the reader|introduction|preface|foreword|prologue|epilogue|acknowledg\w*|(table of )?contents|about the author|references|bibliography|glossary|index|appendix)\b/i;
 
-const words = (text: string) => text.toLowerCase().match(/\p{L}[\p{L}'’-]{2,}/gu) ?? [];
+const words = (text: string): string[] => text.toLowerCase().match(/\p{L}[\p{L}'’-]{2,}/gu) ?? [];
 const clip = (text: string, max: number) => (text.length <= max ? text : `${text.slice(0, max).replace(/[,;:]?\s+\S*$/, '')}…`);
 
 /** The chapter text after a heading line ("## A Note to the Reader"), as paragraphs. */
