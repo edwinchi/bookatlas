@@ -33,7 +33,34 @@ export const GENERAL_GENRES = [
   'Graphic Novels & Manga',
   'Philosophy & Deep Thought',
   'Poetry & Anthologies',
-  'Science & Technology'
+  'Science & Technology',
+  // Everyday categories (owner request 2026-11-23): the subjects readers expect in any bookstore, where the
+  // categories above do not already cover them.
+  "Children's Books",
+  'Young Adult',
+  'Humor',
+  'History',
+  'Religion & Spirituality',
+  'Health & Fitness',
+  'Family & Relationships',
+  'Parenting',
+  'Education & Language',
+  'Social Science',
+  'Law',
+  'Engineering',
+  'Reference',
+  'Art & Photography',
+  'Music',
+  'Entertainment',
+  'Games & Puzzles',
+  'Sports',
+  'Travel & Adventure',
+  'Cookbooks & Food',
+  'Crafts & Hobbies',
+  'Home & Garden',
+  'Pets & Animals',
+  'Notebooks & Journals',
+  'Planners'
 ];
 
 export const GENRES = [

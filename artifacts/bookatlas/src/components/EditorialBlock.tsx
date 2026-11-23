@@ -164,7 +164,7 @@ export const EditorialCuratorBlock: React.FC<{
         </button>
       </div>
 
-      {/* Editorial 3: Gemini AI Matchmaker */}
+      {/* Editorial 3: AI Matchmaker */}
       <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-5 rounded-2xl border border-indigo-500/30 flex flex-col justify-between space-y-4 shadow-md hover:border-indigo-400/50 transition-all">
         <div className="space-y-2">
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-300 bg-indigo-800/80 px-2.5 py-0.5 rounded-full flex items-center gap-1 w-fit">

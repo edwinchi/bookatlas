@@ -215,14 +215,14 @@ export const AIMatchmakerModal: React.FC<AIMatchmakerModalProps> = ({
 
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-300 mb-2">
             <Bot className="w-4 h-4 text-amber-400 animate-pulse" />
-            <span>BooksAtlas Gemini AI Discovery Engine</span>
+            <span>BooksAtlas AI Matchmaker</span>
           </div>
 
           <h2 className="text-xl sm:text-3xl font-serif font-extrabold text-white">
             Find Your Next Favorite Read
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-lg">
-            Powered by Google Gemini 3.7 Flash & Atlantean literary taxonomy. Describe your mood, preferred tropes, pacing, or specific themes.
+            Describe your mood, the stories you love, the pace you like or a theme, and get books from our catalogue that fit.
           </p>
 
           {/* Search Input Bar */}
@@ -278,12 +278,12 @@ export const AIMatchmakerModal: React.FC<AIMatchmakerModalProps> = ({
           {matchedResults.length === 0 ? (
             <div className="py-12 text-center text-slate-500 space-y-2">
               <Compass className="w-10 h-10 text-indigo-400 mx-auto opacity-70" />
-              <p className="text-sm font-medium">Type your prompt above or click one of the quick suggestions to let Gemini analyze our catalog.</p>
+              <p className="text-sm font-medium">Type your prompt above or click one of the quick suggestions to let the AI Matchmaker search our catalogue.</p>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-slate-100">
-                <span>Top Gemini Matches For You</span>
+                <span>Your best matches</span>
                 <span className="text-indigo-700 font-semibold">{matchedResults.length} curated titles</span>
               </div>
 

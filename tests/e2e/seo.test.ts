@@ -96,7 +96,10 @@ test('book and author pages may load the web app: not the API policy that blocks
   const csp = res.headers.get('content-security-policy') ?? '';
   assert.doesNotMatch(csp, /default-src 'none'/, 'a shared link to a book showed a blank page (2026-11-16)');
   assert.match(csp, /frame-ancestors 'none'/, 'still not frameable');
-  assert.match(res.headers.get('content-security-policy-report-only') ?? '', /script-src 'self'/);
+  // Enforced since 2026-11-23 (no longer report-only): only the site's own scripts and the sign-in service run.
+  assert.match(csp, /script-src 'self'/);
+  assert.doesNotMatch(csp, /script-src[^;]*'unsafe-inline'/);
+  assert.equal(res.headers.get('content-security-policy-report-only'), null);
   const author = await fetch('/author/ada-writer', { headers: { 'x-test-role': 'unauthenticated' } });
   assert.doesNotMatch(author.headers.get('content-security-policy') ?? '', /default-src 'none'/);
   const api = await fetch('/api/healthz');

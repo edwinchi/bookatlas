@@ -31,6 +31,8 @@ export interface SiteMenu {
    */
   mega?: boolean;
   top?: React.ReactNode;
+  /** Wide menus: a row of short links under `top` (the shop's sections), shown as chips. */
+  quickLinks?: NavMenuItem[];
   /** Narrow menus: which edge the panel lines up with, and its width. */
   align?: 'left' | 'right';
   width?: string;
@@ -103,17 +105,33 @@ function MegaPanel({ menu }: { menu: SiteMenu }) {
     <div className="flex">
       <div className="min-w-0 flex-1 p-6">
         {menu.top}
+        {menu.quickLinks && (
+          <ul className="-mt-1 mb-6 flex flex-wrap gap-2" aria-label="Shop">
+            {menu.quickLinks.map((item) => {
+              const Icon = item.icon;
+              return (
+                <li key={item.label}>
+                  <ItemLink item={item} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 outline-none transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-800 focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
+                    {Icon && <Icon className="h-3.5 w-3.5 text-indigo-600" aria-hidden />}{item.label}
+                  </ItemLink>
+                </li>
+              );
+            })}
+          </ul>
+        )}
         <div className="flex gap-8">
           {menu.groups.filter((g) => !g.feature).map((group, g) => {
             const entries = group.items.some((i) => i.description);
+            // Plain names (categories, book types): short links, in a grid or a column.
+            const links = !entries && !group.items.some((i) => i.icon);
             return (
               <div key={group.heading ?? g} className={group.columns ? 'min-w-0 flex-[2]' : 'min-w-0 flex-1'}>
                 {group.heading && <p className="mb-2 border-b border-slate-100 pb-2 text-[11px] font-bold uppercase tracking-widest text-slate-500">{group.heading}</p>}
                 <ul className={group.columns ? `grid gap-x-4 ${entries ? ENTRY_GRID[group.columns] : LINK_GRID[group.columns]}` : ''}>
-                  {group.items.map((item) => (group.columns && !entries
+                  {group.items.map((item) => (links
                     ? (
                       <li key={item.label}>
-                        <ItemLink item={item} title={item.label} className="block w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium leading-snug text-slate-700 outline-none transition-colors hover:bg-indigo-50 hover:text-indigo-800 focus-visible:bg-indigo-50 focus-visible:text-indigo-800 focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">{item.label}</ItemLink>
+                        <ItemLink item={item} title={item.label} className="block w-full rounded-lg px-2 py-1 text-left text-sm font-medium leading-snug text-slate-700 outline-none transition-colors hover:bg-indigo-50 hover:text-indigo-800 focus-visible:bg-indigo-50 focus-visible:text-indigo-800 focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">{item.label}</ItemLink>
                       </li>
                     )
                     : <Entry key={item.label} item={item} />))}
@@ -188,7 +206,7 @@ export function SiteNavMenu({ menus, label = 'Site' }: { menus: SiteMenu[]; labe
             <NavigationMenu.Content
               onKeyDown={onPanelKeyDown}
               className={menu.mega
-                ? 'absolute inset-x-4 top-full z-50 rounded-b-3xl border border-t-0 border-slate-200 bg-white shadow-2xl shadow-slate-900/15 data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:slide-in-from-top-1 data-[state=open]:duration-150 xl:inset-x-6'
+                ? 'absolute inset-x-4 top-full z-50 max-h-[calc(100dvh-7rem)] overflow-y-auto overscroll-contain rounded-b-3xl border border-t-0 border-slate-200 bg-white shadow-2xl shadow-slate-900/15 data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:slide-in-from-top-1 data-[state=open]:duration-150 xl:inset-x-6'
                 : `absolute top-full z-50 mt-1 ${menu.width ?? 'w-80'} ${menu.align === 'right' ? 'right-0' : 'left-0'} rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-900/10 data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:slide-in-from-top-1 data-[state=open]:duration-150`}
             >
               {menu.mega ? <MegaPanel menu={menu} /> : <NarrowPanel menu={menu} />}
@@ -216,10 +234,10 @@ export function MobileNavSections({ menus, onDone }: { menus: SiteMenu[]; onDone
             </Accordion.Trigger>
           </Accordion.Header>
           <Accordion.Content className="pb-2">
-            {menu.groups.map((group, g) => (
+            {[...(menu.quickLinks ? [{ heading: 'Shop', items: menu.quickLinks }] : []), ...menu.groups].map((group: NavMenuGroup, g) => (
               <div key={group.heading ?? g} className={g ? 'mt-1 border-t border-slate-100 pt-1' : ''}>
                 {group.heading && <p className="px-2 pb-1 pt-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">{group.heading}</p>}
-                <ul className={group.columns && !group.items.some((i) => i.description) ? 'grid grid-cols-2 gap-x-2' : ''}>
+                <ul className={!group.items.some((i) => i.description || i.icon) ? 'grid grid-cols-2 gap-x-2' : ''}>
                   {group.items.map((item) => {
                     const Icon = item.icon;
                     const body = (

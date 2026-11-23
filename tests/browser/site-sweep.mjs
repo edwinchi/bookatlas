@@ -94,7 +94,7 @@ const sectionItems = [
 }
 for (const [menu, item, check] of [
   ['Bookstore', 'Audiobooks', 'tab'], ['Bookstore', 'Deals under €4.99', 'tab'], ['Bookstore', 'BooksAtlas Plus', 'tab'],
-  ['Bookstore', 'AI Book Matchmaker', 'signin'], ['Bookstore', 'AI Studio', 'signin'], ['Bookstore', 'Live Voice companion', 'signin'],
+  ['Bookstore', 'AI Matchmaker', 'signin'], ['Bookstore', 'AI Studio', 'signin'], ['Bookstore', 'Live Voice companion', 'signin'],
   ['Resources', 'EPUB and technical specs', 'dialog'],
 ]) {
   const page = await fresh();

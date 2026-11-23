@@ -738,7 +738,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
         onOpenCart={() => setIsCartOpen(true)}
         onOpenWishlist={openWishlist}
         onOpenArchitectureGuide={() => setIsArchitectureGuideOpen(true)}
-        onOpenAIMatchmaker={() => requireAiAccess('AI Book Matchmaker', 'Get personalized reading recommendations, matched by mood and theme, powered by AI.', () => setIsAIMatchmakerOpen(true))}
+        onOpenAIMatchmaker={() => requireAiAccess('AI Matchmaker', 'Get personalized reading recommendations, matched by mood and theme, powered by AI.', () => setIsAIMatchmakerOpen(true))}
         onOpenAIHub={() => requireAiAccess('AI Studio', 'Open personalized AI tools for your reading.', () => setIsAIHubOpen(true))}
         onOpenChat={() => requireAiAccess('Interactive Literary Assistant', 'Chat with our persona-driven AI literary companion.', () => setIsChatOpen(true))}
         onOpenVoice={() => requireAiAccess('Live Voice Companion', 'Have a real-time spoken conversation with our AI voice companion.', () => setIsVoiceOpen(true))}
@@ -1041,7 +1041,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                 {/* Editorial Content Blocks */}
                 <EditorialCuratorBlock
                   onExploreGenre={(genre) => handleViewAllCategory(genre)}
-                  onOpenMatchmaker={() => requireAiAccess('AI Book Matchmaker', 'Get personalized reading recommendations, matched by mood and theme, powered by AI.', () => setIsAIMatchmakerOpen(true))}
+                  onOpenMatchmaker={() => requireAiAccess('AI Matchmaker', 'Get personalized reading recommendations, matched by mood and theme, powered by AI.', () => setIsAIMatchmakerOpen(true))}
                 />
 
                 {/* Carousel 4: Immersive Audiobooks with Narrator Previews */}
@@ -1245,7 +1245,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
           <div className="space-y-2">
             <h4 className="font-bold text-white uppercase tracking-wider text-[11px]">Reading Experience</h4>
             <ul className="space-y-0.5 [&>li>button]:min-h-6">
-              <li><button onClick={() => requireAiAccess('AI Book Matchmaker', 'Get personalized reading recommendations, matched by mood and theme, powered by AI.', () => setIsAIMatchmakerOpen(true))} className="hover:text-white cursor-pointer flex items-center gap-1"><Sparkles className="w-3 h-3 text-purple-400" /> AI Book Matchmaker</button></li>
+              <li><button onClick={() => requireAiAccess('AI Matchmaker', 'Get personalized reading recommendations, matched by mood and theme, powered by AI.', () => setIsAIMatchmakerOpen(true))} className="hover:text-white cursor-pointer flex items-center gap-1"><Sparkles className="w-3 h-3 text-purple-400" /> AI Matchmaker</button></li>
               <li><button onClick={() => setActiveTab('library')} className="hover:text-white cursor-pointer">My Bookshelf & Reading Progress</button></li>
               <li><button onClick={() => setIsArchitectureGuideOpen(true)} className="hover:text-amber-400 cursor-pointer font-semibold">BooksAtlas Architecture Blueprint</button></li>
             </ul>

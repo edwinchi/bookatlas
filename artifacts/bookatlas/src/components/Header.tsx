@@ -46,8 +46,22 @@ import { enquiryHref, openEnquiry } from './StartBookDialog';
 
 import { GENRES, AFRICAN_LITERATURE_GENRES, CONSCIOUSNESS_COMMUNITY_GENRES, GENERAL_GENRES } from '../data/booksData';
 
-/** Every bookstore category, A to Z, for the Bookstore menu. */
-const BOOKSTORE_CATEGORIES = [...AFRICAN_LITERATURE_GENRES, ...CONSCIOUSNESS_COMMUNITY_GENRES, ...GENERAL_GENRES].sort((a, b) => a.localeCompare(b));
+/**
+ * Every bookstore category in four themed columns for the Bookstore menu (owner request 2026-11-23), A to Z within
+ * each. A category not placed below (one added later) still shows, in "Life and leisure".
+ */
+const CATEGORY_COLUMNS: { heading: string; categories: string[] }[] = (() => {
+  const themes: { heading: string; categories: string[] }[] = [
+    { heading: 'Fiction and stories', categories: ['Fiction & Literature', 'Sci-Fi & Fantasy', 'Afrofuturism & Speculative Fiction', 'Mystery & Suspense', 'Thriller & Crime', 'Romance & Contemporary', 'Historical Fiction', 'Contemporary African Voices & Fiction', 'Graphic Novels & Manga', 'Poetry & Anthologies', 'Humor', 'Young Adult', "Children's Books"] },
+    { heading: 'Ideas and knowledge', categories: ['Non-Fiction & Essays', 'Biography & Memoir', 'History', 'Pan-African History & Civilizations', 'African Literature & Classics', 'African Diaspora & Black Studies', 'African Philosophy & Indigenous Traditions', 'Dutch & European Classics', 'Philosophy & Deep Thought', 'Social Science', 'Science & Technology', 'Engineering', 'Law', 'Education & Language', 'Reference', 'Business & Leadership'] },
+    { heading: 'Mind, body and spirit', categories: ['Religion & Spirituality', 'Consciousness & Ancient Wisdom', 'Kemetic Science & Sacred Geometry', 'Metaphysics & Higher Dimensions', 'Indigenous Spiritual Technologies', 'Mind Mastery & Quantum Awakening', 'Holistic Energy, Chakras & Kundalini', 'Self-Improvement & Psychology', 'Health & Fitness', 'Family & Relationships', 'Parenting'] },
+    { heading: 'Life and leisure', categories: ['Art & Photography', 'Music', 'Entertainment', 'Games & Puzzles', 'Sports', 'Travel & Adventure', 'Cookbooks & Food', 'Crafts & Hobbies', 'Home & Garden', 'Pets & Animals', 'Notebooks & Journals', 'Planners'] },
+  ];
+  const all = [...AFRICAN_LITERATURE_GENRES, ...CONSCIOUSNESS_COMMUNITY_GENRES, ...GENERAL_GENRES];
+  const placed = new Set(themes.flatMap((t) => t.categories));
+  themes[3]!.categories.push(...all.filter((c) => !placed.has(c)));
+  return themes.map((t) => ({ heading: t.heading, categories: t.categories.filter((c) => all.includes(c)).sort((a, b) => a.localeCompare(b)) }));
+})();
 /** The kinds of books authors publish most, for the Products menu; each opens "Start my book" with it filled in. */
 const BOOK_TYPES = ['Novels', 'Poetry collections', 'Memoirs and biographies', "Children's books", 'Spiritual and wellbeing books', 'Educational books and workbooks', 'Business and self-help', 'Cookbooks', 'Comics and graphic novels', 'Short-story anthologies'];
 
@@ -197,23 +211,18 @@ export const Header: React.FC<HeaderProps> = ({
   );
   const siteMenus: SiteMenu[] = [
     // Bookstore (owner request 2026-11-23): search and every category in one wide panel, next to the shop's sections.
-    { label: 'Bookstore', mega: true, top: bookstoreSearch, groups: [
-              { heading: 'Shop', items: [
-                { label: 'All eBooks', description: 'Browse the whole catalogue', icon: BookOpen, onSelect: () => onNavigateSection('bookstore') },
-                { label: 'Audiobooks', description: 'Listen in your browser', icon: Headphones, onSelect: () => setActiveTab('audiobooks') },
-                { label: 'Deals under €4.99', description: 'Discounted and free eBooks', icon: Tag, onSelect: () => setActiveTab('deals') },
-                { label: 'BooksAtlas Plus', description: 'Unlimited reading and listening', icon: Compass, onSelect: () => setActiveTab('bookatlasplus') },
-                { label: 'AI Studio', description: 'AI tools for your reading', icon: Bot, onSelect: onOpenAIHub },
-              ] },
-              { heading: 'Categories', columns: 3, items: [
-                { label: 'All categories', onSelect: () => openCategory('All Genres') },
-                ...BOOKSTORE_CATEGORIES.map((genre) => ({ label: genre, onSelect: () => openCategory(genre) })),
-              ] },
-              { heading: 'Reading tools', feature: true, items: [
-                { label: 'AI Book Matchmaker', description: 'Tell it your mood, get your next book', icon: Sparkles, badge: 'Reading tools', onSelect: onOpenAIMatchmaker },
-                { label: 'Live Voice companion', description: 'Talk about the book you are reading', icon: Headphones, badge: 'Listen and talk', onSelect: onOpenVoice },
-              ] },
-            ] },
+    { label: 'Bookstore', mega: true, top: bookstoreSearch, quickLinks: [
+              { label: 'All eBooks', icon: BookOpen, onSelect: () => onNavigateSection('bookstore') },
+              { label: 'Audiobooks', icon: Headphones, onSelect: () => setActiveTab('audiobooks') },
+              { label: 'Deals under €4.99', icon: Tag, onSelect: () => setActiveTab('deals') },
+              { label: 'BooksAtlas Plus', icon: Compass, onSelect: () => setActiveTab('bookatlasplus') },
+              { label: 'AI Matchmaker', icon: Sparkles, onSelect: onOpenAIMatchmaker },
+              { label: 'AI Studio', icon: Bot, onSelect: onOpenAIHub },
+              { label: 'Live Voice companion', icon: Headphones, onSelect: onOpenVoice },
+            ], groups: CATEGORY_COLUMNS.map((column) => ({
+              heading: column.heading,
+              items: column.categories.map((genre) => ({ label: genre, onSelect: () => openCategory(genre) })),
+            })) },
     // Products (owner request 2026-11-23): what an author can make here, the kinds of books, and two guides.
     { label: 'Products', mega: true, groups: [
               { heading: 'Products', items: [
@@ -512,10 +521,10 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onOpenAIMatchmaker}
               className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-white text-xs sm:text-sm font-semibold hover:bg-white/15 hover:border-white/40 transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
-              title="AI Book Recommender & Gemini Mood Matcher"
+              title="AI Matchmaker: find your next book by mood"
             >
               <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-              <span className="hidden md:inline">Gemini AI Matchmaker</span>
+              <span className="hidden md:inline">AI Matchmaker</span>
               <span className="md:hidden">AI Match</span>
             </button>
 
@@ -648,7 +657,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="flex items-center gap-1.5 px-3 py-2.5 font-bold text-indigo-700 hover:text-indigo-900 border-b-2 border-transparent hover:border-indigo-500 whitespace-nowrap transition-colors cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Gemini AI Hub</span>
+              <span>AI Studio</span>
               <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold">4 Modalities</span>
             </button>
 
