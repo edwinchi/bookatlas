@@ -96,7 +96,7 @@ export function AuthorHub({ api, submissions, onShowBooks }: { api: ReturnType<t
           <div data-active={active === 'sales'} className={tile}>
             <FileSpreadsheet className="h-5 w-5 text-emerald-600" aria-hidden />
             <span className="text-sm font-bold text-slate-900">Sales and CSV export</span>
-            <span className="text-xs text-slate-600">Every sale with date, country, VAT and your 67% share, for Excel or your accountant.</span>
+            <span className="text-xs text-slate-600">Every sale with date, country, VAT and your 81% share, for Excel or your accountant.</span>
             <button type="button" onClick={() => void downloadCsv()} disabled={busy === 'csv' || !published.length}
               className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50 cursor-pointer">
               {busy === 'csv' ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Download className="h-3.5 w-3.5" aria-hidden />}Download CSV

@@ -511,3 +511,23 @@ test('an empty category invites authors to publish its first book; a search with
   assert.equal(await page.getByRole('region', { name: 'This shelf is waiting for its first book' }).count(), 0);
   await page.context().close();
 });
+
+// Owner request 2026-11-23: a pricing calculator with each format and a side-by-side comparison of platforms.
+test('the pricing calculator shows what each format costs and earns, next to other platforms', async () => {
+  const page = await open('/');
+  const site = page.getByRole('navigation', { name: 'Site' });
+  await site.getByRole('button', { name: 'Products', exact: true }).click();
+  await site.getByRole('link', { name: /^Pricing calculator/ }).click();
+  await page.waitForURL(/\/pricing$/);
+  await page.getByRole('heading', { level: 1, name: /what every sale earns/ }).waitFor();
+  const summary = page.getByRole('complementary', { name: 'Summary' });
+  assert.match(await summary.innerText(), /€6\.68/, '€8.99 at 9% VAT, 81%');
+  const table = page.getByRole('table', { name: 'Earnings per eBook sale by platform' });
+  for (const name of ['BooksAtlas', 'Amazon KDP', 'Lulu Bookstore', 'Apple Books', 'Kobo Writing Life']) assert.ok(await table.getByText(name, { exact: true }).count(), name);
+  await page.getByRole('radio', { name: /^Audiobook/ }).click();
+  assert.match(await summary.innerText(), /€28\.98/, '70,000 words: €24.99 + €3.99');
+  await page.getByRole('radio', { name: /^Paperback/ }).click();
+  await page.getByLabel("Printer's cost per copy (€)").fill('4.35');
+  assert.match(await summary.innerText(), /KDP on Amazon\s*€3\.90/);
+  await page.context().close();
+});

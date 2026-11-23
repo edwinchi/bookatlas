@@ -46,8 +46,8 @@ export const SERVICES: Service[] = [
     ],
   },
   {
-    id: 'sell', icon: Globe2, name: 'Sell worldwide, keep 67%', price: '67% to you', priceTone: 'included',
-    summary: 'Readers buy with iDEAL, cards, Apple Pay, Google Pay and more; you receive 67% of the price excluding VAT (BooksAtlas commission 33%).',
+    id: 'sell', icon: Globe2, name: 'Sell worldwide, keep 81%', price: '81% to you', priceTone: 'included',
+    summary: 'Readers buy with iDEAL, cards, Apple Pay, Google Pay and more; you receive 81% of the price excluding VAT (BooksAtlas commission 19%).',
     details: [
       'Everyone can read the free preview; buyers open the whole book at once.',
       'BooksAtlas handles VAT and sends every buyer an invoice.',

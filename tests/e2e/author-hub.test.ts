@@ -42,9 +42,9 @@ test('author hub: sales CSV (formula-safe), monthly royalty statement, payout de
   assert.ok(row, 'the sale is in the export');
   assert.ok(row.includes(`"'=HYPERLINK(""x"") Codex"`), 'a title starting with = cannot run as a formula');
   assert.ok(row.includes('"DE"') && row.includes('"9.99"') && row.includes('"paid"'));
-  // The author share is 67% of the price excluding VAT.
+  // The author share is 81% of the price excluding VAT (since 2026-11-23).
   const [net, share] = row.split(',').slice(6, 8).map((c) => Number(c.replace(/"/g, '')));
-  assert.equal(Math.round(net! * 100 * 0.67), Math.round(share! * 100));
+  assert.equal(Math.round(net! * 100 * 0.81), Math.round(share! * 100));
   const readerCsv = await (await fetch('/api/author/sales.csv', as('reader'))).text();
   assert.ok(!readerCsv.includes(bookId), 'another account never sees these sales');
 

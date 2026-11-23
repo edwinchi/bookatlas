@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import { Loader2, Tag } from 'lucide-react';
 import type { NarrationSale, useEbookApi } from './ebookApi';
+import { AUTHOR_SHARE } from '../landing/earnings';
 
 const euro = (n: number) => `€${n.toFixed(2)}`;
 /** Dutch VAT on e-books and audiobooks; the share shown is an example for a Dutch buyer. */
 const NL_VAT = 0.09;
-const AUTHOR_SHARE = 0.67;
 
 /**
  * Cycle 9: the author decides how readers get the finished audiobook: included with the eBook, or sold as an
- * add-on (a second line in the cart, with the same 67% author share).
+ * add-on (a second line in the cart, with the same 81% author share).
  */
 export function AudiobookSale({ api, bookId, sale, onSaved }: { api: ReturnType<typeof useEbookApi>; bookId: string; sale: NarrationSale; onSaved: () => void }) {
   const [mode, setMode] = useState<'included' | 'addon'>(sale.audioPrice > 0 ? 'addon' : 'included');
@@ -56,7 +56,7 @@ export function AudiobookSale({ api, bookId, sale, onSaved }: { api: ReturnType<
                 className="w-20 bg-transparent px-1 py-1.5 text-sm font-bold text-slate-900 outline-none" />
             </span>
           </label>
-          {valid && <p className="pb-1.5 text-[11px] text-slate-600">You keep about <b>{euro((amount / (1 + NL_VAT)) * AUTHOR_SHARE)}</b> per audiobook sold (67% of the price excluding VAT; example for a Dutch buyer).</p>}
+          {valid && <p className="pb-1.5 text-[11px] text-slate-600">You keep about <b>{euro((amount / (1 + NL_VAT)) * AUTHOR_SHARE)}</b> per audiobook sold (81% of the price excluding VAT; example for a Dutch buyer).</p>}
           {!valid && <p className="pb-1.5 text-[11px] text-rose-700">Enter a price between €0.99 and €999.</p>}
         </div>
       )}

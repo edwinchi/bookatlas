@@ -1,4 +1,5 @@
 import type { SubmissionIntake } from '@workspace/bookatlas-catalog/publishing';
+import { AUTHOR_SHARE } from '../landing/earnings';
 
 /**
  * Launch Score and Smart Pricing (cycle 5b, master.md "unique features"). Pure functions, run live in the
@@ -17,7 +18,6 @@ export interface LaunchInput {
 }
 export interface LaunchCheck { id: string; label: string; points: number; max: number; tip?: string }
 
-const AUTHOR_SHARE = 0.67;
 const EBOOK_VAT = 0.09;
 const NONFICTION = /self-improvement|psychology|business|leadership|non-fiction|science|technology|philosophy|mind mastery|healing|consciousness|metaphysics|spiritual|energy|biography|memoir|history|indigenous|kemetic/i;
 

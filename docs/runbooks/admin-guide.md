@@ -161,7 +161,7 @@ These settings live in Vercel → bookatlas → Settings → Environment Variabl
 - **Labels:** "Bestseller" and editorial-review labels are shown only when they are true and sourced.
 - **AI content:** AI briefings and summaries are labelled as AI. If one fails, the page says so; it never shows made-up text.
 - **Demo catalogue:** sample titles are marked "Sample title · not for sale". Their cart buttons explain that instead of selling.
-- **Commission:** authors keep 67% of every sale after VAT; BooksAtlas keeps 33%.
+- **Commission:** authors keep 81% of every sale after VAT; BooksAtlas keeps 19% (since 2026-11-23; sales before then keep 67%/33%). Author Pro: 91%/9%.
 
 ## 9. Releases
 

@@ -1,13 +1,13 @@
 import { bookatlasDb } from '../db/supabaseClient.js';
 import { listSubmissions } from '../ebookPrep/submissions.js';
 import { listNarrations } from '../narration/service.js';
-import { AUTHOR_SHARE } from './authorSales.js';
+import { AUTHOR_SHARE, authorShareOf } from './authorSales.js';
 import { memoryInvoices, type Invoice } from './invoices.js';
 import { PaymentError } from './purchases.js';
 
 /**
- * The owner's business view (cycle 5, 2026-11-15): revenue, orders, refunds, the 33% commission, narration
- * income against its Gemini cost, VAT to declare, top books and what is owed to each author (67%).
+ * The owner's business view (cycle 5, 2026-11-15): revenue, orders, refunds, the commission (19%; 33% before 2026-11-23), narration
+ * income against its Gemini cost, VAT to declare, top books and what is owed to each author (81%; 67% for sales before 2026-11-23).
  * Built from invoices, the order record kept for tax. Stripe fees are estimated (cards and iDEAL in the EEA),
  * Gemini costs are converted from US dollars at USD_EUR (default 0.92).
  */
@@ -43,7 +43,7 @@ export async function businessSummary(users: { total: number; newThisMonth: numb
     const ebooks = kept.filter((i) => i.vat_scheme !== 'nl-service');
     const services = kept.filter((i) => i.vat_scheme === 'nl-service');
     const ebookNet = ebooks.reduce((n, i) => n + i.amount_net, 0);
-    const authorsShare = ebooks.reduce((n, i) => n + i.lines.reduce((m, l) => m + Math.round(l.net * AUTHOR_SHARE), 0), 0);
+    const authorsShare = ebooks.reduce((n, i) => n + i.lines.reduce((m, l) => m + authorShareOf(l.net, i.issued_at), 0), 0);
     const narrationCost = narrations.filter((n) => n.created_at >= since).reduce((m, n) => m + usdToEurCents(n.spent_micros), 0);
     const stripeFees = kept.reduce((n, i) => n + Math.round(i.amount_gross * STRIPE_FEE.percent) + STRIPE_FEE.fixedCents, 0);
     const commission = ebookNet - authorsShare;
@@ -69,7 +69,7 @@ export async function businessSummary(users: { total: number; newThisMonth: numb
     };
   });
 
-  // Owed to authors: 67% of their non-refunded sales, all time (payouts are not yet recorded in the app).
+  // Owed to authors: their share of non-refunded sales (81%; 67% before 2026-11-23), all time (payouts are not yet recorded in the app).
   const authors = new Map<string, { ownerId: string; author: string; email: string; units: number; owedCents: number }>();
   const books = new Map<string, { bookId: string; title: string; author: string; units: number; netCents: number }>();
   for (const inv of invoices) {
@@ -80,7 +80,7 @@ export async function businessSummary(users: { total: number; newThisMonth: numb
       book.units += 1; book.netCents += l.net; books.set(l.bookId, book);
       if (!owner) continue;
       const a = authors.get(owner.ownerId) ?? { ownerId: owner.ownerId, author: owner.author, email: owner.email, units: 0, owedCents: 0 };
-      a.units += 1; a.owedCents += Math.round(l.net * AUTHOR_SHARE); authors.set(owner.ownerId, a);
+      a.units += 1; a.owedCents += authorShareOf(l.net, inv.issued_at); authors.set(owner.ownerId, a);
     }
   }
 

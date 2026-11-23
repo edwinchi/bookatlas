@@ -155,7 +155,7 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
   const sales = await (await fetch('/api/author/sales', as('admin'))).json();
   const sold = sales.books.find((b: { bookId: string }) => b.bookId === bookId);
   assert.deepEqual({ units: sold.units, gross: sold.grossCents, net: sold.netCents, share: sold.shareCents, refunds: sold.refunds },
-    { units: 1, gross: 499, net: 458, share: 307, refunds: 0 }, 'the author receives 67% of the price excluding VAT (33% commission)');
+    { units: 1, gross: 499, net: 458, share: 371, refunds: 0 }, 'the author receives 81% of the price excluding VAT (19% commission)');
   assert.equal(sales.monthly.length, 12);
   assert.equal(sales.monthly.at(-1).units >= 1, true, 'this month shows the sale');
   assert.equal(sales.recent[0].country, 'DE');
@@ -169,9 +169,9 @@ test('buying a prepared eBook through Stripe Checkout unlocks it; a refund locks
   const business = await (await fetch('/api/manager/business', as('admin'))).json();
   const month = business.periods.find((p: { period: string }) => p.period === 'month');
   assert.ok(month.orders >= 1 && month.vatCents >= 41);
-  assert.equal(business.commissionRate, 33);
+  assert.equal(business.commissionRate, 19);
   const owed = business.authorsOwed.find((a: { ownerId: string }) => a.ownerId === 'test-admin-1');
-  assert.ok(owed && owed.owedCents >= 307, 'the author is owed 67% of the price excluding VAT');
+  assert.ok(owed && owed.owedCents >= 371, 'the author is owed 81% of the price excluding VAT');
   assert.ok(business.topBooks.some((b: { bookId: string }) => b.bookId === bookId));
 
   // The buyer asks for a refund within 14 days; an administrator approves it, which refunds through Stripe.

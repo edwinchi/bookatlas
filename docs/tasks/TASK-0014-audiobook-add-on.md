@@ -12,7 +12,7 @@ the author nothing extra, and the store did not show which books had one. Now:
    - **Include it with the eBook** (price 0, the earlier behaviour), or
    - **Sell it as an add-on** (€0.99–€999 incl. VAT). Readers hear a free narrated preview and buy the rest.
 3. The add-on is the product `<bookId>.audio`. It goes through the same cart, Stripe or crypto checkout, invoice,
-   refund and author share (67% of the price excluding VAT) as an eBook. It appears as its own line in the author's sales,
+   refund and author share (81% of the price excluding VAT; 67% before 2026-11-23) as an eBook. It appears as its own line in the author's sales,
    CSV export and royalty statement.
 
 ## Rules

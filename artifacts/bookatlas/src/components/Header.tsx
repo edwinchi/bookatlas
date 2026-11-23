@@ -226,11 +226,11 @@ export const Header: React.FC<HeaderProps> = ({
     // Products (owner request 2026-11-23): what an author can make here, the kinds of books, and two guides.
     { label: 'Products', mega: true, groups: [
               { heading: 'Products', items: [
-                { label: 'eBooks', description: 'An EPUB, checked and made store-ready, sold here and worldwide. You keep 67%.', icon: BookOpen, onSelect: () => onNavigateSection('pricing') },
+                { label: 'eBooks', description: 'An EPUB, checked and made store-ready, sold here and worldwide. You keep 81%.', icon: BookOpen, onSelect: () => onNavigateSection('pricing') },
                 { label: 'Audiobooks', description: 'Your book narrated in a natural studio voice, from €24.99.', icon: Headphones, onSelect: () => onNavigateSection('audiobook-publishing') },
                 { label: 'Print-ready files', description: 'Paperback and hardcover files for Amazon KDP and Lulu, from €99.', icon: Ruler, onSelect: () => onNavigateSection('pricing') },
                 { label: 'Book pages', description: 'One link for every edition of your book.', icon: Link2, onSelect: () => onNavigateSection('book-pages') },
-                { label: 'Compare every option and price', icon: Layers, onSelect: () => onNavigateSection('earnings') },
+                { label: 'Pricing calculator', description: 'What each format costs and what every sale earns, next to other platforms.', icon: Calculator, href: `${import.meta.env.BASE_URL}pricing` },
               ] },
               { heading: 'Popular book types', columns: 2, items: BOOK_TYPES.map((type) => ({
                 label: type,
@@ -244,7 +244,7 @@ export const Header: React.FC<HeaderProps> = ({
     { label: 'Publish', groups: [
               { items: [
                 { label: 'Create and self-publish', description: 'From manuscript to bookshelf in four steps', icon: PenTool, onSelect: () => onNavigateSection('how-it-works') },
-                { label: 'eBook publishing', description: 'Sell worldwide and keep 67%', icon: Globe2, onSelect: () => onNavigateSection('pricing') },
+                { label: 'eBook publishing', description: 'Sell worldwide and keep 81%', icon: Globe2, onSelect: () => onNavigateSection('pricing') },
                 { label: 'Print-ready files', description: 'For Amazon KDP and Lulu, from €99', icon: Ruler, onSelect: () => onNavigateSection('pricing') },
                 { label: 'Pricing and royalties', description: 'Compare Standard and Author Pro', icon: Calculator, onSelect: () => onNavigateSection('earnings') },
                 { label: 'Upload your eBook', description: 'EPUB checked and made store-ready', icon: Upload, onSelect: () => onNavigateSection('publish') },

@@ -30,12 +30,12 @@ test('weak spots are named with what to do, the biggest gain first', () => {
   assert.equal(launchScore({ intake: base, cover: null }).checks.find((c) => c.id === 'cover')!.points, 0);
 });
 
-test('smart pricing follows length and category; earnings use the 67% share excluding 9% VAT', () => {
+test('smart pricing follows length and category; earnings use the 81% share excluding 9% VAT', () => {
   const nonfiction = smartPrice(55_752, ['Self-Improvement & Psychology']);
   assert.deepEqual([nonfiction.low, nonfiction.recommended, nonfiction.high], [5.99, 8.99, 11.99]);
   const fiction = smartPrice(55_752, ['Thriller & Crime']);
   assert.deepEqual([fiction.low, fiction.recommended, fiction.high], [4.99, 7.99, 9.99]);
   assert.equal(smartPrice(10_000, []).recommended, 2.99);
-  assert.equal(nonfiction.earningsPerSale, 5.53, '€8.99 / 1.09 × 67%');
-  assert.equal(nonfiction.copiesFor100, 19);
+  assert.equal(nonfiction.earningsPerSale, 6.68, '€8.99 / 1.09 × 81%');
+  assert.equal(nonfiction.copiesFor100, 15, '€100 / €6.68 per sale');
 });

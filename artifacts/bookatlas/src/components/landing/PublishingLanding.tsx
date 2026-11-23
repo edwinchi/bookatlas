@@ -64,7 +64,7 @@ const SERVICES = [
   {
     icon: Globe2,
     name: 'eBook store',
-    price: '67%',
+    price: '81%',
     unit: 'of every sale is yours',
     body: 'Sell your eBook on BooksAtlas to readers worldwide, including every country in Africa. No upfront cost.',
     cta: 'Sell your eBook',
@@ -75,7 +75,7 @@ const SERVICES = [
     name: 'Author Pro',
     price: '€9.99',
     unit: 'a month',
-    body: 'Keep 77% of every eBook sale instead of 67%. Worth it from a handful of sales a month.',
+    body: 'Keep 91% of every eBook sale instead of 81%. Worth it from a handful of sales a month.',
     cta: 'Estimate my earnings',
     target: 'earnings',
   },
@@ -175,7 +175,7 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
             </button>
           </Reveal>
           <Reveal delay={320}>
-            <p className="mt-5 text-xs text-slate-400">Print-ready packages from €99 · Keep 67% of every eBook sale</p>
+            <p className="mt-5 text-xs text-slate-400">Print-ready packages from €99 · Keep 81% of every eBook sale</p>
           </Reveal>
         </div>
 

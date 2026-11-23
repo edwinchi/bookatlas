@@ -42,7 +42,7 @@ export function NaturalVoiceInfo({ tone = 'store' }: { tone?: 'store' | 'reader'
             <Accessibility className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
             <span>Reading along with your device’s voice stays free on every book you can read. It is there for readers with low vision or dyslexia too.</span>
           </p>
-          <p className="mt-2 text-[10px] text-slate-500">The author keeps 67% of every audiobook sale (after VAT).</p>
+          <p className="mt-2 text-[10px] text-slate-500">The author keeps 81% of every audiobook sale (after VAT).</p>
           <Popover.Arrow className="fill-white" />
         </Popover.Content>
       </Popover.Portal>

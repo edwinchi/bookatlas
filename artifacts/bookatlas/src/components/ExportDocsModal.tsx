@@ -155,7 +155,7 @@ export function ExportDocsModal({ isOpen, onClose, books }: ExportDocsModalProps
                 1. Executive Summary & Corporate Ownership
               </h3>
               <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
-                BooksAtlas is a digital eBook and audiobook store with a browser-native EPUB3 reader, operated by <strong>Atlantean Globals Services</strong>, registered in Zwolle, the Netherlands (KvK 89423496). Independent authors publish their books and keep 67% of every sale; readers can read or listen to every book in the browser. A BooksAtlas Plus subscription (€9.99/mo) is coming soon.
+                BooksAtlas is a digital eBook and audiobook store with a browser-native EPUB3 reader, operated by <strong>Atlantean Globals Services</strong>, registered in Zwolle, the Netherlands (KvK 89423496). Independent authors publish their books and keep 81% of every sale; readers can read or listen to every book in the browser. A BooksAtlas Plus subscription (€9.99/mo) is coming soon.
               </p>
             </div>
 

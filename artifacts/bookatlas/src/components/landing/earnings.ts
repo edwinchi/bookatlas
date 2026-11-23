@@ -2,10 +2,13 @@
 // Amounts are before VAT and payment-provider fees.
 
 export const PLANS = {
-  // Owner decision 2026-11-14: 33% commission; Pro keeps its 10-point advantage.
-  standard: { label: 'Standard', commission: 0.33, monthlyFee: 0 },
-  pro: { label: 'Author Pro', commission: 0.23, monthlyFee: 9.99 },
+  // Owner decision 2026-11-23: 19% commission, the author keeps 81% (was 33%); Pro keeps its 10-point advantage.
+  standard: { label: 'Standard', commission: 0.19, monthlyFee: 0 },
+  pro: { label: 'Author Pro', commission: 0.09, monthlyFee: 9.99 },
 } as const;
+
+/** The author's share of every eBook and audiobook sale, excluding VAT (the server applies the same rate). */
+export const AUTHOR_SHARE = 1 - PLANS.standard.commission;
 
 export type PlanId = keyof typeof PLANS;
 

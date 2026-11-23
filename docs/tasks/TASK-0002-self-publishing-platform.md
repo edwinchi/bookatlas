@@ -139,7 +139,7 @@ Sources: [Lulu API fees](https://help.api.lulu.com/en/support/solutions/articles
 
 | # | Stream | Proposed price | Cost to us | Target margin |
 |---|---|---|---|---|
-| R1 | eBook sales commission | **33%** (owner decision 2026-11-14; was 20%) of the net eBook price excluding VAT; the author receives 67%. Author Pro (R4): 23% commission, author keeps 77% | Payment fees about 1.5–3%, file hosting | About 15% |
+| R1 | eBook sales commission | **19%** (owner decision 2026-11-23, after comparing Lulu's 80%/90%; was 33% from 2026-11-14 and 20% before) of the net eBook price excluding VAT; the author receives 81%. Sales before 2026-11-23 keep 67%. Author Pro (R4): 9% commission, author keeps 91% | Payment fees about 1.5–3%, file hosting | About 15% |
 | R2 | **Print-ready package**: KDP and Lulu interior PDF, full cover with spine, metadata sheet, upload checklist | **€99** per title, with AI formatting and a human check | AI cost plus about 30 minutes of review | About 60% |
 | R3 | Premium print package: R2 plus a designed cover and two revision rounds | **€249** per title | Freelancer designer about €100 | About 50% |
 | R4 | Author Pro subscription | **€9.99/month**: eBook commission falls to 10%, unlimited AI helpers, a print-package refresh per edition | AI API cost (capped per account) | ≥ 70% |

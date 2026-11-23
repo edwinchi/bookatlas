@@ -9,7 +9,7 @@ Readers can read a free preview of every book in the browser without an account,
 - [Publish your eBook](https://booksatlas.app/): upload EPUB, Word (.docx) or PDF. Word and PDF are converted to EPUB 3 in the browser; chapters come from headings, the cover from the book.
 - Book details (title, author, description, categories, keywords) are filled in from the manuscript automatically, without AI, and improved by a free AI model when available.
 - Store-ready preparation: covers with a back panel are cropped, copyright years checked, old EPUB versions upgraded, then validated with EPUBCheck and reviewed before publication.
-- Sell worldwide: the author keeps 67% of each sale price excluding VAT (BooksAtlas commission 33%). No upfront cost. BooksAtlas handles VAT and sends buyers invoices.
+- Sell worldwide: the author keeps 81% of each sale price excluding VAT (BooksAtlas commission 19%). No upfront cost. BooksAtlas handles VAT and sends buyers invoices.
 - Natural audiobook narration (add-on): the book is read by a Google Gemini studio voice (Sulafat, warm female; or Charon, informative male), recorded once and streamed to readers with the paragraph highlighted. Price incl. 21% VAT: €24.99 up to 60,000 words (about 220 pages), plus €3.99 per extra 10,000 words; for example about €32.97 for a 290-page book and €40.95 for a 350-page technical book. Code examples and tables are not read aloud.
 - Sales dashboard: units, revenue, refunds and the author's share per book and per month.
 - Print: readiness reports for Amazon KDP and Lulu; authors publish print editions from their own accounts and BooksAtlas links to them.
@@ -28,7 +28,7 @@ Readers can read a free preview of every book in the browser without an account,
 
 ## Frequently asked
 
-- How much does it cost to publish an eBook on BooksAtlas? Nothing upfront. BooksAtlas takes a 33% commission on each sale; the author keeps 67% of the price excluding VAT.
+- How much does it cost to publish an eBook on BooksAtlas? Nothing upfront. BooksAtlas takes a 19% commission on each sale; the author keeps 81% of the price excluding VAT.
 - Can I upload a Word document or a PDF? Yes. BooksAtlas converts .docx and .pdf to EPUB 3 in your browser, keeps your chapters and takes the cover from your book.
 - Can my eBook become an audiobook? Yes, with natural Gemini narration from €24.99 (incl. VAT), priced by length.
 - How do readers pay? iDEAL, cards, Apple Pay, Google Pay, Bancontact, Klarna and more, through Stripe, in euros.

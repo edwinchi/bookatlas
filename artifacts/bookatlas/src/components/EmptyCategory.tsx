@@ -17,7 +17,7 @@ export const EmptyCategory: React.FC<{ category: string; onBrowseAll: () => void
       <h3 id="empty-category-title" className="mt-1 font-serif text-2xl font-bold text-slate-900 sm:text-3xl">This shelf is waiting for its first book</h3>
       <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-slate-600">
         Nobody has published in {category} on BooksAtlas yet. Write the book this shelf is missing: publish it here, sell it to
-        readers everywhere and keep 67% of every sale.
+        readers everywhere and keep 81% of every sale.
       </p>
       <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
         <button
