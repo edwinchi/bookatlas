@@ -486,8 +486,12 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     if (!audio) return;
     if (audio.paused) void audio.play().catch((e: unknown) => { if ((e as { name?: string })?.name !== 'AbortError') stopSpeech(); }); else audio.pause();
   };
+  /** Listen pressed before the narration had loaded: start once it has (found testing 2026-11-23). */
+  const listenWhenReady = useRef(false);
   const toggleSpeech = () => {
     if (isSpeaking) { stopSpeech(); return; }
+    // Before the narration check finishes, the device voice would start in place of the audiobook: wait for it.
+    if (book.hasReaderContent && !narrationChecked) { listenWhenReady.current = true; return; }
     // The natural voice where it may be heard (all of it, or the preview of an audiobook add-on); the device voice after.
     if (useNatural) { playNarrationFrom(currentChapterIndex); return; }
     speakFrom(currentChapterIndex, currentParagraphIndex);
@@ -501,10 +505,12 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const autoListened = useRef(false);
   const contentReady = !book.hasReaderContent || ((!!fullChapters || !!fullError) && narrationChecked);
   useEffect(() => {
-    if (!autoListen || autoListened.current || !contentReady || chapters.length === 0) return;
+    if (!contentReady || chapters.length === 0) return;
+    if (listenWhenReady.current) { listenWhenReady.current = false; if (!isSpeaking) toggleSpeech(); return; }
+    if (!autoListen || autoListened.current) return;
     autoListened.current = true;
     if (!isSpeaking) toggleSpeech();
-  }, [autoListen, contentReady, chapters.length]);
+  }, [autoListen, contentReady, chapters.length, narrationChecked]);
 
   // A new speed, voice or language applies at once.
   useEffect(() => {
@@ -571,7 +577,10 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   })();
   const naturalPlace = (() => {
     const before = segs.slice(0, clock.k).reduce((a, s) => a + s.seconds, 0);
-    const total = narration?.seconds || segs.reduce((a, s) => a + s.seconds, 0);
+    // A preview listener has only the opening parts: count those, not the whole book (it said "32:02:07 left" for a
+    // 4-part preview, found testing the live site 2026-11-23).
+    const playable = segs.reduce((a, s) => a + s.seconds, 0);
+    const total = narration?.access === 'full' ? (narration.seconds || playable) : playable;
     return {
       progress: clock.d ? Math.min(1, clock.t / clock.d) : 0,
       elapsed: `${formatClock(clock.t)} · part ${clock.k + 1} of ${segs.length}`,

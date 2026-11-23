@@ -107,3 +107,26 @@ test('lock-screen controls: title and cover, pause and resume, next chapter, sto
   assert.equal(await page.evaluate(() => navigator.mediaSession.metadata), null);
   await context.close();
 });
+
+test('Listen pressed before the narration has loaded still starts the audiobook, not the device voice', async () => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
+  const page = await context.newPage();
+  const mark = (b) => (b ? { ...b, hasReaderContent: true, format: 'bundle' } : b);
+  await page.route(/\/api\/catalog\/(search|books\/[^/?]+)/, async (route) => {
+    const res = await route.fetch(); const body = await res.json();
+    if (Array.isArray(body.books)) body.books = body.books.map(mark);
+    if (body.book) body.book = mark(body.book);
+    await route.fulfill({ response: res, json: body });
+  });
+  await page.route('**/api/reader/catalog/*/content', (route) => route.fulfill({ json: { chapters, access: 'full' } }));
+  // A slow connection: the narration's details arrive 3 seconds after the book.
+  await page.route('**/api/reader/catalog/*/narration', async (route) => { await new Promise((r) => setTimeout(r, 3000)); await route.fulfill({ json: { narration: { voice: 'Kore', seconds: 9, access: 'full', segments } } }); });
+  await page.route(/\/api\/reader\/catalog\/[^/]+\/narration\/\d+$/, (route) => route.fulfill({ status: 200, contentType: 'audio/wav', body: wav(3) }));
+  await page.goto(base + '/', { waitUntil: 'networkidle' });
+  await page.locator('[title="Read Free Preview in Browser"]').first().click();
+  await page.getByRole('button', { name: /listen to the book/i }).click();
+  const player = page.getByRole('region', { name: 'Listening controls' });
+  await player.getByText(/part 1 of 3/).waitFor({ timeout: 15_000 });
+  assert.equal(await player.getByText(/min left$/).count(), 0, 'not the device voice');
+  await context.close();
+});

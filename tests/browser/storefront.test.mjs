@@ -15,6 +15,8 @@ async function open(path, { mobile = false } = {}) {
   const context = await browser.newContext(mobile
     ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }
     : { viewport: { width: 1280, height: 900 } });
+  // Clerk's bot protection probes odd ports and some never answer, so "network idle" would never come (2026-11-23).
+  await context.route(/\.protect\.clerk\.com/, (route) => route.abort());
   const page = await context.newPage();
   page.on('console', msg => { if (/Content.Security.Policy/i.test(msg.text())) cspViolations.push(msg.text()); });
   page.on('pageerror', err => pageErrors.push(err.message));
