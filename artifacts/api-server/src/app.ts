@@ -57,7 +57,42 @@ app.use(
     { prefix: "/api/internal/narration/local", limit: 240 },
     { prefix: "/api/audio-samples", limit: 60 },
     { prefix: "/api/book-enquiries", limit: 5 },
+    // Hardening (2026-11-23): the public routes that read the database or stream books and audio, and a
+    // ceiling for everything else. A reader turning pages or listening stays far below these.
+    { prefix: "/api/catalog", limit: 240 },
+    { prefix: "/api/reader/catalog", limit: 600 },
+    { prefix: "/api/reviews", limit: 60 },
+    { prefix: "/api/follows", limit: 60 },
+    { prefix: "/api/narration", limit: 60 },
+    { prefix: "/api/invoices", limit: 30 },
+    { prefix: "/api/author", limit: 60 },
+    { prefix: "/api/subscribers", limit: 20 },
+    { prefix: "/api/reader-unsubscribe", limit: 20 },
+    { prefix: "/api/csp-report", limit: 30 },
+    { prefix: "/api", limit: 1200 },
   ]),
+);
+// Pages report what the Content Security Policy blocked (middlewares/pageCsp.ts), so a legitimate resource the
+// policy misses shows up in the logs instead of silently breaking a page. Only the directive and the blocked
+// host are kept: no query strings, no personal data.
+app.post(
+  "/api/csp-report",
+  express.json({ type: ["application/csp-report", "application/reports+json", "application/json"], limit: "8kb" }),
+  (req, res) => {
+    const body = req.body as { "csp-report"?: Record<string, unknown> } | Array<{ body?: Record<string, unknown> }> | undefined;
+    const reports = Array.isArray(body) ? body.map((r) => r.body ?? {}) : [body?.["csp-report"] ?? {}];
+    const host = (u: unknown) => { try { return typeof u === "string" ? (/^[a-z]+$/.test(u) ? u : new URL(u).origin) : undefined; } catch { return String(u).slice(0, 40); } };
+    const path = (u: unknown) => { try { return typeof u === "string" ? new URL(u).pathname.slice(0, 120) : undefined; } catch { return undefined; } };
+    for (const r of reports.slice(0, 5)) {
+      req.log?.warn({
+        event: "csp.violation",
+        directive: String(r["violated-directive"] ?? r["effectiveDirective"] ?? r["effective-directive"] ?? "").slice(0, 60),
+        blocked: host(r["blocked-uri"] ?? r["blockedURL"]),
+        page: path(r["document-uri"] ?? r["documentURL"]),
+      }, "Content Security Policy blocked a resource");
+    }
+    res.status(204).end();
+  },
 );
 // Without a secret key Clerk throws on every request, taking the public catalog down with it.
 // Skip it instead: public routes keep working and account routes fail closed with 503.
@@ -78,5 +113,15 @@ if (process.env.CLERK_SECRET_KEY?.trim()) {
 app.use("/api", bookatlasAccess);
 app.use("/api", router);
 app.use(await createApp());
+// A malformed or oversized request body answers in JSON like every other API error, never with an HTML page
+// (Express's default) that names the framework or echoes details.
+app.use((err: { status?: number; statusCode?: number; type?: string }, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (res.headersSent) { next(err); return; }
+  const status = err.status ?? err.statusCode ?? 500;
+  if (status >= 500) req.log?.error({ err, event: "request.failed" }, "Unhandled request error");
+  res.status(status).json({
+    error: status === 413 ? "The request is too large." : status >= 500 ? "Something went wrong. Please try again." : "The request could not be read.",
+  });
+});
 
 export default app;

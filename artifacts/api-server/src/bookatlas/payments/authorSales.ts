@@ -149,5 +149,5 @@ export function renderRoyaltyStatement(st: Awaited<ReturnType<typeof royaltyStat
 <div class="wrap"><table><thead><tr><th>Book</th><th class="n">Sold</th><th class="n">Refunded</th><th class="n">Incl. VAT</th><th class="n">VAT</th><th class="n">Excl. VAT</th><th class="n">Your share</th></tr></thead>
 <tbody>${rows}<tr class="total"><td>Total</td><td class="n">${st.totals.units}</td><td class="n">${st.totals.refunds}</td><td class="n">${eur(st.totals.grossCents)}</td><td class="n">${eur(st.totals.vatCents)}</td><td class="n">${eur(st.totals.netCents)}</td><td class="n">${eur(st.totals.shareCents)}</td></tr></tbody></table></div>
 <p class="muted">Your share is ${pct}% of the price excluding VAT; BooksAtlas keeps a ${100 - pct}% commission. BooksAtlas pays the VAT to the tax authorities. Refunded sales earn nothing. Payment fees are not deducted yet, so amounts are estimates until payouts start. Buyers are never identified.</p>
-<p class="noprint"><button onclick="print()">Print or save as PDF</button></p></body></html>`;
+<p class="noprint muted">To keep a PDF copy, use your browser's Print and choose "Save as PDF".</p></body></html>`;
 }

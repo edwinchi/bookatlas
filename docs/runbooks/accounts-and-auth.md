@@ -40,14 +40,25 @@ Suggested alerts (configure in the log or monitoring tool):
 
 ## Rate limits
 
-Defined in [app.ts](../../artifacts/api-server/src/app.ts), per client IP per minute: register 20, `/api/auth/me` 60, `/api/account` 30, export 5, AI routes 30 each. State is per process, so on Vercel each warm instance has its own budget. That caps bursts but isn't a global quota; use a shared store (e.g. Redis) if a global limit is ever required. The limiter trusts exactly one proxy hop (`trust proxy` = 1). If another proxy is added in front, update that setting or clients will share one IP.
+Defined in [app.ts](../../artifacts/api-server/src/app.ts), per client IP per minute: register 20, `/api/auth/me` 60, `/api/account` 30, export 5, AI routes 30 each, enquiries 5, checkout 30, catalogue 240, book and narration reading 600, and since 2026-11-23 a ceiling of 1,200 for any other `/api` route. Paths are matched regardless of letter case. State is per process, so on Vercel each warm instance has its own budget. That caps bursts but isn't a global quota; use a shared store (e.g. Redis) or the Vercel Firewall if a global limit is ever required. The limiter trusts exactly one proxy hop (`trust proxy` = 1). If another proxy is added in front, update that setting or clients will share one IP.
 
-## Content Security Policy rollout
+## Content Security Policy
 
-1. Today: `frame-ancestors`, `object-src`, `base-uri` and `form-action` are enforced; the full allowlist is `Content-Security-Policy-Report-Only` in [security-headers.conf](../../docker/security-headers.conf) and [vercel.json](../../vercel.json).
-2. With valid Clerk keys, add the instance's Frontend API host (production: `clerk.<your-domain>`) to `script-src` and `connect-src` in both files. Bot protection also needs `https://*.protect.clerk.com:*` (it probes non-standard ports); added 2026-11-09.
-3. Run `pnpm test:browser` and a manual sign-up, sign-in and sign-out. The last browser test fails on any CSP report.
-4. With zero reports, rename the header to `Content-Security-Policy` in both files. Roll back by renaming it back.
+Enforced since 2026-11-23. The single source is [pageCsp.ts](../../artifacts/api-server/src/middlewares/pageCsp.ts); [vercel.json](../../vercel.json) and [security-headers.conf](../../docker/security-headers.conf) carry the same string, and `pageCsp.test.ts` fails if they drift.
+
+- Before enforcing, the live site was crawled (home, book, author, sign-in, sign-up, reader, narration, sample player, cart, search, legal pages) with the new policy: no violations, and an injected inline or outside script was blocked.
+- The Clerk production Frontend API `https://clerk.booksatlas.app` is already allowed. A different host needs adding to `script-src` and `connect-src`.
+- Browsers post violations to `/api/csp-report`; they are logged as `csp.violation` with the directive, the blocked origin and the page path. Any of these after a deploy means a legitimate resource is missing from the policy: add it in all three files.
+- Roll back by restoring the previous `Content-Security-Policy` value in `vercel.json` and redeploying.
+
+## Owner security settings (dashboards)
+
+These cannot be set from the code:
+
+- **Clerk**: the checklist below, plus MFA required for administrator accounts.
+- **GitHub** (repository Settings → Code security): secret scanning with push protection on; Dependabot alerts on ([dependabot.yml](../../.github/dependabot.yml) proposes the fixes); CodeQL findings under Security → Code scanning ([codeql.yml](../../.github/workflows/codeql.yml)). Settings → Branches: protect `main` (no force pushes, no deletion). Two-factor authentication on the GitHub account.
+- **Vercel**: two-factor authentication on the account; Firewall → Attack Challenge Mode during an attack; sensitive environment variables marked sensitive.
+- **Stripe, Supabase, Resend**: two-factor authentication; rotate any key that was ever shared outside the dashboards.
 
 ## Clerk dashboard checklist (D9)
 

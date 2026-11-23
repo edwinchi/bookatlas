@@ -18,7 +18,8 @@ export function ruleFor(path: string, rules: readonly Rule[]): Rule | undefined 
 export function rateLimit(rules: readonly Rule[], windowMs = 60_000, now = () => Date.now()) {
   const windows = new Map<string, Window>();
   return (req: Request, res: Response, next: NextFunction) => {
-    const path = req.originalUrl.split('?')[0].replace(/\/+$/, '');
+    // Express matches routes regardless of letter case, so the limiter must too (/API/... is the same route).
+    const path = req.originalUrl.split('?')[0].replace(/\/+$/, '').toLowerCase();
     const rule = ruleFor(path, rules);
     if (!rule) { next(); return; }
     const at = now();

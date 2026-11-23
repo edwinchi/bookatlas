@@ -7,6 +7,7 @@ import { logger } from '../lib/logger.js';
 import type { CatalogStore } from './catalog/store.js';
 import { authorProfile, authorSlug } from './reviews/routes.js';
 
+import { PAGE_CSP } from '../middlewares/pageCsp.js';
 /**
  * Search engines and link previews (owner cycle 2, 2026-11-14). Every book has its own address,
  * /books/<id>. The storefront is a single-page app, so this server fills the page head for that address:
@@ -155,12 +156,10 @@ export function announceBook(bookId: string, appUrl: string) {
  * (vercel.json, kept the same here): the API's "default-src 'none'" blocked the app's script and styles, so
  * a shared or search-engine link to a book showed a blank page (found 2026-11-16).
  */
-const PAGE_CSP = "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'";
-const PAGE_CSP_REPORT_ONLY = "default-src 'self'; script-src 'self' https://*.clerk.accounts.dev https://*.protect.clerk.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://images.unsplash.com https://img.clerk.com; media-src 'self' data: blob: https://commondatastorage.googleapis.com; connect-src 'self' https://*.clerk.accounts.dev https://*.protect.clerk.com:* https://clerk-telemetry.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; manifest-src 'self'";
 function htmlPage(res: Response) {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Content-Security-Policy', PAGE_CSP);
-  res.setHeader('Content-Security-Policy-Report-Only', PAGE_CSP_REPORT_ONLY);
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
 }
 
 export function mountSeo(app: Express, catalog: CatalogStore, appUrl: string) {

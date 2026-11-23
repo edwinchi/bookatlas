@@ -1,0 +1,25 @@
+# Code scanning (owner request 2026-11-23: protect the site): GitHub's CodeQL looks for injection, cross-site
+# scripting, path traversal, unsafe redirects and leaked secrets in every push to main and once a week. Free on a
+# public repository; findings appear under Security → Code scanning.
+name: CodeQL
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '27 4 * * 1'
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+      - uses: github/codeql-action/analyze@v3

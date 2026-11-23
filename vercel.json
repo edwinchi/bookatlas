@@ -4,8 +4,15 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/bookatlas run build",
   "outputDirectory": "artifacts/bookatlas/dist/public",
-  "regions": ["fra1"],
-  "crons": [{ "path": "/api/internal/narration/cron", "schedule": "15 8 * * *" }],
+  "regions": [
+    "fra1"
+  ],
+  "crons": [
+    {
+      "path": "/api/internal/narration/cron",
+      "schedule": "15 8 * * *"
+    }
+  ],
   "functions": {
     "api/index.mjs": {
       "maxDuration": 60,
@@ -68,11 +75,11 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
+          "value": "default-src 'self'; script-src 'self' https://*.clerk.accounts.dev https://clerk.booksatlas.app https://*.protect.clerk.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://images.unsplash.com https://img.clerk.com; media-src 'self' data: blob: https://commondatastorage.googleapis.com; connect-src 'self' https://*.clerk.accounts.dev https://clerk.booksatlas.app https://*.protect.clerk.com:* https://clerk-telemetry.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; manifest-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests; report-uri /api/csp-report"
         },
         {
-          "key": "Content-Security-Policy-Report-Only",
-          "value": "default-src 'self'; script-src 'self' https://*.clerk.accounts.dev https://*.protect.clerk.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://images.unsplash.com https://img.clerk.com; media-src 'self' data: blob: https://commondatastorage.googleapis.com; connect-src 'self' https://*.clerk.accounts.dev https://*.protect.clerk.com:* https://clerk-telemetry.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; manifest-src 'self'"
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
         }
       ]
     },

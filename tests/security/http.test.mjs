@@ -12,8 +12,13 @@ test('web responses carry baseline security headers and no server version', asyn
     assert.equal(res.status, 200, path);
     assert.equal(res.headers.get('x-content-type-options'), 'nosniff', path);
     assert.equal(res.headers.get('x-frame-options'), 'DENY', path);
-    assert.match(res.headers.get('content-security-policy') ?? '', /frame-ancestors 'none'/, path);
-    assert.match(res.headers.get('content-security-policy-report-only') ?? '', /default-src 'self'/, path);
+    const csp = res.headers.get('content-security-policy') ?? '';
+    assert.match(csp, /frame-ancestors 'none'/, path);
+    // Enforced since 2026-11-23: scripts only from this site and the sign-in provider, never inline.
+    assert.match(csp, /default-src 'self'/, path);
+    assert.match(csp, /script-src 'self' [^;]*/, path);
+    assert.doesNotMatch(csp.match(/script-src[^;]*/)?.[0] ?? '', /'unsafe-inline'|'unsafe-eval'/, path);
+    assert.equal(res.headers.get('content-security-policy-report-only'), null, `${path}: one enforced policy, no report-only copy`);
     assert.doesNotMatch(res.headers.get('server') ?? '', /\d/, `${path} must not disclose the server version`);
   }
 });
@@ -57,4 +62,13 @@ test('abusive request rates are throttled with Retry-After', async () => {
   }
   assert.ok(throttled, 'expected a 429 within 10 export requests');
   assert.ok(Number(throttled.headers.get('retry-after')) > 0);
+});
+
+test('blocked-resource reports are accepted without sign-in and malformed bodies get a JSON error', async () => {
+  const report = await get('/api/csp-report', { method: 'POST', headers: { 'Content-Type': 'application/csp-report' }, body: JSON.stringify({ 'csp-report': { 'violated-directive': 'script-src', 'blocked-uri': 'https://evil.example/x.js', 'document-uri': 'https://booksatlas.app/?q=secret' } }) });
+  assert.equal(report.status, 204);
+  const bad = await get('/api/book-enquiries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{bad' });
+  assert.equal(bad.status, 400);
+  assert.match(bad.headers.get('content-type') ?? '', /json/);
+  assert.doesNotMatch(await bad.text(), /<html|express|stack|at \//i);
 });

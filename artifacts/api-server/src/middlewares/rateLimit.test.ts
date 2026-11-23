@@ -37,3 +37,9 @@ test('a client over the limit gets 429 with Retry-After until the window resets'
   clock += 60_000;
   assert.equal(call(limiter, '/api/account').status, 200, 'window resets');
 });
+
+test('changing the letter case of the address does not escape the limit', () => {
+  const limiter = rateLimit(rules, 60_000, () => 5);
+  assert.equal(call(limiter, '/api/account/export').status, 200);
+  assert.equal(call(limiter, '/API/Account/Export').status, 429);
+});
