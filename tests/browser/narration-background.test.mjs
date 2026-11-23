@@ -159,7 +159,7 @@ test('on an iPhone (Safari engine) Listen opens the player and the audiobook pla
     // Centred, so the phone's bottom navigation bar does not cover it.
     const preview = page.locator('[title="Read Free Preview in Browser"]').first();
     await preview.evaluate((el) => el.scrollIntoView({ block: 'center' }));
-    await preview.tap();
+    await preview.tap({ force: true }); // the store's carousel keeps moving, so it never counts as "stable"
     await page.getByRole('button', { name: /listen to the book/i }).tap();
     const player = page.getByRole('region', { name: 'Listening controls' });
     await player.getByRole('button', { name: /^pause listening$/i }).waitFor({ timeout: 15_000 });

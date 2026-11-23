@@ -266,6 +266,7 @@ test('the site menu row opens on hover and click, and its links reach the landin
   await page.keyboard.press('ArrowDown');
   await page.waitForFunction(() => document.activeElement?.textContent?.includes('Books and drafts'));
   await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.activeElement?.getAttribute('aria-expanded') === 'false');
   assert.equal(await hub.getAttribute('aria-expanded'), 'false');
 });
 

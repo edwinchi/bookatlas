@@ -39,12 +39,17 @@ import {
   Mail,
   Upload
 } from 'lucide-react';
-import { HeaderNavMenu, MobileNavSection, type NavMenuGroup } from './HeaderNavMenu';
+import { SiteNavMenu, MobileNavSections, type SiteMenu } from './HeaderNavMenu';
 import { AtlasStar } from './landing/AtlasStar';
 import { OPERATOR } from './LegalDocument';
-import { enquiryHref } from './StartBookDialog';
+import { enquiryHref, openEnquiry } from './StartBookDialog';
 
 import { GENRES, AFRICAN_LITERATURE_GENRES, CONSCIOUSNESS_COMMUNITY_GENRES, GENERAL_GENRES } from '../data/booksData';
+
+/** Every bookstore category, A to Z, for the Bookstore menu. */
+const BOOKSTORE_CATEGORIES = [...AFRICAN_LITERATURE_GENRES, ...CONSCIOUSNESS_COMMUNITY_GENRES, ...GENERAL_GENRES].sort((a, b) => a.localeCompare(b));
+/** The kinds of books authors publish most, for the Products menu; each opens "Start my book" with it filled in. */
+const BOOK_TYPES = ['Novels', 'Poetry collections', 'Memoirs and biographies', "Children's books", 'Spiritual and wellbeing books', 'Educational books and workbooks', 'Business and self-help', 'Cookbooks', 'Comics and graphic novels', 'Short-story anthologies'];
 
 
 import { SelectBox } from './ui/select-box';
@@ -178,18 +183,53 @@ export const Header: React.FC<HeaderProps> = ({
   const goToStoreHome = () => { setActiveTab('store'); setSelectedGenre('All Genres'); setSearchQuery(''); };
 
   // The site menus: the menu row on large screens and the sections of the phone menu are built from this one list.
-  const siteMenus: { label: string; groups: NavMenuGroup[] }[] = [
-    { label: 'Store', groups: [
-              { items: [
+  /** A category from the menus: the bookstore section, showing that category. */
+  const openCategory = (genre: string) => { onNavigateSection('bookstore'); setSelectedGenre(genre); };
+  const bookstoreSearch = (
+    <form role="search" className="mb-5" onSubmit={(e) => { e.preventDefault(); const q = searchQuery; onNavigateSection('bookstore'); setSearchQuery(q); (document.activeElement as HTMLElement | null)?.blur(); }}>
+      <label className="relative block">
+        <span className="sr-only">Search the bookstore</span>
+        <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" aria-hidden />
+        <input type="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search the bookstore: title, author, ISBN or topic"
+          className="w-full rounded-full border border-slate-200 bg-slate-100 py-3 pl-12 pr-4 text-sm text-slate-900 placeholder-slate-500 transition-colors focus:border-indigo-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20" />
+      </label>
+    </form>
+  );
+  const siteMenus: SiteMenu[] = [
+    // Bookstore (owner request 2026-11-23): search and every category in one wide panel, next to the shop's sections.
+    { label: 'Bookstore', mega: true, top: bookstoreSearch, groups: [
+              { heading: 'Shop', items: [
                 { label: 'All eBooks', description: 'Browse the whole catalogue', icon: BookOpen, onSelect: () => onNavigateSection('bookstore') },
                 { label: 'Audiobooks', description: 'Listen in your browser', icon: Headphones, onSelect: () => setActiveTab('audiobooks') },
                 { label: 'Deals under €4.99', description: 'Discounted and free eBooks', icon: Tag, onSelect: () => setActiveTab('deals') },
                 { label: 'BooksAtlas Plus', description: 'Unlimited reading and listening', icon: Compass, onSelect: () => setActiveTab('bookatlasplus') },
-              ] },
-              { heading: 'Reading tools', items: [
-                { label: 'AI Book Matchmaker', description: 'Find your next book by mood', icon: Sparkles, onSelect: onOpenAIMatchmaker },
                 { label: 'AI Studio', description: 'AI tools for your reading', icon: Bot, onSelect: onOpenAIHub },
-                { label: 'Live Voice companion', description: 'Talk about books out loud', icon: Headphones, onSelect: onOpenVoice },
+              ] },
+              { heading: 'Categories', columns: 3, items: [
+                { label: 'All categories', onSelect: () => openCategory('All Genres') },
+                ...BOOKSTORE_CATEGORIES.map((genre) => ({ label: genre, onSelect: () => openCategory(genre) })),
+              ] },
+              { heading: 'Reading tools', feature: true, items: [
+                { label: 'AI Book Matchmaker', description: 'Tell it your mood, get your next book', icon: Sparkles, badge: 'Reading tools', onSelect: onOpenAIMatchmaker },
+                { label: 'Live Voice companion', description: 'Talk about the book you are reading', icon: Headphones, badge: 'Listen and talk', onSelect: onOpenVoice },
+              ] },
+            ] },
+    // Products (owner request 2026-11-23): what an author can make here, the kinds of books, and two guides.
+    { label: 'Products', mega: true, groups: [
+              { heading: 'Products', items: [
+                { label: 'eBooks', description: 'An EPUB, checked and made store-ready, sold here and worldwide. You keep 67%.', icon: BookOpen, onSelect: () => onNavigateSection('pricing') },
+                { label: 'Audiobooks', description: 'Your book narrated in a natural studio voice, from €24.99.', icon: Headphones, onSelect: () => onNavigateSection('audiobook-publishing') },
+                { label: 'Print-ready files', description: 'Paperback and hardcover files for Amazon KDP and Lulu, from €99.', icon: Ruler, onSelect: () => onNavigateSection('pricing') },
+                { label: 'Book pages', description: 'One link for every edition of your book.', icon: Link2, onSelect: () => onNavigateSection('book-pages') },
+                { label: 'Compare every option and price', icon: Layers, onSelect: () => onNavigateSection('earnings') },
+              ] },
+              { heading: 'Popular book types', columns: 2, items: BOOK_TYPES.map((type) => ({
+                label: type,
+                onSelect: () => openEnquiry('start', { message: `I would like to publish: ${type.toLowerCase()}.` }),
+              })) },
+              { feature: true, items: [
+                { label: 'From manuscript to bookshelf in four steps', description: 'How publishing on BooksAtlas works.', icon: ListOrdered, badge: 'Guide', onSelect: () => onNavigateSection('how-it-works') },
+                { label: 'Natural-voice audiobooks', description: 'Turn your eBook into an audiobook readers can buy.', icon: Headphones, badge: 'New', onSelect: () => onNavigateSection('audiobook-publishing') },
               ] },
             ] },
     { label: 'Publish', groups: [
@@ -224,15 +264,17 @@ export const Header: React.FC<HeaderProps> = ({
               { label: 'EPUB and technical specs', description: 'Formats, reader and platform details', icon: FileText, onSelect: onOpenArchitectureGuide },
               { label: 'Help', description: 'Send the BooksAtlas team a message', icon: HelpCircle, href: enquiryHref('help') },
             ] }] },
-    { label: 'About', groups: [
-              { items: [
-                { label: 'About BooksAtlas', description: `${OPERATOR.name}, Zwolle, the Netherlands`, icon: Building2, onSelect: () => onNavigateSection('about') },
-                { label: 'Our promise', description: 'What authors can count on', icon: BadgeCheck, onSelect: () => onNavigateSection('promise') },
-                { label: 'Contact us', description: OPERATOR.email, icon: Mail, href: enquiryHref('question') },
+    // About (owner request 2026-11-23): who runs BooksAtlas and the rules it keeps, in a 2 × 2 grid, with two ways to reach us.
+    { label: 'About', mega: true, groups: [
+              { heading: 'About BooksAtlas', columns: 2, items: [
+                { label: 'Who we are', description: `${OPERATOR.name}, an independent publisher in Zwolle, the Netherlands.`, icon: Building2, onSelect: () => onNavigateSection('about') },
+                { label: 'Our promise', description: 'What authors can count on: your accounts stay yours, clear fixed prices.', icon: BadgeCheck, onSelect: () => onNavigateSection('promise') },
+                { label: 'Privacy and your data', description: 'What we keep, for how long, and your rights under the GDPR.', icon: ShieldCheck, href: `${import.meta.env.BASE_URL}privacy` },
+                { label: 'Legal notice', description: 'The company behind BooksAtlas and its registration details.', icon: Scale, href: `${import.meta.env.BASE_URL}legal` },
               ] },
-              { items: [
-                { label: 'Privacy notice', icon: ShieldCheck, href: `${import.meta.env.BASE_URL}privacy` },
-                { label: 'Legal notice', icon: Scale, href: `${import.meta.env.BASE_URL}legal` },
+              { feature: true, items: [
+                { label: 'Start your book', description: 'Tell us about your book. We reply by email before any work starts.', icon: PenTool, badge: 'Authors', href: enquiryHref('start') },
+                { label: 'Contact us', description: OPERATOR.email, icon: Mail, badge: 'Questions', href: enquiryHref('question') },
               ] },
             ] },
   ];
@@ -241,25 +283,23 @@ export const Header: React.FC<HeaderProps> = ({
     <header ref={headerRef} className="sticky top-0 z-40 bg-white border-b border-stone-200 shadow-xs">
       {/* Site menu row, following the Platform Blueprint sitemap: reading first, publishing one click away */}
       <div className="hidden lg:block border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-6 flex items-center gap-4 xl:gap-6">
+        <div className="relative max-w-7xl mx-auto px-6 flex items-center gap-2 xl:gap-6">
           <button
             onClick={goToStoreHome}
             className="shrink-0 py-2 group focus-visible:outline-2 focus-visible:outline-indigo-600 cursor-pointer"
           >
-            <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="BooksAtlas" width={344} height={96} className="h-10 w-auto transition-opacity group-hover:opacity-85 xl:h-11" />
+            <img src={`${import.meta.env.BASE_URL}logo-96.webp`} srcSet={`${import.meta.env.BASE_URL}logo-96.webp 1x, ${import.meta.env.BASE_URL}logo-192.webp 2x`} alt="BooksAtlas" width={344} height={96} className="h-9 w-auto transition-opacity group-hover:opacity-85 xl:h-11" />
           </button>
-          <nav aria-label="Site" className="flex items-center gap-0.5">
-            {siteMenus.map((menu) => <HeaderNavMenu key={menu.label} label={menu.label} groups={menu.groups} />)}
-          </nav>
+          <SiteNavMenu menus={siteMenus} />
 
           <div className="ml-auto flex shrink-0 items-center gap-2 py-1.5 text-xs">
             {isAdminAuthenticated && (
-              <HeaderNavMenu label="Admin" align="right" width="w-72" groups={[{ heading: adminEmail, items: [
+              <SiteNavMenu label="Administrator" menus={[{ label: 'Admin', align: 'right', width: 'w-72', groups: [{ heading: adminEmail, items: [
                 { label: activeTab === 'manager' ? 'Exit Manager Studio' : 'Manager Studio', icon: Bot, onSelect: handleManagerTabClick },
                 { label: 'Specs export', description: 'Word and PDF platform specifications', icon: FileText, onSelect: handleDocsClick },
                 { label: 'Platform blueprint', icon: HelpCircle, onSelect: onOpenArchitectureGuide },
                 { label: 'Lock administrator session', icon: Lock, onSelect: onAdminLogout },
-              ] }]} />
+              ] }] }]} />
             )}
             {setLanguage && (
               <label className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-700 hover:border-slate-300">
@@ -695,7 +735,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span>Manager Portal {isAdminAuthenticated ? '(Active)' : '(Admin Locked)'}</span>
           </button>}
           <nav aria-label="Site menu" className="divide-y divide-slate-100 border-y border-slate-100">
-            {siteMenus.map((menu) => <MobileNavSection key={menu.label} label={menu.label} groups={menu.groups} onDone={() => setMobileMenuOpen(false)} />)}
+            <MobileNavSections menus={siteMenus} onDone={() => setMobileMenuOpen(false)} />
           </nav>
           <a href={enquiryHref('start')} className="flex min-h-12 w-full items-center gap-2 rounded-lg bg-amber-400 px-3 font-bold text-slate-950">
             <Mail className="w-4 h-4" /> Start my book

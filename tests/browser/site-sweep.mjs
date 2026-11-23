@@ -39,9 +39,10 @@ async function openMenu(page, label) {
 // 1. Menu mechanics: click opens, Escape closes and returns focus, outside click closes, arrow keys move.
 {
   const page = await fresh();
-  const btn = await openMenu(page, 'Store');
+  const btn = await openMenu(page, 'Bookstore');
   ok('Store menu opens on click', (await btn.getAttribute('aria-expanded')) === 'true');
   await page.keyboard.press('Escape');
+  await page.waitForTimeout(150);
   ok('Escape closes menu', (await btn.getAttribute('aria-expanded')) === 'false');
   ok('Escape returns focus to button', await btn.evaluate((el) => el === document.activeElement));
   await btn.focus();
@@ -62,7 +63,7 @@ async function openMenu(page, label) {
 
 // 2. Every menu item.
 const sectionItems = [
-  ['Store', 'All eBooks', 'bookstore'],
+  ['Bookstore', 'All eBooks', 'bookstore'],
   ['Publish', 'Create and self-publish', 'how-it-works'],
   ['Publish', 'eBook publishing', 'pricing'],
   ['Publish', 'Print-ready files', 'pricing'],
@@ -70,7 +71,7 @@ const sectionItems = [
   ['Resources', 'Publishing guide', 'how-it-works'],
   ['Resources', 'Who it is for', 'solutions'],
   ['Resources', 'Book pages', 'book-pages'],
-  ['About', 'About BooksAtlas', 'about'],
+  ['About', 'Who we are', 'about'],
   ['About', 'Our promise', 'promise'],
 ];
 {
@@ -92,8 +93,8 @@ const sectionItems = [
   await page.close();
 }
 for (const [menu, item, check] of [
-  ['Store', 'Audiobooks', 'tab'], ['Store', 'Deals under €4.99', 'tab'], ['Store', 'BooksAtlas Plus', 'tab'],
-  ['Store', 'AI Book Matchmaker', 'signin'], ['Store', 'AI Studio', 'signin'], ['Store', 'Live Voice companion', 'signin'],
+  ['Bookstore', 'Audiobooks', 'tab'], ['Bookstore', 'Deals under €4.99', 'tab'], ['Bookstore', 'BooksAtlas Plus', 'tab'],
+  ['Bookstore', 'AI Book Matchmaker', 'signin'], ['Bookstore', 'AI Studio', 'signin'], ['Bookstore', 'Live Voice companion', 'signin'],
   ['Resources', 'EPUB and technical specs', 'dialog'],
 ]) {
   const page = await fresh();
@@ -114,7 +115,7 @@ for (const [menu, item, check] of [
 {
   const page = await fresh();
   const hrefs = {};
-  for (const [menu, item] of [['Publish', 'Start a book'], ['Author hub', 'Questions?'], ['Resources', 'Help'], ['About', 'Contact us'], ['About', 'Privacy notice'], ['About', 'Legal notice']]) {
+  for (const [menu, item] of [['Publish', 'Start a book'], ['Author hub', 'Questions?'], ['Resources', 'Help'], ['About', 'Contact us'], ['About', 'Privacy and your data'], ['About', 'Legal notice']]) {
     await openMenu(page, menu);
     hrefs[item] = await site(page).getByRole('link', { name: new RegExp(`^${item}`) }).getAttribute('href');
     await page.keyboard.press('Escape');
@@ -163,10 +164,10 @@ for (const [menu, item, check] of [
   // The phone menu has the same five menus as the desktop row, each opening to the same items.
   await page.getByRole('button', { name: 'Open bookstore menu' }).click();
   const menu = page.locator('#bookstore-mobile-menu');
-  const sections = await menu.locator('nav[aria-label="Site menu"] > div > button').allInnerTexts();
-  ok('Mobile menu lists Store, Publish, Author hub, Resources, About', sections.map((t) => t.trim()).join('|') === 'Store|Publish|Author hub|Resources|About', sections.join('|'));
+  const sections = await menu.locator('nav[aria-label="Site menu"] h3 > button').allInnerTexts();
+  ok('Mobile menu lists Bookstore, Products, Publish, Author hub, Resources, About', sections.map((t) => t.trim()).join('|') === 'Bookstore|Products|Publish|Author hub|Resources|About', sections.join('|'));
   await page.getByRole('button', { name: 'Close bookstore menu' }).click();
-  for (const [section, label, id] of [['Publish', 'eBook publishing', 'pricing'], ['Publish', 'Create and self-publish', 'how-it-works'], ['Publish', 'Pricing and royalties', 'earnings'], ['Store', 'All eBooks', 'bookstore'], ['About', 'About BooksAtlas', 'about'], ['Resources', 'Who it is for', 'solutions']]) {
+  for (const [section, label, id] of [['Publish', 'eBook publishing', 'pricing'], ['Publish', 'Create and self-publish', 'how-it-works'], ['Publish', 'Pricing and royalties', 'earnings'], ['Bookstore', 'All eBooks', 'bookstore'], ['About', 'Who we are', 'about'], ['Resources', 'Who it is for', 'solutions']]) {
     await page.getByRole('button', { name: 'Open bookstore menu' }).click();
     await menu.getByRole('button', { name: section, exact: true }).click();
     await menu.getByRole('button', { name: new RegExp(`^${label}`) }).click();
