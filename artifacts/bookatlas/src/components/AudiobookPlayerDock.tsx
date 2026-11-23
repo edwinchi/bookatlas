@@ -62,21 +62,26 @@ export const AudiobookPlayerDock: React.FC<AudiobookPlayerDockProps> = ({
 
   useEffect(() => {
     let cancelled = false;
-    let url: string | null = null;
     setState('loading'); setPlaying(false); setTime(0); setDuration(0); setMinimized(false);
-    fetch(audioSampleUrl(book.id))
-      .then(async (res) => {
-        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? 'The sample could not be loaded.');
-        url = URL.createObjectURL(await res.blob());
-        if (cancelled) return;
-        const a = audio.current!;
-        a.src = url;
-        a.playbackRate = speed;
-        setState('ready');
-        await a.play().catch(() => undefined);
-      })
-      .catch((e) => { if (!cancelled) { setError(e instanceof Error ? e.message : 'The sample could not be loaded.'); setState('error'); } });
-    return () => { cancelled = true; audio.current?.pause(); if (url) URL.revokeObjectURL(url); };
+    // Streamed from its address: iPhones refuse the audio as a blob and the player closed there (found 2026-11-23).
+    // play() runs straight away, still inside the tap that opened the player, which phones require for sound.
+    const a = audio.current!;
+    const failed = () => {
+      if (cancelled) return;
+      fetch(audioSampleUrl(book.id), { headers: { range: 'bytes=0-0' } })
+        .then(async (res) => (res.ok ? 'The sample could not be played on this device.' : (await res.json().catch(() => ({}))).error ?? 'The sample could not be loaded.'))
+        .catch(() => 'The sample could not be loaded. Check your connection.')
+        .then((message) => { if (!cancelled) { setError(message); setState('error'); } });
+    };
+    a.onerror = failed;
+    a.onloadedmetadata = () => { if (!cancelled) setState('ready'); };
+    a.src = audioSampleUrl(book.id);
+    a.playbackRate = speed;
+    void a.play().then(() => { if (!cancelled) setState('ready'); }).catch((e: unknown) => {
+      // The browser wants a tap first: the player is ready and waits for Play.
+      if (!cancelled && (e as { name?: string })?.name === 'NotAllowedError') setState('ready');
+    });
+    return () => { cancelled = true; a.onerror = null; a.onloadedmetadata = null; a.pause(); a.removeAttribute('src'); a.load(); };
   }, [book.id]);
 
   useEffect(() => { if (audio.current) audio.current.playbackRate = speed; }, [speed, state]);

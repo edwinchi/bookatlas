@@ -45,6 +45,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Audio goes straight to the network without this worker (2026-11-23): Safari streams it in byte ranges and has
+  // refused range answers relayed by a service worker.
+  if (request.headers.has('range') || request.destination === 'audio' || /^\/api\/(?:audio-samples\/|reader\/catalog\/[^/]+\/narration\/\d+$)/.test(url.pathname)) {
+    return;
+  }
+
   // The API always goes to the network: prices, payments, submissions and purchases change.
   // Only the public catalogue keeps a copy, used when the network is down. Personal answers
   // (accounts, submissions, purchases, reader text, checkout) are never stored.

@@ -348,7 +348,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   });
 
   const narrationAudio = useRef<HTMLAudioElement | null>(null);
-  const narrationUrls = useRef(new globalThis.Map<number, Promise<string>>());
+  /** A listening key fetched again after a part was refused (an expired key). */
+  const freshKey = useRef<string | undefined>(undefined);
   const stopSpeech = () => {
     speechRun.current += 1;
     speechChapter.current = null;
@@ -385,29 +386,27 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     const segs = n.segments;
     const first = segs.findIndex((s) => s.chapter >= chapterIdx);
     if (first < 0) return;
-    const url = (k: number) => {
-      const seg = segs[k];
-      if (!seg) return null;
-      if (!narrationUrls.current.has(seg.n)) {
-        const p = ebookApi.narrationAudio(book.id, seg.n);
-        p.catch(() => narrationUrls.current.delete(seg.n));
-        narrationUrls.current.set(seg.n, p);
-      }
-      return narrationUrls.current.get(seg.n)!;
-    };
+    const url = (k: number) => ebookApi.narrationAudioUrl(book.id, segs[k]!.n, freshKey.current ?? n.key);
     const audio = narrationAudio.current ?? new Audio();
     narrationAudio.current = audio;
-    const play = async (k: number) => {
+    audio.preload = 'auto';
+    let retried = -1;
+    const warmed = new Set<string>();
+    const play = async (k: number, at = 0) => {
       if (run !== speechRun.current) return;
       const seg = segs[k];
       if (!seg) { stopSpeech(); return; }
-      setClock({ t: 0, d: seg.seconds, k });
-      let src: string;
-      try { src = await url(k)!; } catch { stopSpeech(); return; }
-      if (run !== speechRun.current) return;
-      // Load the next two parts ahead, so the next part can start with the screen off and no network wait.
-      void url(k + 1)?.catch(() => undefined);
-      void url(k + 2)?.catch(() => undefined);
+      setClock({ t: at, d: seg.seconds, k });
+      const src = url(k);
+      // Download the next two parts ahead into the browser's cache, so the next part can start with the screen off
+      // and no network wait.
+      for (const ahead of [k + 1, k + 2]) {
+        if (!segs[ahead]) continue;
+        const next = url(ahead);
+        if (warmed.has(next)) continue;
+        warmed.add(next);
+        void fetch(next, { credentials: 'same-origin' }).then((r) => r.blob()).catch(() => warmed.delete(next));
+      }
       const chapter = chaptersRef.current[seg.chapter];
       const nextChapter = segs.findIndex((s) => s.chapter > seg.chapter);
       const thisChapter = segs.findIndex((s) => s.chapter === seg.chapter);
@@ -445,12 +444,22 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       };
       audio.ontimeupdate = highlight;
       audio.onended = () => void play(k + 1);
-      audio.onerror = () => { if (run === speechRun.current) stopSpeech(); };
+      // A refused part (an expired listening key, a dropped connection): fetch a new key and try the part once more.
+      audio.onerror = () => {
+        if (run !== speechRun.current) return;
+        if (retried === k) { stopSpeech(); return; }
+        retried = k;
+        const from = audio.currentTime || at;
+        ebookApi.readerNarration(book.id)
+          .then((fresh) => { freshKey.current = fresh?.key; if (run === speechRun.current) void play(k, from); })
+          .catch(() => { if (run === speechRun.current) stopSpeech(); });
+      };
       audio.onplay = () => { if (run !== speechRun.current) return; setNarrationPaused(false); setPlaying('playing', audio); };
       audio.onloadedmetadata = () => { if (run === speechRun.current) setPlaying(audio.paused ? 'paused' : 'playing', audio); };
       // A pause from the lock screen, headphones or another app; the end of a part is not a pause.
       audio.onpause = () => { if (run !== speechRun.current || audio.ended) return; setNarrationPaused(true); setPlaying('paused', audio); };
       audio.src = src;
+      if (at > 0) audio.addEventListener('loadedmetadata', () => { audio.currentTime = at; }, { once: true });
       // The chosen speed (a new source resets it).
       audio.defaultPlaybackRate = listenRef.current.rate;
       audio.playbackRate = listenRef.current.rate;
@@ -471,7 +480,6 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   useEffect(() => () => {
     narrationAudio.current?.pause();
     clearNowPlaying();
-    for (const p of narrationUrls.current.values()) p.then((u) => URL.revokeObjectURL(u)).catch(() => undefined);
   }, []);
 
   const naturalHere = !!narration?.segments.some((s) => s.chapter >= currentChapterIndex);

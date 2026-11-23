@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import express, { type Express, type Request, type Response } from 'express';
 import type { Book, Chapter } from '@workspace/bookatlas-catalog/types';
+import { sendAudio } from '../../lib/sendAudio.js';
 import { logger } from '../../lib/logger.js';
 import type { CatalogStore } from '../catalog/store.js';
 import { bookContent } from '../ebookPrep/service.js';
@@ -107,10 +108,7 @@ export function mountSamples(app: Express, catalog: CatalogStore) {
     const book = /^[\w.-]{1,120}$/.test(id) ? await catalog.get(id) : null;
     if (!book) throw new NarrationError('Book not found.', 404);
     const mp3 = await audioSample(book);
-    res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
-    res.setHeader('Content-Length', String(mp3.byteLength));
-    res.end(Buffer.from(mp3));
+    sendAudio(req, res, mp3, 'public, max-age=3600, s-maxage=86400');
   }));
 
   // The book's real chapter titles for the book page ("Sample excerpt included"): which are in the free preview.

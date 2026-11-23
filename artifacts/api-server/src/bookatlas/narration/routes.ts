@@ -3,6 +3,9 @@ import express, { type Express, type Request, type Response } from 'express';
 import { waitUntil } from '@vercel/functions';
 import type { Book } from '@workspace/bookatlas-catalog/types';
 import { logger } from '../../lib/logger.js';
+import { sendAudio } from '../../lib/sendAudio.js';
+import { derivedKey } from '../../lib/serverSecret.js';
+import { audioKey, validAudioKey } from './audioKey.js';
 import { PrepError } from '../ebookPrep/archive.js';
 import { PaymentError } from '../payments/purchases.js';
 import { confirmCheckout } from '../payments/checkout.js';
@@ -11,7 +14,7 @@ import { audioAccess } from './edition.js';
 import { MAX_PART_BYTES, claimLocal, openForLocal, releaseLocal, uploadLocalPart, workerAllowed } from './local.js';
 
 /** The key the server uses to call its own next narration step; derived from the session secret. */
-export const stepKey = () => createHmac('sha256', process.env.SESSION_SECRET ?? 'bookatlas-local').update('bookatlas-narration-step-v1').digest('hex');
+export const stepKey = () => derivedKey('bookatlas-narration-step-v1').toString('hex');
 const validKey = (given: unknown) => {
   const a = Buffer.from(String(given ?? ''));
   const b = Buffer.from(stepKey());
@@ -35,12 +38,6 @@ const admin = (req: Request) => {
   const who = signedIn(req);
   if (who.role !== 'admin') throw new NarrationError('Administrator access is required.', 403);
   return who;
-};
-const sendMp3 = (res: Response, bytes: Uint8Array, cache: string) => {
-  res.setHeader('Content-Type', 'audio/mpeg');
-  res.setHeader('Cache-Control', cache);
-  res.setHeader('Content-Length', String(bytes.length));
-  res.end(Buffer.from(bytes));
 };
 
 /**
@@ -89,7 +86,7 @@ export function mountNarration(app: Express, findBook: (id: string) => Promise<B
   }));
   app.get('/api/narration/samples/:voice', guarded(async (req, res) => {
     signedIn(req);
-    sendMp3(res, await voiceSample(String(req.params.voice)), 'private, max-age=86400');
+    sendAudio(req, res, await voiceSample(String(req.params.voice)), 'private, max-age=86400');
   }));
 
   app.get('/api/manager/narrations', guarded(async (req, res) => {
@@ -165,12 +162,16 @@ export function mountNarration(app: Express, findBook: (id: string) => Promise<B
     if (!/^atlas-ebook-[0-9a-f]{8}$/.test(bookId)) { res.json({ narration: null }); return; }
     const book = await findBook(bookId);
     const manifest = await readerManifest(bookId, await audioAccess(bookId, book, req.bookatlasIdentity));
-    res.json({ narration: manifest && { ...manifest, audioPrice: book?.audioPrice ?? 0 } });
+    // The player streams each part from its address (phones cannot play the audio as a blob) and an audio element
+    // cannot send the sign-in header, so a reader with the whole audiobook gets a short-lived key for this book.
+    const key = manifest?.access === 'full' ? audioKey(bookId) : undefined;
+    res.json({ narration: manifest && { ...manifest, audioPrice: book?.audioPrice ?? 0, ...(key ? { key } : {}) } });
   }));
   app.get('/api/reader/catalog/:bookId/narration/:n', guarded(async (req, res) => {
     const bookId = String(req.params.bookId);
     const index = Number(req.params.n);
     if (!/^atlas-ebook-[0-9a-f]{8}$/.test(bookId) || !Number.isSafeInteger(index) || index < 0) throw new NarrationError('Narration not found.', 404);
-    sendMp3(res, await readerSegment(bookId, index, await accessOf(req, bookId)), 'private, max-age=86400');
+    const access = validAudioKey(bookId, req.query.k) ? 'full' : await accessOf(req, bookId);
+    sendAudio(req, res, await readerSegment(bookId, index, access), 'private, max-age=86400');
   }));
 }

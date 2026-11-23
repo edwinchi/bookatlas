@@ -5,7 +5,7 @@
 // so no account, Gemini call or payment is involved. Run: node --test tests/browser/narration-background.test.mjs
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { chromium } from '@playwright/test';
+import { chromium, webkit, devices } from '@playwright/test';
 
 const base = (process.env.BASE_URL || 'http://localhost:5173').replace(/\/+$/, '');
 let browser;
@@ -129,4 +129,42 @@ test('Listen pressed before the narration has loaded still starts the audiobook,
   await player.getByText(/part 1 of 3/).waitFor({ timeout: 15_000 });
   assert.equal(await player.getByText(/min left$/).count(), 0, 'not the device voice');
   await context.close();
+});
+
+// Found 2026-11-23: on iPhones the player opened and closed at once. Safari refused the parts as blob: addresses, the
+// error stopped listening and took the player with it. Parts now stream from their address (with a listening key for
+// a bought audiobook), and play() runs inside the tap. Safari's engine, as an iPhone, with no autoplay allowance.
+test('on an iPhone (Safari engine) Listen opens the player and the audiobook plays', async () => {
+  const phone = await webkit.launch();
+  try {
+    const { defaultBrowserType, ...iPhone } = devices['iPhone 13'];
+    const context = await phone.newContext({ ...iPhone, serviceWorkers: 'block' });
+    await context.route(/\.protect\.clerk\.com/, (route) => route.abort());
+    const page = await context.newPage();
+    const mark = (b) => (b ? { ...b, hasReaderContent: true, format: 'bundle' } : b);
+    await page.route(/\/api\/catalog\/(search|books\/[^/?]+)/, async (route) => {
+      const res = await route.fetch(); const body = await res.json();
+      if (Array.isArray(body.books)) body.books = body.books.map(mark);
+      if (body.book) body.book = mark(body.book);
+      await route.fulfill({ response: res, json: body });
+    });
+    await page.route('**/api/reader/catalog/*/content', (route) => route.fulfill({ json: { chapters, access: 'full' } }));
+    await page.route('**/api/reader/catalog/*/narration', (route) => route.fulfill({ json: { narration: { voice: 'Kore', seconds: 9, access: 'full', segments, key: '1999999999.test-key' } } }));
+    const asked = [];
+    await page.route(/\/api\/reader\/catalog\/[^/]+\/narration\/\d+(\?.*)?$/, (route) => { asked.push(route.request().url()); return route.fulfill({ status: 200, contentType: 'audio/wav', body: wav(3) }); });
+    await page.goto(base + '/', { waitUntil: 'load' });
+    await page.locator('img[alt]').nth(3).waitFor();
+    // Centred, so the phone's bottom navigation bar does not cover it.
+    const preview = page.locator('[title="Read Free Preview in Browser"]').first();
+    await preview.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    await preview.tap();
+    await page.getByRole('button', { name: /listen to the book/i }).tap();
+    const player = page.getByRole('region', { name: 'Listening controls' });
+    await player.getByRole('button', { name: /^pause listening$/i }).waitFor({ timeout: 15_000 });
+    await page.waitForFunction(() => { const a = window.__audio ?? null; return !a || a.currentTime > 0.3; }, null, { timeout: 10_000 }).catch(() => undefined);
+    await page.waitForTimeout(1500);
+    assert.ok(await player.isVisible(), 'the player stays open');
+    assert.ok(asked.length >= 1 && asked.every((u) => u.includes('?k=1999999999.test-key')), `parts are asked for with the listening key (${asked[0]})`);
+    await context.close();
+  } finally { await phone.close(); }
 });

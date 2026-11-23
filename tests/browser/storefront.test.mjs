@@ -126,7 +126,8 @@ test('the audio sample pops up in its own player, plays, and changes speed there
   const sample = await pending;
   const player = page.locator('section[aria-label^="Audio sample"]');
   await player.waitFor();
-  if (sample.status() === 200) {
+  // 206: the player streams the sample and asks for byte ranges, as phones do.
+  if ([200, 206].includes(sample.status())) {
     assert.equal(sample.headers()['content-type'], 'audio/mpeg');
     await player.getByRole('button', { name: /^(Pause|Play) the sample$/ }).waitFor({ timeout: 15_000 });
     await player.getByRole('button', { name: /Listening speed/ }).click();
