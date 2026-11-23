@@ -144,8 +144,10 @@ export function useEbookApi() {
   tokenRef.current = getToken;
 
   const request = async (path: string, init: RequestInit = {}) => {
+    // The sign-in token, waited for at most 6 seconds: a stalled sign-in service must not leave a request (and the
+    // player waiting on it) hanging for ever (found on an Android phone 2026-11-23). The sign-in cookie still goes along.
     let token: string | null = null;
-    try { token = await tokenRef.current(); } catch { token = null; }
+    try { token = await Promise.race([tokenRef.current(), new Promise<null>((resolve) => setTimeout(() => resolve(null), 6000))]); } catch { token = null; }
     const res = await fetch(path, {
       ...init, credentials: 'include',
       headers: { ...(init.headers ?? {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -277,7 +279,14 @@ export function useEbookApi() {
     addFeedback: (store: string, message: string, submissionId?: string) =>
       json<{ matched_rules: string[] }>('/api/ebook-prep/feedback', 'POST', { store, message, submissionId }),
     /** The book's natural narration, if any: every segment for entitled readers, the preview part otherwise. */
-    readerNarration: (bookId: string) => json<{ narration: ReaderNarration | null }>(`/api/reader/catalog/${bookId}/narration`).then((r) => r.narration),
+    /** Gives up after 15 seconds and tries once more, so Listen never waits on a stalled connection. */
+    readerNarration: async (bookId: string) => {
+      const once = async () => {
+        const signal = typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(15_000) : undefined;
+        return (await (await request(`/api/reader/catalog/${bookId}/narration`, { signal })).json() as { narration: ReaderNarration | null }).narration;
+      };
+      try { return await once(); } catch (e) { if (e instanceof EbookApiError && e.status < 500) throw e; return once(); }
+    },
     /** A part's address. The player streams it: phones refuse the audio as a blob (found 2026-11-23). */
     narrationAudioUrl: (bookId: string, n: number, key?: string) => `/api/reader/catalog/${encodeURIComponent(bookId)}/narration/${n}${key ? `?k=${encodeURIComponent(key)}` : ''}`,
     readerContent: (bookId: string) => json<{ chapters: import('../../types').Chapter[]; access: 'full' | 'preview' }>(`/api/reader/catalog/${bookId}/content`),

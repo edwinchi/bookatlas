@@ -126,6 +126,8 @@ test('Listen pressed before the narration has loaded still starts the audiobook,
   await page.locator('[title="Read Free Preview in Browser"]').first().click();
   await page.getByRole('button', { name: /listen to the book/i }).click();
   const player = page.getByRole('region', { name: 'Listening controls' });
+  // The player opens at once, loading, rather than nothing happening (found on an Android phone 2026-11-23).
+  await player.waitFor({ timeout: 1500 });
   await player.getByText(/part 1 of 3/).waitFor({ timeout: 15_000 });
   assert.equal(await player.getByText(/min left$/).count(), 0, 'not the device voice');
   await context.close();
@@ -167,4 +169,27 @@ test('on an iPhone (Safari engine) Listen opens the player and the audiobook pla
     assert.ok(asked.length >= 1 && asked.every((u) => u.includes('?k=1999999999.test-key')), `parts are asked for with the listening key (${asked[0]})`);
     await context.close();
   } finally { await phone.close(); }
+});
+
+test('when the narration details never arrive, Listen still opens the player and says what is wrong', async () => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
+  const page = await context.newPage();
+  const mark = (b) => (b ? { ...b, hasReaderContent: true, format: 'bundle' } : b);
+  await page.route(/\/api\/catalog\/(search|books\/[^/?]+)/, async (route) => {
+    const res = await route.fetch(); const body = await res.json();
+    if (Array.isArray(body.books)) body.books = body.books.map(mark);
+    if (body.book) body.book = mark(body.book);
+    await route.fulfill({ response: res, json: body });
+  });
+  await page.route('**/api/reader/catalog/*/content', (route) => route.fulfill({ json: { chapters, access: 'full' } }));
+  await page.route('**/api/reader/catalog/*/narration', () => new Promise(() => {})); // a stalled connection
+  await page.goto(base + '/', { waitUntil: 'networkidle' });
+  await page.locator('[title="Read Free Preview in Browser"]').first().click();
+  await page.getByRole('button', { name: /listen to the book/i }).click();
+  const player = page.getByRole('region', { name: 'Listening controls' });
+  await player.waitFor({ timeout: 1500 });
+  await player.getByRole('alert').filter({ hasText: /taking long to load/ }).waitFor({ timeout: 25_000 });
+  await player.getByRole('button', { name: 'Stop listening' }).click();
+  await player.waitFor({ state: 'detached' });
+  await context.close();
 });

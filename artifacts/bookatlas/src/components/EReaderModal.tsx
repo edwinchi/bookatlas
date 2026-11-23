@@ -348,6 +348,11 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   });
 
   const narrationAudio = useRef<HTMLAudioElement | null>(null);
+  /** Listen pressed before the narration had loaded: start once it has (found testing 2026-11-23). */
+  const listenWhenReady = useRef(false);
+  /** The player is open and loading while the book's narration details arrive. */
+  const [pendingListen, setPendingListen] = useState(!!autoListen && !!book.hasReaderContent);
+  const [pendingError, setPendingError] = useState('');
   /** A listening key fetched again after a part was refused (an expired key). */
   const freshKey = useRef<string | undefined>(undefined);
   const stopSpeech = () => {
@@ -359,6 +364,9 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     setNarrationPaused(false);
     setSpokenParagraph(null);
     setListenMode(null);
+    listenWhenReady.current = false;
+    autoListened.current = true; // a Stop while the book loads also cancels the automatic start
+    setPendingListen(false);
     clearNowPlaying();
   };
 
@@ -494,16 +502,25 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     if (!audio) return;
     if (audio.paused) void audio.play().catch((e: unknown) => { if ((e as { name?: string })?.name !== 'AbortError') stopSpeech(); }); else audio.pause();
   };
-  /** Listen pressed before the narration had loaded: start once it has (found testing 2026-11-23). */
-  const listenWhenReady = useRef(false);
-  const toggleSpeech = () => {
-    if (isSpeaking) { stopSpeech(); return; }
-    // Before the narration check finishes, the device voice would start in place of the audiobook: wait for it.
-    if (book.hasReaderContent && !narrationChecked) { listenWhenReady.current = true; return; }
+  const startListening = () => {
+    setPendingListen(false);
     // The natural voice where it may be heard (all of it, or the preview of an audiobook add-on); the device voice after.
     if (useNatural) { playNarrationFrom(currentChapterIndex); return; }
     speakFrom(currentChapterIndex, currentParagraphIndex);
   };
+  const toggleSpeech = () => {
+    if (isSpeaking || pendingListen) { stopSpeech(); return; }
+    // Before the narration check finishes, the device voice would start in place of the audiobook: wait for it, with
+    // the player already open and loading, so a press is never met with nothing (found on an Android phone 2026-11-23).
+    if (book.hasReaderContent && !narrationChecked) { listenWhenReady.current = true; setPendingListen(true); return; }
+    startListening();
+  };
+  // Still loading after 20 seconds: say so in the player instead of spinning for ever.
+  useEffect(() => {
+    if (!pendingListen) { setPendingError(''); return; }
+    const id = window.setTimeout(() => setPendingError('The audiobook is taking long to load. Check your connection, or press Stop and try again.'), 20_000);
+    return () => window.clearTimeout(id);
+  }, [pendingListen]);
 
   /** The narration's volume (the device voice has none to set). */
   const [listenVolume, setListenVolume] = useState(1);
@@ -514,10 +531,10 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const contentReady = !book.hasReaderContent || ((!!fullChapters || !!fullError) && narrationChecked);
   useEffect(() => {
     if (!contentReady || chapters.length === 0) return;
-    if (listenWhenReady.current) { listenWhenReady.current = false; if (!isSpeaking) toggleSpeech(); return; }
+    if (listenWhenReady.current) { listenWhenReady.current = false; if (!isSpeaking) startListening(); return; }
     if (!autoListen || autoListened.current) return;
     autoListened.current = true;
-    if (!isSpeaking) toggleSpeech();
+    if (!isSpeaking) startListening();
   }, [autoListen, contentReady, chapters.length, narrationChecked]);
 
   // A new speed, voice or language applies at once.
@@ -1914,11 +1931,11 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       />
 
       {/* The pop-up listening player */}
-      {isSpeaking && listenMode && (
+      {((isSpeaking && listenMode) || pendingListen) && (
         <ListenPlayer
           container={portal}
-          mode={listenMode}
-          status={playerStatus}
+          mode={listenMode ?? 'natural'}
+          status={pendingListen ? 'loading' : playerStatus}
           bookTitle={book.title}
           cover={book.coverImage}
           chapterTitle={chapters[listeningChapter]?.title ?? currentChapter.title}
@@ -1928,24 +1945,24 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           remaining={natural ? naturalPlace.remaining : devicePlace.remaining}
           onSeek={playerSeek}
           caption={!natural && device.caption ? { text: device.caption.text, note: device.caption.via === 'ai' ? `Translated into ${LISTEN_LANGUAGES[listen.lang] ?? listen.lang} by BooksAtlas AI` : `Translated into ${LISTEN_LANGUAGES[listen.lang] ?? listen.lang} on your device` } : null}
-          error={natural ? '' : device.error}
+          error={pendingListen ? pendingError : natural ? '' : device.error}
           prefs={listen}
           onPrefs={setListen}
-          onToggle={playerToggle}
+          onToggle={pendingListen ? () => undefined : playerToggle}
           onStop={stopSpeech}
-          onBack={playerBack}
-          onForward={playerForward}
+          onBack={pendingListen ? () => undefined : playerBack}
+          onForward={pendingListen ? () => undefined : playerForward}
           backLabel={natural ? 'Back 15 seconds' : 'Previous paragraph'}
           forwardLabel={natural ? 'Forward 15 seconds' : 'Next paragraph'}
-          onPrevChapter={listeningChapter > 0 ? () => playerChapter(-1) : undefined}
-          onNextChapter={listeningChapter < chapters.length - 1 ? () => playerChapter(1) : undefined}
+          onPrevChapter={!pendingListen && listeningChapter > 0 ? () => playerChapter(-1) : undefined}
+          onNextChapter={!pendingListen && listeningChapter < chapters.length - 1 ? () => playerChapter(1) : undefined}
           voices={device.voices}
           bookLang={bookLang}
           onPreview={previewVoice}
           naturalVoice={narration?.voice ?? null}
           chapters={chapters.map((c) => c.title)}
           currentChapter={listeningChapter}
-          onChapter={playerGoTo}
+          onChapter={pendingListen ? undefined : playerGoTo}
           volume={listenVolume}
           onVolume={natural ? setListenVolume : undefined}
           footer={audioUpsell ? (
