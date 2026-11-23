@@ -488,3 +488,26 @@ test('phones (360 px): nothing wider than the screen, filters in a sheet, the bo
   assert.equal(await width(), 360);
   await context.close();
 });
+
+// Owner request 2026-11-23: a category with no books yet invites authors to publish the first one.
+test('an empty category invites authors to publish its first book; a search with no results still says so plainly', async () => {
+  const page = await open('/');
+  const site = page.getByRole('navigation', { name: 'Site' });
+  await site.getByRole('button', { name: 'Bookstore', exact: true }).click();
+  await site.getByRole('button', { name: 'Notebooks & Journals', exact: true }).click();
+  const shelf = page.getByRole('region', { name: 'This shelf is waiting for its first book' });
+  await shelf.waitFor();
+  assert.match(await shelf.innerText(), /Notebooks & Journals/i, 'names the category');
+  await shelf.getByRole('button', { name: 'Publish the first book' }).click();
+  const form = page.getByRole('dialog', { name: 'Tell us about your book' });
+  await form.waitFor();
+  assert.match(await form.locator('textarea').first().inputValue(), /Notebooks & Journals/);
+  await page.keyboard.press('Escape');
+  await form.waitFor({ state: 'detached' });
+  await shelf.getByRole('button', { name: /Browse every book/ }).click();
+  await shelf.waitFor({ state: 'detached' });
+  await page.getByLabel('Search the book catalog').first().fill('zzzz no such book qqqq');
+  await page.getByText('No books found matching your filters').waitFor();
+  assert.equal(await page.getByRole('region', { name: 'This shelf is waiting for its first book' }).count(), 0);
+  await page.context().close();
+});

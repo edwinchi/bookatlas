@@ -14,6 +14,7 @@ import { HorizontalProductCarousel } from './components/HorizontalProductCarouse
 import { PromotionalFeatureBanner, EditorialCuratorBlock } from './components/EditorialBlock';
 import { honestSample, isSampleTitle } from './utils/ratings';
 import { StartBookDialog } from './components/StartBookDialog';
+import { EmptyCategory } from './components/EmptyCategory';
 import { BookDetailModal } from './components/BookDetailModal';
 import { AudiobookPlayerDock } from './components/AudiobookPlayerDock';
 import { CartDrawer } from './components/CartDrawer';
@@ -1145,6 +1146,13 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6" aria-hidden>
                     {Array.from({ length: 8 }, (_, i) => <div key={i} className="aspect-[3/5] rounded-xl bg-slate-200/70 animate-pulse" />)}
                   </div>
+                ) : filteredBooks.length === 0 && filters.genre !== 'All Genres' && !filters.searchQuery.trim() && filters.format === 'all' && filters.priceCategory === 'all' && !filters.minRating && !filters.bookatlasPlusOnly && (!filters.language || filters.language === 'all') ? (
+                  // A category with no books at all (not a narrowed search): invite authors to publish the first one.
+                  <EmptyCategory
+                    category={filters.genre}
+                    onBrowseAll={() => setFilters((f) => ({ ...f, genre: 'All Genres' }))}
+                    onHowItWorks={() => goToSection('how-it-works')}
+                  />
                 ) : filteredBooks.length === 0 ? (
                   <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
                     <BookOpen className="w-10 h-10 text-slate-400 mx-auto" />
