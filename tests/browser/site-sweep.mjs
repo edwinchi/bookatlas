@@ -50,7 +50,9 @@ async function openMenu(page, label) {
   ok('Store menu opens on click', (await btn.getAttribute('aria-expanded')) === 'true');
   await page.keyboard.press('Escape');
   // The menu closes on Escape a moment later (its close animation); wait for it rather than a fixed pause.
-  const closed = await page.waitForFunction((el) => el.getAttribute('aria-expanded') === 'false', await btn.elementHandle(), { timeout: 2000 }).then(() => true, () => false);
+  // Polled through the locator (not an element handle): the header can re-render as sign-in finishes loading.
+  let closed = false;
+  for (let i = 0; i < 20 && !closed; i += 1) { closed = (await btn.getAttribute('aria-expanded')) === 'false'; if (!closed) await page.waitForTimeout(100); }
   ok('Escape closes menu', closed);
   ok('Escape returns focus to button', await btn.evaluate((el) => el === document.activeElement));
   await btn.focus();
