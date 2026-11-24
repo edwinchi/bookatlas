@@ -60,6 +60,33 @@ These cannot be set from the code:
 - **Vercel**: two-factor authentication on the account; Firewall → Attack Challenge Mode during an attack; sensitive environment variables marked sensitive.
 - **Stripe, Supabase, Resend**: two-factor authentication; rotate any key that was ever shared outside the dashboards.
 
+## Switching to the Clerk production instance
+
+The live site still uses the development instance (`pk_test_…`): Google sign-in shows a Clerk consent screen and sign-in is slower. To switch:
+
+1. **Create it.** Clerk dashboard → BooksAtlas application → instance switcher (top) → *Create production instance* → *Clone development settings* → domain `booksatlas.app`.
+2. **DNS.** Clerk lists five CNAME records (`clerk`, `accounts`, `clkmail`, `clk._domainkey`, `clk2._domainkey`). DNS is at Vercel, so add each with `npx vercel dns add booksatlas.app <name> CNAME <target>`, then press *Verify configuration* in Clerk and wait for the SSL certificates (minutes to a few hours).
+3. **Google sign-in.** Production needs your own OAuth client. In Google Cloud Console → APIs & Services → Credentials → *Create OAuth client ID* (Web application): add the authorized JavaScript origin `https://booksatlas.app` and the redirect URI Clerk shows under *SSO connections → Google* (`https://clerk.booksatlas.app/v1/oauth_callback`). Paste the client ID and secret into Clerk. Set the consent screen to *In production* so anyone can sign in.
+4. **Settings.** Apply the checklist below to the production instance (cloning copies most of it; check bot protection, lockout and the consent checkbox).
+5. **Vercel, Production environment.**
+   - Set `CLERK_PREVIOUS_SECRET_KEY` to the current development `sk_test_…` key **before** changing the keys. It moves each person's data across on their first production sign-in (below).
+   - Replace `CLERK_SECRET_KEY` with `sk_live_…`, and both `CLERK_PUBLISHABLE_KEY` and `VITE_CLERK_PUBLISHABLE_KEY` with `pk_live_…`.
+   - Redeploy (the publishable key is built into the web app).
+6. **Check.** Sign in with Google and with email on https://booksatlas.app, on a computer and a phone. Your bookshelf, orders, submissions and the owner dashboard must all show your data. There must be no `csp.violation` logs.
+7. **Tell readers** they sign in again once. Their books and notes are still there. Passwords don't carry over, because Clerk can't copy them between instances. Email-code and Google sign-in work at once, and password users choose *Forgot password*.
+
+**Account move** ([accountMove.ts](../../artifacts/api-server/src/auth/accountMove.ts)):
+- **When it runs:** the first time a verified email signs in on the new instance, while `CLERK_PREVIOUS_SECRET_KEY` is set.
+- **What it does:**
+  - Finds the same verified email in the old instance.
+  - Re-keys every user-id column (purchases, invoices, bookshelf, notes, reviews, follows, groups, submissions, narrations, payouts) to the new id.
+  - Copies the administrator role and the sign-up consent.
+  - Marks the account so the move never runs twice.
+- **Monitoring:** watch for `account.moved` and `account.move_failed` in the logs. A failed move is retried at the next sign-in.
+- **Afterwards:** remove `CLERK_PREVIOUS_SECRET_KEY` after 90 days. Payments made before the switch whose Stripe webhook arrives late still carry the old id. Re-key those by hand if one appears.
+
+**Rollback:** put the `pk_test_`/`sk_test_` values back and redeploy. Accounts that were already moved then need the reverse re-key. Keep a list of the `account.moved` log lines for this.
+
 ## Clerk dashboard checklist (D9)
 
 Apply in the Clerk dashboard for development and production instances:

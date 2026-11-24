@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { accessFor, authorizationStatus, canBootstrapOwner, isCrossSiteMutation, type Identity } from './policy';
 import { getClerkProxyHost } from '../middlewares/clerkProxyMiddleware';
 import { logger } from '../lib/logger';
+import { moveAccountFromPreviousInstance } from './accountMove';
 
 declare global {
   namespace Express {
@@ -18,6 +19,12 @@ async function resolveIdentity(req: Request): Promise<Identity | undefined> {
   if (!email || email.verification?.status !== 'verified') return;
 
   let metadata = user.publicMetadata;
+  // First sign-in on the production instance: bring this account's data over from the previous instance.
+  const move = await moveAccountFromPreviousInstance({
+    id: user.id, email: email.emailAddress.trim().toLowerCase(),
+    publicMetadata: user.publicMetadata as Record<string, unknown>, privateMetadata: user.privateMetadata as Record<string, unknown>,
+  }, clerkClient.users);
+  if (move?.moved) metadata = move.publicMetadata as typeof metadata;
   if (canBootstrapOwner(email.emailAddress, true, process.env.BOOKATLAS_OWNER_EMAIL, metadata.bookatlasOwnerBootstrapped)) {
     const updated = await clerkClient.users.updateUserMetadata(userId, {
       publicMetadata: { ...metadata, role: 'admin', bookatlasOwnerBootstrapped: true },
