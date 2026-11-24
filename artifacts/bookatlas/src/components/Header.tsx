@@ -28,6 +28,7 @@ import {
   GraduationCap,
   Library,
   Ruler,
+  BookCopy,
   Globe2,
   Crown,
   ListOrdered,
@@ -228,9 +229,10 @@ export const Header: React.FC<HeaderProps> = ({
               { heading: 'Products', items: [
                 { label: 'eBooks', description: 'An EPUB, checked and made store-ready, sold here and worldwide. You keep 81%.', icon: BookOpen, onSelect: () => onNavigateSection('pricing') },
                 { label: 'Audiobooks', description: 'Your book narrated in a natural studio voice, from €24.99.', icon: Headphones, onSelect: () => onNavigateSection('audiobook-publishing') },
+                { label: 'Printed books', description: 'Paperback and hardcover on Amazon KDP and Lulu. Our step-by-step guides walk you through both.', icon: BookCopy, onSelect: () => onNavigateSection('requirements:print') },
                 { label: 'Print-ready files', description: 'Paperback and hardcover files for Amazon KDP and Lulu, from €99.', icon: Ruler, onSelect: () => onNavigateSection('pricing') },
                 { label: 'Book pages', description: 'One link for every edition of your book.', icon: Link2, onSelect: () => onNavigateSection('book-pages') },
-                { label: 'Pricing calculator', description: 'What each format costs and what every sale earns, next to other platforms.', icon: Calculator, href: `${import.meta.env.BASE_URL}pricing` },
+                { label: 'All products and prices', description: 'Every format, what it costs and what each sale earns, next to other platforms.', icon: Calculator, href: `${import.meta.env.BASE_URL}pricing` },
               ] },
               { heading: 'Popular book types', columns: 2, items: BOOK_TYPES.map((type) => ({
                 label: type,

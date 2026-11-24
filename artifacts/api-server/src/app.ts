@@ -69,6 +69,7 @@ app.use(
     { prefix: "/api/subscribers", limit: 20 },
     { prefix: "/api/reader-unsubscribe", limit: 20 },
     { prefix: "/api/csp-report", limit: 30 },
+    { prefix: "/api/client-error", limit: 20 },
     { prefix: "/api", limit: 1200 },
   ]),
 );
@@ -94,6 +95,27 @@ app.post(
     res.status(204).end();
   },
 );
+// A page that crashed in a reader's browser reports it (owner report 2026-11-25: a blank page on a phone that could
+// not be reproduced elsewhere). Kept: the message, the script file and line, the page path, the browser family.
+// Not kept: query strings, account details, the full user agent.
+app.post("/api/client-error", express.json({ type: ["application/json", "text/plain"], limit: "4kb" }), (req, res) => {
+  const b = (typeof req.body === "object" && req.body ? req.body : {}) as Record<string, unknown>;
+  const text = (v: unknown, n: number) => (typeof v === "string" ? v.split(/[?#]/)[0].slice(0, n) : undefined);
+  const ua = String(req.headers["user-agent"] ?? "");
+  const browser = /CriOS|Chrome/.test(ua) ? "chrome" : /FxiOS|Firefox/.test(ua) ? "firefox" : /Safari/.test(ua) ? "safari" : "other";
+  const device = /iPhone|iPad/.test(ua) ? "ios" : /Android/.test(ua) ? "android" : "desktop";
+  req.log?.warn({
+    event: "client.error",
+    kind: text(b.kind, 20),
+    message: typeof b.message === "string" ? b.message.slice(0, 300) : undefined,
+    source: text(b.source, 160),
+    line: Number.isFinite(b.line) ? b.line : undefined,
+    stack: typeof b.stack === "string" ? b.stack.split("\n").slice(0, 4).map((l) => l.replace(/https?:\/\/[^/\s)]+/g, "").slice(0, 160)) : undefined,
+    page: text(b.page, 120),
+    browser, device,
+  }, "A page crashed in a reader's browser");
+  res.status(204).end();
+});
 // Without a secret key Clerk throws on every request, taking the public catalog down with it.
 // Skip it instead: public routes keep working and account routes fail closed with 503.
 if (process.env.CLERK_SECRET_KEY?.trim()) {

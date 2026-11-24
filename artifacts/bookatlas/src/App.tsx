@@ -1,4 +1,5 @@
 import { lazyPage } from './utils/lazyPage';
+import { showRequirements, type RequirementsTab } from './utils/requirementsLink';
 import { AuthorProfileModal } from './components/AuthorProfileModal';
 import { useEbookApi } from './components/ebook/ebookApi';
 import { AUDIO_SUFFIX, audioOnSale, audioProductOf, isAudioAddOn, isNarrated } from './audioEdition';
@@ -680,6 +681,14 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
   // Header and landing links: show the unfiltered front page, then scroll once it has rendered.
   const goToSection = (id: string) => {
     if (id === 'publish') { setActiveTab('publish'); window.scrollTo({ top: 0 }); return; }
+    if (id.startsWith('requirements:')) {
+      // A guide in "What a complete book needs" on the Publish page (Products → Printed books). Recorded first: a
+      // signed-out visitor goes through sign-in and the Publish page opens the guide afterwards.
+      showRequirements(id.slice('requirements:'.length) as RequirementsTab);
+      setActiveTab('publish');
+      window.scrollTo({ top: 0 });
+      return;
+    }
     if (id.startsWith('author-hub:')) {
       // Author hub tiles live on the Publish page (which asks visitors to sign in first).
       setActiveTab('publish');

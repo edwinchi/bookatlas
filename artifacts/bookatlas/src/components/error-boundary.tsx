@@ -4,6 +4,7 @@ import {
   type ErrorInfo,
   type ReactNode,
 } from 'react';
+import { reportClientError } from '../utils/reportClientError';
 
 export interface ErrorFallbackProps {
   error: Error;
@@ -75,6 +76,7 @@ export class ErrorBoundary extends Component<
   }
 
   componentDidCatch(error: unknown, info: ErrorInfo): void {
+    reportClientError('render', error);
     console.error(
       'ErrorBoundary caught an error:',
       toError(error),

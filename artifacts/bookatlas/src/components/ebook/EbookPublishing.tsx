@@ -15,6 +15,7 @@ import { SubmissionForm } from './SubmissionForm';
 import { SubmissionCard } from './SubmissionCard';
 import { FeedImport } from './FeedImport';
 import { PrintCalculator } from './PrintCalculator';
+import { REQUIREMENTS_EVENT, takeRequestedRequirements, type RequirementsTab } from '../../utils/requirementsLink';
 
 const Checklist: React.FC<{ items: Requirement[] }> = ({ items }) => (
   <ul className="space-y-2.5">
@@ -89,7 +90,20 @@ export const EbookPublishing: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [problem, setProblem] = useState<{ message: string; fields?: Record<string, string> } | null>(null);
-  const [scope, setScope] = useState<'ebook' | 'print' | 'amazon' | 'lulu'>('ebook');
+  const [scope, setScope] = useState<RequirementsTab>('ebook');
+  // A menu asked for one of the guides (Products → Printed books): open that tab and bring it into view.
+  const requirementsRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const open = () => {
+      const tab = takeRequestedRequirements();
+      if (!tab) return;
+      setScope(tab);
+      requestAnimationFrame(() => requestAnimationFrame(() => requirementsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })));
+    };
+    open();
+    window.addEventListener(REQUIREMENTS_EVENT, open);
+    return () => window.removeEventListener(REQUIREMENTS_EVENT, open);
+  }, []);
   const [calc, setCalc] = useState<{ trimSize: TrimSizeId; paper: PaperId; pageCount: number }>({ trimSize: '6x9', paper: 'cream', pageCount: 300 });
 
   const load = useCallback(() => {
@@ -210,7 +224,7 @@ export const EbookPublishing: React.FC = () => {
         </div>
 
         <aside className="space-y-6">
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section ref={requirementsRef} id="book-requirements" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="flex items-center gap-2 font-serif text-lg font-bold text-slate-900"><ClipboardList className="h-5 w-5 text-indigo-600" aria-hidden />What a complete book needs</h2>
             <div role="tablist" className="mt-3 inline-flex rounded-full bg-slate-100 p-1 text-xs font-semibold">
               {(['ebook', 'print', 'amazon', 'lulu'] as const).map((s) => (
