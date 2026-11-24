@@ -2,7 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useEbookApi } from './ebookApi';
 
 /** A book image for signed-in readers. Fetched with the account token once it nears the viewport. */
-export const ReaderFigure: React.FC<{ bookId: string; src: string; alt: string }> = ({ bookId, src, alt }) => {
+/**
+ * `lead`: the picture opens the chapter on a page that also holds the chapter title (a cover or title-page image).
+ * It is kept small enough to fit under the title; otherwise it moved to the next page and left a phone showing only
+ * the title on an otherwise empty page (found 2026-11-25).
+ */
+export const ReaderFigure: React.FC<{ bookId: string; src: string; alt: string; lead?: boolean }> = ({ bookId, src, alt, lead }) => {
   const api = useEbookApi();
   const ref = useRef<HTMLElement>(null);
   const [url, setUrl] = useState<string | null>(null);
@@ -29,7 +34,8 @@ export const ReaderFigure: React.FC<{ bookId: string; src: string; alt: string }
 
   return (
     <figure ref={ref} className="my-6 flex justify-center">
-      {url ? <img src={url} alt={alt} className="max-h-[70vh] max-w-full rounded-lg" />
+      {url ? <img src={url} alt={alt} className="max-h-[70vh] max-w-full rounded-lg"
+          style={lead ? { maxHeight: 'max(10rem, calc(var(--page-h, 70vh) - var(--head-h, 0px)))' } : undefined} />
         : <div className="flex h-48 w-full max-w-md items-center justify-center rounded-lg bg-current/5 text-xs opacity-60">{failed ? 'Image unavailable' : 'Loading image…'}</div>}
     </figure>
   );

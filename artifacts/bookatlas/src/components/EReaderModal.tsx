@@ -908,6 +908,17 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const pg = usePagedLayout(paged, layout.spread, currentChapterIndex, [
     chapters, settings.fontSize, settings.lineHeight, settings.fontFamily, settings.marginWidth, layout.align, inPreview, fullError, isSpeaking,
   ]);
+  // The chapter title's height (with its bottom margin), so a picture opening the chapter fits under it on page one.
+  const [headH, setHeadH] = useState(0);
+  const headObserver = useRef<ResizeObserver | null>(null);
+  const chapterHeadRef = useCallback((el: HTMLDivElement | null) => {
+    headObserver.current?.disconnect();
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const measure = () => setHeadH(el.offsetHeight + (parseFloat(getComputedStyle(el).marginBottom) || 0) + 8);
+    headObserver.current = new ResizeObserver(measure);
+    headObserver.current.observe(el);
+    measure();
+  }, []);
   const [chromeHidden, setChromeHidden] = useState(false);
   const chromeOff = paged && chromeHidden;
   const darkChrome = settings.theme === 'night' || settings.theme === 'black' || (settings.theme === 'custom' && isDarkColour(layout.customBg));
@@ -1250,11 +1261,11 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             ref={paged ? pg.flowRef : undefined}
             lang={bookLang}
             className={paged ? 'overflow-hidden [&_figure]:break-inside-avoid [&_h2]:break-after-avoid [&_h3]:break-after-avoid [&_img]:max-h-[var(--page-h)] [&_img]:w-auto' : undefined}
-            style={paged ? { width: pg.size.w || undefined, height: pg.size.h || undefined, columnCount: pg.cols, columnGap: pg.gap, columnFill: 'auto', ['--page-h' as string]: `${Math.max(120, pg.size.h - 48)}px` } : undefined}
+            style={paged ? { width: pg.size.w || undefined, height: pg.size.h || undefined, columnCount: pg.cols, columnGap: pg.gap, columnFill: 'auto', ['--page-h' as string]: `${Math.max(120, pg.size.h - 48)}px`, ['--head-h' as string]: `${headH}px` } : undefined}
           >
 
           {/* Chapter Header */}
-          <div className="text-center mb-8 pb-6 border-b border-current/15 break-inside-avoid">
+          <div ref={chapterHeadRef} className="text-center mb-8 pb-6 border-b border-current/15 break-inside-avoid">
             <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight mb-2 ${getFontFamilyClass(settings.fontFamily)}`}>
               {currentChapter.title}
             </h2>
@@ -1306,7 +1317,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             {fullError && <p role="status" className="text-xs opacity-70">{fullError}</p>}
             {currentChapter.content.map((paragraph, pIdx) => {
               const figures = (currentChapter.figures ?? []).filter((f) => f.at === pIdx).map((f) => (
-                <ReaderFigure key={`fig-${f.src}`} bookId={book.id} src={f.src} alt={f.alt} />
+                <ReaderFigure key={`fig-${f.src}`} bookId={book.id} src={f.src} alt={f.alt} lead={paged && pIdx === 0} />
               ));
               if (currentChapter.headings?.includes(pIdx)) {
                 return (
