@@ -1,7 +1,8 @@
 // Bookatlas Offline-First Service Worker
 // v6: API answers are no longer cached first (stale prices, payment settings and submissions).
 // v7: the logo reads BOOKSATLAS; visitors drop the cached BOOKATLAS image.
-const CACHE_VERSION = 'bookatlas-v7';
+// v8: requests to other sites are no longer handled by this worker.
+const CACHE_VERSION = 'bookatlas-v8';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DATA_CACHE = `data-${CACHE_VERSION}`;
 
@@ -42,6 +43,12 @@ self.addEventListener('fetch', (event) => {
 
   // Skip non-GET requests
   if (request.method !== 'GET') {
+    return;
+  }
+
+  // Other sites (Clerk sign-in, its icons, fonts) go straight to the network (2026-11-24): relayed through this
+  // worker they fall under its own connect-src policy, which blocked the Google icon on the sign-in button.
+  if (url.origin !== self.location.origin) {
     return;
   }
 
