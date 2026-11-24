@@ -192,3 +192,16 @@ test('access policy for submission, reader and worker routes', () => {
   assert.equal(accessFor('GET', '/api/catalog/search'), 'public');
   assert.equal(accessFor('GET', '/api/healthz/ready'), 'public');
 });
+
+test('hardcopy help: step-by-step guides for Amazon KDP and Lulu, with official https help pages for both', async () => {
+  const { AMAZON_PRINT_REQUIREMENTS, LULU_PRINT_REQUIREMENTS, HARDCOPY_HELP } = await import('@workspace/bookatlas-catalog/publishing');
+  assert.ok(AMAZON_PRINT_REQUIREMENTS.length >= 10 && AMAZON_PRINT_REQUIREMENTS.every((r) => r.scope === 'amazon'));
+  assert.ok(LULU_PRINT_REQUIREMENTS.length >= 10 && LULU_PRINT_REQUIREMENTS.every((r) => r.scope === 'lulu'));
+  assert.equal(new Set([...AMAZON_PRINT_REQUIREMENTS, ...LULU_PRINT_REQUIREMENTS].map((r) => r.id)).size, AMAZON_PRINT_REQUIREMENTS.length + LULU_PRINT_REQUIREMENTS.length, 'ids are unique');
+  for (const store of ['amazon', 'lulu'] as const) assert.ok(HARDCOPY_HELP.filter((h) => h.store === store).length >= 4, store);
+  for (const h of HARDCOPY_HELP) {
+    const url = new URL(h.href);
+    assert.equal(url.protocol, 'https:');
+    assert.match(url.hostname, h.store === 'amazon' ? /(^|\.)amazon\.com$/ : /(^|\.)lulu\.com$/);
+  }
+});

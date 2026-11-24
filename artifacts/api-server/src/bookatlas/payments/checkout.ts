@@ -115,11 +115,6 @@ export async function createCheckout(who: Identity, requested: unknown, findBook
 export type NarrationPaid = (order: { narrationId: string; checkoutSessionId: string; paymentIntentId: string | null; userId: string; email: string | null; name: string | null; country: string | null; currency: string; amountTotal: number }) => Promise<void>;
 let narrationPaid: NarrationPaid | null = null;
 export function setNarrationPaidHandler(handler: NarrationPaid | null) { narrationPaid = handler; }
-/** Printed-book orders (2026-11-24) are sent to the printer by the print service, registered at start-up. */
-export type PrintPaid = (paid: { orderId: string; checkoutSessionId: string; paymentIntentId: string | null; userId: string; email: string | null; name: string | null }) => Promise<void>;
-let printPaid: PrintPaid | null = null;
-let printRefunded: ((paymentIntentId: string) => Promise<void>) | null = null;
-export function setPrintHandlers(paid: PrintPaid | null, refunded: ((paymentIntentId: string) => Promise<void>) | null) { printPaid = paid; printRefunded = refunded; }
 
 async function fulfil(session: Stripe.Checkout.Session) {
   if (session.metadata?.app !== APP_TAG) return false;
@@ -132,15 +127,6 @@ async function fulfil(session: Stripe.Checkout.Session) {
       userId: session.client_reference_id, email: session.customer_details?.email ?? session.customer_email ?? null,
       name: session.customer_details?.name ?? null, country: session.customer_details?.address?.country ?? null,
       currency: session.currency ?? CURRENCY, amountTotal: session.amount_total ?? 0,
-    });
-    return true;
-  }
-  if (session.metadata?.kind === 'print') {
-    if (!printPaid || !session.metadata.printOrderId) return false;
-    await printPaid({
-      orderId: session.metadata.printOrderId, checkoutSessionId: session.id,
-      paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id ?? null,
-      userId: session.client_reference_id, email: session.customer_details?.email ?? session.customer_email ?? null, name: session.customer_details?.name ?? null,
     });
     return true;
   }
@@ -202,7 +188,6 @@ export async function handleWebhook(rawBody: Buffer, signature: string | undefin
       if (charge.refunded && intent) {
         await markRefunded(intent);
         await markInvoiceRefunded(intent).catch((err) => logger.error({ err, event: 'payments.invoice_failed', paymentIntent: intent }, 'Invoice refund could not be recorded'));
-        await printRefunded?.(intent).catch((err) => logger.error({ err, event: 'print.refund_failed', paymentIntent: intent }, 'Print order refund could not be recorded'));
         logger.info({ event: 'payments.refunded', paymentIntent: intent }, 'Purchase refunded; the book is locked again');
       }
       break;
@@ -287,29 +272,4 @@ export async function confirmCheckout(who: Identity, sessionId: string) {
   const session = await stripe().checkout.sessions.retrieve(sessionId);
   if (session.client_reference_id !== who.id) throw new PaymentError('Unknown checkout.', 404);
   return fulfil(session);
-}
-
-/**
- * Checkout for printed copies (2026-11-24): the copies at the author's price and the delivery at Lulu's cost, both
- * VAT included, as quoted on the server. The address was collected and checked before checkout.
- */
-export async function createPrintCheckout(who: Identity, order: { id: string; book_id: string; title: string; quantity: number; quote: { unitPrice: number; shippingGross: number }; shipping_level: string }, appUrl: string) {
-  const session = await stripe().checkout.sessions.create({
-    mode: 'payment',
-    client_reference_id: who.id,
-    customer_email: who.email,
-    line_items: [
-      { quantity: order.quantity, price_data: { currency: CURRENCY, unit_amount: order.quote.unitPrice, tax_behavior: 'inclusive', product_data: { name: `${order.title} (printed copy)`.slice(0, 250), metadata: { bookId: `${order.book_id}.print` } } } },
-      ...(order.quote.shippingGross <= 0 ? [] : [{ quantity: 1, price_data: { currency: CURRENCY, unit_amount: order.quote.shippingGross, tax_behavior: 'inclusive', product_data: { name: `Delivery (${order.shipping_level.toLowerCase().replace('_', ' ')})`, metadata: { bookId: 'shipping' } } } }]),
-    ],
-    automatic_tax: { enabled: taxEnabled() },
-    managed_payments: { enabled: false },
-    custom_text: { submit: { message: `Your books are printed on demand and shipped to the address you gave. You may withdraw within 14 days of delivery: ${appUrl}/refunds` } },
-    metadata: { app: APP_TAG, kind: 'print', printOrderId: order.id, bookId: order.book_id, userId: who.id },
-    payment_intent_data: { metadata: { app: APP_TAG, kind: 'print', printOrderId: order.id } },
-    success_url: `${appUrl}/?print=paid&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appUrl}/?print=cancelled`,
-  });
-  if (!session.url) throw new PaymentError('Stripe did not return a checkout page. Please retry.', 503);
-  return { url: session.url, id: session.id };
 }

@@ -1,7 +1,7 @@
 import { bookatlasDb } from '../db/supabaseClient.js';
 import { listSubmissions } from '../ebookPrep/submissions.js';
 import { listNarrations } from '../narration/service.js';
-import { AUTHOR_SHARE, authorShareOf, baseBookOf } from './authorSales.js';
+import { AUTHOR_SHARE, authorShareOf } from './authorSales.js';
 import { memoryInvoices, type Invoice } from './invoices.js';
 import { PaymentError } from './purchases.js';
 
@@ -43,12 +43,10 @@ export async function businessSummary(users: { total: number; newThisMonth: numb
     const ebooks = kept.filter((i) => i.vat_scheme !== 'nl-service');
     const services = kept.filter((i) => i.vat_scheme === 'nl-service');
     const ebookNet = ebooks.reduce((n, i) => n + i.amount_net, 0);
-    const authorsShare = ebooks.reduce((n, i) => n + i.lines.reduce((m, l) => m + (l.kind === 'shipping' ? 0 : authorShareOf(l.net, i.issued_at, l.cost)), 0), 0);
-    // Printed books: what the printer is paid (printing and fulfilment of the copies, and the delivery passed on at cost).
-    const printCost = ebooks.reduce((n, i) => n + i.lines.reduce((m, l) => m + (l.cost ?? 0) + (l.kind === 'shipping' ? l.net : 0), 0), 0);
+    const authorsShare = ebooks.reduce((n, i) => n + i.lines.reduce((m, l) => m + authorShareOf(l.net, i.issued_at), 0), 0);
     const narrationCost = narrations.filter((n) => n.created_at >= since).reduce((m, n) => m + usdToEurCents(n.spent_micros), 0);
     const stripeFees = kept.reduce((n, i) => n + Math.round(i.amount_gross * STRIPE_FEE.percent) + STRIPE_FEE.fixedCents, 0);
-    const commission = ebookNet - authorsShare - printCost;
+    const commission = ebookNet - authorsShare;
     const serviceNet = services.reduce((n, i) => n + i.amount_net, 0);
     return {
       period,
@@ -63,7 +61,6 @@ export async function businessSummary(users: { total: number; newThisMonth: numb
       ebookSalesNetCents: ebookNet,
       commissionCents: commission,
       authorsShareCents: authorsShare,
-      printCostCents: printCost,
       narrationNetCents: serviceNet,
       narrationCostCents: narrationCost,
       stripeFeesEstimateCents: stripeFees,
@@ -78,13 +75,13 @@ export async function businessSummary(users: { total: number; newThisMonth: numb
   for (const inv of invoices) {
     if (inv.status !== 'issued' || inv.vat_scheme === 'nl-service') continue;
     for (const l of inv.lines) {
-      if (l.kind === 'shipping') continue;
-      const owner = owners.get(baseBookOf(l.bookId));
+      // The natural audiobook add-on (`<id>.audio`) belongs to the eBook's author.
+      const owner = owners.get(l.bookId.replace(/\.audio$/, ''));
       const book = books.get(l.bookId) ?? { bookId: l.bookId, title: l.title, author: owner?.author ?? '', units: 0, netCents: 0 };
       book.units += 1; book.netCents += l.net; books.set(l.bookId, book);
       if (!owner) continue;
       const a = authors.get(owner.ownerId) ?? { ownerId: owner.ownerId, author: owner.author, email: owner.email, units: 0, owedCents: 0 };
-      a.units += 1; a.owedCents += authorShareOf(l.net, inv.issued_at, l.cost); authors.set(owner.ownerId, a);
+      a.units += 1; a.owedCents += authorShareOf(l.net, inv.issued_at); authors.set(owner.ownerId, a);
     }
   }
 

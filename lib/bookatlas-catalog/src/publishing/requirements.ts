@@ -6,7 +6,7 @@
  * own cover template; authors download it with the final page count.
  */
 
-export type RequirementScope = 'ebook' | 'print' | 'amazon';
+export type RequirementScope = 'ebook' | 'print' | 'amazon' | 'lulu';
 export type RequirementGroup = 'Account' | 'Details' | 'Rights' | 'Cover' | 'File' | 'Interior' | 'Publishing';
 
 export interface Requirement {
@@ -106,6 +106,41 @@ export const AMAZON_PRINT_REQUIREMENTS: Requirement[] = [
   { id: 'kdp-proof', scope: 'amazon', group: 'Publishing', label: 'Proof copy', detail: 'Order a printed proof from KDP to check colours, margins and the spine before you publish.' },
   { id: 'kdp-pricing', scope: 'amazon', group: 'Publishing', label: 'Price and royalties', detail: '60% of the list price minus the printing cost on Amazon marketplaces, 40% through Expanded Distribution. KDP shows the minimum price for your page count.' },
   { id: 'kdp-review', scope: 'amazon', group: 'Publishing', label: 'Review', detail: 'KDP reviews a new print book, usually within 72 hours, then it goes on sale on Amazon.' },
+];
+
+/**
+ * Publishing the print edition on Lulu (lulu.com) yourself, step by step (owner decision 2026-11-24: hardcopies are
+ * published by the author on Amazon KDP and Lulu; BooksAtlas helps with both). Written in our own words; Lulu's own
+ * pages (HARDCOPY_HELP) have the current specifications.
+ */
+export const LULU_PRINT_REQUIREMENTS: Requirement[] = [
+  { id: 'lulu-account', scope: 'lulu', group: 'Account', label: 'Lulu account', detail: 'Create a free account at lulu.com and add how you want to be paid (PayPal or bank) under your account settings.' },
+  { id: 'lulu-format', scope: 'lulu', group: 'Details', label: 'Size, binding and paper', detail: 'Choose the book size, binding (paperback, hardcover with printed cover or with dust jacket, coil or saddle stitch), interior colour and paper. Lulu shows the page range each binding allows.' },
+  { id: 'lulu-isbn', scope: 'lulu', group: 'Rights', label: 'ISBN', detail: 'Use your own ISBN or Lulu\'s free one. A free ISBN from Lulu only works for the Lulu edition; a free KDP ISBN cannot be used on Lulu.' },
+  { id: 'lulu-interior', scope: 'lulu', group: 'Interior', label: 'Interior PDF', detail: 'One PDF with every page (copyright and blank pages included), at the chosen size, fonts embedded, images at 300 PPI. Add 0.125 in bleed on every side only if images reach the edge.' },
+  { id: 'lulu-templates', scope: 'lulu', group: 'Interior', label: 'Page templates', detail: 'Lulu offers a free design bundle for each book size, with page and cover templates for Word, InDesign and Photoshop and its Book Creation Guide.' },
+  { id: 'lulu-cover', scope: 'lulu', group: 'Cover', label: 'Cover PDF', detail: 'One spread with back, spine and front. Upload the interior first: Lulu then makes a cover template with the exact spine width for your page count, or you can use its built-in cover designer.' },
+  { id: 'lulu-cover-images', scope: 'lulu', group: 'Cover', label: 'Cover images', detail: 'Between 300 and 600 PPI; keep text well inside the trim lines and leave room for the barcode on the back.' },
+  { id: 'lulu-preview', scope: 'lulu', group: 'Publishing', label: 'File check and preview', detail: 'Lulu checks the files on upload and shows a preview. Fix every warning before you continue.' },
+  { id: 'lulu-proof', scope: 'lulu', group: 'Publishing', label: 'Proof copy', detail: 'Order one printed copy for yourself to check colours, margins and the spine before the book goes on sale.' },
+  { id: 'lulu-pricing', scope: 'lulu', group: 'Publishing', label: 'Price and earnings', detail: 'You set the price; Lulu shows the printing cost and what you earn per copy in its own bookstore and through retailers (retailers keep a discount, so you earn less there).' },
+  { id: 'lulu-distribution', scope: 'lulu', group: 'Publishing', label: 'Where it sells', detail: 'Sell in the Lulu Bookstore, from your own website, or through Lulu\'s global distribution to retailers. If the same book is already on Amazon through KDP, leave Amazon out of Lulu\'s distribution so Amazon does not list two editions.' },
+  { id: 'lulu-link', scope: 'lulu', group: 'Publishing', label: 'Link it on BooksAtlas', detail: 'Once it is on sale, paste the Lulu page under your book on BooksAtlas; readers then see "Print edition on Lulu" on your book page.' },
+];
+
+/** The official help pages for printing on Amazon KDP and Lulu, shown next to the step-by-step guides. */
+export const HARDCOPY_HELP: { store: 'amazon' | 'lulu'; label: string; href: string }[] = [
+  { store: 'amazon', label: 'KDP: paperback submission guidelines', href: 'https://kdp.amazon.com/en_US/help/topic/G201857950' },
+  { store: 'amazon', label: 'KDP: print options (trim size, ink and paper)', href: 'https://kdp.amazon.com/en_US/help/topic/G201834180' },
+  { store: 'amazon', label: 'KDP: creating a paperback cover', href: 'https://kdp.amazon.com/help?topicId=G201953020' },
+  { store: 'amazon', label: 'KDP: cover calculator and templates', href: 'https://kdp.amazon.com/cover-calculator' },
+  { store: 'amazon', label: 'KDP: printing costs', href: 'https://kdp.amazon.com/en_US/help/topic/G201834340' },
+  { store: 'lulu', label: 'Lulu: Book Creation Guide (PDF)', href: 'https://assets.lulu.com/media/guides/en/lulu-book-creation-guide.pdf' },
+  { store: 'lulu', label: 'Lulu: book sizes and design templates', href: 'https://www.lulu.com/products' },
+  { store: 'lulu', label: 'Lulu: uploading your cover', href: 'https://help.lulu.com/en/support/solutions/articles/64000282777-upload-your-cover-file' },
+  { store: 'lulu', label: 'Lulu: hardcover casewrap covers', href: 'https://help.lulu.com/en/support/solutions/articles/64000308572-creating-your-hardcover-casewrap-cover' },
+  { store: 'lulu', label: 'Lulu: publishing for global distribution', href: 'https://help.lulu.com/en/support/solutions/articles/64000255597-publishing-a-print-book-for-global-distribution' },
+  { store: 'lulu', label: 'Lulu: pricing calculator', href: 'https://www.lulu.com/pricing' },
 ];
 
 export const TRIM_SIZES = [

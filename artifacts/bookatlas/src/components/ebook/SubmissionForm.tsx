@@ -320,7 +320,7 @@ export const SubmissionForm: React.FC<{
 
         {/* 1. Format: the eBook, and a print edition if wanted */}
         <Tabs.Content value="format" className="mt-5 space-y-4 outline-none">
-          <StepHeading n={1} title="Choose your formats" text="Every book is published as an eBook. Add a paperback or hardcover: BooksAtlas sells printed copies on your book page, printed on demand and shipped, and the same files work on KDP and Lulu." />
+          <StepHeading n={1} title="Choose your formats" text="Every book is published as an eBook. Add a paperback or hardcover and we size the print files for Amazon KDP and Lulu." />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border-2 border-indigo-600 bg-indigo-50/60 p-4">
               <BookOpen className="h-5 w-5 text-indigo-700" aria-hidden />
@@ -331,7 +331,7 @@ export const SubmissionForm: React.FC<{
             <label className={`block cursor-pointer rounded-2xl border-2 p-4 transition-colors ${intake.wantsPrint ? 'border-indigo-600 bg-indigo-50/60' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
               <BookMarked className="h-5 w-5 text-indigo-700" aria-hidden />
               <span className="mt-2 block text-sm font-bold text-slate-900">Print edition</span>
-              <span className="mt-0.5 block text-xs text-slate-600">Paperback or hardcover, sold and shipped by BooksAtlas. You keep 81% after printing.</span>
+              <span className="mt-0.5 block text-xs text-slate-600">Paperback or hardcover files for KDP and Lulu, sized to your book.</span>
               <span className="mt-2 flex items-center gap-2 text-[11px] font-semibold text-slate-700">
                 <CheckBox checked={!!intake.wantsPrint} onChange={(e) => set('wantsPrint', e.target.checked)} />I want a print edition
               </span>

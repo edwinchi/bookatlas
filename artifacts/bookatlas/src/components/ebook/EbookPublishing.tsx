@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ReaderReportsQueue } from './ReaderReportsQueue';
-import { BookUp, CheckCircle2, ClipboardList, Loader2, Plus, Sparkles } from 'lucide-react';
-import { EBOOK_REQUIREMENTS, PRINT_REQUIREMENTS, AMAZON_PRINT_REQUIREMENTS, type PaperId, type Requirement, type TrimSizeId } from '@workspace/bookatlas-catalog/publishing';
+import { BookUp, CheckCircle2, ClipboardList, ExternalLink, Loader2, Plus, Sparkles } from 'lucide-react';
+import { EBOOK_REQUIREMENTS, PRINT_REQUIREMENTS, AMAZON_PRINT_REQUIREMENTS, LULU_PRINT_REQUIREMENTS, HARDCOPY_HELP, type PaperId, type Requirement, type TrimSizeId } from '@workspace/bookatlas-catalog/publishing';
 import { useAccount } from '../../auth/AuthContext';
 import { EbookApiError, saveBlob, useEbookApi, type FeedbackOverview, type Submission } from './ebookApi';
 import { AuthorSalesDashboard } from './AuthorSalesDashboard';
@@ -9,12 +9,10 @@ import { ServicesOverview } from './ServicesOverview';
 import { AuthorHub } from './AuthorHub';
 import { NarrationPanel } from './NarrationPanel';
 import { NarrationQueue } from './NarrationQueue';
-import { PrintOrdersQueue } from './PrintOrdersQueue';
 import { AdminGuide } from './AdminGuide';
 import { EnquiriesInbox } from './EnquiriesInbox';
 import { SubmissionForm } from './SubmissionForm';
 import { SubmissionCard } from './SubmissionCard';
-import { PrintEditionPanel } from './PrintEditionPanel';
 import { FeedImport } from './FeedImport';
 import { PrintCalculator } from './PrintCalculator';
 
@@ -91,7 +89,7 @@ export const EbookPublishing: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [problem, setProblem] = useState<{ message: string; fields?: Record<string, string> } | null>(null);
-  const [scope, setScope] = useState<'ebook' | 'print' | 'amazon'>('ebook');
+  const [scope, setScope] = useState<'ebook' | 'print' | 'amazon' | 'lulu'>('ebook');
   const [calc, setCalc] = useState<{ trimSize: TrimSizeId; paper: PaperId; pageCount: number }>({ trimSize: '6x9', paper: 'cream', pageCount: 300 });
 
   const load = useCallback(() => {
@@ -205,7 +203,7 @@ export const EbookPublishing: React.FC = () => {
                       : fix === 'original' ? api.originalCover(s.id) : api.replaceCover(s.id, fix.upload))}
                     onPublish={async () => handle(() => api.publish(s.id))}
                     onReject={async (reason) => handle(() => api.reject(s.id, reason))}
-                    extra={s.status === 'published' && s.bookId ? <><NarrationPanel api={api} bookId={s.bookId} /><PrintEditionPanel api={api} bookId={s.bookId} title={s.intake.title} /></> : null}
+                    extra={s.status === 'published' && s.bookId ? <NarrationPanel api={api} bookId={s.bookId} /> : null}
                   />
                 ))}
           </section>
@@ -215,13 +213,24 @@ export const EbookPublishing: React.FC = () => {
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="flex items-center gap-2 font-serif text-lg font-bold text-slate-900"><ClipboardList className="h-5 w-5 text-indigo-600" aria-hidden />What a complete book needs</h2>
             <div role="tablist" className="mt-3 inline-flex rounded-full bg-slate-100 p-1 text-xs font-semibold">
-              {(['ebook', 'print', 'amazon'] as const).map((s) => (
+              {(['ebook', 'print', 'amazon', 'lulu'] as const).map((s) => (
                 <button key={s} role="tab" aria-selected={scope === s} type="button" onClick={() => setScope(s)}
-                  className={`rounded-full px-3 py-1 ${scope === s ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}>{s === 'ebook' ? 'eBook' : s === 'print' ? 'Print' : 'Amazon print'}</button>
+                  className={`rounded-full px-3 py-1 ${scope === s ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}>{s === 'ebook' ? 'eBook' : s === 'print' ? 'Print' : s === 'amazon' ? 'Amazon print' : 'Lulu print'}</button>
               ))}
             </div>
             {scope === 'amazon' && <p className="mt-3 text-xs text-slate-600">To sell the print edition on Amazon, publish it yourself on Amazon KDP. These are the steps and KDP's file rules.</p>}
-            <div className="mt-4"><Checklist items={scope === 'ebook' ? EBOOK_REQUIREMENTS : scope === 'print' ? PRINT_REQUIREMENTS : AMAZON_PRINT_REQUIREMENTS} /></div>
+            {scope === 'lulu' && <p className="mt-3 text-xs text-slate-600">To sell the print edition through Lulu (its bookstore, your own site or retailers), publish it yourself on lulu.com. These are the steps; the same print-ready files work on KDP and Lulu.</p>}
+            <div className="mt-4"><Checklist items={scope === 'ebook' ? EBOOK_REQUIREMENTS : scope === 'print' ? PRINT_REQUIREMENTS : scope === 'amazon' ? AMAZON_PRINT_REQUIREMENTS : LULU_PRINT_REQUIREMENTS} /></div>
+            {(scope === 'amazon' || scope === 'lulu' || scope === 'print') && (
+              <div className="mt-4 rounded-xl bg-slate-50 p-3">
+                <p className="text-xs font-bold text-slate-900">Official help</p>
+                <ul className="mt-1.5 space-y-1">
+                  {HARDCOPY_HELP.filter((h) => scope === 'print' || h.store === scope).map((h) => (
+                    <li key={h.href}><a href={h.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 hover:underline">{h.label}<ExternalLink className="h-3 w-3" aria-hidden /></a></li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <p className="mt-4 flex items-start gap-2 text-xs text-slate-500"><CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />“Checked for you” items are verified, and fixed where possible, after upload.</p>
           </section>
           {scope !== 'ebook' && (
@@ -233,7 +242,6 @@ export const EbookPublishing: React.FC = () => {
           {isAdmin && <EnquiriesInbox />}
           {isAdmin && <AdminGuide />}
           {isAdmin && <NarrationQueue api={api} />}
-          {isAdmin && <PrintOrdersQueue api={api} />}
           {isAdmin && <ReaderReportsQueue api={api} />}
           {isAdmin && <StoreFeedback api={api} />}
           {isAdmin && <FeedImport />}

@@ -9,9 +9,7 @@
  * - `docker/security-headers.conf`, for the local Docker stack.
  *
  * `https://clerk.booksatlas.app` is the Frontend API of the Clerk production instance (runbook accounts-and-auth.md),
- * allowed in advance so switching to it cannot break sign-in. `https://*.supabase.co` in connect-src lets authors upload
- * print PDFs straight to private storage with a one-time signed address (Vercel caps requests at 4.5 MB).
- * Violations are posted to `/api/csp-report` and logged.
+ * allowed in advance so switching to it cannot break sign-in. Violations are posted to `/api/csp-report` and logged.
  */
 export const PAGE_CSP = [
   "default-src 'self'",
@@ -20,7 +18,7 @@ export const PAGE_CSP = [
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: blob: https://images.unsplash.com https://img.clerk.com",
   "media-src 'self' data: blob: https://commondatastorage.googleapis.com",
-  "connect-src 'self' https://*.clerk.accounts.dev https://clerk.booksatlas.app https://*.protect.clerk.com:* https://clerk-telemetry.com https://*.supabase.co",
+  "connect-src 'self' https://*.clerk.accounts.dev https://clerk.booksatlas.app https://*.protect.clerk.com:* https://clerk-telemetry.com",
   "frame-src https://challenges.cloudflare.com",
   "worker-src 'self' blob:",
   "manifest-src 'self'",

@@ -60,15 +60,14 @@ export function audiobookPlan(words: number, addOnPrice: number, vatPercent: num
 }
 
 /**
- * Print: what one copy earns, given the printer's cost per copy. BooksAtlas sells and ships printed copies itself
- * (2026-11-24) and pays 81% of the price excluding VAT after printing; KDP pays 60% of the price excluding VAT on
- * Amazon, less printing; Lulu pays 80% of what remains after printing.
+ * Print: what one copy earns when the author sells it through Amazon KDP or the Lulu Bookstore, given the printer's
+ * cost per copy (taken from the printer's own calculator). KDP pays 60% of the price excluding VAT on Amazon, less
+ * printing; Lulu pays 80% of what remains after printing.
  */
 export function printEarnings(price: number, vatPercent: number, printCost: number) {
   const net = excludingVat(price, vatPercent);
   const cost = Math.max(0, printCost);
   return {
-    booksatlas: cents(Math.max(0, (net - cost) * AUTHOR_SHARE)),
     kdp: cents(Math.max(0, 0.6 * net - cost)),
     lulu: cents(Math.max(0, (net - cost) * 0.8)),
     /** The lowest price (incl. VAT) at which a KDP copy earns anything. */

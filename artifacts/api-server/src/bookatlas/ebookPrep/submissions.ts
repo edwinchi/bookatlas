@@ -21,8 +21,6 @@ export interface SubmissionData {
   coverFix?: { kind: 'upload'; file: StoredFile; width: number; height: number } | { kind: 'enlarge' };
   /** Where the printed book is sold; shown on the book page. */
   printLinks?: { amazon?: string; lulu?: string };
-  /** The printed edition BooksAtlas sells and ships (print/editions.ts). */
-  printEdition?: import('../print/editions.js').PrintEditionData;
   /** A new version of this published book: publishing replaces its text under the same id. */
   replacesBookId?: string;
   version: number;

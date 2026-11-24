@@ -35,8 +35,6 @@ import { ReaderPublicationAccess } from './publishing/ReaderPublicationAccess';
 import { useAccount } from '../auth/AuthContext';
 import { audioOnSale, audioProductOf, isNarrated } from '../audioEdition';
 import { NaturalVoiceInfo } from './ebook/NaturalVoiceInfo';
-import { PrintOrderDialog, printFormat } from './print/PrintOrderDialog';
-import { Printer } from 'lucide-react';
 
 interface BookDetailModalProps {
   book: Book | null;
@@ -93,8 +91,6 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
   const money = (n: number) => (n === 0 ? 'Free' : `${currencySymbol}${n.toFixed(2)}`);
   const { account, requireSignIn } = useAccount();
   const openFullBook = () => { if (account) onReadSample(book); else requireSignIn('reading the full book'); };
-  const [printOpen, setPrintOpen] = useState(false);
-  const orderPrint = () => { if (account) setPrintOpen(true); else requireSignIn('ordering printed copies'); };
 
   const [activeTab, setActiveTab] = useState<'overview' | 'ai_summary' | 'reviews' | 'author'>('overview');
   /** The book's real chapter titles (prepared books), for "Sample excerpt included". */
@@ -384,18 +380,6 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                     <span>The audiobook keeps playing with your screen off; reading along with your device’s voice stays free.</span>
                     <NaturalVoiceInfo />
                   </p>
-                )}
-
-                {/* Printed copies sold and shipped by BooksAtlas (printed on demand, 2026-11-24) */}
-                {book.printEdition && (
-                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
-                    <div>
-                      <p className="flex items-center gap-1.5 text-sm font-bold text-slate-900"><Printer className="h-4 w-4 text-amber-700" aria-hidden />Printed copy · {money(book.printEdition.price)}</p>
-                      <p className="text-[11px] text-slate-600">{printFormat(book.printEdition)} · printed for you and shipped worldwide</p>
-                    </div>
-                    <button type="button" onClick={orderPrint} className="rounded-full bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-500 cursor-pointer">Order printed copies</button>
-                    <PrintOrderDialog book={book} open={printOpen} onOpenChange={setPrintOpen} />
-                  </div>
                 )}
 
                 {/* The printed book, sold by Amazon or Lulu */}
