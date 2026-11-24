@@ -472,14 +472,38 @@ alter table public.bookatlas_reading_groups enable row level security;
 alter table public.bookatlas_reading_group_members enable row level security;
 alter table public.bookatlas_reading_group_posts enable row level security;
 alter table public.bookatlas_reader_reports enable row level security;
+
+-- Printed books sold and shipped by BooksAtlas, printed on demand by Lulu (2026-11-24).
+create table if not exists public.bookatlas_print_orders (
+  id uuid primary key,
+  user_id text not null,
+  book_id text not null,
+  title text not null,
+  quantity integer not null check (quantity between 1 and 10),
+  shipping_level text not null,
+  address jsonb not null,
+  quote jsonb not null,
+  status text not null default 'awaiting_payment' check (status in ('awaiting_payment','paid','submitted','in_production','shipped','canceled','refunded','needs_attention')),
+  checkout_session_id text unique,
+  payment_intent_id text,
+  lulu_job_id bigint unique,
+  lulu_status text,
+  tracking jsonb not null default '[]'::jsonb,
+  error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists bookatlas_print_orders_user_idx on public.bookatlas_print_orders (user_id, created_at desc);
+create index if not exists bookatlas_print_orders_intent_idx on public.bookatlas_print_orders (payment_intent_id);
+alter table public.bookatlas_print_orders enable row level security;
 revoke all on table public.bookatlas_books, public.bookatlas_categories,
   public.bookatlas_registered_users, public.bookatlas_subscribers, public.bookatlas_campaigns,
   public.bookatlas_publishing_jobs, public.bookatlas_publishing_messages,
   public.bookatlas_publishing_test_books, public.bookatlas_ebook_submissions,
-  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations, public.bookatlas_reviews, public.bookatlas_follows, public.bookatlas_crypto_orders, public.bookatlas_author_payouts, public.bookatlas_reader_progress, public.bookatlas_reader_annotations, public.bookatlas_reader_preferences, public.bookatlas_reading_sessions, public.bookatlas_reading_groups, public.bookatlas_reading_group_members, public.bookatlas_reading_group_posts, public.bookatlas_reader_reports from anon, authenticated;
+  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations, public.bookatlas_reviews, public.bookatlas_follows, public.bookatlas_crypto_orders, public.bookatlas_author_payouts, public.bookatlas_reader_progress, public.bookatlas_reader_annotations, public.bookatlas_reader_preferences, public.bookatlas_reading_sessions, public.bookatlas_reading_groups, public.bookatlas_reading_group_members, public.bookatlas_reading_group_posts, public.bookatlas_reader_reports, public.bookatlas_print_orders from anon, authenticated;
 grant select, insert, update, delete on table public.bookatlas_books, public.bookatlas_categories,
   public.bookatlas_registered_users, public.bookatlas_subscribers, public.bookatlas_campaigns,
   public.bookatlas_publishing_jobs, public.bookatlas_publishing_messages,
   public.bookatlas_publishing_test_books, public.bookatlas_ebook_submissions,
-  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations, public.bookatlas_reviews, public.bookatlas_follows, public.bookatlas_crypto_orders, public.bookatlas_author_payouts, public.bookatlas_reader_progress, public.bookatlas_reader_annotations, public.bookatlas_reader_preferences, public.bookatlas_reading_sessions, public.bookatlas_reading_groups, public.bookatlas_reading_group_members, public.bookatlas_reading_group_posts, public.bookatlas_reader_reports to service_role;
+  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations, public.bookatlas_reviews, public.bookatlas_follows, public.bookatlas_crypto_orders, public.bookatlas_author_payouts, public.bookatlas_reader_progress, public.bookatlas_reader_annotations, public.bookatlas_reader_preferences, public.bookatlas_reading_sessions, public.bookatlas_reading_groups, public.bookatlas_reading_group_members, public.bookatlas_reading_group_posts, public.bookatlas_reader_reports, public.bookatlas_print_orders to service_role;
 commit;

@@ -114,6 +114,23 @@ Advice for authors:
 
 The lock-screen controls themselves are tested in a desktop browser (`tests/browser/narration-background.test.mjs`).
 
+## 5b. Printed books, sold and shipped by BooksAtlas
+
+Readers order printed copies on a book page; each copy is printed on demand by Lulu and shipped to the reader. The reader pays the author's price per copy plus delivery (at Lulu's cost), both with VAT. Lulu charges BooksAtlas for printing, fulfilment and delivery. The author keeps 81% of each copy's price excluding VAT after printing and fulfilment; the rest is the BooksAtlas commission.
+
+**Switching it on (once):**
+1. Create a Lulu developer account at developers.lulu.com (start with the sandbox at developers.sandbox.lulu.com). In the account settings set the **billing currency to EUR** and add a payment card: Lulu charges it for every order.
+2. Copy the API key and secret into Vercel as `LULU_CLIENT_KEY` and `LULU_CLIENT_SECRET`. Leave `LULU_ENV` unset for the sandbox (nothing is printed or charged). Set `LULU_ENV=production` only with the live account's keys.
+3. Run `artifacts/api-server/src/bookatlas/db/migrations-2026-11-24-print-orders.sql` once in the Supabase SQL editor. The private storage bucket `bookatlas-print` is created by the app on first upload.
+4. Register the webhook so delivery updates arrive by themselves: in Lulu's API (POST /webhooks/) with topic `PRINT_JOB_STATUS_CHANGED` and URL `https://booksatlas.app/api/lulu/webhook`. Without it, readers' "Check status" button and the owner view still read the status from Lulu.
+5. Redeploy. The Publish page shows "Printed-book orders"; it says when the printer is not connected or is in sandbox mode.
+
+**Authors** set up the printed edition under their published book (Publish → the book → "Printed copies"): trim size, paper, binding, price, and two PDFs (interior; full-wrap cover with 3 mm bleed). Lulu checks both files; the page count and the exact cover size come from that check. A price that does not cover printing is refused. The book page offers printed copies only when both files have passed and the printer is connected.
+
+**Every day:** in "Printed-book orders", act on any order marked **Needs attention** (for example Lulu could not charge the card, or refused a file): fix the cause, then "Send to the printer again". Refunds go through the normal refund requests; a copy that was already printed is a cost to decide on case by case.
+
+**For the accountant:** printed books are invoiced with the same Dutch 9% VAT as e-books for EU buyers (below the EU €10,000 distance-sales threshold) and without Dutch VAT outside the EU, with delivery taxed like the book. Lulu prints in several countries (EU, UK, US and others), so please confirm the VAT treatment of goods shipped from a printer outside the Netherlands, and any import duties for buyers outside the EU.
+
 ## 6. The reader and the listening player
 
 What readers get, so you can answer their questions:

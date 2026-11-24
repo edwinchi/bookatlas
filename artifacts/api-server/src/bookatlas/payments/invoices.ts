@@ -29,7 +29,11 @@ export interface Invoice {
   refund_decided_by: string | null;
 }
 
-export interface InvoiceLine { bookId: string; title: string; gross: number; net: number; vat: number }
+/**
+ * One invoice line. `kind` 'print' is a printed copy (cost = what printing it cost BooksAtlas, excluding tax, which is
+ * deducted before the author's share; never shown to the buyer); 'shipping' is its delivery. Unset: an eBook or audiobook.
+ */
+export interface InvoiceLine { bookId: string; title: string; gross: number; net: number; vat: number; kind?: 'print' | 'shipping'; cost?: number }
 
 export interface InvoiceInput {
   checkoutSessionId: string;
@@ -42,7 +46,7 @@ export interface InvoiceInput {
   /** 'service' for narration (21% VAT); e-books otherwise. */
   kind?: 'ebook' | 'service';
   currency: string;
-  lines: { bookId: string; title: string; gross: number }[];
+  lines: { bookId: string; title: string; gross: number; kind?: 'print' | 'shipping'; cost?: number }[];
 }
 
 const memory: Invoice[] = [];
@@ -61,7 +65,7 @@ export async function issueInvoice(input: InvoiceInput): Promise<Invoice> {
     buyer_email: input.buyerEmail, buyer_name: input.buyerName, buyer_country: vat.country,
     vat_scheme: vat.scheme, vat_rate_bp: vat.rateBp, currency: input.currency,
     amount_gross: vat.gross, amount_net: vat.net, amount_vat: vat.vat,
-    lines: input.lines.map((l, i) => ({ bookId: l.bookId, title: l.title, gross: vat.lines[i]!.gross, net: vat.lines[i]!.net, vat: vat.lines[i]!.vat })),
+    lines: input.lines.map((l, i) => ({ bookId: l.bookId, title: l.title, gross: vat.lines[i]!.gross, net: vat.lines[i]!.net, vat: vat.lines[i]!.vat, ...(l.kind ? { kind: l.kind } : {}), ...(l.cost != null ? { cost: l.cost } : {}) })),
     status: 'issued' as const, issued_at: new Date().toISOString(), refunded_at: null,
     withdrawal_waiver_at: input.withdrawalWaiverAt && !Number.isNaN(Date.parse(input.withdrawalWaiverAt)) ? input.withdrawalWaiverAt : null,
     refund_requested_at: null, refund_reason: null, refund_decision: null, refund_decided_at: null, refund_decided_by: null,
@@ -236,7 +240,7 @@ export function renderInvoiceHtml(invoice: Invoice) {
   const title = seller.complete ? 'Invoice' : 'Receipt';
   const rate = `${(invoice.vat_rate_bp / 100).toLocaleString('nl-NL')}%`;
   const date = new Date(invoice.issued_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Amsterdam' });
-  const rows = invoice.lines.map((l) => `<tr><td>${esc(l.title)}<div class="muted">${invoice.vat_scheme === 'nl-service' ? 'Natural audiobook narration (service)' : 'eBook (EPUB), digital delivery'}</div></td><td class="n">${money(l.net, invoice.currency)}</td><td class="n">${rate}</td><td class="n">${money(l.vat, invoice.currency)}</td><td class="n">${money(l.gross, invoice.currency)}</td></tr>`).join('');
+  const rows = invoice.lines.map((l) => `<tr><td>${esc(l.title)}<div class="muted">${invoice.vat_scheme === 'nl-service' ? 'Natural audiobook narration (service)' : l.kind === 'print' ? 'Printed book, printed on demand and shipped' : l.kind === 'shipping' ? 'Delivery of the printed books' : 'eBook (EPUB), digital delivery'}</div></td><td class="n">${money(l.net, invoice.currency)}</td><td class="n">${rate}</td><td class="n">${money(l.vat, invoice.currency)}</td><td class="n">${money(l.gross, invoice.currency)}</td></tr>`).join('');
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 <title>${title} ${esc(number)} · BooksAtlas</title>
 <style>body{font:14px/1.5 system-ui,sans-serif;color:#0f172a;background:#fff;max-width:760px;margin:32px auto;padding:0 16px}h1{font-size:24px;margin:0}.muted{color:#64748b;font-size:12px}.head{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:28px}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{text-align:left;padding:8px 6px;border-bottom:1px solid #e2e8f0;vertical-align:top}.n{text-align:right;white-space:nowrap}tfoot td{font-weight:600;border:0}.flag{background:#fef3c7;border:1px solid #fcd34d;padding:8px 12px;border-radius:6px;margin:16px 0}.refund{background:#fee2e2;border-color:#fca5a5}@media print{.noprint{display:none}}</style></head><body>

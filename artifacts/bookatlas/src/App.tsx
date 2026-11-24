@@ -482,6 +482,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
   // Payments (TASK-0004): the books this account bought, and the return from Stripe Checkout.
   const payments = usePayments();
   const [ownedBookIds, setOwnedBookIds] = useState<string[]>([]);
+  const readerPrintApi = useEbookApi();
   const [checkoutNotice, setCheckoutNotice] = useState<{ tone: 'ok' | 'info' | 'error'; text: string; actions?: NoticeAction[] } | null>(null);
   const booksRef = useRef(books);
   booksRef.current = books;
@@ -503,6 +504,20 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
       tone: 'ok', text: 'Payment received for your natural audiobook, thank you. An administrator approves it, usually within 2 working days; follow its progress under Publish, on your book. Your invoice is under "Orders & invoices".',
     }));
   }, [account?.id]);
+  // Back from paying for printed copies (2026-11-24).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const outcome = params.get('print');
+    if (!outcome || !account) return;
+    const sessionId = params.get('session_id');
+    params.delete('print'); params.delete('session_id');
+    window.history.replaceState(null, '', `${window.location.pathname}${params.size ? `?${params}` : ''}${window.location.hash}`);
+    if (outcome === 'cancelled') { setCheckoutNotice({ tone: 'info', text: 'Order cancelled. You have not been charged.' }); return; }
+    if (outcome !== 'paid' || !sessionId) return;
+    readerPrintApi.confirmPrint(sessionId).catch(() => undefined).finally(() => setCheckoutNotice({
+      tone: 'ok', text: 'Thank you! Your printed copies are being printed and will be shipped to you. Follow the delivery under "Orders & invoices", where your invoice is too.',
+    }));
+  }, [account?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // Reader Phase 3 (cycle 10): an invite link (?join=CODE) joins the reading group and opens its book.
   const readerApi = useEbookApi();
   const [joinGroupId, setJoinGroupId] = useState<string | null>(null);

@@ -36,8 +36,9 @@ test('audiobook: narration price, earnings per sale and the copies that pay it b
   assert.equal(audiobookPlan(50_000, 0, 9).paysBackAfter, null);
 });
 
-test('print: KDP pays 60% of the price excluding VAT less printing; Lulu 80% of what remains', () => {
+test('print: BooksAtlas pays 81% after printing; KDP 60% of the price excluding VAT less printing; Lulu 80% of what remains', () => {
   const p = printEarnings(14.99, 9, 4.35);
+  assert.equal(p.booksatlas, 7.62, '(13.7523 − 4.35) × 0.81');
   assert.equal(p.kdp, 3.9, '0.6 × 13.75 − 4.35');
   assert.equal(p.lulu, 7.52, '(13.75 − 4.35) × 0.8');
   assert.equal(p.kdpMinimumPrice, 7.9, 'below this KDP pays nothing');

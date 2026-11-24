@@ -20,13 +20,18 @@ export const EARLIER_AUTHOR_SHARE = 0.67;
 export const SHARE_CHANGED_AT = '2026-11-23T00:00:00.000Z';
 /** The author's share for a sale made at `at` (an ISO date). */
 export const shareRate = (at: string) => (at >= SHARE_CHANGED_AT ? AUTHOR_SHARE : EARLIER_AUTHOR_SHARE);
-/** The author's share of a sale's net amount, in cents. */
-export const authorShareOf = (netCents: number, at: string) => Math.round(netCents * shareRate(at));
+/**
+ * The author's share of a sale's net amount, in cents. For a printed copy, `costCents` (printing and fulfilment,
+ * paid to the printer) is deducted first.
+ */
+export const authorShareOf = (netCents: number, at: string, costCents = 0) => Math.max(0, Math.round((netCents - costCents) * shareRate(at)));
+/** The book a sale line belongs to: `<id>.audio` and `<id>.print` are editions of `<id>`. */
+export const baseBookOf = (lineId: string) => lineId.replace(/\.(?:audio|print)$/, '');
 /** How the share is explained on the dashboard and statements. */
 export const SHARE_NOTE = 'Your share is 81% of the price excluding VAT (BooksAtlas commission 19%); sales before 23 November 2026 earned 67%. Payment fees are not deducted yet, so this is an estimate until payouts start.';
 const MONTHS = 12;
 
-type Sale = { at: string; bookId: string; title: string; country: string | null; gross: number; vat: number; net: number; refunded: boolean };
+type Sale = { at: string; bookId: string; title: string; country: string | null; gross: number; vat: number; net: number; cost: number; refunded: boolean };
 
 async function invoicesForBooks(bookIds: string[], memory: () => Invoice[]): Promise<Invoice[]> {
   const ids = bookIds.filter((id) => /^[\w.-]{1,120}$/.test(id));
@@ -49,12 +54,14 @@ export async function authorSaleRows(userId: string, memoryInvoices: () => Invoi
   // The natural audiobook add-on (cycle 9) is its own product line, with the same author share.
   const audiobooks = new Map<string, string>();
   for (const [id, title] of books) audiobooks.set(audioId(id), `${title} (natural audiobook)`);
+  // Printed copies sold and shipped by BooksAtlas (2026-11-24): the share is taken after the printing cost.
+  for (const [id, title] of [...books]) audiobooks.set(`${id}.print`, `${title} (printed copy)`);
   const invoices = await invoicesForBooks([...books.keys(), ...audiobooks.keys()], memoryInvoices);
   const sold = new Set(invoices.flatMap((inv) => inv.lines.map((l) => l.bookId)));
   for (const [id, title] of audiobooks) if (sold.has(id)) books.set(id, title);
   const sales: Sale[] = invoices.flatMap((inv) => inv.lines.filter((l) => books.has(l.bookId)).map((l) => ({
     at: inv.issued_at, bookId: l.bookId, title: books.get(l.bookId) ?? l.title, country: inv.buyer_country,
-    gross: l.gross, vat: l.vat, net: l.net, refunded: inv.status === 'refunded',
+    gross: l.gross, vat: l.vat, net: l.net, cost: l.cost ?? 0, refunded: inv.status === 'refunded',
   })));
   return { books, sales, authorNames: [...authorNames] };
 }
@@ -68,7 +75,7 @@ export async function authorSales(userId: string, memoryInvoices: () => Invoice[
     return {
       bookId, title, units: kept.length, refunds: own.length - kept.length,
       grossCents: kept.reduce((n, s) => n + s.gross, 0), vatCents: kept.reduce((n, s) => n + s.vat, 0),
-      netCents: kept.reduce((n, s) => n + s.net, 0), shareCents: kept.reduce((n, s) => n + authorShareOf(s.net, s.at), 0),
+      netCents: kept.reduce((n, s) => n + s.net, 0), shareCents: kept.reduce((n, s) => n + authorShareOf(s.net, s.at, s.cost), 0),
       lastSaleAt: own[0]?.at ?? null,
     };
   }).sort((a, b) => b.shareCents - a.shareCents || a.title.localeCompare(b.title));
@@ -80,13 +87,13 @@ export async function authorSales(userId: string, memoryInvoices: () => Invoice[
   });
   const monthly = months.map((month) => {
     const kept = sales.filter((s) => !s.refunded && monthKey(s.at) === month);
-    return { month, units: kept.length, netCents: kept.reduce((n, s) => n + s.net, 0), shareCents: kept.reduce((n, s) => n + authorShareOf(s.net, s.at), 0) };
+    return { month, units: kept.length, netCents: kept.reduce((n, s) => n + s.net, 0), shareCents: kept.reduce((n, s) => n + authorShareOf(s.net, s.at, s.cost), 0) };
   });
 
   const window = (days: number) => {
     const since = new Date(now.getTime() - days * 86_400_000).toISOString();
     const kept = sales.filter((s) => !s.refunded && s.at >= since);
-    return { units: kept.length, grossCents: kept.reduce((n, s) => n + s.gross, 0), shareCents: kept.reduce((n, s) => n + authorShareOf(s.net, s.at), 0), refunds: sales.filter((s) => s.refunded && s.at >= since).length };
+    return { units: kept.length, grossCents: kept.reduce((n, s) => n + s.gross, 0), shareCents: kept.reduce((n, s) => n + authorShareOf(s.net, s.at, s.cost), 0), refunds: sales.filter((s) => s.refunded && s.at >= since).length };
   };
   const kept = sales.filter((s) => !s.refunded);
   return {
@@ -96,11 +103,11 @@ export async function authorSales(userId: string, memoryInvoices: () => Invoice[
     totals: {
       last30Days: window(30),
       last12Months: window(365),
-      allTime: { units: kept.length, grossCents: kept.reduce((n, s) => n + s.gross, 0), shareCents: kept.reduce((n, s) => n + authorShareOf(s.net, s.at), 0), refunds: sales.length - kept.length },
+      allTime: { units: kept.length, grossCents: kept.reduce((n, s) => n + s.gross, 0), shareCents: kept.reduce((n, s) => n + authorShareOf(s.net, s.at, s.cost), 0), refunds: sales.length - kept.length },
     },
     monthly,
     books: perBook,
-    recent: sales.slice(0, 20).map((s) => ({ at: s.at, bookId: s.bookId, title: s.title, country: s.country, grossCents: s.gross, shareCents: s.refunded ? 0 : authorShareOf(s.net, s.at), refunded: s.refunded })),
+    recent: sales.slice(0, 20).map((s) => ({ at: s.at, bookId: s.bookId, title: s.title, country: s.country, grossCents: s.gross, shareCents: s.refunded ? 0 : authorShareOf(s.net, s.at, s.cost), refunded: s.refunded })),
   };
 }
 
@@ -116,7 +123,7 @@ const euros = (cents: number) => (cents / 100).toFixed(2);
 export async function authorSalesCsv(userId: string, memoryInvoices: () => Invoice[]) {
   const { sales } = await authorSaleRows(userId, memoryInvoices);
   const header = ['Date (UTC)', 'Book ID', 'Title', 'Buyer country', 'Price incl. VAT (EUR)', 'VAT (EUR)', 'Price excl. VAT (EUR)', 'Your share (EUR)', 'Status'];
-  const rows = sales.map((s) => [s.at.slice(0, 19).replace('T', ' '), s.bookId, s.title, s.country ?? '', euros(s.gross), euros(s.vat), euros(s.net), euros(s.refunded ? 0 : authorShareOf(s.net, s.at)), s.refunded ? 'refunded' : 'paid']);
+  const rows = sales.map((s) => [s.at.slice(0, 19).replace('T', ' '), s.bookId, s.title, s.country ?? '', euros(s.gross), euros(s.vat), euros(s.net), euros(s.refunded ? 0 : authorShareOf(s.net, s.at, s.cost)), s.refunded ? 'refunded' : 'paid']);
   // A byte-order mark so Excel opens the euro sign and accents correctly.
   return '﻿' + [header, ...rows].map((r) => r.map(cell).join(',')).join('\r\n') + '\r\n';
 }
@@ -137,7 +144,7 @@ export async function royaltyStatement(userId: string, month: string, memoryInvo
     const kept = own.filter((s) => !s.refunded);
     return {
       bookId, title, units: kept.length, refunds: own.length - kept.length, grossCents: kept.reduce((n, s) => n + s.gross, 0),
-      vatCents: kept.reduce((n, s) => n + s.vat, 0), netCents: kept.reduce((n, s) => n + s.net, 0), shareCents: kept.reduce((n, s) => n + authorShareOf(s.net, s.at), 0),
+      vatCents: kept.reduce((n, s) => n + s.vat, 0), netCents: kept.reduce((n, s) => n + s.net, 0), shareCents: kept.reduce((n, s) => n + authorShareOf(s.net, s.at, s.cost), 0),
     };
   }).filter((l) => l.units || l.refunds);
   const sum = (k: 'units' | 'refunds' | 'grossCents' | 'vatCents' | 'netCents' | 'shareCents') => lines.reduce((n, l) => n + l[k], 0);

@@ -43,6 +43,8 @@ export interface Book {
   availability?: 'listed';
   /** Where to buy the printed book (TASK-0003): checked Amazon and Lulu product pages. */
   printLinks?: { amazon?: string; lulu?: string };
+  /** Printed copies sold and shipped by BooksAtlas (printed on demand); price per copy, VAT included. */
+  printEdition?: { price: number; binding: 'paperback' | 'hardcover'; trimSize: string; paper: string; pageCount: number };
   title: string;
   subtitle?: string;
   author: string;

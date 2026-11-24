@@ -4,6 +4,7 @@ import { Link } from 'wouter';
 import { UtilityMenu } from './UtilityMenu';
 import { useAccount } from '../auth/AuthContext';
 import { usePayments, type InvoiceSummary, type RefundRequest } from './checkout/usePayments';
+import { useEbookApi, type PrintOrderView } from './ebook/ebookApi';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -24,6 +25,48 @@ function RefundStatus({ inv }: { inv: InvoiceSummary }) {
   if (s === 'declined') return <span className="font-semibold text-slate-600">Refund declined</span>;
   if (s === 'available') return <span>Refund possible until {day(inv.refund.until)}</span>;
   return null;
+}
+
+
+const PRINT_STATUS: Record<PrintOrderView['status'], string> = {
+  paid: 'Paid · sending to the printer', submitted: 'With the printer', in_production: 'Being printed', shipped: 'Shipped',
+  canceled: 'Cancelled', refunded: 'Refunded', needs_attention: 'Delayed · we are on it and will e-mail you',
+};
+
+/** Printed copies the reader ordered (2026-11-24): status and tracking, refreshed from the printer on request. */
+function PrintedOrders({ active }: { active: boolean }) {
+  const api = useEbookApi();
+  const [orders, setOrders] = useState<PrintOrderView[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  useEffect(() => { if (active) api.printOrders().then(setOrders).catch(() => setOrders([])); }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!orders?.length) return null;
+  const refresh = async (id: string) => {
+    setBusy(id);
+    try { const o = await api.refreshPrintOrder(id); setOrders((list) => list?.map((x) => (x.id === id ? o : x)) ?? null); } catch { /* keep the last known status */ } finally { setBusy(null); }
+  };
+  return (
+    <section aria-label="Printed copies" className="space-y-2">
+      <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Printed copies</h3>
+      {orders.map((o) => (
+        <div key={o.id} className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 text-xs">
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-semibold text-slate-900">{o.title} <span className="font-normal text-slate-500">× {o.quantity}</span></p>
+            <span className="shrink-0 font-bold">{money(o.totalCents, 'EUR')}</span>
+          </div>
+          <p className="mt-0.5 text-[11px] text-slate-600">{day(o.createdAt)} · to {o.shipTo.name}, {o.shipTo.city} ({o.shipTo.countryCode})</p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px]">
+            <span className={`font-semibold ${o.status === 'shipped' ? 'text-emerald-700' : o.status === 'needs_attention' ? 'text-amber-800' : 'text-slate-700'}`}>{PRINT_STATUS[o.status]}</span>
+            {o.tracking.flatMap((t) => t.urls.map((u) => (
+              <a key={u} href={u} target="_blank" rel="noopener noreferrer" className="font-bold text-indigo-700 underline">Track{t.carrier ? ` with ${t.carrier}` : ''}</a>
+            )))}
+            {!['shipped', 'canceled', 'refunded'].includes(o.status) && (
+              <button type="button" className={button} disabled={busy === o.id} onClick={() => refresh(o.id)}>{busy === o.id ? 'Checking…' : 'Check status'}</button>
+            )}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
 }
 
 /**
@@ -87,6 +130,7 @@ export function OrdersPanel({ active, wide = false }: { active: boolean; wide?: 
 
   return (
     <div className="space-y-3">
+      <PrintedOrders active={active} />
       {loadError && (
         <div role="alert" className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-[11px] text-rose-800">
           <span className="flex-1">{loadError}</span>

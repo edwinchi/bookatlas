@@ -20,6 +20,8 @@ import type { Book } from '@workspace/bookatlas-catalog/types';
 import { mountNarration } from './narration/routes.js';
 import { mountSamples } from './narration/samples.js';
 import { setNarrationCatalog } from './narration/service.js';
+import { mountPrint } from './print/routes.js';
+import { anonymisePrintOrders, printOrdersForExport } from './print/orders.js';
 import { withAudioEditions } from './narration/edition.js';
 import { mountReviews } from './reviews/routes.js';
 import { businessSummary } from './payments/business.js';
@@ -492,6 +494,8 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
   };
   // Checkout also sells the natural audiobook add-on `<bookId>.audio` (cycle 9).
   mountPayments(app, withAudioEditions((bookId) => catalog.get(bookId)), APP_URL);
+  // Printed books sold and shipped by BooksAtlas, printed on demand by Lulu (2026-11-24).
+  mountPrint(app, catalog, saveBook, APP_URL);
   // Book addresses, link previews and the sitemap (outside /api, public).
   mountSeo(app, catalog, APP_URL);
   // Natural audiobook narration (TASK-0008).
@@ -799,6 +803,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
         const [purchases, invoices, reviews] = await Promise.all([purchasesOf(userId), invoicesOf(userId), reviewsOf(userId)]);
         return [...purchases, ...invoices.map(({ user_id: _u, ...invoice }) => ({ record: 'invoice', number: invoiceNumber(invoice), ...invoice })),
           ...reviews.map((review) => ({ record: 'review', ...review })),
+          ...(await printOrdersForExport(userId)).map((o) => ({ record: 'printed-book-order', ...o })),
           ...(await followsOf(userId)).map(({ user_id: _u, ...f }) => ({ record: 'follow', ...f })),
           ...[await getPayout(userId)].filter(Boolean).map((p) => { const { user_id: _u, ...rest } = p!; return { record: 'payout-details', ...rest }; }),
           ...[await readerDataOf(userId)].map((r) => ({ record: 'reader', progress: r.progress.map(({ user_id: _u, ...x }) => x), annotations: r.annotations.map(({ user_id: _u, ...x }) => x), preferences: r.preferences, sessions: r.sessions.map(({ user_id: _u, ...x }) => x) })),
@@ -817,6 +822,7 @@ export async function createApp(identityProvider: IdentityProvider = clerkIdenti
       try {
         await anonymisePurchases(userId);
         await anonymiseInvoices(userId, `erased-${randomUUID()}`);
+        await anonymisePrintOrders(userId, `erased-${randomUUID()}`);
         await eraseFollowsOf(userId);
         await erasePayout(userId);
         await eraseGroupData(userId);

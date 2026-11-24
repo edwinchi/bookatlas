@@ -9,10 +9,12 @@ import { ServicesOverview } from './ServicesOverview';
 import { AuthorHub } from './AuthorHub';
 import { NarrationPanel } from './NarrationPanel';
 import { NarrationQueue } from './NarrationQueue';
+import { PrintOrdersQueue } from './PrintOrdersQueue';
 import { AdminGuide } from './AdminGuide';
 import { EnquiriesInbox } from './EnquiriesInbox';
 import { SubmissionForm } from './SubmissionForm';
 import { SubmissionCard } from './SubmissionCard';
+import { PrintEditionPanel } from './PrintEditionPanel';
 import { FeedImport } from './FeedImport';
 import { PrintCalculator } from './PrintCalculator';
 
@@ -203,7 +205,7 @@ export const EbookPublishing: React.FC = () => {
                       : fix === 'original' ? api.originalCover(s.id) : api.replaceCover(s.id, fix.upload))}
                     onPublish={async () => handle(() => api.publish(s.id))}
                     onReject={async (reason) => handle(() => api.reject(s.id, reason))}
-                    extra={s.status === 'published' && s.bookId ? <NarrationPanel api={api} bookId={s.bookId} /> : null}
+                    extra={s.status === 'published' && s.bookId ? <><NarrationPanel api={api} bookId={s.bookId} /><PrintEditionPanel api={api} bookId={s.bookId} title={s.intake.title} /></> : null}
                   />
                 ))}
           </section>
@@ -231,6 +233,7 @@ export const EbookPublishing: React.FC = () => {
           {isAdmin && <EnquiriesInbox />}
           {isAdmin && <AdminGuide />}
           {isAdmin && <NarrationQueue api={api} />}
+          {isAdmin && <PrintOrdersQueue api={api} />}
           {isAdmin && <ReaderReportsQueue api={api} />}
           {isAdmin && <StoreFeedback api={api} />}
           {isAdmin && <FeedImport />}

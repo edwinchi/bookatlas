@@ -32,7 +32,7 @@ function requireAdmin(req: Request) {
 const summary = (i: Invoice) => ({
   method: i.payment_intent_id?.startsWith('cg_') ? 'crypto' : 'card',
   seq: i.seq, number: invoiceNumber(i), issuedAt: i.issued_at, status: i.status, currency: i.currency,
-  grossCents: i.amount_gross, vatCents: i.amount_vat, books: i.lines.map((l) => ({ bookId: l.bookId, title: l.title })),
+  grossCents: i.amount_gross, vatCents: i.amount_vat, books: i.lines.filter((l) => l.kind !== 'shipping').map((l) => ({ bookId: l.bookId, title: l.title })),
   refund: {
     state: refundState(i), until: refundableUntil(i), requestedAt: i.refund_requested_at, decision: i.refund_decision,
     // Without a recorded waiver the buyer still has the statutory 14-day right of withdrawal: refund on request.

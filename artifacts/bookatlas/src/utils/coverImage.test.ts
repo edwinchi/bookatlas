@@ -17,3 +17,13 @@ test('BooksAtlas covers get display sizes; other images are untouched', () => {
   assert.deepEqual(coverProps('https://example.com/cover.jpg?w=400', 240), { src: 'https://example.com/cover.jpg?w=400' });
   assert.deepEqual(coverProps(undefined, 240), { src: undefined });
 });
+
+test('sample-title covers are served in 360, 720 and 800 px widths', () => {
+  assert.deepEqual(coverProps('/covers/samples/atlas-afr-001.jpg', 160), {
+    src: '/covers/samples/atlas-afr-001-w720.jpg',
+    srcSet: '/covers/samples/atlas-afr-001-w360.jpg 360w, /covers/samples/atlas-afr-001-w720.jpg 720w, /covers/samples/atlas-afr-001.jpg 800w',
+    sizes: '160px',
+  });
+  assert.equal(coverProps('/covers/samples/atlas-afr-001.jpg', 420).src, '/covers/samples/atlas-afr-001.jpg');
+  assert.deepEqual(coverProps('/covers/samples/../secret.jpg', 160), { src: '/covers/samples/../secret.jpg' });
+});

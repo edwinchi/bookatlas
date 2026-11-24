@@ -41,6 +41,15 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (normalized === '/api/crypto/callback' && method === 'POST') return 'self-service';
   if (normalized === '/api/crypto/orders' && method === 'POST') return 'reader';
   if (/^\/api\/crypto\/orders\/[^/]+$/.test(normalized) && method === 'GET') return 'reader';
+  // Printed books sold and shipped by BooksAtlas (2026-11-24). Lulu signs its webhook.
+  if (normalized === '/api/lulu/webhook' && method === 'POST') return 'self-service';
+  if (normalized === '/api/print/config' && method === 'GET') return 'public';
+  if (['/api/print/quote', '/api/print/confirm'].includes(normalized) && method === 'POST') return 'reader';
+  if (normalized === '/api/print/orders' && ['GET', 'POST'].includes(method)) return 'reader';
+  if (/^\/api\/print\/orders\/[0-9a-f-]{36}\/refresh$/.test(normalized) && method === 'POST') return 'reader';
+  if (/^\/api\/print\/editions\/atlas-ebook-[0-9a-f]{8}$/.test(normalized) && ['GET', 'PUT'].includes(method)) return 'reader';
+  if (/^\/api\/print\/editions\/atlas-ebook-[0-9a-f]{8}\/files\/(?:interior|cover)\/(?:start|done)$/.test(normalized) && method === 'POST') return 'reader';
+  if (/^\/api\/print\/editions\/atlas-ebook-[0-9a-f]{8}\/files\/(?:interior|cover)$/.test(normalized) && method === 'PUT') return 'reader';
   if (normalized === '/api/author/sales' && method === 'GET') return 'reader';
   // Author hub (cycle 6): CSV export, royalty statements, payout details.
   if ((normalized === '/api/author/sales.csv' || /^\/api\/author\/statements\/[^/]+$/.test(normalized)) && method === 'GET') return 'reader';

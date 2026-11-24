@@ -13,8 +13,15 @@ async function fresh(viewport = { width: 1366, height: 900 }) {
   const ctx = await browser.newContext({ viewport });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(base, { waitUntil: 'networkidle' });
-  await page.waitForSelector('#landing-title', { timeout: 15000 });
+  // Not 'networkidle': the live site keeps connections open (analytics, sign-in), so the network is never quiet.
+  // The page is ready once its heading is there and the catalogue request has answered.
+  const catalogue = page.waitForResponse((r) => r.url().includes('/api/catalog/search'), { timeout: 20000 }).catch(() => null);
+  await page.goto(base, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#landing-title', { timeout: 20000 });
+  await catalogue;
+  await page.waitForLoadState('load').catch(() => {});
+  // Let the sign-in script finish mounting; menus clicked before that can be re-rendered under the pointer.
+  await page.waitForTimeout(1500);
   return page;
 }
 
@@ -42,8 +49,9 @@ async function openMenu(page, label) {
   const btn = await openMenu(page, 'Bookstore');
   ok('Store menu opens on click', (await btn.getAttribute('aria-expanded')) === 'true');
   await page.keyboard.press('Escape');
-  await page.waitForTimeout(150);
-  ok('Escape closes menu', (await btn.getAttribute('aria-expanded')) === 'false');
+  // The menu closes on Escape a moment later (its close animation); wait for it rather than a fixed pause.
+  const closed = await page.waitForFunction((el) => el.getAttribute('aria-expanded') === 'false', await btn.elementHandle(), { timeout: 2000 }).then(() => true, () => false);
+  ok('Escape closes menu', closed);
   ok('Escape returns focus to button', await btn.evaluate((el) => el === document.activeElement));
   await btn.focus();
   await page.keyboard.press('ArrowDown');

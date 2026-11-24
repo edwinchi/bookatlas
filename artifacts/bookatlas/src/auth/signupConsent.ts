@@ -1,5 +1,5 @@
 /** Mirrors PRIVACY_NOTICE_VERSION in the API; bump both when the privacy notice changes. */
-export const PRIVACY_NOTICE_VERSION = '2026-11-15';
+export const PRIVACY_NOTICE_VERSION = '2026-11-24';
 export const SIGNUP_CONSENT_KEY = 'bookatlas:signup-consent:v1';
 
 export type SignupConsent = { ageConfirmed: true; privacyNoticeVersion: string };

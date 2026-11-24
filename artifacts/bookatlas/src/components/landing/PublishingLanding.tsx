@@ -82,7 +82,7 @@ const SERVICES = [
 ];
 
 const COMMITMENTS = [
-  { icon: KeyRound, title: 'Your accounts stay yours', body: 'You publish from your own KDP or Lulu account. We never ask for your password or touch your print royalties.' },
+  { icon: KeyRound, title: 'Print without stock', body: 'Readers order printed copies on your book page; each one is printed on demand and shipped worldwide. You keep 81% after printing, and your files still work on KDP or Lulu.' },
   { icon: Ruler, title: 'Built to printer specs', body: 'Trim size, bleed, margins, spine width and fonts are checked before you upload, so files pass first time.' },
   { icon: BadgeEuro, title: 'Clear, fixed prices', body: 'One price per package and one commission rate per plan. You see the total before you commit.' },
   { icon: Globe2, title: 'Readers everywhere', body: 'eBooks sell worldwide from day one, from Europe to every country in Africa and beyond.' },
@@ -162,8 +162,8 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
           </Reveal>
           <Reveal delay={160}>
             <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
-              BooksAtlas turns your manuscript into print-ready files for Amazon KDP and Lulu, then sells your eBook to readers
-              around the world, from Amsterdam to Accra to Auckland.
+              BooksAtlas turns your manuscript into an eBook and a print-ready book, then sells both to readers around the world,
+              from Amsterdam to Accra to Auckland. Printed copies are made on demand and shipped to the reader's door.
             </p>
           </Reveal>
           <Reveal delay={240} className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -207,7 +207,7 @@ export const PublishingLanding: React.FC<PublishingLandingProps> = ({ books, onO
           id="landing-services"
           eyebrow="Services"
           title="Everything between the last page and the first sale"
-          intro="Fixed prices, no setup fees. Paperbacks print through Amazon KDP or Lulu; your eBook sells here."
+          intro="Fixed prices, no setup fees. Your eBook and your printed book both sell here; printed copies are made on demand and shipped."
         />
         <div className="mx-auto mt-8 sm:mt-12 grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {SERVICES.map(({ icon: Icon, name, price, unit, body, cta, href, target, featured }, i) => {

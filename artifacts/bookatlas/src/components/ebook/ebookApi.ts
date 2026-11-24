@@ -87,6 +87,30 @@ export interface ReadinessPackage {
   markdown: string;
 }
 
+
+/** Printed books sold and shipped by BooksAtlas (2026-11-24); mirrors print/routes.ts. Amounts in euro cents. */
+export type ShippingLevel = 'MAIL' | 'PRIORITY_MAIL' | 'GROUND' | 'EXPEDITED' | 'EXPRESS';
+export interface PrintConfig { enabled: boolean; live: boolean; maxCopies: number; shippingLevels: { id: ShippingLevel; label: string; note: string }[] }
+export interface DeliveryAddress { name: string; street1: string; street2?: string; city: string; postcode: string; stateCode?: string; countryCode: string; phone: string; email?: string }
+export interface PrintQuote { bookId: string; title: string; quantity: number; shippingLevel: ShippingLevel; unitPriceCents: number; booksCents: number; shippingCents: number; totalCents: number; vatRateBp: number }
+export type PrintOrderStatus = 'paid' | 'submitted' | 'in_production' | 'shipped' | 'canceled' | 'refunded' | 'needs_attention';
+export interface PrintOrderView {
+  id: string; bookId: string; title: string; quantity: number; shippingLevel: ShippingLevel; shipTo: { name: string; city: string; countryCode: string };
+  totalCents: number; shippingCents: number; status: PrintOrderStatus; tracking: { id?: string; urls: string[]; carrier?: string }[]; createdAt: string; updatedAt: string;
+}
+export interface ManagedPrintOrder extends PrintOrderView { userId: string; email: string; quote: { unitPrice: number; bookGross: number; shippingGross: number; totalGross: number; productionExcl: number; shippingExcl: number; authorShare: number }; luluJobId: number | null; luluStatus: string | null; error: string | null }
+export type PrintFileKind = 'interior' | 'cover';
+type FileState = { uploaded: boolean; size?: number; uploadedAt?: string } | null;
+type CheckView = { status: 'checking' | 'passed' | 'failed'; errors: string[] } | null;
+export interface PrintEditionView {
+  bookId: string; configured: boolean; maxFileBytes: number; directUpload: boolean; onSale: boolean; missing: string[];
+  coverDimensions: { widthMm: number; heightMm: number } | null;
+  edition: null | {
+    spec: { trimSize: string; paper: string; binding: 'paperback' | 'hardcover' }; priceCents: number | null; pageCount: number | null; wanted: boolean;
+    files: Record<PrintFileKind, FileState>; checks: Record<PrintFileKind, CheckView>; unitCostExclCents: number | null; minimumPriceCents: number | null;
+  };
+}
+
 export class EbookApiError extends Error {
   constructor(message: string, public status: number, public fields?: Record<string, string>) { super(message); }
 }
@@ -175,6 +199,37 @@ export function useEbookApi() {
 
   return {
     authorSales: () => json<AuthorSales>('/api/author/sales'),
+    // Printed books sold and shipped by BooksAtlas (2026-11-24).
+    printConfig: () => fetch('/api/print/config').then((r) => r.json() as Promise<PrintConfig>),
+    printQuote: (body: { bookId: string; quantity: number; shippingLevel: ShippingLevel; address: DeliveryAddress }) => json<PrintQuote>('/api/print/quote', 'POST', body),
+    orderPrint: (body: { bookId: string; quantity: number; shippingLevel: ShippingLevel; address: DeliveryAddress }) => json<{ orderId: string; url: string }>('/api/print/orders', 'POST', body),
+    confirmPrint: (sessionId: string) => json<{ paid: boolean }>('/api/print/confirm', 'POST', { sessionId }),
+    printOrders: () => json<{ orders: PrintOrderView[] }>('/api/print/orders').then((r) => r.orders),
+    refreshPrintOrder: (id: string) => json<PrintOrderView>(`/api/print/orders/${id}/refresh`, 'POST', {}),
+    printEdition: (bookId: string) => json<PrintEditionView>(`/api/print/editions/${bookId}`),
+    savePrintEdition: (bookId: string, body: { trimSize?: string; paper?: string; binding?: string; price?: number | null; wanted?: boolean }) => json<PrintEditionView>(`/api/print/editions/${bookId}`, 'PUT', body),
+    /** Straight to private storage (no account token goes there), then the API checks it and starts the printer's check. */
+    uploadPrintFile: async (bookId: string, kind: PrintFileKind, file: File, onProgress: (share: number) => void) => {
+      const target = await json<{ method: 'PUT'; url: string; direct: boolean }>(`/api/print/editions/${bookId}/files/${kind}/start`, 'POST', { size: file.size });
+      if (!target.direct) {
+        const res = await request(target.url, { method: 'PUT', headers: { 'Content-Type': 'application/pdf' }, body: file });
+        onProgress(1);
+        return res.json() as Promise<PrintEditionView>;
+      }
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', target.url);
+        xhr.setRequestHeader('Content-Type', 'application/pdf');
+        xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
+        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new EbookApiError('The upload was refused. Please try again.', xhr.status)));
+        xhr.onerror = () => reject(new EbookApiError('The upload was interrupted. Please check your connection and try again.', 0));
+        xhr.send(file);
+      });
+      onProgress(1);
+      return json<PrintEditionView>(`/api/print/editions/${bookId}/files/${kind}/done`, 'POST', {});
+    },
+    managerPrintOrders: () => json<{ configured: boolean; live: boolean; orders: ManagedPrintOrder[] }>('/api/manager/print-orders'),
+    retryPrintOrder: (id: string) => json<PrintOrderView>(`/api/manager/print-orders/${id}/retry`, 'POST', {}),
     /** Author hub (cycle 6): files fetched with the sign-in token, returned as blobs. */
     salesCsv: async () => (await request('/api/author/sales.csv')).blob(),
     statementHtml: async (month: string) => (await request(`/api/author/statements/${month}`)).text(),

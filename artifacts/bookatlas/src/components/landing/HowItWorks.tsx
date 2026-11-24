@@ -163,8 +163,8 @@ const STEPS = [
     body: 'Share your finished manuscript as a PDF, or an EPUB for the eBook, and tell us the trim size, paper and feel you have in mind.' },
   { title: 'We prepare print-ready files', icon: Ruler,
     body: 'We set the interior to your trim size, calculate the spine from your page count, and check bleed, margins and embedded fonts against Amazon KDP and Lulu requirements.' },
-  { title: 'You publish from your own account', icon: CheckCircle2,
-    body: 'Upload the files to KDP or Lulu with our step-by-step checklist. Your account, ISBN choices and print royalties stay with you. We never ask for your password.' },
+  { title: 'Sold here, and anywhere you like', icon: CheckCircle2,
+    body: 'Upload the PDFs under your book and readers can order printed copies on BooksAtlas: each copy is printed when ordered and shipped to them, and you keep 81% after printing. The same files work on KDP or Lulu, from your own account.' },
   { title: 'Readers find you everywhere', icon: Store,
     body: 'Your eBook goes on sale in the BooksAtlas store worldwide, and your book page sends paperback readers straight to your print listing.' },
 ];

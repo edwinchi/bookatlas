@@ -14,8 +14,8 @@ type Product = 'ebook' | 'audiobook' | 'paperback' | 'hardcover';
 const PRODUCTS: { id: Product; label: string; hint: string; icon: React.ElementType }[] = [
   { id: 'ebook', label: 'eBook', hint: 'Sell worldwide, keep 81%', icon: BookOpen },
   { id: 'audiobook', label: 'Audiobook', hint: 'Natural voice, from €24.99', icon: Headphones },
-  { id: 'paperback', label: 'Paperback', hint: 'Print-ready for KDP and Lulu', icon: BookMarked },
-  { id: 'hardcover', label: 'Hardcover', hint: 'Case-bound print files', icon: Library },
+  { id: 'paperback', label: 'Paperback', hint: 'Sold and shipped by BooksAtlas', icon: BookMarked },
+  { id: 'hardcover', label: 'Hardcover', hint: 'Printed on demand, shipped worldwide', icon: Library },
 ];
 /** VAT on eBooks and audiobooks where the buyer lives (the store charges the buyer's rate). */
 const VAT = [
@@ -216,7 +216,7 @@ export default function PricingPage() {
                 </p>
                 <p className="flex gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-inset ring-amber-200">
                   <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                  BooksAtlas prepares your print files; you publish them from your own KDP or Lulu account, so the printer sets the printing cost and pays your print royalties directly. We never touch them.
+                  BooksAtlas sells and ships your printed book itself: readers order it on your book page, each copy is printed when it is ordered and shipped to them, and you keep 81% of the price excluding VAT after printing. No stock and no upfront cost. You can still publish the same files on KDP or Lulu too.
                 </p>
               </Section>
             )}
@@ -273,12 +273,13 @@ export default function PricingPage() {
                   <Money value={`from ${euro(PRINT_PACKAGES[0].price)}`} caption="print-ready files from BooksAtlas, once per book" />
                   <div className="border-t border-white/15 pt-4">
                     {printCost === ''
-                      ? <p className="text-xs text-indigo-100">Enter the printer's cost per copy to see your royalty on KDP and Lulu.</p>
+                      ? <p className="text-xs text-indigo-100">Enter the printer's cost per copy to see what each copy earns on BooksAtlas, KDP and Lulu.</p>
                       : (
                         <dl className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="col-span-2"><dt className="text-[11px] text-indigo-100">Sold and shipped by BooksAtlas</dt><dd className="text-2xl font-bold">{euro(print.booksatlas)}</dd></div>
                           <div><dt className="text-[11px] text-indigo-100">KDP on Amazon</dt><dd className="text-xl font-bold">{euro(print.kdp)}</dd></div>
                           <div><dt className="text-[11px] text-indigo-100">Lulu Bookstore</dt><dd className="text-xl font-bold">{euro(print.lulu)}</dd></div>
-                          <p className="col-span-2 text-[11px] text-indigo-100">per copy. KDP pays 60% of the price excluding VAT less printing (it pays nothing below {euro(print.kdpMinimumPrice)}); Lulu pays 80% of what remains after printing.</p>
+                          <p className="col-span-2 text-[11px] text-indigo-100">per copy. BooksAtlas pays 81% of the price excluding VAT after printing; the reader pays delivery. KDP pays 60% of the price excluding VAT less printing (it pays nothing below {euro(print.kdpMinimumPrice)}); Lulu pays 80% of what remains after printing.</p>
                         </dl>
                       )}
                   </div>
