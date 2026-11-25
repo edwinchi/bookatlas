@@ -38,7 +38,22 @@ const big = 'inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl 
 // ------------------------------------------------------------------------------------------------ stories
 
 /** A story read aloud: the sentence lights up, and the word too where the device reports it. Tap a word to hear it. */
-function StoryReader({ story, onStars, onBack }: { story: Story; onStars: (n: number) => void; onBack: () => void }) {
+/**
+ * Stories a reader finished (answered the questions), kept on this device for each family profile (phase 7). The best
+ * score is kept: a story read again only counts if it went better.
+ */
+function useStoriesDone(readerId: string) {
+  const key = `bookatlas:young-done:${readerId}`;
+  const read = (): Record<string, number> => { try { const v = JSON.parse(localStorage.getItem(key) || '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } };
+  const [done, setDone] = useState<Record<string, number>>(read);
+  useEffect(() => { setDone(read()); }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const mark = useCallback((id: string, right: number) => {
+    setDone((d) => { if ((d[id] ?? -1) >= right) return d; const v = { ...d, [id]: right }; try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* this device */ } return v; });
+  }, [key]);
+  return { done, mark };
+}
+
+function StoryReader({ story, onStars, onBack, onDone }: { story: Story; onStars: (n: number) => void; onBack: () => void; onDone: (right: number) => void }) {
   const speaker = useSpeaker();
   const [playing, setPlaying] = useState(false);
   const [at, setAt] = useState<{ p: number; word: number | null } | null>(null);
@@ -56,7 +71,7 @@ function StoryReader({ story, onStars, onBack }: { story: Story; onStars: (n: nu
     });
   };
   const right = story.questions.filter((q, i) => answers[i] === q.answer).length;
-  const check = () => { setChecked(true); onStars(storyStars(right, story.questions.length)); };
+  const check = () => { setChecked(true); onStars(storyStars(right, story.questions.length)); onDone(right); };
   return (
     <div className="space-y-6">
       <button type="button" onClick={() => { speaker.stop(); onBack(); }} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-indigo-700 cursor-pointer"><ArrowLeft className="h-4 w-4" aria-hidden />All stories</button>
@@ -118,22 +133,32 @@ function StoryReader({ story, onStars, onBack }: { story: Story; onStars: (n: nu
   );
 }
 
-function Stories({ level, onStars }: { level: Level; onStars: (n: number) => void }) {
+function Stories({ level, onStars, readerId }: { level: Level; onStars: (n: number) => void; readerId: string }) {
   const { stories } = useYoung();
+  const { done, mark } = useStoriesDone(readerId);
   const [openId, setOpenId] = useState<string | null>(null);
   useEffect(() => { setOpenId(null); }, [level]);
   // The story follows the language: switching language while reading shows the same story translated.
   const open = stories.find((s) => s.id === openId) ?? null;
-  if (open) return <StoryReader key={`${open.id}:${open.title}`} story={open} onStars={onStars} onBack={() => setOpenId(null)} />;
+  if (open) return <StoryReader key={`${open.id}:${open.title}`} story={open} onStars={onStars} onBack={() => setOpenId(null)} onDone={(right) => mark(open.id, right)} />;
+  const here = stories.filter((s) => s.level === level);
+  const read = here.filter((s) => s.id in done).length;
   return (
+    <div className="space-y-4">
+    <p className="flex items-center gap-2 text-sm font-semibold text-slate-700" data-testid="stories-read">
+      <span className="inline-flex h-2 w-24 overflow-hidden rounded-full bg-slate-200" aria-hidden><span className="h-full rounded-full bg-emerald-500" style={{ width: `${here.length ? (read / here.length) * 100 : 0}%` }} /></span>
+      {read} of {here.length} stories read at this level
+    </p>
     <div className="grid gap-4 sm:grid-cols-2">
-      {stories.filter((s) => s.level === level).map((s) => (
+      {here.map((s) => (
         <button key={s.id} type="button" onClick={() => setOpenId(s.id)} data-testid={`story-${s.id}`}
           className="flex items-center gap-4 rounded-3xl bg-white p-5 text-left ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
           <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-amber-50 text-4xl" aria-hidden>{s.picture}</span>
-          <span><span className="block font-serif text-xl font-bold text-slate-900">{s.title}</span><span className="text-sm text-slate-500">{s.paragraphs.join(' ').split(/\s+/).length} words · 3 questions</span></span>
+          <span className="min-w-0 flex-1"><span className="block font-serif text-xl font-bold text-slate-900">{s.title}</span><span className="text-sm text-slate-500">{s.paragraphs.join(' ').split(/\s+/).length} words · {s.questions.length} questions</span></span>
+          {s.id in done && <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-500 text-white" title={`Read · ${done[s.id]} of ${s.questions.length} right`} data-testid="story-done"><Check className="h-5 w-5" aria-hidden /><span className="sr-only">Read, {done[s.id]} of {s.questions.length} right</span></span>}
         </button>
       ))}
+    </div>
     </div>
   );
 }
@@ -343,7 +368,7 @@ export default function YoungReadersPage() {
           <Tabs.Trigger value="games" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-games"><Puzzle className="h-4 w-4" aria-hidden />Word games</Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="first" className="focus-visible:outline-none"><FirstWordsPanel onStars={add} /></Tabs.Content>
-        <Tabs.Content value="stories" className="focus-visible:outline-none"><Stories level={level} onStars={add} /></Tabs.Content>
+        <Tabs.Content value="stories" className="focus-visible:outline-none"><Stories level={level} onStars={add} readerId={reader.id} /></Tabs.Content>
         <Tabs.Content value="sounds" className="focus-visible:outline-none"><LetterSounds /></Tabs.Content>
         <Tabs.Content value="games" className="focus-visible:outline-none"><WordGames level={level} onStars={add} /></Tabs.Content>
         <p className="mt-10 text-sm text-slate-600">Grown-ups: add your children as readers under <Link href="/reading-intelligence#family" className="font-bold text-indigo-700 hover:underline">Family reading</Link> to follow their stars, reading time and quiz scores.</p>

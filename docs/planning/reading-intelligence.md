@@ -95,9 +95,14 @@ No database change in phase 5: the e-mail choices live in the reader settings.
 | Natural voice in French, Spanish, Portuguese and Dutch | Recorded once with Piper (owner's choice: MIT, open source) on the owner's computer, `npm run young -- --lang fr` (`tools/local-narrator/piper.mjs`), into `public/audio/young/<lang>`. Voices: fr_FR-siwis, es_ES-davefx, pt_PT-tugão, nl_BE-nathalie. `useSpeaker.ts` plays them with each word lit up, like English |
 | Letter sounds in each language | `sounds` in `reading/young/*.ts` (letters with a word and a picture, letters that work together, vowel sounds), recorded with the rest |
 
-## Later
+## Phase 7: built (2026-11-25)
 
-- Teachers' own reading lists of children's stories, and more stories per level.
+| Owner request | Where it lives |
+|---|---|
+| More stories per level | Six new stories, two per level (The Little Boat, Market Day, The Brave Little Hen, The Rainy Picnic, The New Girl, Grandma’s Old Clock), in all five languages with recorded voices (`youngReaders.ts`, `reading/young/*.ts`) |
+| Story progress | A tick on each story a reader finished and "2 of 4 stories read at this level", kept on the device for each family profile (best score kept) |
+
+The planned phases are complete. Ideas beyond this list come from the owner.
 
 ## Choices and limits
 

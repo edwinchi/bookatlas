@@ -124,6 +124,81 @@ export const STORIES: Story[] = [
       { question: 'Why was Tomás not afraid any more?', options: ['Helping Leo took his mind off the dark', 'The storm stopped', 'His parents came home'], answer: 0 },
     ],
   },
+  // Phase 7 (owner request 2026-11-25): two more stories per level.
+  {
+    id: 'little-boat', level: 1, title: 'The Little Boat', picture: '⛵',
+    paragraphs: ['Tom has a little boat.', 'He puts it in the pond. It floats!', 'A frog jumps on the boat. Splash!', 'Tom and the frog laugh. It is a frog boat now.'],
+    questions: [
+      { question: 'What does Tom have?', options: ['A little boat', 'A big car', 'A red ball'], answer: 0 },
+      { question: 'Where does Tom put the boat?', options: ['In the bath', 'In the pond', 'In the sea'], answer: 1 },
+      { question: 'Who jumps on the boat?', options: ['A duck', 'A fish', 'A frog'], answer: 2 },
+    ],
+  },
+  {
+    id: 'market-day', level: 1, title: 'Market Day', picture: '🧺',
+    paragraphs: ['It is market day.', 'Nana gets a big basket.', 'We get red tomatoes and yellow mangoes.', 'The basket is full. Nana gives me a mango. Yum!'],
+    questions: [
+      { question: 'Who gets a basket?', options: ['Nana', 'Dad', 'A cat'], answer: 0 },
+      { question: 'What colour are the mangoes?', options: ['Red', 'Yellow', 'Blue'], answer: 1 },
+      { question: 'What does Nana give me?', options: ['A tomato', 'A basket', 'A mango'], answer: 2 },
+    ],
+  },
+  {
+    id: 'brave-hen', level: 2, title: 'The Brave Little Hen', picture: '🐔',
+    paragraphs: [
+      'Every morning, the little hen walked around the farm and counted her five chicks.',
+      'One day, she counted only four. Where was the smallest chick?',
+      'She looked in the barn and behind the well. Then she heard a tiny “cheep” from the tall grass.',
+      'The chick was stuck in a hole! The hen dug with her feet until the chick was free. That night, she counted five again.',
+    ],
+    questions: [
+      { question: 'How many chicks did the hen have?', options: ['Three', 'Five', 'Ten'], answer: 1 },
+      { question: 'Where did she hear the chick?', options: ['In the tall grass', 'In the barn', 'On the roof'], answer: 0 },
+      { question: 'How did the hen help?', options: ['She called the farmer', 'She flew away', 'She dug until the chick was free'], answer: 2 },
+    ],
+  },
+  {
+    id: 'rainy-picnic', level: 2, title: 'The Rainy Picnic', picture: '☔',
+    paragraphs: [
+      'Ama and her dad packed sandwiches, oranges and a big blanket for a picnic in the park.',
+      'Just as they sat down, dark clouds came and it started to rain.',
+      'Dad laughed. “Let us have our picnic at home,” he said. They ran back, all wet.',
+      'They put the blanket on the living-room floor and ate their sandwiches while the rain tapped on the window. It was the best picnic ever.',
+    ],
+    questions: [
+      { question: 'Where did they want to have the picnic?', options: ['At school', 'In the park', 'At the beach'], answer: 1 },
+      { question: 'What happened when they sat down?', options: ['It started to rain', 'A dog came', 'The sun went down'], answer: 0 },
+      { question: 'Where did they have the picnic in the end?', options: ['In the car', 'In the park', 'On the living-room floor'], answer: 2 },
+    ],
+  },
+  {
+    id: 'new-girl', level: 3, title: 'The New Girl', picture: '🎒',
+    paragraphs: [
+      'On Monday, a new girl joined Kwame’s class. Her name was Sofia, and she had just moved from another country. She did not speak much English yet.',
+      'At break time, Sofia stood alone by the fence. Kwame wanted to say hello, but he did not know how to talk to someone who might not understand him.',
+      'Then he had an idea. He took out his football and rolled it gently towards her. Sofia smiled, stopped it with her foot and kicked it back.',
+      'They played until the bell rang. Nobody needed many words. By Friday, Sofia was teaching Kwame to count to ten in her language, and he was teaching her the names of his favourite players.',
+    ],
+    questions: [
+      { question: 'Why did Sofia not speak much English?', options: ['She was shy', 'She had just moved from another country', 'She had a cold'], answer: 1 },
+      { question: 'How did Kwame start playing with her?', options: ['He rolled his football to her', 'He asked the teacher', 'He gave her a sweet'], answer: 0 },
+      { question: 'What does the story show?', options: ['Football is the best game', 'Break time is too short', 'You can make friends without many words'], answer: 2 },
+    ],
+  },
+  {
+    id: 'old-clock', level: 3, title: 'Grandma’s Old Clock', picture: '🕰️',
+    paragraphs: [
+      'In the corner of Grandma’s hallway stood a tall wooden clock. It had stopped years ago, at exactly seven minutes past three.',
+      'One rainy afternoon, Jun asked why nobody had fixed it. Grandma smiled. “It stopped on the day your mother was born,” she said. “I liked to remember that moment.”',
+      'Jun thought about it for a long time. Then he found a small key on top of the clock and asked if they could make it go again, so that it could count new moments too.',
+      'Together they wound it carefully. With a soft click, the clock began to tick. Grandma laughed and said that now it would remember two days: the day his mother was born, and the day Jun brought it back to life.',
+    ],
+    questions: [
+      { question: 'At what time had the clock stopped?', options: ['Twelve o’clock', 'Seven minutes past three', 'Half past six'], answer: 1 },
+      { question: 'Why had Grandma not fixed it?', options: ['It reminded her of the day Jun’s mother was born', 'She had no money', 'She did not like clocks'], answer: 0 },
+      { question: 'What does the clock remember at the end?', options: ['Only the rainy afternoon', 'Nothing at all', 'Two special days'], answer: 2 },
+    ],
+  },
 ];
 
 /** A small seeded random (the same puzzle for the same round, so a test or a reload does not reshuffle). */

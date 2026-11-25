@@ -111,6 +111,80 @@ const es: YoungTranslation = {
         { question: '¿Por qué Tomás ya no tenía miedo?', options: ['Ayudar a Leo le hizo olvidar la oscuridad', 'La tormenta paró', 'Sus padres volvieron a casa'] },
       ],
     },
+    'little-boat': {
+      title: 'El barquito',
+      paragraphs: ['Tom tiene un barquito.', 'Lo pone en el estanque. ¡Flota!', 'Una rana salta al barco. ¡Chof!', 'Tom y la rana se ríen. Ahora es un barco de rana.'],
+      questions: [
+        { question: '¿Qué tiene Tom?', options: ['Un barquito', 'Un coche grande', 'Una pelota roja'] },
+        { question: '¿Dónde pone Tom el barco?', options: ['En la bañera', 'En el estanque', 'En el mar'] },
+        { question: '¿Quién salta al barco?', options: ['Un pato', 'Un pez', 'Una rana'] },
+      ],
+    },
+    'market-day': {
+      title: 'Día de mercado',
+      paragraphs: ['Hoy es día de mercado.', 'La abuela coge una cesta grande.', 'Compramos tomates rojos y mangos amarillos.', 'La cesta está llena. La abuela me da un mango. ¡Ñam!'],
+      questions: [
+        { question: '¿Quién coge una cesta?', options: ['La abuela', 'Papá', 'Un gato'] },
+        { question: '¿De qué color son los mangos?', options: ['Rojos', 'Amarillos', 'Azules'] },
+        { question: '¿Qué me da la abuela?', options: ['Un tomate', 'Una cesta', 'Un mango'] },
+      ],
+    },
+    'brave-hen': {
+      title: 'La gallinita valiente',
+      paragraphs: [
+        'Cada mañana, la gallinita daba una vuelta por la granja y contaba a sus cinco pollitos.',
+        'Un día solo contó cuatro. ¿Dónde estaba el pollito más pequeño?',
+        'Miró en el granero y detrás del pozo. Entonces oyó un «pío» muy bajito en la hierba alta.',
+        '¡El pollito estaba atrapado en un agujero! La gallina escarbó con las patas hasta que el pollito quedó libre. Esa noche volvió a contar cinco.',
+      ],
+      questions: [
+        { question: '¿Cuántos pollitos tenía la gallina?', options: ['Tres', 'Cinco', 'Diez'] },
+        { question: '¿Dónde oyó al pollito?', options: ['En la hierba alta', 'En el granero', 'En el tejado'] },
+        { question: '¿Cómo ayudó la gallina?', options: ['Llamó al granjero', 'Se fue volando', 'Escarbó hasta que el pollito quedó libre'] },
+      ],
+    },
+    'rainy-picnic': {
+      title: 'El pícnic bajo la lluvia',
+      paragraphs: [
+        'Ama y su papá prepararon bocadillos, naranjas y una manta grande para hacer un pícnic en el parque.',
+        'Justo cuando se sentaron, llegaron nubes oscuras y empezó a llover.',
+        'Papá se rio. «Hagamos el pícnic en casa», dijo. Volvieron corriendo, empapados.',
+        'Pusieron la manta en el suelo del salón y se comieron los bocadillos mientras la lluvia golpeaba la ventana. Fue el mejor pícnic del mundo.',
+      ],
+      questions: [
+        { question: '¿Dónde querían hacer el pícnic?', options: ['En el colegio', 'En el parque', 'En la playa'] },
+        { question: '¿Qué pasó cuando se sentaron?', options: ['Empezó a llover', 'Llegó un perro', 'Se puso el sol'] },
+        { question: '¿Dónde hicieron el pícnic al final?', options: ['En el coche', 'En el parque', 'En el suelo del salón'] },
+      ],
+    },
+    'new-girl': {
+      title: 'La niña nueva',
+      paragraphs: [
+        'El lunes llegó una niña nueva a la clase de Kwame. Se llamaba Sofía y acababa de mudarse desde otro país. Todavía no hablaba mucho español.',
+        'En el recreo, Sofía estaba sola junto a la valla. Kwame quería saludarla, pero no sabía cómo hablar con alguien que quizá no lo entendiera.',
+        'Entonces tuvo una idea. Sacó su balón y lo hizo rodar despacio hacia ella. Sofía sonrió, lo paró con el pie y se lo devolvió.',
+        'Jugaron hasta que sonó el timbre. Nadie necesitó muchas palabras. El viernes, Sofía le enseñaba a Kwame a contar hasta diez en su idioma, y él le enseñaba los nombres de sus jugadores favoritos.',
+      ],
+      questions: [
+        { question: '¿Por qué Sofía no hablaba mucho español?', options: ['Era tímida', 'Acababa de mudarse desde otro país', 'Estaba resfriada'] },
+        { question: '¿Cómo empezó Kwame a jugar con ella?', options: ['Le hizo rodar su balón', 'Se lo preguntó a la maestra', 'Le dio un caramelo'] },
+        { question: '¿Qué nos enseña la historia?', options: ['El fútbol es el mejor juego', 'El recreo es demasiado corto', 'Puedes hacer amigos sin muchas palabras'] },
+      ],
+    },
+    'old-clock': {
+      title: 'El viejo reloj de la abuela',
+      paragraphs: [
+        'En un rincón del pasillo de la abuela había un reloj alto de madera. Se había parado hacía años, a las tres y siete en punto.',
+        'Una tarde de lluvia, Jun preguntó por qué nadie lo había arreglado. La abuela sonrió. «Se paró el día en que nació tu mamá», dijo. «Me gustaba recordar ese momento».',
+        'Jun lo pensó durante mucho rato. Luego encontró una llavecita encima del reloj y preguntó si podían ponerlo en marcha otra vez, para que también contara momentos nuevos.',
+        'Juntos le dieron cuerda con cuidado. Con un suave clic, el reloj empezó a hacer tictac. La abuela se rio y dijo que ahora recordaría dos días: el día en que nació su mamá y el día en que Jun le devolvió la vida.',
+      ],
+      questions: [
+        { question: '¿A qué hora se había parado el reloj?', options: ['A las doce', 'A las tres y siete', 'A las seis y media'] },
+        { question: '¿Por qué la abuela no lo había arreglado?', options: ['Le recordaba el día en que nació la mamá de Jun', 'No tenía dinero', 'No le gustaban los relojes'] },
+        { question: '¿Qué recuerda el reloj al final?', options: ['Solo la tarde de lluvia', 'Nada', 'Dos días especiales'] },
+      ],
+    },
   },
 };
 export default es;

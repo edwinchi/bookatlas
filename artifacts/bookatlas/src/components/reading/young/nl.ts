@@ -110,6 +110,80 @@ const nl: YoungTranslation = {
         { question: 'Waarom was Tomás niet meer bang?', options: ['Door Leo te helpen vergat hij het donker', 'Het onweer hield op', 'Zijn ouders kwamen thuis'] },
       ],
     },
+    'little-boat': {
+      title: 'Het kleine bootje',
+      paragraphs: ['Tom heeft een klein bootje.', 'Hij zet het in de vijver. Het drijft!', 'Een kikker springt op het bootje. Plons!', 'Tom en de kikker lachen. Nu is het een kikkerboot.'],
+      questions: [
+        { question: 'Wat heeft Tom?', options: ['Een klein bootje', 'Een grote auto', 'Een rode bal'] },
+        { question: 'Waar zet Tom het bootje?', options: ['In bad', 'In de vijver', 'In de zee'] },
+        { question: 'Wie springt op het bootje?', options: ['Een eend', 'Een vis', 'Een kikker'] },
+      ],
+    },
+    'market-day': {
+      title: 'Marktdag',
+      paragraphs: ['Het is marktdag.', 'Oma pakt een grote mand.', 'We halen rode tomaten en gele mango’s.', 'De mand is vol. Oma geeft me een mango. Mmm!'],
+      questions: [
+        { question: 'Wie pakt een mand?', options: ['Oma', 'Papa', 'Een kat'] },
+        { question: 'Welke kleur hebben de mango’s?', options: ['Rood', 'Geel', 'Blauw'] },
+        { question: 'Wat geeft oma mij?', options: ['Een tomaat', 'Een mand', 'Een mango'] },
+      ],
+    },
+    'brave-hen': {
+      title: 'Het dappere kipje',
+      paragraphs: [
+        'Elke ochtend liep het kipje over de boerderij en telde ze haar vijf kuikentjes.',
+        'Op een dag telde ze er maar vier. Waar was het kleinste kuikentje?',
+        'Ze keek in de schuur en achter de put. Toen hoorde ze een heel zacht „piep” uit het hoge gras.',
+        'Het kuikentje zat vast in een gat! Het kipje krabde met haar poten tot het kuikentje vrij was. Die avond telde ze weer vijf.',
+      ],
+      questions: [
+        { question: 'Hoeveel kuikentjes had het kipje?', options: ['Drie', 'Vijf', 'Tien'] },
+        { question: 'Waar hoorde ze het kuikentje?', options: ['In het hoge gras', 'In de schuur', 'Op het dak'] },
+        { question: 'Hoe hielp het kipje?', options: ['Ze riep de boer', 'Ze vloog weg', 'Ze krabde tot het kuikentje vrij was'] },
+      ],
+    },
+    'rainy-picnic': {
+      title: 'De regenpicknick',
+      paragraphs: [
+        'Ama en haar papa pakten broodjes, sinaasappels en een grote deken in voor een picknick in het park.',
+        'Net toen ze gingen zitten, kwamen er donkere wolken en begon het te regenen.',
+        'Papa lachte. "Laten we thuis picknicken," zei hij. Ze renden terug, helemaal nat.',
+        'Ze legden de deken op de vloer van de woonkamer en aten hun broodjes terwijl de regen tegen het raam tikte. Het was de leukste picknick ooit.',
+      ],
+      questions: [
+        { question: 'Waar wilden ze picknicken?', options: ['Op school', 'In het park', 'Op het strand'] },
+        { question: 'Wat gebeurde er toen ze gingen zitten?', options: ['Het begon te regenen', 'Er kwam een hond', 'De zon ging onder'] },
+        { question: 'Waar picknickten ze uiteindelijk?', options: ['In de auto', 'In het park', 'Op de vloer van de woonkamer'] },
+      ],
+    },
+    'new-girl': {
+      title: 'Het nieuwe meisje',
+      paragraphs: [
+        'Op maandag kwam er een nieuw meisje in de klas van Kwame. Ze heette Sofia en was net verhuisd uit een ander land. Ze sprak nog niet veel Nederlands.',
+        'In de pauze stond Sofia alleen bij het hek. Kwame wilde haar gedag zeggen, maar hij wist niet hoe hij moest praten met iemand die hem misschien niet verstond.',
+        'Toen kreeg hij een idee. Hij pakte zijn voetbal en rolde die zachtjes naar haar toe. Sofia glimlachte, stopte de bal met haar voet en schopte hem terug.',
+        'Ze speelden tot de bel ging. Niemand had veel woorden nodig. Op vrijdag leerde Sofia Kwame tot tien tellen in haar taal, en hij leerde haar de namen van zijn favoriete spelers.',
+      ],
+      questions: [
+        { question: 'Waarom sprak Sofia nog niet veel Nederlands?', options: ['Ze was verlegen', 'Ze was net verhuisd uit een ander land', 'Ze was verkouden'] },
+        { question: 'Hoe begon Kwame met haar te spelen?', options: ['Hij rolde zijn voetbal naar haar toe', 'Hij vroeg het aan de juf', 'Hij gaf haar een snoepje'] },
+        { question: 'Wat laat het verhaal zien?', options: ['Voetbal is het leukste spel', 'De pauze is te kort', 'Je kunt vrienden maken zonder veel woorden'] },
+      ],
+    },
+    'old-clock': {
+      title: 'De oude klok van oma',
+      paragraphs: [
+        'In de hoek van oma’s gang stond een hoge houten klok. Hij was jaren geleden stil blijven staan, om precies zeven over drie.',
+        'Op een regenachtige middag vroeg Jun waarom niemand hem had gerepareerd. Oma glimlachte. "Hij bleef stilstaan op de dag dat je mama geboren werd," zei ze. "Ik vond het fijn om aan dat moment te denken."',
+        'Jun dacht er lang over na. Toen vond hij een klein sleuteltje boven op de klok en vroeg hij of ze hem weer konden laten lopen, zodat hij ook nieuwe momenten kon tellen.',
+        'Samen draaiden ze hem voorzichtig op. Met een zachte klik begon de klok te tikken. Oma lachte en zei dat hij nu twee dagen zou onthouden: de dag dat zijn mama geboren werd, en de dag dat Jun hem weer tot leven bracht.',
+      ],
+      questions: [
+        { question: 'Hoe laat was de klok stil blijven staan?', options: ['Om twaalf uur', 'Om zeven over drie', 'Om half zeven'] },
+        { question: 'Waarom had oma hem niet laten repareren?', options: ['Hij deed haar denken aan de dag dat Juns mama geboren werd', 'Ze had geen geld', 'Ze hield niet van klokken'] },
+        { question: 'Wat onthoudt de klok aan het eind?', options: ['Alleen de regenachtige middag', 'Helemaal niets', 'Twee bijzondere dagen'] },
+      ],
+    },
   },
 };
 export default nl;
