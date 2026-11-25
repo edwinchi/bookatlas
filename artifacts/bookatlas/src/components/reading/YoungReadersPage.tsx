@@ -13,7 +13,7 @@ import { tappedWord } from './youngVoice';
 import { ENGLISH, YOUNG_LANGS, YoungContext, loadYoung, startLang, useYoung, type YoungContent, type YoungLangId } from './youngLang';
 import { SelectBox } from '../ui/select-box';
 import { FirstWordsPanel } from './FirstWordsPanel';
-import { LEVELS, SOUNDS, pictureRound, sameWord, scramble, storyStars, type Level, type Story } from './youngReaders';
+import { LEVELS, pictureRound, sameWord, scramble, storyStars, type Level, type Story } from './youngReaders';
 
 /** Stars earned on this device; for a signed-in family they count for the reader who is playing. */
 function useStars() {
@@ -150,13 +150,12 @@ function LetterSounds() {
   return (
     <div className="space-y-6">
       {!speaker.supported && <p className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">This browser has no voice to read aloud. Try Chrome, Edge or Safari.</p>}
-      {young.id !== 'en' && <p className="rounded-2xl bg-indigo-50 p-4 text-sm text-indigo-950">Letter sounds are English phonics for now, read in English.</p>}
       {groups.map((g) => (
         <section key={g.id} aria-label={g.title}>
           <h3 className="mb-3 text-lg font-bold text-slate-900">{g.title}</h3>
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-6 lg:grid-cols-9">
-            {SOUNDS.filter((s) => s.group === g.id).map((s) => (
-              <button key={s.id} type="button" onClick={() => { setLast(s.id); speaker.say([s.say]); }} aria-label={`${s.label}, as in ${s.word}`}
+            {young.sounds.filter((s) => s.group === g.id).map((s) => (
+              <button key={s.id} type="button" onClick={() => { setLast(s.id); speaker.say([s.say]); }} aria-label={`${s.label}: ${s.word}`}
                 className={`flex aspect-square flex-col items-center justify-center rounded-2xl bg-white ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer ${last === s.id ? 'ring-2 ring-indigo-500' : ''}`}>
                 <span className="font-reader-clear text-3xl font-bold text-slate-900">{s.label}</span>
                 <span className="text-xl" aria-hidden>{s.picture}</span>

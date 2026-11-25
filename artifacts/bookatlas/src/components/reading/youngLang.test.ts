@@ -50,3 +50,21 @@ test('young readers in more languages: the starting language and capitals', () =
   assert.equal(cap('le chien'), 'Le chien');
   assert.equal(cap('él'), 'Él');
 });
+
+test('young readers in more languages: letter sounds and the recorded clips list for each language', async () => {
+  const { youngClipTexts, clipKey, youngAudioDir } = await import('./youngVoice');
+  assert.equal(youngAudioDir('en'), 'audio/young');
+  assert.equal(youngAudioDir('fr'), 'audio/young/fr');
+  for (const { id } of YOUNG_LANGS.filter((l) => l.id !== 'en')) {
+    const c = await loadYoung(id);
+    assert.ok(c.sounds.length >= 30, `${id}: letter sounds`);
+    assert.equal(new Set(c.sounds.map((s) => s.id)).size, c.sounds.length, `${id}: one of each sound`);
+    assert.ok(c.sounds.some((s) => s.group === 'pairs') && c.sounds.some((s) => s.group === 'vowels'));
+    const texts = youngClipTexts(c);
+    assert.equal(new Set(texts.map(clipKey)).size, texts.length, `${id}: no two texts share a key`);
+    assert.ok(texts.includes(c.stories[0]!.paragraphs[0]!));
+    assert.ok(texts.includes(c.find(c.firstWords[0]!.words[0]!.word)));
+    assert.ok(texts.includes(c.sounds[0]!.say));
+  }
+  assert.match((await loadYoung('fr')).sounds.find((s) => s.id === 'ch')!.say, /^ch, comme dans chat\.$/);
+});

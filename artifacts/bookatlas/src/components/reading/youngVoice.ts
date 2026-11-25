@@ -9,6 +9,8 @@ import { SOUNDS, STORIES, WORDS } from './youngReaders';
  * Pure helpers, shared with the narrator and tested in youngVoice.test.ts.
  */
 export const YOUNG_AUDIO_DIR = 'audio/young';
+/** English clips (Kokoro) sit in audio/young; each other language in its own folder (Piper, phase 6). */
+export const youngAudioDir = (lang: string) => (lang === 'en' ? YOUNG_AUDIO_DIR : `${YOUNG_AUDIO_DIR}/${lang}`);
 
 /** The same text always gets the same short key, so changed texts are recorded again and old clips dropped. */
 export function clipKey(text: string) {
@@ -24,15 +26,26 @@ export const findPhrase = (word: string) => `Find the ${word}!`;
 export const rightPhrase = (word: string) => `Yes! The ${word}!`;
 export const tryAgainPhrase = (word: string) => `That is the ${word}. Try again!`;
 
-/** Every text the young readers' pages say, once each. */
-export function youngClipTexts(): string[] {
+/** What the pages say in one language (the shape of YoungContent in youngLang.ts). */
+export interface SpokenContent {
+  stories: { paragraphs: string[] }[];
+  sounds: { say: string }[];
+  words: Record<number, { word: string }[]>;
+  firstWords: { words: { word: string }[] }[];
+  pictureBooks: { pages: { text: string }[] }[];
+  find: (w: string) => string; right: (w: string) => string; tryAgain: (w: string) => string;
+}
+const ENGLISH_SPOKEN: SpokenContent = { stories: STORIES, sounds: SOUNDS, words: WORDS, firstWords: FIRST_WORDS, pictureBooks: PICTURE_BOOKS, find: findPhrase, right: rightPhrase, tryAgain: tryAgainPhrase };
+
+/** Every text the young readers' pages say in a language, once each. */
+export function youngClipTexts(c: SpokenContent = ENGLISH_SPOKEN): string[] {
   const out = new Set<string>();
   const add = (t: string) => { const v = t.replace(/\s+/g, ' ').trim(); if (v) out.add(v); };
-  for (const s of STORIES) for (const p of s.paragraphs) { add(p); for (const w of p.split(/\s+/)) add(tappedWord(w)); }
-  for (const s of SOUNDS) add(s.say);
-  for (const level of Object.values(WORDS)) for (const w of level) add(w.word);
-  for (const g of FIRST_WORDS) for (const w of g.words) { add(w.word); add(findPhrase(w.word)); add(rightPhrase(w.word)); add(tryAgainPhrase(w.word)); }
-  for (const b of PICTURE_BOOKS) for (const p of b.pages) add(p.text);
+  for (const s of c.stories) for (const p of s.paragraphs) { add(p); for (const w of p.split(/\s+/)) add(tappedWord(w)); }
+  for (const s of c.sounds) add(s.say);
+  for (const level of Object.values(c.words)) for (const w of level) add(w.word);
+  for (const g of c.firstWords) for (const w of g.words) { add(w.word); add(c.find(w.word)); add(c.right(w.word)); add(c.tryAgain(w.word)); }
+  for (const b of c.pictureBooks) for (const p of b.pages) add(p.text);
   return [...out];
 }
 

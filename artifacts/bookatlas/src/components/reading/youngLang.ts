@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import { FIRST_WORDS, PICTURE_BOOKS, type PictureBook, type WordGroup } from './firstWords';
-import { STORIES, WORDS, type Level, type PictureWord, type Story } from './youngReaders';
+import { SOUNDS, STORIES, WORDS, type Level, type PictureWord, type Sound, type Story } from './youngReaders';
 import { findPhrase, rightPhrase, tryAgainPhrase } from './youngVoice';
 
 /**
@@ -21,6 +21,8 @@ export interface YoungContent {
   words: Record<Level, PictureWord[]>;
   firstWords: WordGroup[];
   pictureBooks: PictureBook[];
+  /** Letter sounds in this language (phase 6); English phonics for English. */
+  sounds: Sound[];
   find: (word: string) => string;
   right: (word: string) => string;
   tryAgain: (word: string) => string;
@@ -33,20 +35,21 @@ export interface YoungTranslation {
   levelWords: Record<Level, string[]>;
   groups: Record<string, { name: string; words: string[] }>;
   books: Record<string, { title: string; pages: string[] }>;
+  sounds: Sound[];
   find: (word: string) => string;
   right: (word: string) => string;
   tryAgain: (word: string) => string;
 }
 
 export const ENGLISH: YoungContent = {
-  id: 'en', voice: 'en-GB', stories: STORIES, words: WORDS, firstWords: FIRST_WORDS, pictureBooks: PICTURE_BOOKS,
+  id: 'en', voice: 'en-GB', sounds: SOUNDS, stories: STORIES, words: WORDS, firstWords: FIRST_WORDS, pictureBooks: PICTURE_BOOKS,
   find: findPhrase, right: rightPhrase, tryAgain: tryAgainPhrase,
 };
 
 /** The English content with the translated texts put in; anything missing stays English. */
 export function buildContent(id: YoungLangId, t: YoungTranslation): YoungContent {
   return {
-    id, voice: t.voice, find: t.find, right: t.right, tryAgain: t.tryAgain,
+    id, voice: t.voice, sounds: t.sounds, find: t.find, right: t.right, tryAgain: t.tryAgain,
     stories: STORIES.map((s) => {
       const x = t.stories[s.id];
       if (!x) return s;
@@ -56,6 +59,17 @@ export function buildContent(id: YoungLangId, t: YoungTranslation): YoungContent
     firstWords: FIRST_WORDS.map((g) => ({ ...g, name: t.groups[g.id]?.name ?? g.name, words: g.words.map((w, i) => ({ ...w, word: t.groups[g.id]?.words[i] ?? w.word })) })),
     pictureBooks: PICTURE_BOOKS.map((b) => ({ ...b, title: t.books[b.id]?.title ?? b.title, pages: b.pages.map((p, i) => ({ ...p, text: t.books[b.id]?.pages[i] ?? p.text })) })),
   };
+}
+
+/**
+ * Letter sounds for a language: each letter said with a word that starts with it (or has it), then letters that
+ * work together and vowel sounds. `as` is the language's "as in": ("ch", "chat") → "ch, comme dans chat."
+ */
+export function makeSounds(letters: [string, string, string][], pairs: [string, string, string, 'pairs' | 'vowels'][], as: (label: string, word: string) => string): Sound[] {
+  return [
+    ...letters.map(([label, word, picture]): Sound => ({ id: label, label, word, picture, group: 'letters', say: `${label}. ${as(label, word)}` })),
+    ...pairs.map(([label, word, picture, group]): Sound => ({ id: label, label, word, picture, group, say: as(label, word) })),
+  ];
 }
 
 /** First letter upper case ("le chien" → "Le chien"), for the start of a sentence. */

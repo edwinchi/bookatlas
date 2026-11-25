@@ -1,4 +1,4 @@
-import { cap, type YoungTranslation } from '../youngLang';
+import { cap, makeSounds, type YoungTranslation } from '../youngLang';
 
 /**
  * Young readers in Portuguese (Reading Intelligence phase 5), in European Portuguese as used in Portugal and in
@@ -9,6 +9,17 @@ const pt: YoungTranslation = {
   find: (w) => `Onde está ${w}?`,
   right: (w) => `Sim! ${cap(w)}!`,
   tryAgain: (w) => `Isso é ${w}. Tenta outra vez!`,
+  // Letter sounds in Portuguese (phase 6).
+  sounds: makeSounds([
+    ['a', 'abelha', '🐝'], ['b', 'bola', '⚽'], ['c', 'casa', '🏠'], ['d', 'dado', '🎲'], ['e', 'escola', '🏫'], ['f', 'faca', '🔪'],
+    ['g', 'gato', '🐱'], ['h', 'hipopótamo', '🦛'], ['i', 'ilha', '🏝️'], ['j', 'janela', '🪟'], ['k', 'kiwi', '🥝'], ['l', 'lua', '🌙'],
+    ['m', 'mão', '✋'], ['n', 'navio', '🚢'], ['o', 'ovo', '🥚'], ['p', 'pato', '🦆'], ['q', 'queijo', '🧀'], ['r', 'rato', '🐭'],
+    ['s', 'sol', '☀️'], ['t', 'tartaruga', '🐢'], ['u', 'uva', '🍇'], ['v', 'vaca', '🐄'], ['x', 'peixe', '🐟'], ['z', 'zebra', '🦓'],
+  ], [
+    ['ch', 'chave', '🔑', 'pairs'], ['lh', 'coelho', '🐰', 'pairs'], ['nh', 'ninho', '🪺', 'pairs'], ['rr', 'carro', '🚗', 'pairs'],
+    ['ss', 'pássaro', '🐦', 'pairs'], ['ç', 'maçã', '🍎', 'pairs'], ['ão', 'cão', '🐶', 'vowels'], ['õe', 'limões', '🍋', 'vowels'],
+    ['ei', 'leite', '🥛', 'vowels'], ['ou', 'ouro', '🥇', 'vowels'],
+  ], (l, w) => `${l}, como em ${w}.`),
   levelWords: {
     1: ['gato', 'cão', 'sol', 'autocarro', 'chapéu', 'porco', 'cama', 'caneca', 'ovo', 'raposa', 'carro', 'mapa'],
     2: ['peixe', 'sapo', 'árvore', 'estrela', 'navio', 'bolo', 'lua', 'barco', 'pato', 'chuva', 'livro', 'papagaio'],

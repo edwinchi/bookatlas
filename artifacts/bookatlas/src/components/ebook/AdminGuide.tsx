@@ -79,11 +79,26 @@ const SECTIONS: { id: string; title: string; blocks: Block[] }[] = [
     ],
   },
   {
+    id: 'read-smarter', title: 'Read smarter (Reading Intelligence)', blocks: [
+      { p: 'Read smarter in the menu opens /reading-intelligence. Everything is free for readers: Fast Read and the speed check, reading aids, AI summaries and explanations, your own text, My progress with goals and streaks, family profiles, Young readers (5 languages, recorded natural voices) and Schools and teams.' },
+      { steps: [
+        'Schools and teams need two SQL files, once, in this order in the Supabase SQL editor: migrations-2026-11-25-reading-classes.sql, then migrations-2026-11-25-class-assignments.sql (both in artifacts/api-server/src/bookatlas/db/). Until then the section says it is not available.',
+        'Teachers make a class, share the 8-letter code, set the reading list with due dates, set quizzes made from a chapter (one of their 40 AI requests), and download a CSV or PDF report of minutes per week, progress and quiz scores.',
+        'Members are told the teacher sees their progress and reading time. Names show as first name and initial. Closing a class deletes its list, quizzes and scores.',
+        'Reading e-mails (weekly summary on Sunday, streak reminder) are off until a reader switches them on. They are sent daily at 17:00 UTC and need RESEND_API_KEY and EMAIL_FROM. Every e-mail has a one-click stop link.',
+      ] },
+      { p: 'After changing a children’s text, record the new clips, then deploy:' },
+      { code: 'cd /c/projects/bookatlas/tools/local-narrator\nnpm run young                # English (Kokoro)\nnpm run young -- --lang fr   # French (Piper); also es, pt, nl' },
+      { note: 'Words not lighting up with the device voice? Chrome on Android often does not report word positions for Google voices; the sentence still lights up. Recorded voices (audiobooks and Young readers) always light up each word.' },
+    ],
+  },
+  {
     id: 'settings', title: 'Settings and secrets (Vercel)', blocks: [
       { p: 'These live in Vercel → bookatlas → Settings → Environment Variables (Production). After changing one, redeploy so production reads it. Never paste their values in chats, issues or code.' },
       { steps: [
         'NARRATION_WORKER_TOKEN: lets your PC’s narrator upload parts. The same value must be in .env.local.',
-        'CRON_SECRET: protects the daily narration schedule.',
+        'CRON_SECRET: protects the daily schedules (narration at 08:15 UTC, reading e-mails at 17:00 UTC).',
+        'RESEND_API_KEY and EMAIL_FROM: sending e-mail (reading e-mails, new books for followers). Without them nothing is sent.',
         'GEMINI_API_KEY: cloud narration and AI features. Free tier unless billing is on.',
         'STRIPE_*, CLERK_*, SUPABASE_*: payments, sign-in and the database.',
       ] },

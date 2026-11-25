@@ -1,4 +1,4 @@
-import { cap, type YoungTranslation } from '../youngLang';
+import { cap, makeSounds, type YoungTranslation } from '../youngLang';
 
 /** Young readers in Spanish (Reading Intelligence phase 5). Written for BooksAtlas, in the order of the English. */
 const es: YoungTranslation = {
@@ -6,6 +6,18 @@ const es: YoungTranslation = {
   find: (w) => `¿Dónde está ${w}?`,
   right: (w) => `¡Sí! ¡${cap(w)}!`,
   tryAgain: (w) => `Eso es ${w}. ¡Inténtalo otra vez!`,
+  // Letter sounds in Spanish (phase 6).
+  sounds: makeSounds([
+    ['a', 'abeja', '🐝'], ['b', 'barco', '🚢'], ['c', 'casa', '🏠'], ['d', 'dedo', '☝️'], ['e', 'estrella', '⭐'], ['f', 'flor', '🌸'],
+    ['g', 'gato', '🐱'], ['h', 'helado', '🍦'], ['i', 'isla', '🏝️'], ['j', 'jirafa', '🦒'], ['k', 'kiwi', '🥝'], ['l', 'luna', '🌙'],
+    ['m', 'mano', '✋'], ['n', 'nube', '☁️'], ['ñ', 'niño', '👦'], ['o', 'oso', '🐻'], ['p', 'perro', '🐶'], ['q', 'queso', '🧀'],
+    ['r', 'ratón', '🐭'], ['s', 'sol', '☀️'], ['t', 'tomate', '🍅'], ['u', 'uva', '🍇'], ['v', 'vaca', '🐄'], ['x', 'taxi', '🚕'],
+    ['y', 'yoyó', '🪀'], ['z', 'zapato', '👞'],
+  ], [
+    ['ch', 'chocolate', '🍫', 'pairs'], ['ll', 'lluvia', '🌧️', 'pairs'], ['rr', 'burro', '🫏', 'pairs'], ['qu', 'paquete', '📦', 'pairs'],
+    ['gu', 'guitarra', '🎸', 'pairs'], ['ue', 'huevo', '🥚', 'vowels'], ['ie', 'pie', '🦶', 'vowels'], ['au', 'autobús', '🚌', 'vowels'],
+    ['ai', 'aire', '🌬️', 'vowels'], ['ei', 'peine', '🪮', 'vowels'],
+  ], (l, w) => `${l}, como en ${w}.`),
   levelWords: {
     1: ['gato', 'perro', 'sol', 'autobús', 'sombrero', 'cerdo', 'cama', 'taza', 'huevo', 'zorro', 'coche', 'mapa'],
     2: ['pez', 'rana', 'árbol', 'estrella', 'buque', 'pastel', 'luna', 'barca', 'pato', 'lluvia', 'libro', 'cometa'],

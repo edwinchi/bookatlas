@@ -40,6 +40,19 @@ books, the first words, the word games and the letter sounds (about 500 short cl
 - Options: `--voice bf_emma` for another voice (everything is recorded again), `--speed 0.9` for the reading pace.
 - Commit the folder and deploy. Until then, the pages use the device voice.
 
+### French, Spanish, Portuguese and Dutch (Piper)
+
+Kokoro speaks English only. The other languages are recorded with [Piper](https://github.com/rhasspy/piper) (MIT):
+`npm run young -- --lang fr` (or `es`, `pt`, `nl`). Each language goes to its own folder, such as `public/audio/young/fr`.
+
+One-time setup, in this folder (`piper/` is not committed):
+
+1. Download `piper_windows_amd64.zip` from the Piper release `2023.11.14-2` on GitHub and unzip it into `piper/` (so `piper/piper/piper.exe` exists).
+2. Download the voices from Hugging Face `rhasspy/piper-voices` into `piper/voices/`: `fr_FR-siwis-medium`, `es_ES-davefx-medium`, `pt_PT-tugão-medium` (save it as `pt_PT-tugao-medium`) and `nl_BE-nathalie-medium`, each the `.onnx` and the `.onnx.json` file.
+3. This Piper release does not know a few two-letter sound codes in the newer voice files. Remove the entries of `phoneme_id_map` whose key is longer than one character from each `.onnx.json` (they are never used for these languages).
+
+A language takes about two minutes to record.
+
 ## Audio samples for every book
 
 Run `npm run samples` to record a real audio sample with Kokoro for every English book in the store that doesn't have one yet.

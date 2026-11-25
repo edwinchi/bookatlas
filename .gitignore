@@ -62,3 +62,4 @@ tools/local-narrator/sample-*.mp3
 
 # Google OAuth client secrets downloaded from Google Cloud: never commit (the repository is public).
 client_secret_*.json
+tools/local-narrator/piper/

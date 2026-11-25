@@ -1,4 +1,4 @@
-import { cap, type YoungTranslation } from '../youngLang';
+import { cap, makeSounds, type YoungTranslation } from '../youngLang';
 
 /** Young readers in French (Reading Intelligence phase 5). Written for BooksAtlas, in the order of the English. */
 const fr: YoungTranslation = {
@@ -6,6 +6,18 @@ const fr: YoungTranslation = {
   find: (w) => `Où est ${w} ?`,
   right: (w) => `Oui ! ${cap(w)} !`,
   tryAgain: (w) => `Ça, c’est ${w}. Essaie encore !`,
+  // Letter sounds in French (phase 6): each letter with a word, then letters that work together and vowel sounds.
+  sounds: makeSounds([
+    ['a', 'ananas', '🍍'], ['b', 'ballon', '🎈'], ['c', 'canard', '🦆'], ['d', 'dauphin', '🐬'], ['e', 'escargot', '🐌'], ['f', 'fraise', '🍓'],
+    ['g', 'gâteau', '🎂'], ['h', 'hibou', '🦉'], ['i', 'île', '🏝️'], ['j', 'jus', '🧃'], ['k', 'kiwi', '🥝'], ['l', 'lion', '🦁'],
+    ['m', 'maison', '🏠'], ['n', 'nuage', '☁️'], ['o', 'orange', '🍊'], ['p', 'pomme', '🍎'], ['q', 'quatre', '4️⃣'], ['r', 'robot', '🤖'],
+    ['s', 'soleil', '☀️'], ['t', 'tortue', '🐢'], ['u', 'usine', '🏭'], ['v', 'vache', '🐄'], ['w', 'wagon', '🚃'], ['x', 'taxi', '🚕'],
+    ['y', 'yoyo', '🪀'], ['z', 'zèbre', '🦓'],
+  ], [
+    ['ch', 'chat', '🐱', 'pairs'], ['gn', 'montagne', '⛰️', 'pairs'], ['ph', 'photo', '📷', 'pairs'], ['qu', 'quille', '🎳', 'pairs'],
+    ['ou', 'loup', '🐺', 'vowels'], ['oi', 'roi', '👑', 'vowels'], ['on', 'pont', '🌉', 'vowels'], ['an', 'maman', '👩', 'vowels'],
+    ['in', 'lapin', '🐰', 'vowels'], ['eau', 'bateau', '⛵', 'vowels'], ['ai', 'lait', '🥛', 'vowels'], ['eu', 'feu', '🔥', 'vowels'],
+  ], (l, w) => `${l}, comme dans ${w}.`),
   levelWords: {
     1: ['chat', 'chien', 'soleil', 'bus', 'chapeau', 'cochon', 'lit', 'tasse', 'œuf', 'renard', 'voiture', 'carte'],
     2: ['poisson', 'grenouille', 'arbre', 'étoile', 'navire', 'gâteau', 'lune', 'bateau', 'canard', 'pluie', 'livre', 'cerf-volant'],

@@ -19,6 +19,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Mp3Encoder } from '@breezystack/lamejs';
 import { parseCast, voicedPieces } from './voices.mjs';
+import { PIPER_VOICES, speakPieces } from './piper.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const VOICES = {
@@ -143,8 +144,8 @@ async function speak(text) {
   return pcm;
 }
 
-function toMp3(pcm, kbps = 64) {
-  const encoder = new Mp3Encoder(1, SAMPLE_RATE, kbps);
+function toMp3(pcm, kbps = 64, rate = SAMPLE_RATE) {
+  const encoder = new Mp3Encoder(1, rate, kbps);
   const out = [];
   for (let i = 0; i < pcm.length; i += 11_520) { const b = encoder.encodeBuffer(pcm.subarray(i, i + 11_520)); if (b.length) out.push(Buffer.from(b)); }
   const end = encoder.flush();
@@ -217,29 +218,73 @@ async function young() {
   const root = join(here, '..', '..');
   const tsx = createRequire(join(root, 'artifacts', 'api-server', 'package.json')).resolve('tsx/esm/api');
   const { tsImport } = await import(pathToFileURL(tsx).href);
-  const yv = await tsImport(pathToFileURL(join(root, 'artifacts', 'bookatlas', 'src', 'components', 'reading', 'youngVoice.ts')).href, import.meta.url);
-  const dir = join(root, 'artifacts', 'bookatlas', 'public', ...yv.YOUNG_AUDIO_DIR.split('/'));
+  const reading = join(root, 'artifacts', 'bookatlas', 'src', 'components', 'reading');
+  const yv = await tsImport(pathToFileURL(join(reading, 'youngVoice.ts')).href, import.meta.url);
+  // English with Kokoro (phase 4); French, Spanish, Portuguese and Dutch with Piper (phase 6).
+  const lang = String(opts.lang ?? 'en');
+  if (lang !== 'en' && !PIPER_VOICES[lang]) throw new Error(`Unknown language "${lang}". Use en, ${Object.keys(PIPER_VOICES).join(', ')}.`);
+  const piper = lang !== 'en';
+  const content = piper ? await (await tsImport(pathToFileURL(join(reading, 'youngLang.ts')).href, import.meta.url)).loadYoung(lang) : undefined;
+  const engineVoice = piper ? String(opts.voice ?? PIPER_VOICES[lang]) : voice;
+  const dir = join(root, 'artifacts', 'bookatlas', 'public', ...yv.youngAudioDir(lang).split('/'));
   mkdirSync(dir, { recursive: true });
   const file = join(dir, 'clips.json');
-  const speed = Number(opts.speed ?? 0.9);
-  let manifest = { voice, speed, clips: {} };
-  try { const m = JSON.parse(readFileSync(file, 'utf8')); if (m.voice === voice && m.speed === speed && m.clips) manifest = m; } catch { /* a first run */ }
-  const texts = yv.youngClipTexts();
+  const speed = Number(opts.speed ?? (piper ? 1.1 : 0.9));
+  let manifest = { voice: engineVoice, speed, clips: {} };
+  try { const m = JSON.parse(readFileSync(file, 'utf8')); if (m.voice === engineVoice && m.speed === speed && m.clips) manifest = m; } catch { /* a first run */ }
+  const texts = yv.youngClipTexts(content);
   const keys = new Map(texts.map((t) => [yv.clipKey(t), t]));
   for (const k of Object.keys(manifest.clips)) if (!keys.has(k)) delete manifest.clips[k];
   for (const f of readdirSync(dir)) if (f.endsWith('.mp3') && !(f.slice(0, -4) in manifest.clips) && !keys.has(f.slice(0, -4))) rmSync(join(dir, f));
   const todo = [...keys].filter(([k]) => !manifest.clips[k] || !existsSync(join(dir, `${k}.mp3`)));
-  console.log(`${texts.length} children's texts: ${texts.length - todo.length} recorded, ${todo.length} to record in the ${voice} voice.`);
+  console.log(`${texts.length} children's texts in ${lang}: ${texts.length - todo.length} recorded, ${todo.length} to record in the ${engineVoice} voice.`);
   const started = Date.now();
   let audio = 0;
-  for (const [n, [key, text]] of todo.entries()) {
-    const { pcm, timing, seconds } = await speakTimed(text, speed);
-    writeFileSync(join(dir, `${key}.mp3`), toMp3(pcm, 48));
+  const save = (key, pcm, timing, seconds, rate) => {
+    writeFileSync(join(dir, `${key}.mp3`), toMp3(pcm, 48, rate));
     manifest.clips[key] = { d: Math.round(seconds * 1000) / 1000, t: timing };
     audio += seconds;
-    // Saved after every clip, so stopping and running again carries on.
-    writeFileSync(file, JSON.stringify(manifest));
-    if ((n + 1) % 25 === 0 || n + 1 === todo.length) console.log(`  ${n + 1}/${todo.length} · ${Math.round(audio)} s of audio in ${Math.round((Date.now() - started) / 1000)} s`);
+  };
+  if (!piper) {
+    for (const [n, [key, text]] of todo.entries()) {
+      const { pcm, timing, seconds } = await speakTimed(text, speed);
+      save(key, pcm, timing, seconds, SAMPLE_RATE);
+      // Saved after every clip, so stopping and running again carries on.
+      writeFileSync(file, JSON.stringify(manifest));
+      if ((n + 1) % 25 === 0 || n + 1 === todo.length) console.log(`  ${n + 1}/${todo.length} · ${Math.round(audio)} s of audio in ${Math.round((Date.now() - started) / 1000)} s`);
+    }
+  } else {
+    // Piper reads a batch of texts in one run, sentence by sentence; the sentences are joined with a short pause and
+    // their start and end times kept for the word lighting, as with Kokoro.
+    for (let b = 0; b < todo.length; b += 100) {
+      const batch = todo.slice(b, b + 100).map(([key, text]) => {
+        const pieces = chunks(text);
+        let from = 0;
+        const starts = pieces.map((p) => { const at = Math.max(0, text.indexOf(p, from)); from = at + p.length; return at; });
+        return { key, pieces, starts };
+      });
+      const all = speakPieces(engineVoice, batch.flatMap((x) => x.pieces), { lengthScale: speed });
+      let i = 0;
+      for (const x of batch) {
+        const parts = all.slice(i, i + x.pieces.length); i += x.pieces.length;
+        const rate = parts[0].rate;
+        const pause = new Int16Array(Math.round(PAUSE_SENTENCE * rate));
+        const timing = [];
+        let at = 0;
+        const out = [];
+        for (const [k, p] of parts.entries()) {
+          timing.push([x.starts[k], Math.round((at / rate) * 1000) / 1000, Math.round(((at + p.pcm.length) / rate) * 1000) / 1000]);
+          out.push(p.pcm); at += p.pcm.length;
+          if (k < parts.length - 1) { out.push(pause); at += pause.length; }
+        }
+        const pcm = new Int16Array(at);
+        let o = 0;
+        for (const p of out) { pcm.set(p, o); o += p.length; }
+        save(x.key, pcm, timing, at / rate, rate);
+      }
+      writeFileSync(file, JSON.stringify(manifest));
+      console.log(`  ${Math.min(b + 100, todo.length)}/${todo.length} · ${Math.round(audio)} s of audio in ${Math.round((Date.now() - started) / 1000)} s`);
+    }
   }
   writeFileSync(file, JSON.stringify(manifest));
   console.log(`Done: ${Object.keys(manifest.clips).length} clips in ${dir}. Commit the folder and deploy.`);

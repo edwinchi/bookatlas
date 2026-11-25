@@ -1,21 +1,22 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { YoungContext } from './youngLang';
-import { YOUNG_AUDIO_DIR, clipKey, wordAtTime, type ClipManifest } from './youngVoice';
+import { clipKey, wordAtTime, youngAudioDir, type ClipManifest } from './youngVoice';
 
 /**
- * The recorded natural voice (phase 4), loaded once per visit: the list of clips and their word timings. Missing
- * or unreachable clips are fine; the device voice reads instead.
+ * The recorded natural voice, loaded once per language and visit: the list of clips and their word timings. English
+ * is Kokoro (phase 4), the other languages Piper (phase 6). Missing or unreachable clips are fine; the device voice
+ * reads instead.
  */
-let manifest: Promise<ClipManifest | null> | null = null;
-const loadManifest = () => {
-  if (!manifest) {
-    manifest = typeof fetch === 'undefined' ? Promise.resolve(null)
-      : fetch(`${import.meta.env.BASE_URL}${YOUNG_AUDIO_DIR}/clips.json`, { cache: 'no-cache' })
+const manifests = new Map<string, Promise<ClipManifest | null>>();
+const loadManifest = (lang: string) => {
+  if (!manifests.has(lang)) {
+    manifests.set(lang, typeof fetch === 'undefined' ? Promise.resolve(null)
+      : fetch(`${import.meta.env.BASE_URL}${youngAudioDir(lang)}/clips.json`, { cache: 'no-cache' })
         .then((r) => (r.ok ? r.json() as Promise<ClipManifest> : null))
         .then((m) => (m && typeof m === 'object' && m.clips ? m : null))
-        .catch(() => null);
+        .catch(() => null));
   }
-  return manifest;
+  return manifests.get(lang)!;
 };
 
 type SayOptions = { rate?: number; onPart?: (i: number) => void; onWord?: (part: number, char: number) => void; onEnd?: () => void };
@@ -27,13 +28,13 @@ export function useSpeaker() {
   const synth = typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null;
   const canPlay = typeof window !== 'undefined' && typeof Audio !== 'undefined';
   const [clips, setClips] = useState<ClipManifest | null>(null);
-  // The recorded voice is English; other languages use the device voice in that language (phase 5).
+  // The language of the young readers' pages: its recorded clips, or the device voice in that language.
   const young = useContext(YoungContext);
   const lang = young.voice;
   const run = useRef(0);
   const audio = useRef<HTMLAudioElement | null>(null);
   const frame = useRef(0);
-  useEffect(() => { let live = true; void loadManifest().then((m) => { if (live) setClips(m); }); return () => { live = false; }; }, []);
+  useEffect(() => { let live = true; setClips(null); void loadManifest(young.id).then((m) => { if (live) setClips(m); }); return () => { live = false; }; }, [young.id]);
   const stop = useCallback(() => {
     run.current += 1;
     cancelAnimationFrame(frame.current);
@@ -96,7 +97,7 @@ export function useSpeaker() {
       };
       el.onended = () => next(i + 1);
       el.onerror = () => { if (me === run.current) device(parts, o, me, i); };
-      el.src = `${import.meta.env.BASE_URL}${YOUNG_AUDIO_DIR}/${key}.mp3`;
+      el.src = `${import.meta.env.BASE_URL}${youngAudioDir(young.id)}/${key}.mp3`;
       el.playbackRate = rate;
       try { (el as HTMLAudioElement & { preservesPitch?: boolean }).preservesPitch = true; } catch { /* the default keeps the pitch */ }
       el.play().then(() => { frame.current = requestAnimationFrame(follow); })
@@ -110,9 +111,9 @@ export function useSpeaker() {
   const say = useCallback((parts: string[], o: SayOptions = {}) => {
     stop();
     const me = run.current;
-    if (young.id === 'en' && canPlay && clips && parts.length && clips.clips[clipKey(parts[0]!)]) return recorded(parts, o, me, clips);
+    if (canPlay && clips && parts.length && clips.clips[clipKey(parts[0]!)]) return recorded(parts, o, me, clips);
     return device(parts, o, me);
   }, [synth, stop, clips, canPlay, young.id, lang]); // eslint-disable-line react-hooks/exhaustive-deps
-  const natural = young.id === 'en' && !!clips;
+  const natural = !!clips;
   return { supported: !!synth || (canPlay && natural), natural, say, stop };
 }

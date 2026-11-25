@@ -88,10 +88,16 @@ after the phase 3 file. Until then, reading lists still work and due dates and q
 
 No database change in phase 5: the e-mail choices live in the reader settings.
 
+## Phase 6: built (2026-11-25)
+
+| Owner request | Where it lives |
+|---|---|
+| Natural voice in French, Spanish, Portuguese and Dutch | Recorded once with Piper (owner's choice: MIT, open source) on the owner's computer, `npm run young -- --lang fr` (`tools/local-narrator/piper.mjs`), into `public/audio/young/<lang>`. Voices: fr_FR-siwis, es_ES-davefx, pt_PT-tugão, nl_BE-nathalie. `useSpeaker.ts` plays them with each word lit up, like English |
+| Letter sounds in each language | `sounds` in `reading/young/*.ts` (letters with a word and a picture, letters that work together, vowel sounds), recorded with the rest |
+
 ## Later
 
-- Natural-voice recordings for the other languages (Kokoro speaks English only).
-- Letter sounds for each language.
+- Teachers' own reading lists of children's stories, and more stories per level.
 
 ## Choices and limits
 

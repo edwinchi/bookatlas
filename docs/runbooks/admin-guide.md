@@ -137,7 +137,64 @@ What readers get, so you can answer their questions:
 - A recorded natural narration always plays in the book's own language. Choosing another language switches to the device voice.
 - **Emotion:** the cloud studio voices (Sulafat, Charon) are told to let the emotion of each passage colour the delivery. Kokoro recordings made on your PC read evenly and do not follow that instruction.
 
-## 7. Settings and secrets (Vercel)
+## 7. Read smarter (Reading Intelligence)
+
+**Read smarter** in the site menu opens `/reading-intelligence`. Everything there is free for readers. The plan and the
+file for each feature are in `docs/planning/reading-intelligence.md`.
+
+**What readers get:**
+- **Fast Read and the speed check:** one word at a time at a chosen speed, and a 1-minute test of words per minute.
+- **Reading aids** (in the reader's **T** button → Aids): bold word starts, a reading guide, one paragraph in focus, the spoken word lit up, and fonts for dyslexia.
+- **AI help:** summaries in three lengths, and "explain this" for a child, a student or a professional. These count towards the 40 AI requests a day.
+- **Your own text:** paste an article or open a PDF or EPUB to Fast Read it.
+- **My progress:** reading time, streak, daily goal, the week against the goal, books finished, speed and favourite reading hours.
+- **Family reading:** up to 6 profiles. The reader picks who is reading, and each profile has its own minutes, streak, stars and quizzes.
+- **Young readers** (`/reading-intelligence/young-readers`):
+  - First words, picture books, stories with questions, letter sounds and word games, in three levels.
+  - Available in English, French, Spanish, Portuguese and Dutch, each with a recorded natural voice and every word lit up.
+  - No account needed.
+- **Schools and teams:**
+  - A teacher or team lead makes a class, shares the 8-letter invite code and sets the reading list with due dates.
+  - They set quizzes made from a chapter, and see each member's progress, minutes this week and quiz scores.
+  - **Report** downloads a CSV or PDF covering up to 26 weeks.
+
+**Database (once):** schools and teams need two SQL files, run in this order in the Supabase SQL editor:
+1. `artifacts/api-server/src/bookatlas/db/migrations-2026-11-25-reading-classes.sql` (the classes)
+2. `artifacts/api-server/src/bookatlas/db/migrations-2026-11-25-class-assignments.sql` (due dates and quizzes)
+
+Until they have run, schools and teams say "not available right now" or "not switched on yet". Everything else works.
+
+**Reading e-mails:**
+- Readers can switch on a **weekly summary** (Sundays) and a **streak reminder** (an evening when a streak of 2+ days would break) under My progress. Both are off by default.
+- A daily Vercel cron at 17:00 UTC sends them (`/api/internal/reader/digest`, protected by `CRON_SECRET`).
+- They need `RESEND_API_KEY` and `EMAIL_FROM` in Vercel (section 8). Until then, the reader's choice is saved and nothing is sent.
+- Every e-mail has a one-click link that stops both.
+
+**Schools and privacy:**
+- Members are told when they join that the teacher sees their progress on the class books and their reading time.
+- Names show as first name and initial.
+- A member can leave at any time. When the teacher closes the class, its list, quizzes and scores are deleted.
+- Class quizzes are written by the AI from the chapter, and the teacher chooses which questions to keep. It uses one of the teacher's 40 AI requests.
+
+**Re-recording the children's voices** after a text in `artifacts/bookatlas/src/components/reading/` changes. Only new or changed texts are recorded:
+
+```bash
+cd /c/projects/bookatlas/tools/local-narrator
+npm run young                  # English (Kokoro), about 35 minutes for everything
+npm run young -- --lang fr     # French (Piper); also es, pt, nl. About 2 minutes each
+```
+
+Then deploy, so the new clips in `artifacts/bookatlas/public/audio/young/` go live.
+- English uses Kokoro (`af_heart`).
+- The other languages use Piper: `fr_FR-siwis`, `es_ES-davefx`, `pt_PT-tugão` and `nl_BE-nathalie`.
+- Piper's program and voices are in `tools/local-narrator/piper/` on this PC and are not in the repository. To set it up on another PC, follow `tools/local-narrator/README.md`.
+
+**Questions readers may ask:**
+- *"The words do not light up when the device reads."* Chrome on Android often does not report word positions for Google voices, so only the sentence lights up. The recorded voices (audiobooks and Young readers) always light up each word.
+- *"The class says not available."* Run the two SQL files above.
+- *"I get no e-mails."* Check that the switches are on under My progress and that Resend is set up. The weekly summary only comes on Sundays.
+
+## 8. Settings and secrets (Vercel)
 
 These settings live in Vercel → bookatlas → Settings → Environment Variables (Production).
 - After changing one, redeploy so production reads it.
@@ -146,16 +203,17 @@ These settings live in Vercel → bookatlas → Settings → Environment Variabl
 | Variable | What it does |
 |---|---|
 | `NARRATION_WORKER_TOKEN` | Lets your PC's narrator upload parts and samples. The same value must be in `.env.local`. |
-| `CRON_SECRET` | Protects the daily narration schedule. |
+| `CRON_SECRET` | Protects the daily schedules: narration (08:15 UTC) and reading e-mails (17:00 UTC). |
 | `GEMINI_API_KEY` | Cloud narration and AI features. It is on the free tier unless billing is turned on. |
 | `STRIPE_*`, `CLERK_*`, `SUPABASE_*` | Payments, sign-in and the database. |
 | `APP_URL`, `SESSION_SECRET`, `UNSUBSCRIBE_TOKEN_SECRET` | The site address and signing secrets. |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Sending e-mail: reading e-mails, new-book e-mails to followers, enquiry notices. Without them nothing is sent. |
 
 **Database changes:** some releases come with a SQL migration in `artifacts/api-server/src/bookatlas/db/`.
 - Run it in the Supabase SQL editor before deploying that release.
 - Migrations are safe to run twice.
 
-## 8. House rules for the store
+## 9. House rules for the store
 
 - **Reviews and ratings:** only real ones, from readers. Never write or import reviews (EU Omnibus rules).
 - **Labels:** "Bestseller" and editorial-review labels are shown only when they are true and sourced.
@@ -163,7 +221,7 @@ These settings live in Vercel → bookatlas → Settings → Environment Variabl
 - **Demo catalogue:** sample titles are marked "Sample title · not for sale". Their cart buttons explain that instead of selling.
 - **Commission:** authors keep 81% of every sale after VAT; BooksAtlas keeps 19% (since 2026-11-23; sales before then keep 67%/33%). Author Pro: 91%/9%.
 
-## 9. Releases
+## 10. Releases
 
 - Each change is built and tested on the working branch first.
 - It reaches booksatlas.app only after the owner says "deploy". Then the branch is pushed to `main` and Vercel publishes it in about a minute.

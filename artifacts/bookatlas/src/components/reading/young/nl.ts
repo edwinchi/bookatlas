@@ -1,4 +1,4 @@
-import { cap, type YoungTranslation } from '../youngLang';
+import { cap, makeSounds, type YoungTranslation } from '../youngLang';
 
 /** Young readers in Dutch (Reading Intelligence phase 5). Written for BooksAtlas, in the order of the English. */
 const nl: YoungTranslation = {
@@ -6,6 +6,17 @@ const nl: YoungTranslation = {
   find: (w) => `Waar is ${w}?`,
   right: (w) => `Ja! ${cap(w)}!`,
   tryAgain: (w) => `Dat is ${w}. Probeer het nog eens!`,
+  // Letter sounds in Dutch (phase 6).
+  sounds: makeSounds([
+    ['a', 'aap', '🐒'], ['b', 'bal', '⚽'], ['c', 'citroen', '🍋'], ['d', 'dino', '🦕'], ['e', 'eend', '🦆'], ['f', 'fiets', '🚲'],
+    ['g', 'geit', '🐐'], ['h', 'hond', '🐶'], ['i', 'inktvis', '🐙'], ['j', 'jas', '🧥'], ['k', 'kat', '🐱'], ['l', 'leeuw', '🦁'],
+    ['m', 'maan', '🌙'], ['n', 'neus', '👃'], ['o', 'olifant', '🐘'], ['p', 'peer', '🍐'], ['r', 'raket', '🚀'], ['s', 'sok', '🧦'],
+    ['t', 'tent', '⛺'], ['u', 'uil', '🦉'], ['v', 'vis', '🐟'], ['w', 'wolk', '☁️'], ['x', 'taxi', '🚕'], ['z', 'zon', '☀️'],
+  ], [
+    ['ch', 'acht', '8️⃣', 'pairs'], ['sch', 'school', '🏫', 'pairs'], ['ng', 'ring', '💍', 'pairs'], ['aa', 'kaas', '🧀', 'vowels'],
+    ['ee', 'been', '🦵', 'vowels'], ['oo', 'boom', '🌳', 'vowels'], ['uu', 'vuur', '🔥', 'vowels'], ['oe', 'boek', '📖', 'vowels'],
+    ['eu', 'deur', '🚪', 'vowels'], ['ui', 'huis', '🏠', 'vowels'], ['ij', 'ijs', '🍦', 'vowels'], ['ou', 'hout', '🪵', 'vowels'],
+  ], (l, w) => `${l}, zoals in ${w}.`),
   levelWords: {
     1: ['kat', 'hond', 'zon', 'bus', 'hoed', 'varken', 'bed', 'beker', 'ei', 'vos', 'auto', 'kaart'],
     2: ['vis', 'kikker', 'boom', 'ster', 'schip', 'taart', 'maan', 'boot', 'eend', 'regen', 'boek', 'vlieger'],
