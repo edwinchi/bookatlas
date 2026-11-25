@@ -13,9 +13,10 @@
 // Settings come from ../../.env.local (or the environment): NARRATION_WORKER_TOKEN (required, the same value as
 // in Vercel) and BOOKSATLAS_URL (default https://booksatlas.app). The voice model (~90 MB) is downloaded on the
 // first run and cached.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Mp3Encoder } from '@breezystack/lamejs';
 import { parseCast, voicedPieces } from './voices.mjs';
 
@@ -142,13 +143,40 @@ async function speak(text) {
   return pcm;
 }
 
-function toMp3(pcm) {
-  const encoder = new Mp3Encoder(1, SAMPLE_RATE, 64);
+function toMp3(pcm, kbps = 64) {
+  const encoder = new Mp3Encoder(1, SAMPLE_RATE, kbps);
   const out = [];
   for (let i = 0; i < pcm.length; i += 11_520) { const b = encoder.encodeBuffer(pcm.subarray(i, i + 11_520)); if (b.length) out.push(Buffer.from(b)); }
   const end = encoder.flush();
   if (end.length) out.push(Buffer.from(end));
   return Buffer.concat(out);
+}
+
+/**
+ * A short children's text with its timings: for each piece Kokoro reads, the first character and when the voice
+ * starts and stops, so the site can light up each word as it is said.
+ */
+async function speakTimed(text, speed) {
+  const model = await voiceModel();
+  const parts = [];
+  const timing = [];
+  let at = 0;
+  let from = 0;
+  const pieces = chunks(text);
+  for (const [i, piece] of pieces.entries()) {
+    const start = Math.max(0, text.indexOf(piece, from));
+    from = start + piece.length;
+    const audio = await model.generate(piece, { voice, speed });
+    const t0 = at;
+    parts.push(audio.audio); at += audio.audio.length / SAMPLE_RATE;
+    timing.push([start, Math.round(t0 * 1000) / 1000, Math.round(at * 1000) / 1000]);
+    if (i < pieces.length - 1) { const pause = new Float32Array(Math.round(PAUSE_SENTENCE * SAMPLE_RATE)); parts.push(pause); at += pause.length / SAMPLE_RATE; }
+  }
+  const total = parts.reduce((n, p) => n + p.length, 0);
+  const pcm = new Int16Array(total);
+  let o = 0;
+  for (const p of parts) for (let i = 0; i < p.length; i += 1) pcm[o++] = Math.max(-32768, Math.min(32767, Math.round(p[i] * 32767)));
+  return { pcm, timing, seconds: total / SAMPLE_RATE };
 }
 
 const minutes = (s) => (s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.round((s % 3600) / 60)} min` : `${Math.max(1, Math.round(s / 60))} min`);
@@ -178,6 +206,43 @@ async function samples() {
     console.log(`  ${m.title}: ${(pcm.length / SAMPLE_RATE).toFixed(0)} s`);
   }
   console.log('Done.');
+}
+
+/**
+ * Natural voice for young readers: records every text the children's pages say (stories, picture books, words,
+ * letter sounds) into artifacts/bookatlas/public/audio/young, with clips.json for the word timings. Only new or
+ * changed texts are recorded; clips for texts that no longer exist are removed. Commit the folder and deploy.
+ */
+async function young() {
+  const root = join(here, '..', '..');
+  const tsx = createRequire(join(root, 'artifacts', 'api-server', 'package.json')).resolve('tsx/esm/api');
+  const { tsImport } = await import(pathToFileURL(tsx).href);
+  const yv = await tsImport(pathToFileURL(join(root, 'artifacts', 'bookatlas', 'src', 'components', 'reading', 'youngVoice.ts')).href, import.meta.url);
+  const dir = join(root, 'artifacts', 'bookatlas', 'public', ...yv.YOUNG_AUDIO_DIR.split('/'));
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, 'clips.json');
+  const speed = Number(opts.speed ?? 0.9);
+  let manifest = { voice, speed, clips: {} };
+  try { const m = JSON.parse(readFileSync(file, 'utf8')); if (m.voice === voice && m.speed === speed && m.clips) manifest = m; } catch { /* a first run */ }
+  const texts = yv.youngClipTexts();
+  const keys = new Map(texts.map((t) => [yv.clipKey(t), t]));
+  for (const k of Object.keys(manifest.clips)) if (!keys.has(k)) delete manifest.clips[k];
+  for (const f of readdirSync(dir)) if (f.endsWith('.mp3') && !(f.slice(0, -4) in manifest.clips) && !keys.has(f.slice(0, -4))) rmSync(join(dir, f));
+  const todo = [...keys].filter(([k]) => !manifest.clips[k] || !existsSync(join(dir, `${k}.mp3`)));
+  console.log(`${texts.length} children's texts: ${texts.length - todo.length} recorded, ${todo.length} to record in the ${voice} voice.`);
+  const started = Date.now();
+  let audio = 0;
+  for (const [n, [key, text]] of todo.entries()) {
+    const { pcm, timing, seconds } = await speakTimed(text, speed);
+    writeFileSync(join(dir, `${key}.mp3`), toMp3(pcm, 48));
+    manifest.clips[key] = { d: Math.round(seconds * 1000) / 1000, t: timing };
+    audio += seconds;
+    // Saved after every clip, so stopping and running again carries on.
+    writeFileSync(file, JSON.stringify(manifest));
+    if ((n + 1) % 25 === 0 || n + 1 === todo.length) console.log(`  ${n + 1}/${todo.length} · ${Math.round(audio)} s of audio in ${Math.round((Date.now() - started) / 1000)} s`);
+  }
+  writeFileSync(file, JSON.stringify(manifest));
+  console.log(`Done: ${Object.keys(manifest.clips).length} clips in ${dir}. Commit the folder and deploy.`);
 }
 
 async function list() {
@@ -224,6 +289,6 @@ async function narrate() {
   console.log(`Paused after part ${next.n} of ${claim.total}. Run the same command again to continue.`);
 }
 
-const command = opts.sample ? sample : opts.list ? list : opts.samples ? samples : narrate;
-if (command !== sample && !token) { console.error('NARRATION_WORKER_TOKEN is missing: add it to .env.local (the same value as in Vercel).'); process.exit(2); }
+const command = opts.sample ? sample : opts.young ? young : opts.list ? list : opts.samples ? samples : narrate;
+if (command !== sample && command !== young && !token) { console.error('NARRATION_WORKER_TOKEN is missing: add it to .env.local (the same value as in Vercel).'); process.exit(2); }
 command().catch((e) => { console.error(`Stopped: ${e.message}`); process.exit(1); });

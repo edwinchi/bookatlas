@@ -5,6 +5,7 @@ import * as ProgressBar from '@radix-ui/react-progress';
 import { ArrowLeft, ArrowRight, BookHeart, Ear, Grid3x3, Search, Square, Star, Timer, Volume2 } from 'lucide-react';
 import { useActiveReader } from './family';
 import { useSpeaker } from './useSpeaker';
+import { findPhrase, rightPhrase, tryAgainPhrase } from './youngVoice';
 import { ALL_FIRST_WORDS, FIRST_WORDS, PICTURE_BOOKS, emptyFirstProgress, findRound, readFirstProgress, recognition, wordKey, type FirstWordsProgress, type PictureBook } from './firstWords';
 
 const pill = 'inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white px-4 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 data-[state=active]:bg-rose-500 data-[state=active]:text-white data-[state=on]:bg-rose-500 data-[state=on]:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer';
@@ -137,15 +138,15 @@ function FindIt({ onResult, onStars }: { onResult: (right: boolean) => void; onS
   const [round, setRound] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
   const r = useMemo(() => findRound(round, group === 'all' ? null : group), [round, group]);
-  const ask = useCallback(() => speaker.say([`Find the ${r.target.word}!`], { rate: 0.8 }), [speaker, r.target.word]);
+  const ask = useCallback(() => speaker.say([findPhrase(r.target.word)], { rate: 0.8 }), [speaker, r.target.word]);
   useEffect(() => { setPicked(null); const t = window.setTimeout(ask, 300); return () => window.clearTimeout(t); }, [r]); // eslint-disable-line react-hooks/exhaustive-deps
   const choose = (w: string) => {
     if (picked) return;
     setPicked(w);
     const right = w === r.target.word;
     onResult(right);
-    if (right) { onStars(1); speaker.say([`Yes! The ${r.target.word}!`], { rate: 0.85 }); window.setTimeout(() => setRound((n) => n + 1), 1600); }
-    else { speaker.say([`That is the ${w}. Try again!`], { rate: 0.85 }); window.setTimeout(() => setPicked(null), 1400); }
+    if (right) { onStars(1); speaker.say([rightPhrase(r.target.word)], { rate: 0.85 }); window.setTimeout(() => setRound((n) => n + 1), 1600); }
+    else { speaker.say([tryAgainPhrase(w)], { rate: 0.85 }); window.setTimeout(() => setPicked(null), 1400); }
   };
   return (
     <div className="space-y-5">

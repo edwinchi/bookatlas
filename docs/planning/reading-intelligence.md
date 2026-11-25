@@ -65,10 +65,21 @@ Removing a profile removes its reading.
 `artifacts/api-server/src/bookatlas/db/migrations-2026-11-25-reading-classes.sql` once in the Supabase SQL editor.
 Until then, the schools section says it is not available, and everything else works.
 
+## Phase 4: built (2026-11-25)
+
+| Brief | Where it lives |
+|---|---|
+| Natural voice for children's stories and picture books | `tools/local-narrator` `npm run young` records every Young readers text with Kokoro into `public/audio/young` (`clips.json` holds the word timings); `useSpeaker.ts` plays the recording with each word lit up and falls back to the device voice |
+| Assignments with due dates | Each book on a class reading list can have a due date; members see "due Fri 5 Dec" or "2 days late", the teacher sees how many have not finished (`classDates.ts`) |
+| Class quizzes | The teacher picks a chapter, the AI writes questions, the teacher keeps the good ones and sets a date (`ClassQuizzes.tsx`). Members answer once, without seeing the answers first; the server scores it; the teacher sees every score and the average |
+
+**Database:** due dates and quizzes need three new columns. Run
+`artifacts/api-server/src/bookatlas/db/migrations-2026-11-25-class-assignments.sql` once in the Supabase SQL editor,
+after the phase 3 file. Until then, reading lists still work and due dates and quizzes say they are not switched on.
+
 ## Later
 
-- Natural-voice audiobooks for children's stories and picture books.
-- Teacher assignments with due dates, and class quizzes.
+- Natural-voice narration in other languages for the children's pages.
 
 ## Choices and limits
 

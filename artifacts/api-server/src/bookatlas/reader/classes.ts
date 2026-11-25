@@ -13,14 +13,37 @@ import { ReaderError, readerMemory, type Progress, type Session } from './servic
 export const MAX_CLASS_MEMBERS = 300;
 export const MAX_OWNED_CLASSES = 10;
 export const MAX_CLASS_BOOKS = 25;
+export const MAX_CLASS_QUIZZES = 30;
+export const MAX_QUIZ_QUESTIONS = 10;
 
-export interface ReadingClass { id: string; owner_id: string; name: string; kind: 'class' | 'team'; invite_code: string; books: string[]; created_at: string }
-export interface ClassMember { class_id: string; user_id: string; display_name: string; role: 'teacher' | 'member'; joined_at: string }
+export interface QuizQuestion { question: string; options: string[]; answer: number; explanation: string }
+/** A quiz the teacher made from a chapter of a book on the list (phase 4: assignments and class quizzes). */
+export interface ClassQuiz { id: string; book_id: string; chapter_index: number; chapter_title: string; questions: QuizQuestion[]; due: string | null; created_at: string }
+export interface QuizScore { right: number; total: number; answers: number[]; at: string }
+export interface ReadingClass {
+  id: string; owner_id: string; name: string; kind: 'class' | 'team'; invite_code: string; books: string[]; created_at: string;
+  /** Book id -> due date (YYYY-MM-DD). Added by migrations-2026-11-25-class-assignments.sql. */
+  due_dates?: Record<string, string> | null;
+  quizzes?: ClassQuiz[] | null;
+}
+export interface ClassMember {
+  class_id: string; user_id: string; display_name: string; role: 'teacher' | 'member'; joined_at: string;
+  quiz_scores?: Record<string, QuizScore> | null;
+}
 
 const db = () => bookatlasDb;
 const local = { classes: [] as ReadingClass[], members: [] as ClassMember[] };
 export const classMemory = () => local;
 const fail = (r: { error: unknown }) => { if (r.error) throw new ReaderError('Schools and teams are not available right now. Please try again later.', 503); };
+/** Due dates and quizzes live in columns added after the first release; a clear message until they exist. */
+const failNew = (r: { error: unknown }) => { if (r.error) throw new ReaderError('Due dates and class quizzes are not switched on yet. Please try again later.', 503); };
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** A real calendar date (YYYY-MM-DD) between 2020 and 2100, or null. */
+export function dueDate(v: unknown): string | null {
+  if (typeof v !== 'string' || !DATE.test(v)) return null;
+  const d = new Date(`${v}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v && v >= '2020-01-01' && v <= '2100-12-31' ? v : null;
+}
 const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/<[^>]*>/g, '').replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max) : '');
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const inviteCode = () => [...randomBytes(8)].map((b) => ALPHABET[b % ALPHABET.length]).join('');
@@ -109,8 +132,80 @@ export async function setClassBooks(who: Identity, id: string, body: Record<stri
   const books = await booksWithTitles(ids, titles);
   const kept = books.map((b) => b.id);
   if (!db()) c.books = kept; else fail(await db()!.from('reading_classes').update({ books: kept }).eq('id', c.id));
-  return { books };
+  // Due dates: sent with the list (book id -> YYYY-MM-DD); left as they were when not sent.
+  let due = c.due_dates ?? {};
+  if (body.due && typeof body.due === 'object') {
+    const raw = body.due as Record<string, unknown>;
+    due = Object.fromEntries(kept.map((b) => [b, dueDate(raw[b])]).filter((e): e is [string, string] => !!e[1]));
+    if (!db()) c.due_dates = due; else failNew(await db()!.from('reading_classes').update({ due_dates: due }).eq('id', c.id));
+  }
+  return { books, due: Object.fromEntries(Object.entries(due).filter(([b]) => kept.includes(b))) };
 }
+
+/** The teacher's questions, checked: 1 to 10 questions with 2 to 5 options and a valid answer. */
+export function quizQuestions(raw: unknown): QuizQuestion[] {
+  return (Array.isArray(raw) ? raw : []).map((q: Record<string, unknown>) => {
+    const options = (Array.isArray(q?.options) ? q.options : []).map((o) => clean(o, 200)).filter(Boolean).slice(0, 5);
+    return { question: clean(q?.question, 400), options, answer: Number(q?.answer), explanation: clean(q?.explanation, 400) };
+  }).filter((q) => q.question && q.options.length >= 2 && Number.isInteger(q.answer) && q.answer >= 0 && q.answer < q.options.length).slice(0, MAX_QUIZ_QUESTIONS);
+}
+
+async function saveQuizzes(c: ReadingClass, quizzes: ClassQuiz[]) {
+  if (!db()) c.quizzes = quizzes; else failNew(await db()!.from('reading_classes').update({ quizzes }).eq('id', c.id));
+}
+
+/** The teacher publishes a quiz on a chapter of a book on the reading list, with an optional due date. */
+export async function publishQuiz(who: Identity, id: string, body: Record<string, unknown>) {
+  const { c, teacher } = await memberClass(who, id);
+  if (!teacher) throw new ReaderError('Only the teacher or team lead can set a quiz.', 403);
+  const bookId = typeof body.bookId === 'string' ? body.bookId : '';
+  if (!c.books.includes(bookId)) throw new ReaderError('Add the book to the reading list first.');
+  const chapterIndex = Number(body.chapterIndex);
+  if (!Number.isInteger(chapterIndex) || chapterIndex < 0 || chapterIndex > 2000) throw new ReaderError('Choose a chapter.');
+  const questions = quizQuestions(body.questions);
+  if (!questions.length) throw new ReaderError('Keep at least one question.');
+  const quizzes = c.quizzes ?? [];
+  if (quizzes.length >= MAX_CLASS_QUIZZES) throw new ReaderError(`A class can have up to ${MAX_CLASS_QUIZZES} quizzes. Remove an old one first.`, 409);
+  const quiz: ClassQuiz = {
+    id: randomUUID(), book_id: bookId, chapter_index: chapterIndex, chapter_title: clean(body.chapterTitle, 160) || `Chapter ${chapterIndex + 1}`,
+    questions, due: dueDate(body.due), created_at: new Date().toISOString(),
+  };
+  await saveQuizzes(c, [...quizzes, quiz]);
+  return { quiz: teacherQuiz(quiz) };
+}
+
+export async function removeQuiz(who: Identity, id: string, quizId: string) {
+  const { c, teacher } = await memberClass(who, id);
+  if (!teacher) throw new ReaderError('Only the teacher or team lead can remove a quiz.', 403);
+  const quizzes = c.quizzes ?? [];
+  if (!quizzes.some((q) => q.id === quizId)) throw new ReaderError('Quiz not found.', 404);
+  await saveQuizzes(c, quizzes.filter((q) => q.id !== quizId));
+  return { ok: true };
+}
+
+/** A member answers a quiz once; the server scores it and keeps the first attempt for the teacher. */
+export async function answerQuiz(who: Identity, id: string, quizId: string, body: Record<string, unknown>) {
+  const { c, me, teacher } = await memberClass(who, id);
+  const quiz = (c.quizzes ?? []).find((q) => q.id === quizId);
+  if (!quiz) throw new ReaderError('Quiz not found.', 404);
+  const given = (Array.isArray(body.answers) ? body.answers : []).slice(0, quiz.questions.length).map((a) => (Number.isInteger(a) ? Number(a) : -1));
+  while (given.length < quiz.questions.length) given.push(-1);
+  const fresh: QuizScore = { right: quiz.questions.filter((q, i) => given[i] === q.answer).length, total: quiz.questions.length, answers: given, at: new Date().toISOString() };
+  // The teacher may try their own quiz; only a member's first attempt is kept.
+  const earlier = teacher ? undefined : me?.quiz_scores?.[quiz.id];
+  if (!earlier && me && !teacher) {
+    const scores = { ...(me.quiz_scores ?? {}), [quiz.id]: fresh };
+    if (!db()) me.quiz_scores = scores;
+    else failNew(await db()!.from('reading_class_members').update({ quiz_scores: scores }).eq('class_id', c.id).eq('user_id', who.id));
+  }
+  return { score: earlier ?? fresh, quiz: teacherQuiz(quiz), alreadyAnswered: !!earlier };
+}
+
+const teacherQuiz = (q: ClassQuiz) => ({ id: q.id, bookId: q.book_id, chapterIndex: q.chapter_index, chapterTitle: q.chapter_title, due: q.due, createdAt: q.created_at, questions: q.questions });
+/** Before answering, a member sees the questions without the answers. */
+const memberQuiz = (q: ClassQuiz, score: QuizScore | undefined) => score
+  ? { ...teacherQuiz(q), score }
+  : { ...teacherQuiz(q), questions: q.questions.map((x) => ({ question: x.question, options: x.options })), score: null };
 
 /** A member leaves, the teacher removes a member, or the teacher closes the class. */
 export async function leaveClass(who: Identity, id: string, userId?: string) {
@@ -167,13 +262,20 @@ export async function classDetail(who: Identity, id: string, titles: Titles, now
       average: bookIds.length ? Math.round(Object.values(perBook).reduce((a, b) => a + b, 0) / bookIds.length) : 0,
       weekMinutes: Math.round(sessions.filter((s) => s.user_id === m.user_id).reduce((n, s) => n + s.seconds, 0) / 60),
       lastRead: last,
+      quizzes: Object.fromEntries((c.quizzes ?? []).map((q) => { const sc = m.quiz_scores?.[q.id]; return [q.id, sc ? Math.round((sc.right / Math.max(1, sc.total)) * 100) : null]; })),
     };
   });
+  const me = members.find((m) => m.user_id === who.id);
+  const quizzes = (c.quizzes ?? []).filter((q) => bookIds.includes(q.book_id)).map((q) => (teacher ? teacherQuiz(q) : memberQuiz(q, me?.quiz_scores?.[q.id])));
+  const scored = rows.flatMap((r) => Object.values(r.quizzes).filter((v): v is number => v !== null));
   const teacherName = members.find((m) => m.role === 'teacher')?.display_name ?? '';
   return {
     ...summary(c, members.length, teacher ? 'teacher' : 'member', books), teacher: teacherName,
+    due: Object.fromEntries(Object.entries(c.due_dates ?? {}).filter(([b]) => bookIds.includes(b))),
+    quizzes,
     rows,
     totals: teacher ? {
+      quizAverage: scored.length ? Math.round(scored.reduce((a, b) => a + b, 0) / scored.length) : null,
       members: rows.length,
       weekMinutes: rows.reduce((n, r) => n + r.weekMinutes, 0),
       averageProgress: rows.length ? Math.round(rows.reduce((n, r) => n + r.average, 0) / rows.length) : 0,

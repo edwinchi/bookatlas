@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { classDetail, classMemory, createClass, joinClass, leaveClass, myClasses, setClassBooks } from './classes.js';
+import { answerQuiz, classDetail, classMemory, createClass, dueDate, joinClass, leaveClass, myClasses, publishQuiz, removeQuiz, setClassBooks } from './classes.js';
 import { readerMemory } from './service.js';
 import { accessFor } from '../../auth/policy.js';
 
@@ -29,7 +29,7 @@ test('schools and teams: create, join with the code, reading list, progress for 
   assert.deepEqual(view.rows[0]!.books, { 'book-a': 50, 'book-b': 0 });
   assert.equal(view.rows[0]!.weekMinutes, 20);
   assert.equal(view.rows[0]!.name, 'Kofi B.');
-  assert.deepEqual(view.totals, { members: 1, weekMinutes: 20, averageProgress: 25, activeThisWeek: 1 });
+  assert.deepEqual(view.totals, { quizAverage: null, members: 1, weekMinutes: 20, averageProgress: 25, activeThisWeek: 1 });
   const own = await classDetail(pupil, c.id, titles, now);
   assert.equal(own.rows.length, 1);
   assert.equal(own.rows[0]!.userId, 'user_pupil');
@@ -58,4 +58,58 @@ test('schools and teams: routes are for signed-in readers', () => {
   assert.equal(accessFor('PUT', `/api/reader/classes/${id}/books`), 'reader');
   assert.equal(accessFor('DELETE', `/api/reader/classes/${id}/members/me`), 'reader');
   assert.equal(accessFor('DELETE', `/api/reader/classes/${id}`), 'admin');
+});
+
+test('assignments: due dates on the reading list, only for books on it and only real dates', async () => {
+  const c = await createClass(teacher, { name: 'Due dates', kind: 'class' });
+  const r = await setClassBooks(teacher, c.id, { books: ['book-a', 'book-b'], due: { 'book-a': '2026-12-05', 'book-b': '2026-02-30', 'unknown': '2026-12-01' } }, titles);
+  assert.deepEqual(r.due, { 'book-a': '2026-12-05' });
+  // Not sending due dates keeps them; removing the book drops its date.
+  assert.deepEqual((await setClassBooks(teacher, c.id, { books: ['book-a', 'book-b'] }, titles)).due, { 'book-a': '2026-12-05' });
+  assert.deepEqual((await setClassBooks(teacher, c.id, { books: ['book-b'] }, titles)).due, {});
+  assert.equal(dueDate('2026-11-31'), null);
+  assert.equal(dueDate('2027-01-15'), '2027-01-15');
+});
+
+test('class quizzes: the teacher sets one, members answer once without seeing the answers first', async () => {
+  const now = new Date('2026-11-25T12:00:00Z');
+  const c = await createClass(teacher, { name: 'Quiz class', kind: 'class' });
+  await joinClass(pupil, { code: c.inviteCode }, titles);
+  await setClassBooks(teacher, c.id, { books: ['book-a'] }, titles);
+  const questions = [
+    { question: 'Who?', options: ['Ama', 'Kofi'], answer: 1, explanation: 'Kofi did it.' },
+    { question: 'Where?', options: ['Accra', 'Kumasi', 'Tamale'], answer: 0, explanation: '' },
+    { question: 'Broken', options: ['only one'], answer: 0 },
+  ];
+  await assert.rejects(publishQuiz(pupil, c.id, { bookId: 'book-a', chapterIndex: 0, questions }), /Only the teacher/);
+  await assert.rejects(publishQuiz(teacher, c.id, { bookId: 'book-b', chapterIndex: 0, questions }), /reading list first/);
+  const { quiz } = await publishQuiz(teacher, c.id, { bookId: 'book-a', chapterIndex: 2, chapterTitle: 'The <i>river</i>', questions, due: '2026-12-01' });
+  assert.equal(quiz.questions.length, 2);
+  assert.equal(quiz.chapterTitle, 'The river');
+  assert.equal(quiz.due, '2026-12-01');
+  const before = await classDetail(pupil, c.id, titles, now);
+  assert.equal('answer' in before.quizzes[0]!.questions[0]!, false, 'members do not see the answers before answering');
+  const first = await answerQuiz(pupil, c.id, quiz.id, { answers: [1, 2] });
+  assert.deepEqual([first.score.right, first.score.total, first.alreadyAnswered], [1, 2, false]);
+  const again = await answerQuiz(pupil, c.id, quiz.id, { answers: [1, 0] });
+  assert.deepEqual([again.score.right, again.alreadyAnswered], [1, true], 'only the first attempt counts');
+  const after = await classDetail(pupil, c.id, titles, now);
+  assert.equal((after.quizzes[0]!.questions[0] as { answer?: number }).answer, 1);
+  const view = await classDetail(teacher, c.id, titles, now);
+  assert.equal(view.rows[0]!.quizzes[quiz.id], 50);
+  assert.equal(view.totals!.quizAverage, 50);
+  // The teacher can try their own quiz without it counting.
+  assert.equal((await answerQuiz(teacher, c.id, quiz.id, { answers: [1, 0] })).score.right, 2);
+  assert.equal((await classDetail(teacher, c.id, titles, now)).rows.length, 1);
+  await assert.rejects(removeQuiz(pupil, c.id, quiz.id), /Only the teacher/);
+  assert.deepEqual(await removeQuiz(teacher, c.id, quiz.id), { ok: true });
+  assert.equal((await classDetail(teacher, c.id, titles, now)).quizzes.length, 0);
+});
+
+test('class quizzes: routes are for signed-in readers', () => {
+  const id = '0b3b7c1e-1d2a-4f5e-9a8b-123456789abc';
+  assert.equal(accessFor('POST', `/api/reader/classes/${id}/quizzes`), 'reader');
+  assert.equal(accessFor('DELETE', `/api/reader/classes/${id}/quizzes/${id}`), 'reader');
+  assert.equal(accessFor('POST', `/api/reader/classes/${id}/quizzes/${id}/answers`), 'reader');
+  assert.equal(accessFor('GET', `/api/reader/classes/${id}/quizzes`), 'admin');
 });

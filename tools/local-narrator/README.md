@@ -30,6 +30,16 @@ Stopping:
 
 **Speed:** about 2.5 seconds of work per second of audio while narrating a whole book (a 60,000-word book: about 12–15 hours).
 
+## Natural voice for young readers
+
+Run `npm run young` to record every text on the Young readers pages in the Kokoro voice: the stories, the picture
+books, the first words, the word games and the letter sounds (about 500 short clips, 8 to 10 minutes of audio).
+
+- The clips go to `artifacts/bookatlas/public/audio/young`, with `clips.json` holding the timings that light up each word.
+- Only new or changed texts are recorded. Clips for texts that were removed are deleted.
+- Options: `--voice bf_emma` for another voice (everything is recorded again), `--speed 0.9` for the reading pace.
+- Commit the folder and deploy. Until then, the pages use the device voice.
+
 ## Audio samples for every book
 
 Run `npm run samples` to record a real audio sample with Kokoro for every English book in the store that doesn't have one yet.

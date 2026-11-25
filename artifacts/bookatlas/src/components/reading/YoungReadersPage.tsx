@@ -9,6 +9,7 @@ import { useEbookApi } from '../ebook/ebookApi';
 import { useActiveReader } from './family';
 import { loadReaderFont } from '../reader/readingAids';
 import { useSpeaker } from './useSpeaker';
+import { tappedWord } from './youngVoice';
 import { FirstWordsPanel } from './FirstWordsPanel';
 import { LEVELS, SOUNDS, STORIES, WORDS, pictureRound, sameWord, scramble, storyStars, type Level, type Story } from './youngReaders';
 
@@ -71,7 +72,7 @@ function StoryReader({ story, onStars, onBack }: { story: Story; onStars: (n: nu
             <p key={p} className={`rounded-xl px-2 py-1 transition-colors ${at?.p === p ? 'bg-indigo-50' : ''}`}>
               {words.map((w, i) => (
                 <React.Fragment key={i}>
-                  <button type="button" onClick={() => speaker.say([w.text.replace(/[^\p{L}\p{N}'’-]/gu, '')], { rate: 0.75 })}
+                  <button type="button" onClick={() => speaker.say([tappedWord(w.text)], { rate: 0.75 })}
                     className={`rounded-md px-0.5 transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer ${at?.p === p && at.word === i ? 'bg-amber-300' : ''}`}>{w.text}</button>{' '}
                 </React.Fragment>
               ))}

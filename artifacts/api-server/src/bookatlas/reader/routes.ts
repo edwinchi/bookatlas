@@ -10,7 +10,7 @@ import { achievements, DEFAULT_DAILY_GOAL } from './achievements.js';
 import { chapterSocial, hideTarget, report, reportedItems, setShared, sharedAnnotationExists } from './social.js';
 import { addPost, createGroup, deletePost, groupCount, groupDetail, joinGroup, leaveGroup, myGroups, postExists } from './groups.js';
 import { DAILY_AI_LIMIT, LANGUAGES, askBook, defineWord, explainPassage, refundAiQuota, studyChapter, translatePassage, useAiQuota, type Generate } from './ai.js';
-import { classDetail, createClass, joinClass, leaveClass, myClasses, setClassBooks } from './classes.js';
+import { answerQuiz, classDetail, createClass, joinClass, leaveClass, myClasses, publishQuiz, removeQuiz, setClassBooks } from './classes.js';
 import { FamilyError, addActivity, familyView, readFamily, weekStart, withProfiles, type Family } from './family.js';
 
 let generatorOverride: Generate | null = null;
@@ -143,6 +143,10 @@ export function mountReader(app: Express, catalog: CatalogStore, generate?: Gene
   app.post('/api/reader/classes/join', json, guarded(async (req, res) => { res.json(await joinClass(signedIn(req), body(req), titleOf)); }));
   app.get('/api/reader/classes/:id', guarded(async (req, res) => { res.json(await classDetail(signedIn(req), classId(req), titleOf)); }));
   app.put('/api/reader/classes/:id/books', json, guarded(async (req, res) => { res.json(await setClassBooks(signedIn(req), classId(req), body(req), titleOf)); }));
+  // Phase 4: class quizzes made from a chapter, answered once by each member.
+  app.post('/api/reader/classes/:id/quizzes', json, guarded(async (req, res) => { res.status(201).json(await publishQuiz(signedIn(req), classId(req), body(req))); }));
+  app.delete('/api/reader/classes/:id/quizzes/:quizId', guarded(async (req, res) => { res.json(await removeQuiz(signedIn(req), classId(req), String(req.params.quizId))); }));
+  app.post('/api/reader/classes/:id/quizzes/:quizId/answers', json, guarded(async (req, res) => { res.json(await answerQuiz(signedIn(req), classId(req), String(req.params.quizId), body(req))); }));
   app.delete('/api/reader/classes/:id/members/:userId', guarded(async (req, res) => {
     const who = signedIn(req);
     const target = String(req.params.userId);

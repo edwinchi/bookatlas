@@ -58,6 +58,9 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (/^\/api\/reader\/classes\/[0-9a-f-]{36}$/.test(normalized) && method === 'GET') return 'reader';
   if (/^\/api\/reader\/classes\/[0-9a-f-]{36}\/books$/.test(normalized) && method === 'PUT') return 'reader';
   if (/^\/api\/reader\/classes\/[0-9a-f-]{36}\/members\/[\w-]{1,80}$/.test(normalized) && method === 'DELETE') return 'reader';
+  if (/^\/api\/reader\/classes\/[0-9a-f-]{36}\/quizzes$/.test(normalized) && method === 'POST') return 'reader';
+  if (/^\/api\/reader\/classes\/[0-9a-f-]{36}\/quizzes\/[0-9a-f-]{36}$/.test(normalized) && method === 'DELETE') return 'reader';
+  if (/^\/api\/reader\/classes\/[0-9a-f-]{36}\/quizzes\/[0-9a-f-]{36}\/answers$/.test(normalized) && method === 'POST') return 'reader';
   // Reader Phase 3 (cycle 10): achievements, shared notes, reports, reading groups; moderation for administrators.
   if (method === 'GET' && (normalized === '/api/reader/achievements' || normalized === '/api/reader/groups' || /^\/api\/reader\/social\/[^/]+\/\d+$/.test(normalized) || /^\/api\/reader\/groups\/[0-9a-f-]{36}$/.test(normalized))) return 'reader';
   if (method === 'PATCH' && /^\/api\/reader\/annotations\/[^/]+\/share$/.test(normalized)) return 'reader';

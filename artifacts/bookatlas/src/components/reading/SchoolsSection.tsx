@@ -3,9 +3,11 @@ import * as Dialog from '@radix-ui/react-dialog';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import * as Popover from '@radix-ui/react-popover';
-import { BookOpen, Briefcase, Check, Copy, GraduationCap, Loader2, LogOut, Plus, School, Search, Trash2, UserMinus, Users, X } from 'lucide-react';
+import { BookOpen, Briefcase, CalendarDays, Check, Copy, GraduationCap, Loader2, LogOut, Plus, School, Search, Trash2, UserMinus, Users, X } from 'lucide-react';
 import { useAccount } from '../../auth/AuthContext';
 import { useEbookApi, type ClassDetail, type ClassSummary } from '../ebook/ebookApi';
+import { ClassQuizzes, DueBadge } from './ClassQuizzes';
+import { dueState, today } from './classDates';
 
 const BASE = import.meta.env.BASE_URL;
 const SIGN_IN = `${BASE}sign-in?redirect_url=${encodeURIComponent(`${BASE}reading-intelligence#schools`)}`;
@@ -71,7 +73,13 @@ function ClassView({ id, onClose, onChanged }: { id: string; onClose: () => void
   const load = useCallback(() => api.classDetail(id).then(setD).catch((e) => setError(errText(e, 'The class could not be loaded.'))), [id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, [load]);
   const teacher = d?.role === 'teacher';
-  const saveBooks = async (books: string[]) => { try { await api.setClassBooks(id, books); await load(); onChanged(); } catch (e) { setError(errText(e, 'The reading list could not be saved.')); } };
+  const saveBooks = async (books: string[], due?: Record<string, string>) => { try { await api.setClassBooks(id, books, due); await load(); onChanged(); } catch (e) { setError(errText(e, 'The reading list could not be saved.')); } };
+  const setDue = (bookId: string, date: string) => {
+    if (!d) return;
+    const due = { ...d.due };
+    if (date) due[bookId] = date; else delete due[bookId];
+    void saveBooks(d.books.map((b) => b.id), due);
+  };
   const copy = async () => { if (!d?.inviteCode) return; try { await navigator.clipboard.writeText(d.inviteCode); setCopied(true); window.setTimeout(() => setCopied(false), 1500); } catch { /* the code is on screen */ } };
   const doConfirm = async () => {
     const c = confirm; setConfirm(null);
@@ -104,23 +112,42 @@ function ClassView({ id, onClose, onChanged }: { id: string; onClose: () => void
             </div>
             {!d.books.length ? <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">{teacher ? 'Add the books you want the group to read.' : 'No books on the list yet.'}</p> : (
               <ul className="grid gap-2 sm:grid-cols-2">
-                {d.books.map((b) => (
-                  <li key={b.id} className="flex items-center gap-2 rounded-xl bg-white p-3 ring-1 ring-slate-200">
-                    <BookOpen className="h-4 w-4 shrink-0 text-indigo-600" aria-hidden />
-                    <a href={`${BASE}books/${encodeURIComponent(b.id)}`} className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900 hover:underline">{b.title}</a>
-                    {!teacher && d.rows[0] && <Cell v={d.rows[0].books[b.id] ?? 0} />}
-                    {teacher && <button type="button" onClick={() => void saveBooks(d.books.filter((x) => x.id !== b.id).map((x) => x.id))} aria-label={`Remove ${b.title} from the list`} className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"><X className="h-4 w-4" /></button>}
-                  </li>
-                ))}
+                {d.books.map((b) => {
+                  const due = d.due[b.id];
+                  const mine = !teacher && d.rows[0] ? d.rows[0].books[b.id] ?? 0 : null;
+                  const late = teacher && due ? d.rows.filter((r) => dueState(due, (r.books[b.id] ?? 0) >= 98) === 'late').length : 0;
+                  return (
+                    <li key={b.id} className="flex flex-col gap-2 rounded-xl bg-white p-3 ring-1 ring-slate-200">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4 shrink-0 text-indigo-600" aria-hidden />
+                        <a href={`${BASE}books/${encodeURIComponent(b.id)}`} className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900 hover:underline">{b.title}</a>
+                        {mine !== null && <Cell v={mine} />}
+                        {teacher && <button type="button" onClick={() => void saveBooks(d.books.filter((x) => x.id !== b.id).map((x) => x.id))} aria-label={`Remove ${b.title} from the list`} className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"><X className="h-4 w-4" /></button>}
+                      </div>
+                      {teacher ? (
+                        <div className="flex flex-wrap items-center gap-2 pl-6">
+                          <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-600"><CalendarDays className="h-3.5 w-3.5" aria-hidden />Due
+                            <input type="date" value={due ?? ''} min={due && due < today() ? due : today()} onChange={(e) => setDue(b.id, e.target.value)} aria-label={`Due date for ${b.title}`} data-testid="book-due"
+                              className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-normal focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30" />
+                          </label>
+                          {due && <DueBadge date={due} finished={false} />}
+                          {late > 0 && <span className="text-[11px] font-bold text-rose-700">{late} not finished</span>}
+                        </div>
+                      ) : due && <div className="pl-6"><DueBadge date={due} finished={(mine ?? 0) >= 98} /></div>}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </section>
 
+          <ClassQuizzes d={d} onChanged={() => void load()} />
+
           {teacher && d.totals && (
             <section aria-labelledby="class-progress" className="space-y-3">
               <h4 id="class-progress" className="text-sm font-bold text-slate-900">Progress</h4>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {[['Members', d.totals.members], ['Read this week', d.totals.activeThisWeek], ['Minutes this week', d.totals.weekMinutes], ['Average progress', `${d.totals.averageProgress}%`]].map(([l, v]) => (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                {[['Members', d.totals.members], ['Read this week', d.totals.activeThisWeek], ['Minutes this week', d.totals.weekMinutes], ['Average progress', `${d.totals.averageProgress}%`], ...(d.totals.quizAverage !== null ? [['Quiz average', `${d.totals.quizAverage}%`]] : [])].map(([l, v]) => (
                   <div key={String(l)} className="rounded-xl bg-white p-3 ring-1 ring-slate-200"><p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{l}</p><p className="text-xl font-extrabold tabular-nums text-slate-900">{v}</p></div>
                 ))}
               </div>
@@ -129,13 +156,14 @@ function ClassView({ id, onClose, onChanged }: { id: string; onClose: () => void
                   <table className="w-full min-w-[36rem] text-left text-sm" data-testid="class-table">
                     <caption className="sr-only">Each member’s progress on the reading list</caption>
                     <thead className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500">
-                      <tr><th scope="col" className="px-3 py-2">Member</th>{d.books.map((b) => <th key={b.id} scope="col" className="max-w-[10rem] truncate px-3 py-2" title={b.title}>{b.title}</th>)}<th scope="col" className="px-3 py-2">This week</th><th scope="col" className="px-3 py-2"><span className="sr-only">Remove</span></th></tr>
+                      <tr><th scope="col" className="px-3 py-2">Member</th>{d.books.map((b) => <th key={b.id} scope="col" className="max-w-[10rem] truncate px-3 py-2" title={b.title}>{b.title}</th>)}{d.quizzes.map((q) => <th key={q.id} scope="col" className="max-w-[8rem] truncate px-3 py-2" title={`Quiz: ${q.chapterTitle}`}>Quiz: {q.chapterTitle}</th>)}<th scope="col" className="px-3 py-2">This week</th><th scope="col" className="px-3 py-2"><span className="sr-only">Remove</span></th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {d.rows.map((r) => (
                         <tr key={r.userId}>
                           <th scope="row" className="px-3 py-2 font-semibold text-slate-900">{r.name}<span className="block text-[11px] font-normal text-slate-500">{r.lastRead ? `last read ${new Date(r.lastRead).toLocaleDateString()}` : 'not started'}</span></th>
                           {d.books.map((b) => <td key={b.id} className="px-3 py-2"><Cell v={r.books[b.id] ?? 0} /></td>)}
+                          {d.quizzes.map((q) => { const v = r.quizzes[q.id]; return <td key={q.id} className="px-3 py-2 text-xs tabular-nums">{typeof v === 'number' ? <span className={`font-bold ${v >= 80 ? 'text-emerald-700' : v >= 50 ? 'text-slate-800' : 'text-rose-700'}`}>{v}%</span> : <span className="text-slate-400">{q.due && dueState(q.due, false) === 'late' ? 'missed' : 'not yet'}</span>}</td>; })}
                           <td className="px-3 py-2 tabular-nums text-slate-700">{r.weekMinutes} min</td>
                           <td className="px-3 py-2"><button type="button" onClick={() => setConfirm({ userId: r.userId, name: r.name })} aria-label={`Remove ${r.name}`} className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"><UserMinus className="h-4 w-4" /></button></td>
                         </tr>

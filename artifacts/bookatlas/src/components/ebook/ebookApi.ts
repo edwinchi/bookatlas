@@ -116,8 +116,14 @@ export interface GroupDetail extends GroupSummary { inviteCode: string; memberNa
 export interface SyncedProgress { book_id: string; chapter_index: number; paragraph_index: number; progress_percent: number; device: string | null; updated_at: string }
 /** Schools and teams (Reading Intelligence phase 3). */
 export interface ClassSummary { id: string; name: string; kind: 'class' | 'team'; role: 'teacher' | 'member'; members: number; books: { id: string; title: string }[]; createdAt: string; inviteCode?: string }
-export interface ClassRow { userId: string; name: string; joinedAt: string; books: Record<string, number>; finished: number; average: number; weekMinutes: number; lastRead: string | null }
-export interface ClassDetail extends ClassSummary { teacher: string; rows: ClassRow[]; totals: { members: number; weekMinutes: number; averageProgress: number; activeThisWeek: number } | null }
+export interface ClassRow { userId: string; name: string; joinedAt: string; books: Record<string, number>; finished: number; average: number; weekMinutes: number; lastRead: string | null; quizzes: Record<string, number | null> }
+export interface ClassQuizQuestion { question: string; options: string[]; answer?: number; explanation?: string }
+export interface ClassQuizScore { right: number; total: number; answers: number[]; at: string }
+export interface ClassQuiz { id: string; bookId: string; chapterIndex: number; chapterTitle: string; due: string | null; createdAt: string; questions: ClassQuizQuestion[]; score?: ClassQuizScore | null }
+export interface ClassDetail extends ClassSummary {
+  teacher: string; rows: ClassRow[]; due: Record<string, string>; quizzes: ClassQuiz[];
+  totals: { members: number; weekMinutes: number; averageProgress: number; activeThisWeek: number; quizAverage: number | null } | null;
+}
 export interface ReadingStats {
   totalMinutes: number; words: number; wordsPerMinute: number | null; streakDays: number; booksStarted: number; booksFinished: number;
   sessions: number; last30: { day: string; minutes: number }[];
@@ -212,7 +218,10 @@ export function useEbookApi() {
     createClass: (body: { name: string; kind: 'class' | 'team' }) => json<ClassSummary>('/api/reader/classes', 'POST', body),
     joinClass: (code: string) => json<ClassSummary>('/api/reader/classes/join', 'POST', { code }),
     classDetail: (id: string) => json<ClassDetail>(`/api/reader/classes/${id}`),
-    setClassBooks: (id: string, books: string[]) => json<{ books: { id: string; title: string }[] }>(`/api/reader/classes/${id}/books`, 'PUT', { books }),
+    setClassBooks: (id: string, books: string[], due?: Record<string, string>) => json<{ books: { id: string; title: string }[]; due: Record<string, string> }>(`/api/reader/classes/${id}/books`, 'PUT', due ? { books, due } : { books }),
+    publishClassQuiz: (id: string, body: { bookId: string; chapterIndex: number; chapterTitle: string; questions: ClassQuizQuestion[]; due: string | null }) => json<{ quiz: ClassQuiz }>(`/api/reader/classes/${id}/quizzes`, 'POST', body),
+    removeClassQuiz: (id: string, quizId: string) => json<{ ok: boolean }>(`/api/reader/classes/${id}/quizzes/${quizId}`, 'DELETE'),
+    answerClassQuiz: (id: string, quizId: string, answers: number[]) => json<{ score: ClassQuizScore; quiz: ClassQuiz; alreadyAnswered: boolean }>(`/api/reader/classes/${id}/quizzes/${quizId}/answers`, 'POST', { answers }),
     leaveClass: (id: string, userId = 'me') => json<{ closed: boolean }>(`/api/reader/classes/${id}/members/${encodeURIComponent(userId)}`, 'DELETE'),
     shareAnnotation: (id: string, bookId: string, shared: boolean) => json<Annotation>(`/api/reader/annotations/${id}/share`, 'PATCH', { bookId, shared }),
     chapterSocial: (bookId: string, chapter: number) => json<ChapterSocial>(`/api/reader/social/${encodeURIComponent(bookId)}/${chapter}`),

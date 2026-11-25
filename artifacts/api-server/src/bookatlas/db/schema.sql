@@ -488,6 +488,9 @@ create table if not exists public.bookatlas_reading_class_members (
   primary key (class_id, user_id)
 );
 create index if not exists bookatlas_reading_class_members_user_idx on public.bookatlas_reading_class_members (user_id);
+-- Phase 4 (2026-11-25): due dates on the reading list, class quizzes and each member's quiz scores.
+alter table public.bookatlas_reading_classes add column if not exists due_dates jsonb not null default '{}'::jsonb, add column if not exists quizzes jsonb not null default '[]'::jsonb;
+alter table public.bookatlas_reading_class_members add column if not exists quiz_scores jsonb not null default '{}'::jsonb;
 
 alter table public.bookatlas_reading_sessions enable row level security;
 alter table public.bookatlas_reading_groups enable row level security;

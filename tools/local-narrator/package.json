@@ -9,7 +9,8 @@
     "list": "node narrate.mjs --list",
     "narrate": "node narrate.mjs",
     "sample": "node narrate.mjs --sample",
-    "samples": "node narrate.mjs --samples"
+    "samples": "node narrate.mjs --samples",
+    "young": "node narrate.mjs --young"
   },
   "dependencies": {
     "@breezystack/lamejs": "1.2.7",

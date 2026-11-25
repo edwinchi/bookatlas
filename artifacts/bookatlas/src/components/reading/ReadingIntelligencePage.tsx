@@ -321,7 +321,7 @@ export default function ReadingIntelligencePage() {
         </Section>
 
         <Section id="young" icon={Baby} eyebrow="Young readers" title="Stories, letter sounds and word games"
-          intro="From first words to confident reading: picture words and little picture books for the youngest, then stories that read themselves aloud with every word lit up, questions after each story, letter sounds and word games in three levels. Free, with no account needed.">
+          intro="From first words to confident reading: picture words and little picture books for the youngest, then stories that read themselves aloud in a natural voice with every word lit up, questions after each story, letter sounds and word games in three levels. Free, with no account needed.">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Feature icon={Baby} title="First words (0–4)">Animals, colours, food, family, nature and vehicles to tap and hear, picture books and a Find it game.</Feature>
             <Feature icon={BookOpen} title="Stories read aloud">Tap Read to me and follow the words; tap any word to hear it again.</Feature>
@@ -332,7 +332,7 @@ export default function ReadingIntelligencePage() {
         </Section>
 
         <Section id="schools" icon={School} eyebrow="Schools and teams" title="Read together as a class or a team"
-          intro="Teachers and team leads make a class, share its invite code and choose the books. Members see the reading list; the teacher sees how far each member is in every book and how long they read this week.">
+          intro="Teachers and team leads make a class, share its invite code, choose the books and set due dates and quizzes. Members see what to read and by when; the teacher sees how far each member is in every book, their quiz scores and how long they read this week.">
           <SchoolsSection />
         </Section>
       </div>
