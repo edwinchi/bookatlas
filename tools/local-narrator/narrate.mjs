@@ -7,6 +7,7 @@
 //   npm run list                      the narrations you can take
 //   npm run sample -- --voice af_heart     hear a voice (writes sample-af_heart.mp3)
 //   npm run narrate -- --narration <id> [--voice af_heart] [--from-start] [--parts 20]
+//        [--dialogue-voice bf_emma] [--cast "Kofi=am_michael,Lina=bf_isabella"]   a voice per character (voices.mjs)
 //   npm run samples                   a real audio sample for every English book that has none yet
 //
 // Settings come from ../../.env.local (or the environment): NARRATION_WORKER_TOKEN (required, the same value as
@@ -16,6 +17,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Mp3Encoder } from '@breezystack/lamejs';
+import { parseCast, voicedPieces } from './voices.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const VOICES = {
@@ -56,6 +58,13 @@ const base = String(opts.url ?? settings.BOOKSATLAS_URL ?? 'https://booksatlas.a
 const token = settings.NARRATION_WORKER_TOKEN?.trim();
 const voice = String(opts.voice ?? 'af_heart');
 if (!VOICES[voice]) { console.error(`Unknown voice "${voice}". Choose one of:\n${Object.entries(VOICES).map(([k, v]) => `  ${k.padEnd(12)} ${v}`).join('\n')}`); process.exit(2); }
+
+// A voice per character (Reading Intelligence phase 3): speech in quotes in the speaker's or the dialogue voice.
+const dialogueVoice = opts['dialogue-voice'] ? String(opts['dialogue-voice']) : null;
+if (dialogueVoice && !VOICES[dialogueVoice]) { console.error(`Unknown dialogue voice "${dialogueVoice}".`); process.exit(2); }
+let cast;
+try { cast = parseCast(opts.cast ?? '', VOICES); } catch (e) { console.error(e.message); process.exit(2); }
+const casting = { narrator: voice, dialogue: dialogueVoice, cast };
 
 // --------------------------------------------------------------------------------------------- API
 async function api(path, init = {}, tries = 4) {
@@ -107,9 +116,15 @@ async function speak(text) {
   const paragraphs = text.split(/\n\s*\n/).map((p) => p.replace(/\s+/g, ' ').trim()).filter(Boolean);
   for (const [pi, paragraph] of paragraphs.entries()) {
     for (const chunk of chunks(paragraph)) {
-      const audio = await model.generate(chunk, { voice });
-      voiced += audio.audio.length / SAMPLE_RATE;
-      parts.push(audio.audio, silence(PAUSE_SENTENCE));
+      // One voice, or a piece per speaker with a breath between them; the pause after the chunk stays the same.
+      const pieces = voicedPieces(chunk, casting);
+      for (const [i, piece] of pieces.entries()) {
+        const audio = await model.generate(piece.text, { voice: piece.voice });
+        voiced += audio.audio.length / SAMPLE_RATE;
+        parts.push(audio.audio);
+        if (i < pieces.length - 1) parts.push(silence(0.08));
+      }
+      parts.push(silence(PAUSE_SENTENCE));
     }
     if (pi < paragraphs.length - 1) parts.push(silence(PAUSE_PARAGRAPH));
   }

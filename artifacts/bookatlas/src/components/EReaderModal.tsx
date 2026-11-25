@@ -58,6 +58,7 @@ import { ListenPlayer, type PlayerStatus } from './reader/ListenPlayer';
 import { ReaderPreferences } from './reader/ReaderPreferences';
 import { FastReadDialog } from './reader/FastReadPanel';
 import { BoldStarts, ReadingGuide, clearSpoken, loadReaderFont, readerFontClass, showSpoken } from './reader/readingAids';
+import { narrationTimeline, wordAt, type TimedWord } from './reader/narrationSync';
 import { ReaderContents, GoToPopover } from './reader/ReaderNavigation';
 import { useDeviceVoice, type Translated } from './reader/useDeviceVoice';
 import { usePagedLayout } from './reader/usePagedLayout';
@@ -451,18 +452,21 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
         },
       );
       if (speechChapter.current !== seg.chapter) { speechChapter.current = seg.chapter; setCurrentChapterIndex(seg.chapter); }
-      const paras = Array.from({ length: seg.to - seg.from + 1 }, (_, i) => seg.from + i);
-      const lengths = paras.map((p) => Math.max(1, (chapter?.content[p] ?? '').length));
-      const total = lengths.reduce((a, b) => a + b, 0);
+      // Each word's moment in the part, worked out from the text and the length of the audio (Reading Intelligence
+      // phase 3): the paragraph, sentence and word being spoken light up.
+      const paras = Array.from({ length: seg.to - seg.from + 1 }, (_, i) => ({ p: seg.from + i, text: chapter?.content[seg.from + i] ?? '' }));
+      const opensChapter = seg.from === (chapter?.content.findIndex((t) => t.trim()) ?? -1);
+      let timeline: TimedWord[] | null = null;
+      let lastPara = -1;
       const highlight = () => {
         if (run !== speechRun.current) return;
-        const fraction = audio.duration ? audio.currentTime / audio.duration : 0;
         setClock({ t: audio.currentTime || 0, d: audio.duration || seg.seconds, k });
-        let acc = 0;
-        for (let i = 0; i < paras.length; i += 1) {
-          acc += lengths[i]! / total;
-          if (fraction <= acc || i === paras.length - 1) { setSpokenParagraph(paras[i]!); setCurrentParagraphIndex(paras[i]!); break; }
-        }
+        const length = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : seg.seconds;
+        if (!timeline && length > 0) timeline = narrationTimeline(paras, opensChapter ? chapter?.title ?? null : null, length);
+        const w = timeline ? wordAt(timeline, audio.currentTime || 0) : null;
+        const p = w?.p ?? seg.from;
+        if (p !== lastPara) { lastPara = p; setSpokenParagraph(p); setCurrentParagraphIndex(p); }
+        if (followWordsRef.current && w) requestAnimationFrame(() => { if (run === speechRun.current) showSpoken(document.querySelector(`[data-para="${w.p}"]`), [w.s0, w.s1], [w.w0, w.w1]); });
       };
       audio.ontimeupdate = highlight;
       audio.onended = () => void play(k + 1);

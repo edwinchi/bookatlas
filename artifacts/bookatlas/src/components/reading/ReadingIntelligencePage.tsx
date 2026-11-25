@@ -3,9 +3,8 @@ import { Link } from 'wouter';
 import * as Toggle from '@radix-ui/react-toggle';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { SelectBox } from '../ui/select-box';
-import { enquiryHref } from '../StartBookDialog';
 import {
-  Accessibility, ArrowLeft, AudioLines, Baby, Bold, BookOpen, Brain, CalendarDays, Flame, Focus, Gauge, GraduationCap,
+  Accessibility, ArrowLeft, AudioLines, Baby, Bold, BookOpen, Brain, Flame, Focus, Gauge, GraduationCap,
   FileText, Star, Headphones, Languages, Library, Loader2, MessageSquareText, Rows3, School, Sparkles, Target, Timer, TrendingUp, Type, Users, Zap,
 } from 'lucide-react';
 import { useAccount } from '../../auth/AuthContext';
@@ -16,6 +15,7 @@ import { BoldStarts } from '../reader/readingAids';
 import { SAMPLE_PASSAGE, speedPlan, summarizeTests } from '../reader/fastRead';
 import { FamilyPanel, NextStepCard, WhoIsReading, useFamily } from './FamilySection';
 import { OwnText } from './OwnTextPanel';
+import { SchoolsSection } from './SchoolsSection';
 
 const BASE = import.meta.env.BASE_URL;
 const STORE = BASE;
@@ -32,7 +32,7 @@ const SECTIONS = [
   { id: 'progress', label: 'My progress', icon: TrendingUp },
   { id: 'family', label: 'Family', icon: Users },
   { id: 'young', label: 'Young readers', icon: Baby },
-  { id: 'next', label: 'Coming next', icon: Sparkles },
+  { id: 'schools', label: 'Schools and teams', icon: School },
 ] as const;
 
 function Section({ id, icon: Icon, eyebrow, title, intro, children }: { id: string; icon: React.ComponentType<{ className?: string }>; eyebrow: string; title: string; intro: string; children: React.ReactNode }) {
@@ -277,7 +277,7 @@ export default function ReadingIntelligencePage() {
           intro="Every book you can read on BooksAtlas can also be read aloud, on any phone, tablet or computer. Switch between reading and listening and keep your place.">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <Feature icon={AudioLines} title="Words light up">While your device’s voice reads, the sentence and the word being spoken are marked on the page, so you can follow along.</Feature>
-            <Feature icon={Headphones} title="Natural-voice audiobooks">Books with a narrated edition play in a natural studio voice, chapter by chapter, from the lock screen too.</Feature>
+            <Feature icon={Headphones} title="Natural-voice audiobooks">Books with a narrated edition play in a natural studio voice, with each word lighting up as it is spoken, from the lock screen too.</Feature>
             <Feature icon={Gauge} title="Half speed to 3×">Slow down for a hard passage or speed up for a familiar one. The pace you choose is kept.</Feature>
             <Feature icon={Languages} title="In your own language">Listen in 40 languages: the book is translated paragraph by paragraph as it is read.</Feature>
             <Feature icon={Type} title="Choose the voice">Pick any voice your device has, grouped by language and country, and hear a sample first.</Feature>
@@ -321,8 +321,9 @@ export default function ReadingIntelligencePage() {
         </Section>
 
         <Section id="young" icon={Baby} eyebrow="Young readers" title="Stories, letter sounds and word games"
-          intro="For children from about 4 to 12, in three reading levels: short stories that read themselves aloud with every word lit up, questions after each story, letter sounds, and three word games. Free, with no account needed.">
-          <div className="grid gap-3 sm:grid-cols-3">
+          intro="From first words to confident reading: picture words and little picture books for the youngest, then stories that read themselves aloud with every word lit up, questions after each story, letter sounds and word games in three levels. Free, with no account needed.">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Feature icon={Baby} title="First words (0–4)">Animals, colours, food, family, nature and vehicles to tap and hear, picture books and a Find it game.</Feature>
             <Feature icon={BookOpen} title="Stories read aloud">Tap Read to me and follow the words; tap any word to hear it again.</Feature>
             <Feature icon={Type} title="Letter sounds">Every letter, and the letters that work together, with a word and a picture.</Feature>
             <Feature icon={Star} title="Word games">Find the picture, build the word and spell it, and collect stars.</Feature>
@@ -330,15 +331,9 @@ export default function ReadingIntelligencePage() {
           <a href={`${BASE}reading-intelligence/young-readers`} data-testid="open-young-readers" className="mt-5 inline-flex min-h-12 items-center gap-2 rounded-2xl bg-amber-400 px-5 text-base font-bold text-slate-950 hover:bg-amber-300"><Baby className="h-5 w-5" aria-hidden />Open Young readers</a>
         </Section>
 
-        <Section id="next" icon={Sparkles} eyebrow="Coming next" title="What we are building next"
-          intro="Reading Intelligence grows step by step. These come next, in this order.">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Feature icon={Baby} title="First words">Picture books for the youngest, read aloud, with a word spoken for every picture they tap.</Feature>
-            <Feature icon={AudioLines} title="Narration that follows every word">Natural-voice audiobooks that light up each word as it is spoken.</Feature>
-            <Feature icon={Users} title="A voice for every character">Stories narrated with a different voice for each character.</Feature>
-            <Feature icon={School} title="Schools and teams">Reading lists, class progress and reading plans for teachers and companies.</Feature>
-          </div>
-          <p className="mt-4 text-sm text-slate-600"><CalendarDays className="mr-1 inline h-4 w-4 text-indigo-600" aria-hidden />Want one of these first? <a href={enquiryHref('question')} className="font-bold text-indigo-700 hover:underline">Tell us</a>.</p>
+        <Section id="schools" icon={School} eyebrow="Schools and teams" title="Read together as a class or a team"
+          intro="Teachers and team leads make a class, share its invite code and choose the books. Members see the reading list; the teacher sees how far each member is in every book and how long they read this week.">
+          <SchoolsSection />
         </Section>
       </div>
     </main>

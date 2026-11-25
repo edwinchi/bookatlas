@@ -3,51 +3,14 @@ import { Link } from 'wouter';
 import * as Tabs from '@radix-ui/react-tabs';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import * as RadioGroup from '@radix-ui/react-radio-group';
-import { ArrowLeft, Check, Delete, Puzzle, RotateCcw, Sparkles, Square, Star, Volume2, X, BookOpen, Type as TypeIcon, Image as ImageIcon, PenLine } from 'lucide-react';
+import { ArrowLeft, Baby, Check, Delete, Puzzle, RotateCcw, Sparkles, Square, Star, Volume2, X, BookOpen, Type as TypeIcon, Image as ImageIcon, PenLine } from 'lucide-react';
 import { useAccount } from '../../auth/AuthContext';
 import { useEbookApi } from '../ebook/ebookApi';
 import { useActiveReader } from './family';
 import { loadReaderFont } from '../reader/readingAids';
+import { useSpeaker } from './useSpeaker';
+import { FirstWordsPanel } from './FirstWordsPanel';
 import { LEVELS, SOUNDS, STORIES, WORDS, pictureRound, sameWord, scramble, storyStars, type Level, type Story } from './youngReaders';
-
-/** The device voice for children's reading: a clear English voice, a little slower than usual. */
-function useSpeaker() {
-  const synth = typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null;
-  const run = useRef(0);
-  const stop = useCallback(() => { run.current += 1; try { synth?.cancel(); } catch { /* nothing to stop */ } }, [synth]);
-  useEffect(() => stop, [stop]);
-  const voice = () => {
-    try {
-      const vs = (synth?.getVoices() ?? []).filter((v) => v?.lang && /^en[-_]/i.test(v.lang));
-      return vs.find((v) => /natural|neural|premium|enhanced/i.test(v.name ?? '')) ?? vs.find((v) => v.default) ?? vs[0] ?? null;
-    } catch { return null; }
-  };
-  /** Says the parts one after the other; `onPart` and `onWord` follow along, `onEnd` when done. */
-  const say = useCallback((parts: string[], o: { rate?: number; onPart?: (i: number) => void; onWord?: (part: number, char: number) => void; onEnd?: () => void } = {}) => {
-    if (!synth) return false;
-    stop();
-    const me = run.current;
-    const next = (i: number) => {
-      if (me !== run.current) return;
-      if (i >= parts.length) { o.onEnd?.(); return; }
-      o.onPart?.(i);
-      try {
-        const u = new SpeechSynthesisUtterance(parts[i]!);
-        const v = voice();
-        u.lang = v?.lang ?? 'en-GB';
-        try { if (v) u.voice = v; } catch { /* the language is enough */ }
-        u.rate = o.rate ?? 0.85;
-        u.onboundary = (e) => { if (me === run.current && e.name === 'word') o.onWord?.(i, e.charIndex); };
-        u.onend = () => next(i + 1);
-        u.onerror = () => { if (me === run.current) o.onEnd?.(); };
-        synth.speak(u);
-      } catch { o.onEnd?.(); }
-    };
-    next(0);
-    return true;
-  }, [synth, stop]);
-  return { supported: !!synth, say, stop };
-}
 
 /** Stars earned on this device; for a signed-in family they count for the reader who is playing. */
 function useStars() {
@@ -347,12 +310,14 @@ export default function YoungReadersPage() {
         </div>
       </header>
 
-      <Tabs.Root defaultValue="stories" className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <Tabs.Root defaultValue={reader.kind === 'early' || window.location.hash === '#first-words' ? 'first' : 'stories'} className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <Tabs.List aria-label="Activities" className="mb-6 flex flex-wrap gap-2">
+          <Tabs.Trigger value="first" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-first"><Baby className="h-4 w-4" aria-hidden />First words</Tabs.Trigger>
           <Tabs.Trigger value="stories" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-stories"><BookOpen className="h-4 w-4" aria-hidden />Stories</Tabs.Trigger>
           <Tabs.Trigger value="sounds" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-sounds"><TypeIcon className="h-4 w-4" aria-hidden />Letter sounds</Tabs.Trigger>
           <Tabs.Trigger value="games" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-games"><Puzzle className="h-4 w-4" aria-hidden />Word games</Tabs.Trigger>
         </Tabs.List>
+        <Tabs.Content value="first" className="focus-visible:outline-none"><FirstWordsPanel onStars={add} /></Tabs.Content>
         <Tabs.Content value="stories" className="focus-visible:outline-none"><Stories level={level} onStars={add} /></Tabs.Content>
         <Tabs.Content value="sounds" className="focus-visible:outline-none"><LetterSounds /></Tabs.Content>
         <Tabs.Content value="games" className="focus-visible:outline-none"><WordGames level={level} onStars={add} /></Tabs.Content>

@@ -49,12 +49,26 @@ No database change was needed: speed checks are stored with the reader settings.
 Family data is kept in the account's reader settings (`settings.family`), so there's still no database change.
 Removing a profile removes its reading.
 
-## Phase 3: later
+## Phase 3: built (2026-11-25)
 
-- First words (0–4): picture books read aloud, words lit up, a word spoken when a picture is tapped.
-- Schools and teams: reading lists, class progress, teacher view.
-- Synced natural-voice narration with word timings (needs timings from the narration worker).
-- Multi-voice narration (a voice per character).
+| Brief | Where it lives |
+|---|---|
+| First words (0–4): animals, colours, food, family, nature, vehicles | Young readers → First words (`FirstWordsPanel.tsx`, `firstWords.ts`): tap a picture to hear its word |
+| Picture books read aloud with each word lit up | Three original picture books, page by page |
+| Object recognition | "Find it": the word is said, and the child taps the right one of four pictures |
+| Progress for the youngest | Words heard, right pictures, listening time (per reader, on the device) |
+| Narration that lights up each word | `reader/narrationSync.ts`: word timings worked out from the text, the narrator's pauses and the audio length; works on every recorded audiobook |
+| A voice for every character | `tools/local-narrator/voices.mjs`: `--dialogue-voice` and `--cast "Name=voice"` (see the narrator README) |
+| Schools and teams: reading lists, class progress, teacher view | `reader/classes.ts`, `/api/reader/classes…`, `SchoolsSection.tsx` |
+
+**Database:** schools and teams need two new tables. Run
+`artifacts/api-server/src/bookatlas/db/migrations-2026-11-25-reading-classes.sql` once in the Supabase SQL editor.
+Until then, the schools section says it is not available, and everything else works.
+
+## Later
+
+- Natural-voice audiobooks for children's stories and picture books.
+- Teacher assignments with due dates, and class quizzes.
 
 ## Choices and limits
 

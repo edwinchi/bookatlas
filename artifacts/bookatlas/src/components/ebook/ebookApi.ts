@@ -114,6 +114,10 @@ export interface GroupSummary { id: string; bookId: string; bookTitle: string | 
 export interface GroupPost { id: string; name: string; chapterIndex: number | null; body: string; date: string; mine: boolean; hidden: boolean; canDelete: boolean }
 export interface GroupDetail extends GroupSummary { inviteCode: string; memberNames: { name: string; role: string; me: boolean }[]; posts: GroupPost[] }
 export interface SyncedProgress { book_id: string; chapter_index: number; paragraph_index: number; progress_percent: number; device: string | null; updated_at: string }
+/** Schools and teams (Reading Intelligence phase 3). */
+export interface ClassSummary { id: string; name: string; kind: 'class' | 'team'; role: 'teacher' | 'member'; members: number; books: { id: string; title: string }[]; createdAt: string; inviteCode?: string }
+export interface ClassRow { userId: string; name: string; joinedAt: string; books: Record<string, number>; finished: number; average: number; weekMinutes: number; lastRead: string | null }
+export interface ClassDetail extends ClassSummary { teacher: string; rows: ClassRow[]; totals: { members: number; weekMinutes: number; averageProgress: number; activeThisWeek: number } | null }
 export interface ReadingStats {
   totalMinutes: number; words: number; wordsPerMinute: number | null; streakDays: number; booksStarted: number; booksFinished: number;
   sessions: number; last30: { day: string; minutes: number }[];
@@ -203,6 +207,13 @@ export function useEbookApi() {
     family: () => json<FamilyView>('/api/reader/family'),
     saveFamily: (body: { profiles: FamilyProfile[]; challenge?: { weeklyMinutes: number } }) => json<FamilyView>('/api/reader/family', 'PUT', body),
     familyActivity: (body: FamilyActivity & { profileId: string }) => json<void>('/api/reader/family/activity', 'POST', body),
+    // Reading Intelligence phase 3 (2026-11-25): schools and teams.
+    classes: () => json<{ classes: ClassSummary[] }>('/api/reader/classes').then((r) => r.classes),
+    createClass: (body: { name: string; kind: 'class' | 'team' }) => json<ClassSummary>('/api/reader/classes', 'POST', body),
+    joinClass: (code: string) => json<ClassSummary>('/api/reader/classes/join', 'POST', { code }),
+    classDetail: (id: string) => json<ClassDetail>(`/api/reader/classes/${id}`),
+    setClassBooks: (id: string, books: string[]) => json<{ books: { id: string; title: string }[] }>(`/api/reader/classes/${id}/books`, 'PUT', { books }),
+    leaveClass: (id: string, userId = 'me') => json<{ closed: boolean }>(`/api/reader/classes/${id}/members/${encodeURIComponent(userId)}`, 'DELETE'),
     shareAnnotation: (id: string, bookId: string, shared: boolean) => json<Annotation>(`/api/reader/annotations/${id}/share`, 'PATCH', { bookId, shared }),
     chapterSocial: (bookId: string, chapter: number) => json<ChapterSocial>(`/api/reader/social/${encodeURIComponent(bookId)}/${chapter}`),
     report: (kind: 'annotation' | 'post', targetId: string, reason?: string) => json<{ reported: boolean }>('/api/reader/reports', 'POST', { kind, targetId, reason }),

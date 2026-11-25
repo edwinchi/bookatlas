@@ -10,6 +10,7 @@ import { achievements, DEFAULT_DAILY_GOAL } from './achievements.js';
 import { chapterSocial, hideTarget, report, reportedItems, setShared, sharedAnnotationExists } from './social.js';
 import { addPost, createGroup, deletePost, groupCount, groupDetail, joinGroup, leaveGroup, myGroups, postExists } from './groups.js';
 import { DAILY_AI_LIMIT, LANGUAGES, askBook, defineWord, explainPassage, refundAiQuota, studyChapter, translatePassage, useAiQuota, type Generate } from './ai.js';
+import { classDetail, createClass, joinClass, leaveClass, myClasses, setClassBooks } from './classes.js';
 import { FamilyError, addActivity, familyView, readFamily, weekStart, withProfiles, type Family } from './family.js';
 
 let generatorOverride: Generate | null = null;
@@ -135,6 +136,18 @@ export function mountReader(app: Express, catalog: CatalogStore, generate?: Gene
   }));
 
   const titleOf = async (id: string) => (await catalog.get(id))?.title ?? null;
+  // Schools and teams (Reading Intelligence phase 3, 2026-11-25): classes with an invite code and a reading list.
+  const classId = (req: Request) => String(req.params.id);
+  app.get('/api/reader/classes', guarded(async (req, res) => { res.json({ classes: await myClasses(signedIn(req), titleOf) }); }));
+  app.post('/api/reader/classes', json, guarded(async (req, res) => { res.status(201).json(await createClass(signedIn(req), body(req))); }));
+  app.post('/api/reader/classes/join', json, guarded(async (req, res) => { res.json(await joinClass(signedIn(req), body(req), titleOf)); }));
+  app.get('/api/reader/classes/:id', guarded(async (req, res) => { res.json(await classDetail(signedIn(req), classId(req), titleOf)); }));
+  app.put('/api/reader/classes/:id/books', json, guarded(async (req, res) => { res.json(await setClassBooks(signedIn(req), classId(req), body(req), titleOf)); }));
+  app.delete('/api/reader/classes/:id/members/:userId', guarded(async (req, res) => {
+    const who = signedIn(req);
+    const target = String(req.params.userId);
+    res.json(await leaveClass(who, classId(req), target === 'me' ? who.id : target));
+  }));
   app.post('/api/reader/groups', json, guarded(async (req, res) => {
     res.status(201).json(await createGroup(signedIn(req), body(req), titleOf));
   }));

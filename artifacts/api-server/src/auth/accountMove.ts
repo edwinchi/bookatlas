@@ -21,6 +21,7 @@ export const USER_ID_COLUMNS: readonly (readonly [BookatlasTable, string])[] = [
   ['reading_sessions', 'user_id'], ['follows', 'user_id'], ['reviews', 'user_id'],
   ['reading_group_members', 'user_id'], ['reading_group_posts', 'user_id'], ['reader_reports', 'reporter_id'],
   ['ebook_submissions', 'owner_id'], ['publishing_jobs', 'owner_id'], ['narrations', 'owner_id'], ['reading_groups', 'owner_id'],
+  ['reading_classes', 'owner_id'], ['reading_class_members', 'user_id'],
 ];
 
 export const MOVE_FLAG = 'bookatlasAccountMove';

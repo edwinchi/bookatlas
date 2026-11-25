@@ -467,19 +467,43 @@ create table if not exists public.bookatlas_reader_reports (
   unique (kind, target_id, reporter_id)
 );
 
+-- Schools and teams (Reading Intelligence phase 3): a class with an invite code, a reading list and its members.
+create table if not exists public.bookatlas_reading_classes (
+  id uuid primary key,
+  owner_id text not null,
+  name text not null check (char_length(name) between 2 and 80),
+  kind text not null default 'class' check (kind in ('class', 'team')),
+  invite_code text not null unique,
+  books jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists bookatlas_reading_classes_owner_idx on public.bookatlas_reading_classes (owner_id);
+
+create table if not exists public.bookatlas_reading_class_members (
+  class_id uuid not null references public.bookatlas_reading_classes (id) on delete cascade,
+  user_id text not null,
+  display_name text not null,
+  role text not null check (role in ('teacher', 'member')),
+  joined_at timestamptz not null default now(),
+  primary key (class_id, user_id)
+);
+create index if not exists bookatlas_reading_class_members_user_idx on public.bookatlas_reading_class_members (user_id);
+
 alter table public.bookatlas_reading_sessions enable row level security;
 alter table public.bookatlas_reading_groups enable row level security;
 alter table public.bookatlas_reading_group_members enable row level security;
 alter table public.bookatlas_reading_group_posts enable row level security;
 alter table public.bookatlas_reader_reports enable row level security;
+alter table public.bookatlas_reading_classes enable row level security;
+alter table public.bookatlas_reading_class_members enable row level security;
 revoke all on table public.bookatlas_books, public.bookatlas_categories,
   public.bookatlas_registered_users, public.bookatlas_subscribers, public.bookatlas_campaigns,
   public.bookatlas_publishing_jobs, public.bookatlas_publishing_messages,
   public.bookatlas_publishing_test_books, public.bookatlas_ebook_submissions,
-  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations, public.bookatlas_reviews, public.bookatlas_follows, public.bookatlas_crypto_orders, public.bookatlas_author_payouts, public.bookatlas_reader_progress, public.bookatlas_reader_annotations, public.bookatlas_reader_preferences, public.bookatlas_reading_sessions, public.bookatlas_reading_groups, public.bookatlas_reading_group_members, public.bookatlas_reading_group_posts, public.bookatlas_reader_reports from anon, authenticated;
+  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations, public.bookatlas_reviews, public.bookatlas_follows, public.bookatlas_crypto_orders, public.bookatlas_author_payouts, public.bookatlas_reader_progress, public.bookatlas_reader_annotations, public.bookatlas_reader_preferences, public.bookatlas_reading_sessions, public.bookatlas_reading_groups, public.bookatlas_reading_group_members, public.bookatlas_reading_group_posts, public.bookatlas_reader_reports, public.bookatlas_reading_classes, public.bookatlas_reading_class_members from anon, authenticated;
 grant select, insert, update, delete on table public.bookatlas_books, public.bookatlas_categories,
   public.bookatlas_registered_users, public.bookatlas_subscribers, public.bookatlas_campaigns,
   public.bookatlas_publishing_jobs, public.bookatlas_publishing_messages,
   public.bookatlas_publishing_test_books, public.bookatlas_ebook_submissions,
-  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations, public.bookatlas_reviews, public.bookatlas_follows, public.bookatlas_crypto_orders, public.bookatlas_author_payouts, public.bookatlas_reader_progress, public.bookatlas_reader_annotations, public.bookatlas_reader_preferences, public.bookatlas_reading_sessions, public.bookatlas_reading_groups, public.bookatlas_reading_group_members, public.bookatlas_reading_group_posts, public.bookatlas_reader_reports to service_role;
+  public.bookatlas_prep_feedback, public.bookatlas_purchases, public.bookatlas_invoices, public.bookatlas_narrations, public.bookatlas_reviews, public.bookatlas_follows, public.bookatlas_crypto_orders, public.bookatlas_author_payouts, public.bookatlas_reader_progress, public.bookatlas_reader_annotations, public.bookatlas_reader_preferences, public.bookatlas_reading_sessions, public.bookatlas_reading_groups, public.bookatlas_reading_group_members, public.bookatlas_reading_group_posts, public.bookatlas_reader_reports, public.bookatlas_reading_classes, public.bookatlas_reading_class_members to service_role;
 commit;

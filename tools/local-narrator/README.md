@@ -50,3 +50,19 @@ Run `npm run samples` to record a real audio sample with Kokoro for every Englis
 | `bm_george`, `bm_fable`, `bm_lewis` | British, male |
 
 Kokoro reads English only. For other languages, use the cloud narrator.
+
+## A voice for every character
+
+Speech in quotes can be read in its own voice, and each named character can have their own.
+
+- `--dialogue-voice bf_emma`: all speech in quotes in this voice. Everything else stays in `--voice`.
+- `--cast "Kofi=am_michael,Lina=bf_isabella"`: a line goes to its speaker when the text names them next to the quote, as in “…,” said Kofi or Lina asked, “…”. Lines with no named speaker use the dialogue voice, or the narrator's voice if there is none.
+
+Example:
+
+```
+npm run narrate -- --narration <id> --voice af_heart --dialogue-voice bf_emma --cast "Kofi=am_michael,Lina=bf_isabella" --from-start
+```
+
+- **Try it first:** run `npm run sample` with the same `--voice`, `--dialogue-voice` and `--cast` options, plus `--text "“Look!” said Kofi. Lina laughed."`, and listen to the sample.
+- **Pauses:** these stay as before, so the reader still lights up the words in time with the narration.
