@@ -116,7 +116,7 @@ export interface GroupDetail extends GroupSummary { inviteCode: string; memberNa
 export interface SyncedProgress { book_id: string; chapter_index: number; paragraph_index: number; progress_percent: number; device: string | null; updated_at: string }
 /** Schools and teams (Reading Intelligence phase 3). */
 export interface ClassSummary { id: string; name: string; kind: 'class' | 'team'; role: 'teacher' | 'member'; members: number; books: { id: string; title: string }[]; createdAt: string; inviteCode?: string }
-export interface ClassRow { userId: string; name: string; joinedAt: string; books: Record<string, number>; finished: number; average: number; weekMinutes: number; lastRead: string | null; quizzes: Record<string, number | null> }
+export interface ClassRow { userId: string; name: string; joinedAt: string; books: Record<string, number>; finished: number; average: number; weekMinutes: number; lastRead: string | null; quizzes: Record<string, number | null>; stories: Record<string, { right: number; total: number } | null> }
 export interface ClassQuizQuestion { question: string; options: string[]; answer?: number; explanation?: string }
 export interface ClassQuizScore { right: number; total: number; answers: number[]; at: string }
 export interface ClassQuiz { id: string; bookId: string; chapterIndex: number; chapterTitle: string; due: string | null; createdAt: string; questions: ClassQuizQuestion[]; score?: ClassQuizScore | null }
@@ -230,6 +230,7 @@ export function useEbookApi() {
     classDetail: (id: string) => json<ClassDetail>(`/api/reader/classes/${id}`),
     setClassBooks: (id: string, books: string[], due?: Record<string, string>) => json<{ books: { id: string; title: string }[]; due: Record<string, string> }>(`/api/reader/classes/${id}/books`, 'PUT', due ? { books, due } : { books }),
     classReport: (id: string, weeks: number) => json<ClassReport>(`/api/reader/classes/${id}/report?weeks=${weeks}`),
+    youngStoryDone: (storyId: string, right: number) => json<{ storyId: string; best: { right: number; total: number; at: string } }>('/api/reader/young/stories', 'POST', { storyId, right }),
     publishClassQuiz: (id: string, body: { bookId: string; chapterIndex: number; chapterTitle: string; questions: ClassQuizQuestion[]; due: string | null }) => json<{ quiz: ClassQuiz }>(`/api/reader/classes/${id}/quizzes`, 'POST', body),
     removeClassQuiz: (id: string, quizId: string) => json<{ ok: boolean }>(`/api/reader/classes/${id}/quizzes/${quizId}`, 'DELETE'),
     answerClassQuiz: (id: string, quizId: string, answers: number[]) => json<{ score: ClassQuizScore; quiz: ClassQuiz; alreadyAnswered: boolean }>(`/api/reader/classes/${id}/quizzes/${quizId}/answers`, 'POST', { answers }),

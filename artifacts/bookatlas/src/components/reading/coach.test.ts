@@ -10,7 +10,7 @@ test('adaptive coach: speed goes up only while understanding holds', () => {
   assert.equal(nextStep({ ...base, quizAverage: 90, quizzes: 4 }).wpm, 330);
   assert.equal(nextStep({ ...base, quizAverage: 70, quizzes: 4 }).wpm, 300);
   assert.equal(nextStep({ ...base, quizAverage: 40, quizzes: 4 }).wpm, 270);
-  assert.equal(nextStep({ ...base, tests: [{ ...base.tests[0]!, wpm: 990 }], quizAverage: 95, quizzes: 4 }).wpm, 1000, 'never above the maximum');
+  assert.equal(nextStep({ ...base, tests: [{ ...base.tests[0]!, wpm: 1490 }], quizAverage: 95, quizzes: 4 }).wpm, 1500, 'never above the maximum (1,500, specification SR-001)');
 });
 
 test('adaptive coach: quiz level, explanations and a plan for today', () => {

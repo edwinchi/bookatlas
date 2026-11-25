@@ -4,7 +4,9 @@ import * as Slider from '@radix-ui/react-slider';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import * as Tabs from '@radix-ui/react-tabs';
 import * as ProgressBar from '@radix-ui/react-progress';
-import { ChevronLeft, ChevronRight, Gauge, Pause, Play, RotateCcw, Rewind, Timer, X, Zap } from 'lucide-react';
+import * as Collapsible from '@radix-ui/react-collapsible';
+import { Brain, ChevronDown, ChevronLeft, ChevronRight, FastForward, Gauge, Pause, Play, RotateCcw, Rewind, Timer, X, Zap } from 'lucide-react';
+import { coachAdvice, driftDelay, readQuizPercents, readSessions, saveSession, type FastSession } from './adaptiveCoach';
 import { useAccount } from '../../auth/AuthContext';
 import { activeReader, defaultsFor } from '../reading/family';
 import { useEbookApi } from '../ebook/ebookApi';
@@ -46,9 +48,51 @@ function FocusWord({ word }: { word: string }) {
   );
 }
 
+const CONFIDENCE: Record<'high' | 'medium' | 'low', string> = { high: 'bg-emerald-100 text-emerald-800', medium: 'bg-amber-100 text-amber-900', low: 'bg-slate-200 text-slate-700' };
+
 /**
- * The Fast Read player: one word or a short group of words at a time, at 100 to 1,000 words a minute, with pause,
- * a step back, restart and the time left. Used in the reader and as the demo on the Reading Intelligence page.
+ * The adaptive coach (master build plan M1): from the reader's last Fast Read sessions and quiz scores, a speed
+ * and a group size to try, how sure the advice is, and one line of why.
+ */
+function SpeedCoach({ wpm, group, mode, onApply }: { wpm: number; group: number; mode: Mode; onApply: (wpm: number, group: number) => void }) {
+  const [sessions, setSessions] = useState<FastSession[]>(readSessions);
+  useEffect(() => { const reload = () => setSessions(readSessions()); window.addEventListener('bookatlas:fast-read-sessions', reload); return () => window.removeEventListener('bookatlas:fast-read-sessions', reload); }, []);
+  const advice = useMemo(() => coachAdvice(sessions, readQuizPercents(), { wpm, group, mode }), [sessions, wpm, group, mode]);
+  const same = advice && advice.wpm === wpm && advice.group === group;
+  return (
+    <Collapsible.Root className="rounded-2xl bg-indigo-50 ring-1 ring-indigo-100" data-testid="speed-coach">
+      <Collapsible.Trigger className="group flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-2xl cursor-pointer">
+        <span className="flex items-center gap-1.5 text-xs font-bold text-indigo-950"><Brain className="h-4 w-4 text-indigo-600" aria-hidden />Speed coach{advice && !same ? <span className="ml-1 rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] text-white">{advice.wpm} wpm</span> : null}</span>
+        <ChevronDown className="h-4 w-4 text-indigo-500 transition-transform group-data-[state=open]:rotate-180 motion-reduce:transition-none" aria-hidden />
+      </Collapsible.Trigger>
+      <Collapsible.Content className="space-y-2 px-3 pb-3 text-xs text-indigo-950">
+        {!advice ? <p>Read a little with Fast Read (at least 20 words) and the coach suggests a speed that suits you.</p> : (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-lg font-extrabold tabular-nums" data-testid="coach-wpm">{advice.wpm} words a minute</span>
+              {mode === 'group' && <span className="rounded-full bg-white px-2 py-0.5 font-bold ring-1 ring-indigo-200">{advice.group} words a group</span>}
+              <span className={`rounded-full px-2 py-0.5 font-bold ${CONFIDENCE[advice.confidence]}`}>{advice.confidence} confidence</span>
+            </div>
+            <p>{advice.insight}</p>
+            <p className="text-[11px] text-indigo-800/80">
+              From your last {advice.metrics.sessions} session{advice.metrics.sessions === 1 ? '' : 's'}: {Math.round(advice.metrics.completionRate * 100)}% read to the end, {advice.metrics.rewindRate} jumps back and {advice.metrics.pauseRate} pauses per 100 words{advice.metrics.comprehension !== null ? `, quizzes ${advice.metrics.comprehension}%` : ', no quiz scores yet'}.
+            </p>
+            <button type="button" disabled={!!same} onClick={() => onApply(advice.wpm, advice.group)} data-testid="coach-apply"
+              className="min-h-10 w-full rounded-xl bg-indigo-600 px-3 text-xs font-bold text-white hover:bg-indigo-500 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">{same ? 'You are at this speed' : 'Use this speed'}</button>
+          </>
+        )}
+      </Collapsible.Content>
+    </Collapsible.Root>
+  );
+}
+
+/** Words a jump back or forward moves (specification SR-001: ±25). */
+const JUMP = 25;
+
+/**
+ * The Fast Read player: one word (RSVP) or a short group of words (Chunk Reader) at a time, at 100 to 1,500 words a
+ * minute, with pause, 25-word jumps, restart, the time left, drift-corrected timing and the adaptive speed coach.
+ * Used in the reader and as the demo on the Reading Intelligence page.
  */
 export function FastReadPlayer({ paragraphs, firstParagraph = 0, startParagraph, onPosition, onEnd, endLabel, autoFocus }: {
   paragraphs: string[]; firstParagraph?: number; startParagraph?: number;
@@ -87,22 +131,64 @@ export function FastReadPlayer({ paragraphs, firstParagraph = 0, startParagraph,
     setIdx(next);
   }, [steps]);
 
+  // Drift-corrected timing (specification "RSVP scheduler"): the next step is due step.ms after this one was due,
+  // so a late timer is made up on the next word instead of adding up over a long session.
+  const due = useRef<number | null>(null);
   useEffect(() => {
-    if (!playing || !step) return;
+    if (!playing || !step) { due.current = null; return; }
+    const now = performance.now();
+    due.current = (due.current ?? now) + step.ms;
     const t = window.setTimeout(() => {
-      if (idx >= steps.length - 1) { setPlaying(false); return; }
+      if (idx >= steps.length - 1) { setPlaying(false); finish(true); return; }
       go(idx + 1);
-    }, step.ms);
+    }, driftDelay(due.current, now));
     return () => window.clearTimeout(t);
-  }, [playing, idx, step, steps.length, go]);
+  }, [playing, idx, step, steps.length, go]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The session, for the coach: words read, active time, pauses and jumps back; kept when the text ends or the
+  // player closes (at least 20 words).
+  const session = useRef({ startWord: 0, maxWord: 0, activeMs: 0, since: 0, pauses: 0, rewinds: 0 });
+  const prefsRef = useRef(prefs);
+  prefsRef.current = prefs;
+  useEffect(() => { session.current.maxWord = Math.max(session.current.maxWord, wordAt.current); }, [idx]);
+  useEffect(() => {
+    const s = session.current;
+    if (playing) s.since = performance.now();
+    else if (s.since) { s.activeMs += performance.now() - s.since; s.since = 0; }
+  }, [playing]);
+  const finish = (completed: boolean) => {
+    const s = session.current;
+    if (s.since) { s.activeMs += performance.now() - s.since; s.since = 0; }
+    const words = Math.max(0, s.maxWord - s.startWord + (completed ? (steps[steps.length - 1]?.words ?? 0) : 0));
+    const p = prefsRef.current;
+    if (words >= 20) saveSession({ at: new Date().toISOString(), mode: p.mode, group: p.group, wpm: p.wpm, words, seconds: Math.round(s.activeMs / 1000), pauses: s.pauses, rewinds: s.rewinds, completed });
+    session.current = { startWord: wordAt.current, maxWord: wordAt.current, activeMs: 0, since: playing && !completed ? performance.now() : 0, pauses: 0, rewinds: 0 };
+  };
+  const finishRef = useRef(finish);
+  finishRef.current = finish;
+  useEffect(() => () => finishRef.current(false), []);
+  useEffect(() => { session.current = { startWord: startWord, maxWord: startWord, activeMs: 0, since: 0, pauses: 0, rewinds: 0 }; }, [paragraphs, startWord]);
   useEffect(() => { if (step) onPosition?.(step.paragraph); }, [step?.paragraph]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const back = () => { let w = wordAt.current - 10; if (w < 0) w = 0; wordAt.current = w; setIdx(indexForWord(w)); };
-  const toggle = () => { if (!steps.length) return; if (idx >= steps.length - 1 && !playing) go(0); setPlaying((p) => !p); };
+  const jump = (n: number) => {
+    const total = steps.reduce((a, s) => a + s.words, 0);
+    const w = Math.max(0, Math.min(Math.max(0, total - 1), wordAt.current + n));
+    if (n < 0) session.current.rewinds += 1;
+    due.current = null;
+    wordAt.current = w; setIdx(indexForWord(w));
+  };
+  const back = () => jump(-JUMP);
+  const forward = () => jump(JUMP);
+  const toggle = () => {
+    if (!steps.length) return;
+    if (idx >= steps.length - 1 && !playing) go(0);
+    if (playing) session.current.pauses += 1;
+    setPlaying((p) => !p);
+  };
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === ' ' || e.key === 'k') { e.preventDefault(); toggle(); }
     else if (e.key === 'ArrowLeft') { e.preventDefault(); back(); }
-    else if (e.key === 'ArrowRight') { e.preventDefault(); go(idx + 1); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); forward(); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setPrefs({ wpm: clampWpm(prefs.wpm + 25) }); }
     else if (e.key === 'ArrowDown') { e.preventDefault(); setPrefs({ wpm: clampWpm(prefs.wpm - 25) }); }
   };
@@ -123,7 +209,7 @@ export function FastReadPlayer({ paragraphs, firstParagraph = 0, startParagraph,
       </div>
 
       <ProgressBar.Root value={pct} aria-label="Progress" className="relative h-1.5 overflow-hidden rounded-full bg-slate-200">
-        <ProgressBar.Indicator className="h-full rounded-full bg-indigo-600 transition-[width]" style={{ width: `${pct}%` }} />
+        <ProgressBar.Indicator className="h-full rounded-full bg-indigo-600 transition-[width] motion-reduce:transition-none" style={{ width: `${pct}%` }} />
       </ProgressBar.Root>
       <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
         <span>{pct}%</span><span className="flex items-center gap-1"><Timer className="h-3.5 w-3.5" aria-hidden />{steps.length ? minutesLeft(left) : ''}</span>
@@ -131,11 +217,11 @@ export function FastReadPlayer({ paragraphs, firstParagraph = 0, startParagraph,
 
       <div className="flex items-center justify-center gap-3">
         <button type="button" className={btn} onClick={() => { go(0); setPlaying(false); }} aria-label="Start again"><RotateCcw className="h-4 w-4" /></button>
-        <button type="button" className={btn} onClick={back} aria-label="Back 10 words"><Rewind className="h-4 w-4" /></button>
+        <button type="button" className={btn} onClick={back} aria-label={`Back ${JUMP} words`} data-testid="fast-read-back"><Rewind className="h-4 w-4" /></button>
         <button type="button" onClick={toggle} disabled={!steps.length} data-testid="fast-read-play"
           className="grid h-14 w-14 place-items-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-300 disabled:opacity-40 cursor-pointer"
           aria-label={playing ? 'Pause' : 'Play'}>{playing ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 translate-x-0.5" />}</button>
-        <button type="button" className={btn} onClick={() => go(idx + 1)} aria-label="Next word"><ChevronRight className="h-4 w-4" /></button>
+        <button type="button" className={btn} onClick={forward} aria-label={`Forward ${JUMP} words`} data-testid="fast-read-forward"><FastForward className="h-4 w-4" /></button>
         {atEnd && onEnd
           ? <button type="button" onClick={onEnd} className="min-h-11 rounded-full bg-slate-900 px-4 text-xs font-bold text-white hover:bg-slate-800 cursor-pointer">{endLabel ?? 'Continue'}</button>
           : <span className="h-11 w-11" aria-hidden />}
@@ -170,6 +256,7 @@ export function FastReadPlayer({ paragraphs, firstParagraph = 0, startParagraph,
           </div>
         )}
       </div>
+      <SpeedCoach wpm={prefs.wpm} group={prefs.group} mode={prefs.mode} onApply={(wpm, group) => setPrefs({ wpm: clampWpm(wpm), group: clampGroup(group) })} />
     </div>
   );
 }

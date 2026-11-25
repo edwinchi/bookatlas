@@ -1,0 +1,57 @@
+# BooksAtlas Reading Intelligence: master build plan
+
+Source of truth: the owner's specification "BooksAtlas Reading Intelligence.md" (2026-11-25), read with what is
+already live on booksatlas.app. Milestones follow the specification's own order. Each milestone is marked when
+it is built, tested and documented. Deploys still need the owner's "deploy".
+
+## Stack decision
+
+The specification names Next.js 15, NestJS, Prisma, Redis/BullMQ, Cloudflare R2, Meilisearch and OpenAI with
+pgvector. BooksAtlas is already live on its own stack, and every module below exists or is being finished on it:
+
+| Specification | BooksAtlas (kept) | Why |
+|---|---|---|
+| Next.js 15 + React 19 + shadcn/ui | Vite + React + Radix primitives + Tailwind | shadcn/ui *is* Radix + Tailwind; the owner's standing rule is Radix + Tailwind everywhere |
+| NestJS + DTO validation | Express API, every route behind an access policy (`auth/policy.ts`, unknown routes fail closed), body cleaners per route | same guarantees without a rewrite of a live product |
+| Prisma + PostgreSQL | Supabase PostgreSQL, SQL migrations in `artifacts/api-server/src/bookatlas/db/`, RLS on every table | the database is already PostgreSQL; migrations are run by the owner |
+| Redis + BullMQ | the narration queue and daily Vercel crons | no background workers needed at current scale |
+| Cloudflare R2 | Supabase storage and the Vercel CDN (`public/`) | already serving books, covers and audio |
+| OpenAI + embeddings + pgvector | the AI router (Gemini) with BM25 retrieval over paragraphs, citations `[1]` | no per-token embedding cost; answers cite the book |
+| Zustand stores | React state + small hooks; settings sync through `/api/reader/preferences` | fewer moving parts |
+| PostHog / Sentry / OpenTelemetry | pino logs on Vercel, health check `/api/healthz/ready` | to add when traffic needs it |
+
+Pricing (Free / Pro / Family) from the specification is **not** introduced: the owner keeps reading features
+free and BooksAtlas earns its 19% commission on sales.
+
+## Milestones (specification order)
+
+| # | Specification section | Status | Where |
+|---|---|---|---|
+| M0 | Reader foundation: bookmarks, highlights, notes, progress autosave, themes, fonts, spacing, margins, goals; user-scoped data | ✅ done | `components/EReaderModal.tsx`, `reader/service.ts`, `auth/policy.ts` |
+| M0 | Import engine: EPUB, PDF, DOCX, TXT, HTML | ✅ done | publishing import; "Your own text" (article, PDF, EPUB) |
+| M0 | Mobile reader: drawers, bottom actions | ✅ done | reader toolbars and Radix dialogs |
+| M1 | **SR-001/002 Fast Read v2: RSVP + Chunk Reader** — 100–1500 WPM, ORP fixation point, ±25-word jumps, keyboard, progress and time left, drift-corrected timing, session metrics, adaptive speed and chunk-size coach with confidence, reduced motion | ✅ done (this milestone) | `reader/fastRead.ts`, `reader/adaptiveCoach.ts`, `reader/FastReadPanel.tsx` |
+| M2 | SR-003 Bionic strength levels (25–60%) | ☐ next | `reader/fastRead.ts` (bold word starts) |
+| M3 | SR-004 Focus Reader modes: line, paragraph, spotlight, zen | ◐ paragraph focus, reading guide and hidden toolbars exist; spotlight and a named zen mode to add | `readerLayout.ts`, `readingAids.tsx` |
+| M4 | SR-005 Comprehension checkpoints (every chapter, manual), scored excellent/good/fair/needs improvement, feeding the coach | ◐ chapter quizzes exist; checkpoint prompts and scoring bands to add | `reader/ai.ts`, `ReaderAssistant.tsx` |
+| M5 | AN-001/002 Unified analytics and heatmaps: day × hour heatmap, peak hour and day, consistency score, best/average/current WPM | ◐ days chart, hours chart, speed summary exist; day × hour grid and consistency to add | `ReadingIntelligencePage.tsx` |
+| M6 | AI-001 Summary engine (1-minute, 5-minute, full) | ✅ done | `reader/ai.ts` `studyChapter` |
+| M7 | AI-002 Explain engine: child, student, professional, **expert** | ◐ expert level to add | `reader/ai.ts` `EXPLAIN_LEVELS` |
+| M8 | AI-004 Flashcards with spaced repetition (Again 1 day, Hard 3, Good 7, Easy 14) | ◐ flashcards exist; review scheduling to add | `ReaderAssistant.tsx` |
+| M9 | AI-003 Book chat with citations and follow-up questions | ✅ done (BM25 retrieval) | `reader/ai.ts` `askBook` |
+| M10 | AI-005 Knowledge maps (concept graph per chapter) | ☐ | — |
+| M11 | Audiobooks: read, listen, read + listen, word highlighting, chapter sync | ✅ done | narration, `narrationSync.ts` |
+| M12 | Accessibility center: dyslexia fonts and spacing, guide lines, paragraph chunking, large fonts, high contrast, read-aloud anything | ✅ done | reader Aids tab, Your own text |
+| M13 | Family system: parent/adult/teen/child profiles, challenges, household analytics | ✅ done | `reader/family.ts`, `FamilySection.tsx` |
+| M14 | Future modules (Baby, Kids, Teen readers, School mode, Teacher dashboard) | ✅ built ahead: Young readers, Schools and teams, reports | `reading/*` |
+
+### Notes on the specification
+
+- **Adaptive speed rules.** Implemented exactly: comprehension ≥ 90 → +100, ≥ 80 → +50, < 60 → −100; rewind rate
+  > 0.15 → −75; pause rate > 0.20 → −50; completion rate ≥ 0.9 → +25; result kept between 100 and 1500. The
+  specification's "heavy rewinds" test expects 625, which its own rules do not give (650 + 50 − 75 + 25 = 650);
+  its worked examples (825 and 475) match the rules, so the rules win and the test says 650. Its "moderate" test
+  (completion exactly 0.9 → 575) needs "≥ 0.9", which is used.
+- **Rates.** A rewind rate is rewinds per 100 words read and a pause rate is pauses per 100 words read (both capped
+  at 1); the completion rate is the share of sessions read to the end. Comprehension is the average of the
+  reader's last five quiz scores, or unknown.

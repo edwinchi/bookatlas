@@ -8,6 +8,11 @@ import { useAccount } from '../../auth/AuthContext';
 import { useEbookApi, type ClassDetail, type ClassSummary } from '../ebook/ebookApi';
 import { ClassQuizzes, DueBadge } from './ClassQuizzes';
 import { ClassReportButton } from './ClassReportDialog';
+import { STORIES } from './youngReaders';
+
+/** Young readers stories on a class list are stored as "ya.<story id>" (phase 8). */
+const isYoung = (id: string) => id.startsWith('ya.');
+const bookHref = (id: string) => (isYoung(id) ? `${BASE}reading-intelligence/young-readers?story=${encodeURIComponent(id.slice(3))}` : `${BASE}books/${encodeURIComponent(id)}`);
 import { dueState, today } from './classDates';
 
 const BASE = import.meta.env.BASE_URL;
@@ -22,6 +27,7 @@ function BookPicker({ onPick, exclude }: { onPick: (b: { id: string; title: stri
   const [q, setQ] = useState('');
   const [found, setFound] = useState<{ id: string; title: string; author: string }[]>([]);
   const [busy, setBusy] = useState(false);
+  const [kind, setKind] = useState<'books' | 'stories'>('books');
   useEffect(() => {
     if (q.trim().length < 2) { setFound([]); return; }
     const ctrl = new AbortController();
@@ -38,6 +44,19 @@ function BookPicker({ onPick, exclude }: { onPick: (b: { id: string; title: stri
       <Popover.Trigger asChild><button type="button" className={`${btn} bg-slate-900 text-white hover:bg-slate-800`} data-testid="add-class-book"><Plus className="h-4 w-4" aria-hidden />Add a book</button></Popover.Trigger>
       <Popover.Portal>
         <Popover.Content align="start" sideOffset={6} className="z-[60] w-[min(24rem,calc(100vw-2rem))] rounded-2xl bg-white p-3 shadow-2xl ring-1 ring-slate-900/10">
+          <ToggleGroup.Root type="single" value={kind} onValueChange={(v) => v && setKind(v as 'books' | 'stories')} aria-label="What to add" className="mb-2 flex gap-1 rounded-xl bg-slate-100 p-1">
+            <ToggleGroup.Item value="books" className={item}>Books</ToggleGroup.Item>
+            <ToggleGroup.Item value="stories" className={item} data-testid="pick-stories">Children’s stories</ToggleGroup.Item>
+          </ToggleGroup.Root>
+          {kind === 'stories' ? (
+            <ul className="max-h-72 overflow-y-auto">
+              {STORIES.filter((s) => !exclude.includes(`ya.${s.id}`)).map((s) => (
+                <li key={s.id}><button type="button" onClick={() => { onPick({ id: `ya.${s.id}`, title: `Young readers · ${s.title}` }); setOpen(false); }} className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left hover:bg-indigo-50 cursor-pointer" data-testid={`pick-story-${s.id}`}>
+                  <span className="text-xl" aria-hidden>{s.picture}</span><span><span className="block text-sm font-semibold text-slate-900">{s.title}</span><span className="block text-xs text-slate-500">Level {s.level} · in 5 languages, read aloud</span></span>
+                </button></li>
+              ))}
+            </ul>
+          ) : (<>
           <label className="relative block"><span className="sr-only">Search the bookstore</span>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
             <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Title, author or topic" className="w-full rounded-xl border border-slate-300 py-2.5 pl-9 pr-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30" />
@@ -51,6 +70,7 @@ function BookPicker({ onPick, exclude }: { onPick: (b: { id: string; title: stri
               </button></li>
             ))}
           </ul>
+          </>)}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
@@ -121,7 +141,7 @@ function ClassView({ id, onClose, onChanged }: { id: string; onClose: () => void
                     <li key={b.id} className="flex flex-col gap-2 rounded-xl bg-white p-3 ring-1 ring-slate-200">
                       <div className="flex items-center gap-2">
                         <BookOpen className="h-4 w-4 shrink-0 text-indigo-600" aria-hidden />
-                        <a href={`${BASE}books/${encodeURIComponent(b.id)}`} className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900 hover:underline">{b.title}</a>
+                        <a href={bookHref(b.id)} className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900 hover:underline">{b.title}</a>
                         {mine !== null && <Cell v={mine} />}
                         {teacher && <button type="button" onClick={() => void saveBooks(d.books.filter((x) => x.id !== b.id).map((x) => x.id))} aria-label={`Remove ${b.title} from the list`} className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"><X className="h-4 w-4" /></button>}
                       </div>
@@ -163,7 +183,10 @@ function ClassView({ id, onClose, onChanged }: { id: string; onClose: () => void
                       {d.rows.map((r) => (
                         <tr key={r.userId}>
                           <th scope="row" className="px-3 py-2 font-semibold text-slate-900">{r.name}<span className="block text-[11px] font-normal text-slate-500">{r.lastRead ? `last read ${new Date(r.lastRead).toLocaleDateString()}` : 'not started'}</span></th>
-                          {d.books.map((b) => <td key={b.id} className="px-3 py-2"><Cell v={r.books[b.id] ?? 0} /></td>)}
+                          {d.books.map((b) => {
+                            const st = r.stories?.[b.id];
+                            return <td key={b.id} className="px-3 py-2">{isYoung(b.id) ? (st ? <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700"><Check className="h-3.5 w-3.5" aria-hidden />{st.right}/{st.total} right</span> : <span className="text-xs text-slate-400">not yet</span>) : <Cell v={r.books[b.id] ?? 0} />}</td>;
+                          })}
                           {d.quizzes.map((q) => { const v = r.quizzes[q.id]; return <td key={q.id} className="px-3 py-2 text-xs tabular-nums">{typeof v === 'number' ? <span className={`font-bold ${v >= 80 ? 'text-emerald-700' : v >= 50 ? 'text-slate-800' : 'text-rose-700'}`}>{v}%</span> : <span className="text-slate-400">{q.due && dueState(q.due, false) === 'late' ? 'missed' : 'not yet'}</span>}</td>; })}
                           <td className="px-3 py-2 tabular-nums text-slate-700">{r.weekMinutes} min</td>
                           <td className="px-3 py-2"><button type="button" onClick={() => setConfirm({ userId: r.userId, name: r.name })} aria-label={`Remove ${r.name}`} className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"><UserMinus className="h-4 w-4" /></button></td>

@@ -200,7 +200,7 @@ export function ClassQuizzes({ d, onChanged }: { d: ClassDetail; onChanged: () =
     <section aria-labelledby="class-quizzes" className="space-y-2" data-testid="class-quizzes">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 id="class-quizzes" className="text-sm font-bold text-slate-900">Quizzes</h4>
-        {teacher && <button type="button" onClick={() => setMaking(true)} disabled={!d.books.length} className={`${btn} bg-slate-900 text-white hover:bg-slate-800`} data-testid="new-quiz"><Plus className="h-4 w-4" aria-hidden />Set a quiz</button>}
+        {teacher && <button type="button" onClick={() => setMaking(true)} disabled={!d.books.some((b) => !b.id.startsWith('ya.'))} className={`${btn} bg-slate-900 text-white hover:bg-slate-800`} data-testid="new-quiz"><Plus className="h-4 w-4" aria-hidden />Set a quiz</button>}
       </div>
       {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
       {!d.quizzes.length ? <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">{d.books.length ? 'Set a quiz on a chapter of a book on the list. The AI writes the questions; you choose which to keep.' : 'Add a book to the reading list first.'}</p> : (
@@ -237,7 +237,7 @@ export function ClassQuizzes({ d, onChanged }: { d: ClassDetail; onChanged: () =
           })}
         </ul>
       )}
-      {teacher && <QuizMaker classId={d.id} books={d.books} open={making} onOpenChange={setMaking} onDone={onChanged} />}
+      {teacher && <QuizMaker classId={d.id} books={d.books.filter((b) => !b.id.startsWith('ya.'))} open={making} onOpenChange={setMaking} onDone={onChanged} />}
       {taking && <QuizTaker classId={d.id} quiz={taking} teacher={teacher} onClose={() => setTaking(null)} onDone={onChanged} />}
       <AlertDialog.Root open={!!removing} onOpenChange={(o) => { if (!o) setRemoving(null); }}>
         <AlertDialog.Portal>

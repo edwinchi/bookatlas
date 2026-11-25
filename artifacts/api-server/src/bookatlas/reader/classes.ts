@@ -3,6 +3,7 @@ import type { Identity } from '../../auth/policy.js';
 import { bookatlasDb } from '../db/supabaseClient.js';
 import { publicName } from '../reviews/service.js';
 import { ReaderError, readerMemory, type Progress, type Session } from './service.js';
+import { isYoung, youngResultsOf, type StoryResult } from './youngStories.js';
 
 /**
  * Schools and teams (Reading Intelligence phase 3, owner request 2026-11-25). A teacher or team lead makes a
@@ -252,9 +253,15 @@ export async function classDetail(who: Identity, id: string, titles: Titles, now
       fail(s); sessions = s.data as typeof sessions;
     }
   }
+  // Young readers stories on the list (phase 8): finished when the reader answered its questions.
+  const youngIds = bookIds.filter(isYoung);
+  const young = youngIds.length ? await youngResultsOf(ids) : new Map<string, Record<string, StoryResult>>();
   const rows = visible.map((m) => {
     const mine = progress.filter((p) => p.user_id === m.user_id);
-    const perBook = Object.fromEntries(bookIds.map((b) => [b, Math.round(mine.find((p) => p.book_id === b)?.progress_percent ?? 0)]));
+    const results = young.get(m.user_id) ?? {};
+    const storyOf = (b: string) => results[b.slice(3)] ?? null;
+    const perBook = Object.fromEntries(bookIds.map((b) => [b, isYoung(b) ? (storyOf(b) ? 100 : 0) : Math.round(mine.find((p) => p.book_id === b)?.progress_percent ?? 0)]));
+    const stories = Object.fromEntries(youngIds.map((b) => { const x = storyOf(b); return [b, x ? { right: x.right, total: x.total } : null]; }));
     const done = Object.values(perBook).filter((v) => v >= 98).length;
     const last = mine.map((p) => p.updated_at).sort().pop() ?? null;
     return {
@@ -262,6 +269,7 @@ export async function classDetail(who: Identity, id: string, titles: Titles, now
       average: bookIds.length ? Math.round(Object.values(perBook).reduce((a, b) => a + b, 0) / bookIds.length) : 0,
       weekMinutes: Math.round(sessions.filter((s) => s.user_id === m.user_id).reduce((n, s) => n + s.seconds, 0) / 60),
       lastRead: last,
+      stories,
       quizzes: Object.fromEntries((c.quizzes ?? []).map((q) => { const sc = m.quiz_scores?.[q.id]; return [q.id, sc ? Math.round((sc.right / Math.max(1, sc.total)) * 100) : null]; })),
     };
   });

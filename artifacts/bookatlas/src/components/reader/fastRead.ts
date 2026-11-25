@@ -5,7 +5,8 @@
  */
 
 export const MIN_WPM = 100;
-export const MAX_WPM = 1000;
+/** 1,500 words a minute at most (master build plan M1, specification SR-001). */
+export const MAX_WPM = 1500;
 export const MIN_GROUP = 2;
 export const MAX_GROUP = 8;
 export const clampWpm = (w: number) => Math.round(Math.min(MAX_WPM, Math.max(MIN_WPM, Number.isFinite(w) ? w : 300)) / 10) * 10;

@@ -132,3 +132,23 @@ test('teacher report: reading minutes per week for each member, teacher only', a
   await assert.rejects(classReport(other, c.id, titles, 4, now), /Only the teacher/);
   assert.equal(accessFor('GET', `/api/reader/classes/${c.id}/report`), 'reader');
 });
+
+test('young readers in classes: stories on the list, finished when the questions are answered', async () => {
+  const { recordYoungStory } = await import('./youngStories.js');
+  const titled = async (id: string) => (id.startsWith('ya.') ? (await import('./youngStories.js')).youngTitle(id) : titles(id));
+  const now = new Date('2026-11-25T12:00:00Z');
+  const c = await createClass(teacher, { name: 'Year 1', kind: 'class' });
+  const kid = { id: 'user_kid', email: 'k@example.test', name: 'Esi Owusu', role: 'reader' as const };
+  await joinClass(kid, { code: c.inviteCode }, titled);
+  const list = await setClassBooks(teacher, c.id, { books: ['ya.red-hat', 'ya.nope', 'book-a'] }, titled);
+  assert.deepEqual(list.books, [{ id: 'ya.red-hat', title: 'Young readers · The Red Hat' }, { id: 'book-a', title: 'Book A' }]);
+  await assert.rejects(recordYoungStory(kid.id, { storyId: 'nope', right: 1 }), /Unknown story/);
+  await assert.rejects(recordYoungStory(kid.id, { storyId: 'red-hat', right: 9 }), /right answers/);
+  await recordYoungStory(kid.id, { storyId: 'red-hat', right: 2 });
+  await recordYoungStory(kid.id, { storyId: 'red-hat', right: 1 });
+  const view = await classDetail(teacher, c.id, titled, now);
+  const row = view.rows.find((r) => r.userId === kid.id)!;
+  assert.equal(row.books['ya.red-hat'], 100);
+  assert.deepEqual(row.stories['ya.red-hat'], { right: 2, total: 3 }, 'the best score is kept');
+  assert.equal(accessFor('POST', '/api/reader/young/stories'), 'reader');
+});

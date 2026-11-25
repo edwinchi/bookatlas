@@ -13,7 +13,7 @@ test('fast read: one word at a time, and groups that stop at the end of a senten
 
 test('fast read: speed limits and longer pauses after sentences', () => {
   assert.equal(clampWpm(50), 100);
-  assert.equal(clampWpm(5000), 1000);
+  assert.equal(clampWpm(5000), 1500);
   assert.equal(clampWpm(Number.NaN), 300);
   assert.equal(stepMs(['word'], 600), 100);
   assert.ok(stepMs(['end.'], 600) > stepMs(['word'], 600));

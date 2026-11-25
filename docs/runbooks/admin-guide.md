@@ -157,6 +157,8 @@ file for each feature are in `docs/planning/reading-intelligence.md`.
   - A teacher or team lead makes a class, shares the 8-letter invite code and sets the reading list with due dates.
   - They set quizzes made from a chapter, and see each member's progress, minutes this week and quiz scores.
   - **Report** downloads a CSV or PDF covering up to 26 weeks.
+  - The reading list can also hold **children's stories** (the picker's Children's stories tab). A child who answers a story's questions while signed in shows ✓ and the score.
+  - When you add a story to Young readers, also add it to `artifacts/api-server/src/bookatlas/reader/youngStories.ts`. A test checks that both lists match.
 
 **Database (once):** schools and teams need two SQL files, run in this order in the Supabase SQL editor:
 1. `artifacts/api-server/src/bookatlas/db/migrations-2026-11-25-reading-classes.sql` (the classes)

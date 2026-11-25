@@ -59,6 +59,7 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   // Schools and teams (Reading Intelligence phase 3, 2026-11-25).
   if (normalized === '/api/reader/classes' && ['GET', 'POST'].includes(method)) return 'reader';
   if (normalized === '/api/reader/classes/join' && method === 'POST') return 'reader';
+  if (normalized === '/api/reader/young/stories' && method === 'POST') return 'reader';
   if (/^\/api\/reader\/classes\/[0-9a-f-]{36}$/.test(normalized) && method === 'GET') return 'reader';
   if (/^\/api\/reader\/classes\/[0-9a-f-]{36}\/report$/.test(normalized) && method === 'GET') return 'reader';
   if (/^\/api\/reader\/classes\/[0-9a-f-]{36}\/books$/.test(normalized) && method === 'PUT') return 'reader';

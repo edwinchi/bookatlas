@@ -249,7 +249,7 @@ export default function ReadingIntelligencePage() {
             <div className="space-y-3">
               <Feature icon={Zap} title="One word">Each word appears on the same spot, with the letter your eye should rest on marked in red. Pauses are longer after a full stop or a long word.</Feature>
               <Feature icon={Rows3} title="Word groups">Groups of 2 to 8 words, ending at a full stop, so you take in a phrase at a glance.</Feature>
-              <Feature icon={Gauge} title="100 to 1,000 words a minute">Change the speed while you read: the arrow keys work too, and space pauses.</Feature>
+              <Feature icon={Gauge} title="100 to 1,500 words a minute">Change the speed while you read: the arrow keys jump 25 words and change the speed, and space pauses. The speed coach suggests a speed from your sessions and quiz scores.</Feature>
             </div>
           </div>
           <div className="mt-6 rounded-2xl bg-white p-5 ring-1 ring-slate-200">

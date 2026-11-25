@@ -102,7 +102,15 @@ No database change in phase 5: the e-mail choices live in the reader settings.
 | More stories per level | Six new stories, two per level (The Little Boat, Market Day, The Brave Little Hen, The Rainy Picnic, The New Girl, Grandma’s Old Clock), in all five languages with recorded voices (`youngReaders.ts`, `reading/young/*.ts`) |
 | Story progress | A tick on each story a reader finished and "2 of 4 stories read at this level", kept on the device for each family profile (best score kept) |
 
-The planned phases are complete. Ideas beyond this list come from the owner.
+## Next phases (owner choice, 2026-11-25)
+
+Phase 8 Young readers in classes · phase 9 author reading insights · phase 10 share and invite · phase 11 offline reading.
+
+## Phase 8: built (2026-11-25)
+
+| Owner request | Where it lives |
+|---|---|
+| Young readers in classes | A teacher adds children's stories to a class list (the book picker's "Children's stories" tab); they are stored as `ya.<story id>`. A signed-in reader who answers a story's questions has the best score kept in their reader settings (`youngStories`, `POST /api/reader/young/stories`). The teacher's table and report show ✓ right/total. A link on the list opens the story (`/reading-intelligence/young-readers?story=<id>`). `reader/youngStories.ts` must list the same stories as `youngReaders.ts` (checked by `scripts/src/young-stories-sync.test.mjs`) |
 
 ## Choices and limits
 

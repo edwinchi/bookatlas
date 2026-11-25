@@ -13,7 +13,7 @@ import { tappedWord } from './youngVoice';
 import { ENGLISH, YOUNG_LANGS, YoungContext, loadYoung, startLang, useYoung, type YoungContent, type YoungLangId } from './youngLang';
 import { SelectBox } from '../ui/select-box';
 import { FirstWordsPanel } from './FirstWordsPanel';
-import { LEVELS, pictureRound, sameWord, scramble, storyStars, type Level, type Story } from './youngReaders';
+import { LEVELS, STORIES, pictureRound, sameWord, scramble, storyStars, type Level, type Story } from './youngReaders';
 
 /** Stars earned on this device; for a signed-in family they count for the reader who is playing. */
 function useStars() {
@@ -133,14 +133,20 @@ function StoryReader({ story, onStars, onBack, onDone }: { story: Story; onStars
   );
 }
 
-function Stories({ level, onStars, readerId }: { level: Level; onStars: (n: number) => void; readerId: string }) {
+function Stories({ level, onStars, readerId, startStory }: { level: Level; onStars: (n: number) => void; readerId: string; startStory: string | null }) {
   const { stories } = useYoung();
   const { done, mark } = useStoriesDone(readerId);
-  const [openId, setOpenId] = useState<string | null>(null);
-  useEffect(() => { setOpenId(null); }, [level]);
+  const { account } = useAccount();
+  const api = useEbookApi();
+  const [openId, setOpenId] = useState<string | null>(startStory);
+  // Changing the level closes the open story (not the first render, which may open one from a class link).
+  const shownLevel = useRef(level);
+  useEffect(() => { if (shownLevel.current !== level) { shownLevel.current = level; setOpenId(null); } }, [level]);
+  // Signed in: the result is kept with the account too, so a teacher sees it when the story is on a class list.
+  const finished = (id: string, right: number) => { mark(id, right); if (account) void api.youngStoryDone(id, right).catch(() => undefined); };
   // The story follows the language: switching language while reading shows the same story translated.
   const open = stories.find((s) => s.id === openId) ?? null;
-  if (open) return <StoryReader key={`${open.id}:${open.title}`} story={open} onStars={onStars} onBack={() => setOpenId(null)} onDone={(right) => mark(open.id, right)} />;
+  if (open) return <StoryReader key={`${open.id}:${open.title}`} story={open} onStars={onStars} onBack={() => setOpenId(null)} onDone={(right) => finished(open.id, right)} />;
   const here = stories.filter((s) => s.level === level);
   const read = here.filter((s) => s.id in done).length;
   return (
@@ -317,6 +323,8 @@ export default function YoungReadersPage() {
     return () => { document.title = title; };
   }, []);
   const { stars, add, reader } = useStars();
+  // A link from a class reading list: ?story=<id> opens that story at its level.
+  const startStory = useMemo(() => { try { const id = new URLSearchParams(window.location.search).get('story'); return STORIES.some((s) => s.id === id) ? id : null; } catch { return null; } }, []);
   const [langId, setLangId] = useState<YoungLangId>(() => { let saved: string | null = null; try { saved = localStorage.getItem('bookatlas:young-lang'); } catch { /* this device */ } return startLang(saved, typeof navigator === 'undefined' ? undefined : navigator.language); });
   const [content, setContent] = useState<YoungContent>(ENGLISH);
   useEffect(() => {
@@ -325,7 +333,7 @@ export default function YoungReadersPage() {
     try { localStorage.setItem('bookatlas:young-lang', langId); } catch { /* this device */ }
     return () => { live = false; };
   }, [langId]);
-  const [level, setLevel] = useState<Level>(() => { try { return (Number(localStorage.getItem('bookatlas:young-level')) as Level) || 1; } catch { return 1; } });
+  const [level, setLevel] = useState<Level>(() => { const s = STORIES.find((x) => x.id === startStory); if (s) return s.level; try { return (Number(localStorage.getItem('bookatlas:young-level')) as Level) || 1; } catch { return 1; } });
   const pickLevel = (v: string) => { if (!v) return; const l = Number(v) as Level; setLevel(l); try { localStorage.setItem('bookatlas:young-level', String(l)); } catch { /* this device */ } };
   return (
     <YoungContext.Provider value={content}>
@@ -360,7 +368,7 @@ export default function YoungReadersPage() {
         </div>
       </header>
 
-      <Tabs.Root defaultValue={reader.kind === 'early' || window.location.hash === '#first-words' ? 'first' : 'stories'} className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <Tabs.Root defaultValue={startStory ? 'stories' : reader.kind === 'early' || window.location.hash === '#first-words' ? 'first' : 'stories'} className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <Tabs.List aria-label="Activities" className="mb-6 flex flex-wrap gap-2">
           <Tabs.Trigger value="first" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-first"><Baby className="h-4 w-4" aria-hidden />First words</Tabs.Trigger>
           <Tabs.Trigger value="stories" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-stories"><BookOpen className="h-4 w-4" aria-hidden />Stories</Tabs.Trigger>
@@ -368,7 +376,7 @@ export default function YoungReadersPage() {
           <Tabs.Trigger value="games" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-games"><Puzzle className="h-4 w-4" aria-hidden />Word games</Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="first" className="focus-visible:outline-none"><FirstWordsPanel onStars={add} /></Tabs.Content>
-        <Tabs.Content value="stories" className="focus-visible:outline-none"><Stories level={level} onStars={add} readerId={reader.id} /></Tabs.Content>
+        <Tabs.Content value="stories" className="focus-visible:outline-none"><Stories level={level} onStars={add} readerId={reader.id} startStory={startStory} /></Tabs.Content>
         <Tabs.Content value="sounds" className="focus-visible:outline-none"><LetterSounds /></Tabs.Content>
         <Tabs.Content value="games" className="focus-visible:outline-none"><WordGames level={level} onStars={add} /></Tabs.Content>
         <p className="mt-10 text-sm text-slate-600">Grown-ups: add your children as readers under <Link href="/reading-intelligence#family" className="font-bold text-indigo-700 hover:underline">Family reading</Link> to follow their stars, reading time and quiz scores.</p>

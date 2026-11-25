@@ -12,6 +12,7 @@ import { chapterSocial, hideTarget, report, reportedItems, setShared, sharedAnno
 import { addPost, createGroup, deletePost, groupCount, groupDetail, joinGroup, leaveGroup, myGroups, postExists } from './groups.js';
 import { DAILY_AI_LIMIT, LANGUAGES, askBook, defineWord, explainPassage, refundAiQuota, studyChapter, translatePassage, useAiQuota, type Generate } from './ai.js';
 import { digestEmailConfigured, getDigest, resendBatch, runDigest, setDigest, unsubscribeDigest } from './digest.js';
+import { recordYoungStory, youngTitle } from './youngStories.js';
 import { answerQuiz, classDetail, classReport, createClass, joinClass, leaveClass, myClasses, publishQuiz, removeQuiz, setClassBooks } from './classes.js';
 import { FamilyError, addActivity, familyView, readFamily, weekStart, withProfiles, type Family } from './family.js';
 
@@ -137,7 +138,9 @@ export function mountReader(app: Express, catalog: CatalogStore, generate?: Gene
     res.status(201).json(await report(signedIn(req).id, b.kind, b.targetId, b.reason, (kind, id) => (kind === 'annotation' ? sharedAnnotationExists(id) : postExists(id))));
   }));
 
-  const titleOf = async (id: string) => (await catalog.get(id))?.title ?? null;
+  // Books and, on class lists, Young readers stories ("ya.<id>", phase 8).
+  const titleOf = async (id: string) => youngTitle(id) ?? (await catalog.get(id))?.title ?? null;
+  app.post('/api/reader/young/stories', json, guarded(async (req, res) => { res.json(await recordYoungStory(signedIn(req).id, body(req))); }));
   // Schools and teams (Reading Intelligence phase 3, 2026-11-25): classes with an invite code and a reading list.
   const classId = (req: Request) => String(req.params.id);
   app.get('/api/reader/classes', guarded(async (req, res) => { res.json({ classes: await myClasses(signedIn(req), titleOf) }); }));

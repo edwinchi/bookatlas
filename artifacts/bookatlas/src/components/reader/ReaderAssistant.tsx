@@ -1,6 +1,7 @@
 import { activeReader, defaultsFor } from '../reading/family';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import React, { useEffect, useRef, useState } from 'react';
+import { recordQuizPercent } from './adaptiveCoach';
 import * as Tabs from '@radix-ui/react-tabs';
 import { BookOpenCheck, Check, GraduationCap, Languages, Loader2, MessageCircleQuestion, RotateCcw, Send, Sparkles, Volume2, X } from 'lucide-react';
 import type { Chapter } from '../../types';
@@ -196,7 +197,7 @@ function StudyTab({ api, bookId, chapters, chapterIndex, onRemaining, signedIn }
       )}
       {result?.concepts && <dl className="space-y-2 text-xs">{result.concepts.map((c) => <div key={c.term} className="rounded-xl bg-slate-50 p-2.5"><dt className="font-bold text-slate-900">{c.term}</dt><dd className="mt-0.5 text-slate-700">{c.explanation}</dd></div>)}</dl>}
       {result?.cards && <Flashcards cards={result.cards} />}
-      {result?.questions && <Quiz questions={result.questions} onComplete={(score, total) => { if (signedIn) void api.familyActivity({ profileId: activeReader().id, quiz: { score, total }, bookId }).catch(() => undefined); }} />}
+      {result?.questions && <Quiz questions={result.questions} onComplete={(score, total) => { recordQuizPercent(score, total); if (signedIn) void api.familyActivity({ profileId: activeReader().id, quiz: { score, total }, bookId }).catch(() => undefined); }} />}
       {result && <p className="text-[10px] text-slate-400">Made by AI from the chapter text; check anything important in the book.</p>}
     </div>
   );

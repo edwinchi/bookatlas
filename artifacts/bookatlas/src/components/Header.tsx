@@ -234,7 +234,7 @@ export const Header: React.FC<HeaderProps> = ({
     // Read smarter (owner request 2026-11-25): the Reading Intelligence tools, each opening its part of the page.
     { label: 'Read smarter', mega: true, groups: [
               { heading: 'Reading Intelligence', columns: 2, items: [
-                { label: 'Fast Read', description: 'One word or a few at a time, from 100 to 1,000 words a minute.', icon: Zap, href: `${import.meta.env.BASE_URL}reading-intelligence#fast-read` },
+                { label: 'Fast Read', description: 'One word or a few at a time, from 100 to 1,500 words a minute, with a speed coach.', icon: Zap, href: `${import.meta.env.BASE_URL}reading-intelligence#fast-read` },
                 { label: 'Reading speed check', description: 'Find out how fast you read, and follow your progress.', icon: Gauge, href: `${import.meta.env.BASE_URL}reading-intelligence#speed-check` },
                 { label: 'Read and listen', description: 'Every book read aloud, with the words lit up as they are spoken.', icon: Headphones, href: `${import.meta.env.BASE_URL}reading-intelligence#listen` },
                 { label: 'AI reading coach', description: 'Summaries, explanations, quizzes and answers from the book itself.', icon: Brain, href: `${import.meta.env.BASE_URL}reading-intelligence#coach` },
