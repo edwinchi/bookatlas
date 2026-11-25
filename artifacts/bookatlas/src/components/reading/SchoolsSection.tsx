@@ -7,6 +7,7 @@ import { BookOpen, Briefcase, CalendarDays, Check, Copy, GraduationCap, Loader2,
 import { useAccount } from '../../auth/AuthContext';
 import { useEbookApi, type ClassDetail, type ClassSummary } from '../ebook/ebookApi';
 import { ClassQuizzes, DueBadge } from './ClassQuizzes';
+import { ClassReportButton } from './ClassReportDialog';
 import { dueState, today } from './classDates';
 
 const BASE = import.meta.env.BASE_URL;
@@ -145,7 +146,7 @@ function ClassView({ id, onClose, onChanged }: { id: string; onClose: () => void
 
           {teacher && d.totals && (
             <section aria-labelledby="class-progress" className="space-y-3">
-              <h4 id="class-progress" className="text-sm font-bold text-slate-900">Progress</h4>
+              <div className="flex flex-wrap items-center justify-between gap-2"><h4 id="class-progress" className="text-sm font-bold text-slate-900">Progress</h4><ClassReportButton classId={d.id} /></div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
                 {[['Members', d.totals.members], ['Read this week', d.totals.activeThisWeek], ['Minutes this week', d.totals.weekMinutes], ['Average progress', `${d.totals.averageProgress}%`], ...(d.totals.quizAverage !== null ? [['Quiz average', `${d.totals.quizAverage}%`]] : [])].map(([l, v]) => (
                   <div key={String(l)} className="rounded-xl bg-white p-3 ring-1 ring-slate-200"><p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{l}</p><p className="text-xl font-extrabold tabular-nums text-slate-900">{v}</p></div>

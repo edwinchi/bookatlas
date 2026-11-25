@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import express, { type Express, type Request, type Response } from 'express';
 import { logger } from '../../lib/logger.js';
 import type { CatalogStore } from '../catalog/store.js';
@@ -10,7 +11,8 @@ import { achievements, DEFAULT_DAILY_GOAL } from './achievements.js';
 import { chapterSocial, hideTarget, report, reportedItems, setShared, sharedAnnotationExists } from './social.js';
 import { addPost, createGroup, deletePost, groupCount, groupDetail, joinGroup, leaveGroup, myGroups, postExists } from './groups.js';
 import { DAILY_AI_LIMIT, LANGUAGES, askBook, defineWord, explainPassage, refundAiQuota, studyChapter, translatePassage, useAiQuota, type Generate } from './ai.js';
-import { answerQuiz, classDetail, createClass, joinClass, leaveClass, myClasses, publishQuiz, removeQuiz, setClassBooks } from './classes.js';
+import { digestEmailConfigured, getDigest, resendBatch, runDigest, setDigest, unsubscribeDigest } from './digest.js';
+import { answerQuiz, classDetail, classReport, createClass, joinClass, leaveClass, myClasses, publishQuiz, removeQuiz, setClassBooks } from './classes.js';
 import { FamilyError, addActivity, familyView, readFamily, weekStart, withProfiles, type Family } from './family.js';
 
 let generatorOverride: Generate | null = null;
@@ -143,6 +145,33 @@ export function mountReader(app: Express, catalog: CatalogStore, generate?: Gene
   app.post('/api/reader/classes/join', json, guarded(async (req, res) => { res.json(await joinClass(signedIn(req), body(req), titleOf)); }));
   app.get('/api/reader/classes/:id', guarded(async (req, res) => { res.json(await classDetail(signedIn(req), classId(req), titleOf)); }));
   app.put('/api/reader/classes/:id/books', json, guarded(async (req, res) => { res.json(await setClassBooks(signedIn(req), classId(req), body(req), titleOf)); }));
+  // Phase 5: reading e-mails (weekly summary, streak reminder), opt-in, with a signed one-click unsubscribe link.
+  app.get('/api/reader/digest', guarded(async (req, res) => { res.json({ ...(await getDigest(signedIn(req).id)), available: digestEmailConfigured() }); }));
+  app.put('/api/reader/digest', json, guarded(async (req, res) => { res.json({ ...(await setDigest(signedIn(req), body(req))), available: digestEmailConfigured() }); }));
+  const stopDigest = guarded(async (req, res) => {
+    const ok = await unsubscribeDigest(req.query.token);
+    res.setHeader('Cache-Control', 'no-store');
+    if (req.method === 'POST') { res.status(ok ? 200 : 400).json({ unsubscribed: ok }); return; }
+    const page = (title: string, text: string) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title} · BooksAtlas</title><style>body{font:16px/1.5 system-ui,sans-serif;color:#0f172a;max-width:520px;margin:15vh auto;padding:0 16px}a{color:#4f46e5}</style></head><body><h1>${title}</h1><p>${text}</p><p><a href="/reading-intelligence#progress">Reading settings</a> · <a href="/">BooksAtlas</a></p></body></html>`;
+    res.status(ok ? 200 : 400).type('html').send(ok ? page('Unsubscribed', 'You will no longer get reading e-mails from BooksAtlas. You can switch them on again under Read smarter.') : page('Link not valid', 'This link is not valid. You can switch reading e-mails off under Read smarter → Your reading.'));
+  });
+  app.get('/api/reader/digest/unsubscribe', stopDigest);
+  app.post('/api/reader/digest/unsubscribe', stopDigest);
+  // Once a day (vercel.json); with CRON_SECRET set, Vercel's "Authorization: Bearer" header is required.
+  app.get('/api/internal/reader/digest', guarded(async (req, res) => {
+    const secret = process.env.CRON_SECRET?.trim();
+    if (secret) {
+      const given = Buffer.from(req.get('authorization') ?? '');
+      const wanted = Buffer.from(`Bearer ${secret}`);
+      if (given.length !== wanted.length || !timingSafeEqual(given, wanted)) throw new ReaderError('Not allowed.', 403);
+    }
+    if (!digestEmailConfigured()) { res.json({ skipped: 'e-mail is not configured' }); return; }
+    const app = (process.env.APP_URL?.trim().startsWith('https://') ? process.env.APP_URL.trim() : 'https://booksatlas.app').replace(/\/$/, '');
+    res.json(await runDigest(app, resendBatch));
+  }));
+
+  // Phase 5: the teacher's report, with reading minutes per week.
+  app.get('/api/reader/classes/:id/report', guarded(async (req, res) => { res.json(await classReport(signedIn(req), classId(req), titleOf, req.query.weeks)); }));
   // Phase 4: class quizzes made from a chapter, answered once by each member.
   app.post('/api/reader/classes/:id/quizzes', json, guarded(async (req, res) => { res.status(201).json(await publishQuiz(signedIn(req), classId(req), body(req))); }));
   app.delete('/api/reader/classes/:id/quizzes/:quizId', guarded(async (req, res) => { res.json(await removeQuiz(signedIn(req), classId(req), String(req.params.quizId))); }));

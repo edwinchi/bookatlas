@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { answerQuiz, classDetail, classMemory, createClass, dueDate, joinClass, leaveClass, myClasses, publishQuiz, removeQuiz, setClassBooks } from './classes.js';
+import { answerQuiz, classDetail, classMemory, classReport, createClass, dueDate, joinClass, leaveClass, myClasses, publishQuiz, removeQuiz, setClassBooks } from './classes.js';
 import { readerMemory } from './service.js';
 import { accessFor } from '../../auth/policy.js';
 
@@ -112,4 +112,23 @@ test('class quizzes: routes are for signed-in readers', () => {
   assert.equal(accessFor('DELETE', `/api/reader/classes/${id}/quizzes/${id}`), 'reader');
   assert.equal(accessFor('POST', `/api/reader/classes/${id}/quizzes/${id}/answers`), 'reader');
   assert.equal(accessFor('GET', `/api/reader/classes/${id}/quizzes`), 'admin');
+});
+
+test('teacher report: reading minutes per week for each member, teacher only', async () => {
+  const now = new Date('2026-11-25T12:00:00Z'); // a Wednesday; this week starts Monday 23 Nov
+  const c = await createClass(teacher, { name: 'Report class', kind: 'class' });
+  await joinClass(other, { code: c.inviteCode }, titles);
+  await setClassBooks(teacher, c.id, { books: ['book-a'] }, titles);
+  readerMemory().sessions.push(
+    { id: 'r1', user_id: 'user_other', book_id: 'book-a', started_at: '2026-11-24T08:00:00Z', seconds: 600, paragraphs: 1, words: 100, device: null },
+    { id: 'r2', user_id: 'user_other', book_id: 'book-a', started_at: '2026-11-17T08:00:00Z', seconds: 1800, paragraphs: 1, words: 100, device: null },
+    { id: 'r3', user_id: 'user_other', book_id: 'book-a', started_at: '2026-10-01T08:00:00Z', seconds: 900, paragraphs: 1, words: 100, device: null },
+  );
+  const r = await classReport(teacher, c.id, titles, '4', now);
+  assert.deepEqual(r.weeks, ['2026-11-02', '2026-11-09', '2026-11-16', '2026-11-23']);
+  const row = r.rows.find((x) => x.userId === 'user_other')!;
+  assert.deepEqual(row.weekly, [0, 0, 30, 10]);
+  assert.equal((await classReport(teacher, c.id, titles, '999', now)).weeks.length, 26);
+  await assert.rejects(classReport(other, c.id, titles, 4, now), /Only the teacher/);
+  assert.equal(accessFor('GET', `/api/reader/classes/${c.id}/report`), 'reader');
 });

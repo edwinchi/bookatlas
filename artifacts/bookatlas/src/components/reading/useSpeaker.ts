@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { YoungContext } from './youngLang';
 import { YOUNG_AUDIO_DIR, clipKey, wordAtTime, type ClipManifest } from './youngVoice';
 
 /**
@@ -26,6 +27,9 @@ export function useSpeaker() {
   const synth = typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null;
   const canPlay = typeof window !== 'undefined' && typeof Audio !== 'undefined';
   const [clips, setClips] = useState<ClipManifest | null>(null);
+  // The recorded voice is English; other languages use the device voice in that language (phase 5).
+  const young = useContext(YoungContext);
+  const lang = young.voice;
   const run = useRef(0);
   const audio = useRef<HTMLAudioElement | null>(null);
   const frame = useRef(0);
@@ -39,8 +43,11 @@ export function useSpeaker() {
   useEffect(() => stop, [stop]);
   const voice = () => {
     try {
-      const vs = (synth?.getVoices() ?? []).filter((v) => v?.lang && /^en[-_]/i.test(v.lang));
-      return vs.find((v) => /natural|neural|premium|enhanced/i.test(v.name ?? '')) ?? vs.find((v) => v.default) ?? vs[0] ?? null;
+      const want = lang.toLowerCase().replace('_', '-');
+      const vs = (synth?.getVoices() ?? []).filter((v) => v?.lang && v.lang.toLowerCase().replace('_', '-').slice(0, 2) === want.slice(0, 2));
+      const exact = vs.filter((v) => v.lang.toLowerCase().replace('_', '-') === want);
+      const pick = (list: SpeechSynthesisVoice[]) => list.find((v) => /natural|neural|premium|enhanced/i.test(v.name ?? '')) ?? list.find((v) => v.default) ?? list[0];
+      return pick(exact) ?? pick(vs) ?? null;
     } catch { return null; }
   };
 
@@ -54,7 +61,7 @@ export function useSpeaker() {
       try {
         const u = new SpeechSynthesisUtterance(parts[i]!);
         const v = voice();
-        u.lang = v?.lang ?? 'en-GB';
+        u.lang = v?.lang ?? lang;
         try { if (v) u.voice = v; } catch { /* the language is enough */ }
         u.rate = o.rate ?? RECORDED_RATE;
         u.onboundary = (e) => { if (me === run.current && e.name === 'word') o.onWord?.(i, e.charIndex); };
@@ -103,8 +110,9 @@ export function useSpeaker() {
   const say = useCallback((parts: string[], o: SayOptions = {}) => {
     stop();
     const me = run.current;
-    if (canPlay && clips && parts.length && clips.clips[clipKey(parts[0]!)]) return recorded(parts, o, me, clips);
+    if (young.id === 'en' && canPlay && clips && parts.length && clips.clips[clipKey(parts[0]!)]) return recorded(parts, o, me, clips);
     return device(parts, o, me);
-  }, [synth, stop, clips, canPlay]); // eslint-disable-line react-hooks/exhaustive-deps
-  return { supported: !!synth || (canPlay && !!clips), natural: !!clips, say, stop };
+  }, [synth, stop, clips, canPlay, young.id, lang]); // eslint-disable-line react-hooks/exhaustive-deps
+  const natural = young.id === 'en' && !!clips;
+  return { supported: !!synth || (canPlay && natural), natural, say, stop };
 }

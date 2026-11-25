@@ -77,9 +77,21 @@ Until then, the schools section says it is not available, and everything else wo
 `artifacts/api-server/src/bookatlas/db/migrations-2026-11-25-class-assignments.sql` once in the Supabase SQL editor,
 after the phase 3 file. Until then, reading lists still work and due dates and quizzes say they are not switched on.
 
+## Phase 5: built (2026-11-25)
+
+| Owner request | Where it lives |
+|---|---|
+| Teacher reports | Schools and teams → a class → Report: reading minutes per week (4 to 26 weeks), progress and quiz scores per member, as CSV or PDF (`/api/reader/classes/:id/report`, `classReport.ts`, `ClassReportDialog.tsx`) |
+| Reading goals and streaks | Read smarter → My progress: the week against the daily goal (`GoalsPanel.tsx`) |
+| Weekly progress and streak e-mails | Opt-in switches under My progress. A daily Vercel cron (`/api/internal/reader/digest`, 17:00 UTC) sends a streak reminder when a 2+ day streak would break and, on Sunday, the weekly summary with each family profile's week (`reader/digest.ts`). Every e-mail has a one-click unsubscribe link. Needs `RESEND_API_KEY` and `EMAIL_FROM`; without them the choice is saved and nothing is sent |
+| Young readers in more languages | French, Spanish, Portuguese and Dutch stories, picture books, first words and game words (`reading/young/*.ts`, `youngLang.ts`), read by the device voice in that language. English keeps the recorded Kokoro voice. Letter sounds stay English phonics |
+
+No database change in phase 5: the e-mail choices live in the reader settings.
+
 ## Later
 
-- Natural-voice narration in other languages for the children's pages.
+- Natural-voice recordings for the other languages (Kokoro speaks English only).
+- Letter sounds for each language.
 
 ## Choices and limits
 

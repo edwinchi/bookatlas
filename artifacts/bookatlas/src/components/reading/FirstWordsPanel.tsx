@@ -5,8 +5,8 @@ import * as ProgressBar from '@radix-ui/react-progress';
 import { ArrowLeft, ArrowRight, BookHeart, Ear, Grid3x3, Search, Square, Star, Timer, Volume2 } from 'lucide-react';
 import { useActiveReader } from './family';
 import { useSpeaker } from './useSpeaker';
-import { findPhrase, rightPhrase, tryAgainPhrase } from './youngVoice';
-import { ALL_FIRST_WORDS, FIRST_WORDS, PICTURE_BOOKS, emptyFirstProgress, findRound, readFirstProgress, recognition, wordKey, type FirstWordsProgress, type PictureBook } from './firstWords';
+import { useYoung } from './youngLang';
+import { emptyFirstProgress, findRound, readFirstProgress, recognition, wordKey, type FirstWordsProgress, type PictureBook } from './firstWords';
 
 const pill = 'inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white px-4 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 data-[state=active]:bg-rose-500 data-[state=active]:text-white data-[state=on]:bg-rose-500 data-[state=on]:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer';
 
@@ -38,10 +38,12 @@ function useListenClock(update: ReturnType<typeof useFirstProgress>['update']) {
 }
 
 function WordCards({ onHeard, clock }: { onHeard: (key: string) => void; clock: ReturnType<typeof useListenClock> }) {
+  const { firstWords } = useYoung();
   const speaker = useSpeaker();
-  const [group, setGroup] = useState(FIRST_WORDS[0]!.id);
+  const [group, setGroup] = useState(firstWords[0]!.id);
   const [shown, setShown] = useState<{ word: string; picture: string } | null>(null);
-  const g = FIRST_WORDS.find((x) => x.id === group)!;
+  useEffect(() => { setShown(null); }, [firstWords]);
+  const g = firstWords.find((x) => x.id === group)!;
   const say = (w: { word: string; picture: string }) => {
     setShown(w);
     onHeard(wordKey(group, w.word));
@@ -51,7 +53,7 @@ function WordCards({ onHeard, clock }: { onHeard: (key: string) => void; clock: 
   return (
     <div className="space-y-5">
       <ToggleGroup.Root type="single" value={group} onValueChange={(v) => { if (v) { setGroup(v); setShown(null); } }} aria-label="Word group" className="flex flex-wrap gap-2">
-        {FIRST_WORDS.map((x) => <ToggleGroup.Item key={x.id} value={x.id} className={pill}><span aria-hidden>{x.icon}</span>{x.name}</ToggleGroup.Item>)}
+        {firstWords.map((x) => <ToggleGroup.Item key={x.id} value={x.id} className={pill}><span aria-hidden>{x.icon}</span>{x.name}</ToggleGroup.Item>)}
       </ToggleGroup.Root>
       {shown && (
         <div className="flex items-center justify-center gap-6 rounded-3xl bg-white py-6 ring-1 ring-rose-200" aria-live="polite">
@@ -116,12 +118,14 @@ function BookReader({ book, onBack, clock }: { book: PictureBook; onBack: () => 
 }
 
 function PictureBooks({ clock }: { clock: ReturnType<typeof useListenClock> }) {
-  const [open, setOpen] = useState<PictureBook | null>(null);
-  if (open) return <BookReader book={open} onBack={() => setOpen(null)} clock={clock} />;
+  const { pictureBooks } = useYoung();
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = pictureBooks.find((b) => b.id === openId) ?? null;
+  if (open) return <BookReader key={`${open.id}:${open.title}`} book={open} onBack={() => setOpenId(null)} clock={clock} />;
   return (
     <div className="grid gap-4 sm:grid-cols-3">
-      {PICTURE_BOOKS.map((b) => (
-        <button key={b.id} type="button" onClick={() => setOpen(b)} data-testid={`picture-book-${b.id}`}
+      {pictureBooks.map((b) => (
+        <button key={b.id} type="button" onClick={() => setOpenId(b.id)} data-testid={`picture-book-${b.id}`}
           className="flex flex-col items-center gap-3 rounded-3xl bg-white p-6 text-center ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
           <span className="text-7xl" aria-hidden>{b.cover}</span>
           <span className="font-serif text-xl font-bold text-slate-900">{b.title}</span>
@@ -133,29 +137,32 @@ function PictureBooks({ clock }: { clock: ReturnType<typeof useListenClock> }) {
 }
 
 function FindIt({ onResult, onStars }: { onResult: (right: boolean) => void; onStars: (n: number) => void }) {
+  const young = useYoung();
   const speaker = useSpeaker();
   const [group, setGroup] = useState<string>('all');
   const [round, setRound] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
-  const r = useMemo(() => findRound(round, group === 'all' ? null : group), [round, group]);
-  const ask = useCallback(() => speaker.say([findPhrase(r.target.word)], { rate: 0.8 }), [speaker, r.target.word]);
+  const r = useMemo(() => findRound(round, group === 'all' ? null : group, young.firstWords), [round, group, young.firstWords]);
+  const ask = useCallback(() => speaker.say([young.find(r.target.word)], { rate: 0.8 }), [speaker, young, r.target.word]);
   useEffect(() => { setPicked(null); const t = window.setTimeout(ask, 300); return () => window.clearTimeout(t); }, [r]); // eslint-disable-line react-hooks/exhaustive-deps
   const choose = (w: string) => {
     if (picked) return;
     setPicked(w);
     const right = w === r.target.word;
     onResult(right);
-    if (right) { onStars(1); speaker.say([rightPhrase(r.target.word)], { rate: 0.85 }); window.setTimeout(() => setRound((n) => n + 1), 1600); }
-    else { speaker.say([tryAgainPhrase(w)], { rate: 0.85 }); window.setTimeout(() => setPicked(null), 1400); }
+    if (right) { onStars(1); speaker.say([young.right(r.target.word)], { rate: 0.85 }); window.setTimeout(() => setRound((n) => n + 1), 1600); }
+    else { speaker.say([young.tryAgain(w)], { rate: 0.85 }); window.setTimeout(() => setPicked(null), 1400); }
   };
   return (
     <div className="space-y-5">
       <ToggleGroup.Root type="single" value={group} onValueChange={(v) => { if (v) { setGroup(v); setRound(0); } }} aria-label="Pictures from" className="flex flex-wrap gap-2">
         <ToggleGroup.Item value="all" className={pill}>All words</ToggleGroup.Item>
-        {FIRST_WORDS.map((x) => <ToggleGroup.Item key={x.id} value={x.id} className={pill}><span aria-hidden>{x.icon}</span>{x.name}</ToggleGroup.Item>)}
+        {young.firstWords.map((x) => <ToggleGroup.Item key={x.id} value={x.id} className={pill}><span aria-hidden>{x.icon}</span>{x.name}</ToggleGroup.Item>)}
       </ToggleGroup.Root>
       <div className="flex flex-wrap items-center gap-3">
-        <p className="font-reader-clear text-3xl font-bold text-slate-900">Find the <span className="text-rose-600" data-testid="find-it-word">{r.target.word}</span>!</p>
+        {young.id === 'en'
+          ? <p className="font-reader-clear text-3xl font-bold text-slate-900">Find the <span className="text-rose-600" data-testid="find-it-word">{r.target.word}</span>!</p>
+          : <p className="font-reader-clear text-3xl font-bold text-slate-900"><span className="sr-only" data-testid="find-it-word">{r.target.word}</span>{young.find(r.target.word)}</p>}
         <button type="button" onClick={ask} aria-label="Say it again" className="grid h-12 w-12 place-items-center rounded-full bg-amber-400 text-slate-950 hover:bg-amber-300 cursor-pointer"><Ear className="h-5 w-5" /></button>
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -175,7 +182,11 @@ function FindIt({ onResult, onStars }: { onResult: (right: boolean) => void; onS
 export function FirstWordsPanel({ onStars }: { onStars: (n: number) => void }) {
   const { p, update } = useFirstProgress();
   const clock = useListenClock(update);
-  const total = ALL_FIRST_WORDS.length;
+  const { firstWords } = useYoung();
+  // Words heard in the language on screen (each language has its own words).
+  const keys = useMemo(() => new Set(firstWords.flatMap((g) => g.words.map((w) => wordKey(g.id, w.word)))), [firstWords]);
+  const heard = p.heard.filter((k) => keys.has(k)).length;
+  const total = keys.size;
   const rec = recognition(p);
   return (
     <div className="space-y-6">
@@ -197,8 +208,8 @@ export function FirstWordsPanel({ onStars }: { onStars: (n: number) => void }) {
       <section aria-label="Progress" className="grid gap-3 rounded-3xl bg-white p-5 ring-1 ring-slate-200 sm:grid-cols-3" data-testid="first-progress">
         <div>
           <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500"><Ear className="h-4 w-4" aria-hidden />Words heard</p>
-          <p className="mt-1 text-2xl font-extrabold tabular-nums text-slate-900">{p.heard.length} <span className="text-sm font-semibold text-slate-500">of {total}</span></p>
-          <ProgressBar.Root value={p.heard.length} max={total} aria-label="Words heard" className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><ProgressBar.Indicator className="h-full rounded-full bg-rose-500" style={{ width: `${(p.heard.length / total) * 100}%` }} /></ProgressBar.Root>
+          <p className="mt-1 text-2xl font-extrabold tabular-nums text-slate-900">{heard} <span className="text-sm font-semibold text-slate-500">of {total}</span></p>
+          <ProgressBar.Root value={heard} max={total} aria-label="Words heard" className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><ProgressBar.Indicator className="h-full rounded-full bg-rose-500" style={{ width: `${(heard / total) * 100}%` }} /></ProgressBar.Root>
         </div>
         <div>
           <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500"><Star className="h-4 w-4" aria-hidden />Right picture</p>

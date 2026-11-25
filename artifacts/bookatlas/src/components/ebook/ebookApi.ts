@@ -120,10 +120,18 @@ export interface ClassRow { userId: string; name: string; joinedAt: string; book
 export interface ClassQuizQuestion { question: string; options: string[]; answer?: number; explanation?: string }
 export interface ClassQuizScore { right: number; total: number; answers: number[]; at: string }
 export interface ClassQuiz { id: string; bookId: string; chapterIndex: number; chapterTitle: string; due: string | null; createdAt: string; questions: ClassQuizQuestion[]; score?: ClassQuizScore | null }
+export interface ClassReport {
+  id: string; name: string; kind: 'class' | 'team'; teacher: string; generatedAt: string;
+  books: { id: string; title: string }[]; due: Record<string, string>; quizzes: { id: string; bookId: string; chapterTitle: string; due: string | null }[];
+  weeks: string[]; rows: (ClassRow & { weekly: number[] })[];
+  totals: ClassDetail['totals'];
+}
 export interface ClassDetail extends ClassSummary {
   teacher: string; rows: ClassRow[]; due: Record<string, string>; quizzes: ClassQuiz[];
   totals: { members: number; weekMinutes: number; averageProgress: number; activeThisWeek: number; quizAverage: number | null } | null;
 }
+/** Reading e-mails (phase 5): the weekly summary and the streak reminder, both opt-in. */
+export interface ReadingEmails { weekly: boolean; streak: boolean; email: string | null; available: boolean }
 export interface ReadingStats {
   totalMinutes: number; words: number; wordsPerMinute: number | null; streakDays: number; booksStarted: number; booksFinished: number;
   sessions: number; last30: { day: string; minutes: number }[];
@@ -207,6 +215,8 @@ export function useEbookApi() {
     recordReadingSession: (body: { bookId: string; startedAt: string; seconds: number; paragraphs: number; words: number; device: string }) =>
       json<unknown>('/api/reader/sessions', 'POST', body),
     readingStats: () => json<ReadingStats>('/api/reader/stats'),
+    readingEmails: () => json<ReadingEmails>('/api/reader/digest'),
+    setReadingEmails: (body: { weekly?: boolean; streak?: boolean }) => json<ReadingEmails>('/api/reader/digest', 'PUT', body),
     // Reader Phase 3 (cycle 10): achievements, shared notes, reports, reading groups.
     achievements: () => json<AchievementsView>('/api/reader/achievements'),
     // Reading Intelligence phase 2 (2026-11-25): family profiles and their reading.
@@ -219,6 +229,7 @@ export function useEbookApi() {
     joinClass: (code: string) => json<ClassSummary>('/api/reader/classes/join', 'POST', { code }),
     classDetail: (id: string) => json<ClassDetail>(`/api/reader/classes/${id}`),
     setClassBooks: (id: string, books: string[], due?: Record<string, string>) => json<{ books: { id: string; title: string }[]; due: Record<string, string> }>(`/api/reader/classes/${id}/books`, 'PUT', due ? { books, due } : { books }),
+    classReport: (id: string, weeks: number) => json<ClassReport>(`/api/reader/classes/${id}/report?weeks=${weeks}`),
     publishClassQuiz: (id: string, body: { bookId: string; chapterIndex: number; chapterTitle: string; questions: ClassQuizQuestion[]; due: string | null }) => json<{ quiz: ClassQuiz }>(`/api/reader/classes/${id}/quizzes`, 'POST', body),
     removeClassQuiz: (id: string, quizId: string) => json<{ ok: boolean }>(`/api/reader/classes/${id}/quizzes/${quizId}`, 'DELETE'),
     answerClassQuiz: (id: string, quizId: string, answers: number[]) => json<{ score: ClassQuizScore; quiz: ClassQuiz; alreadyAnswered: boolean }>(`/api/reader/classes/${id}/quizzes/${quizId}/answers`, 'POST', { answers }),

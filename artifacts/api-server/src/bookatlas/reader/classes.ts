@@ -283,3 +283,37 @@ export async function classDetail(who: Identity, id: string, titles: Titles, now
     } : null,
   };
 }
+
+/**
+ * Teacher report (Reading Intelligence phase 5, owner request 2026-11-25): everything in the class view plus each
+ * member's reading minutes per week for the last `weeks` weeks (Monday to Sunday, UTC), oldest first. For the
+ * teacher only; downloaded as CSV or PDF in the browser.
+ */
+export async function classReport(who: Identity, id: string, titles: Titles, weeksRaw: unknown, now = new Date()) {
+  const detail = await classDetail(who, id, titles, now);
+  if (detail.role !== 'teacher') throw new ReaderError('Only the teacher or team lead can download the report.', 403);
+  const weeks = Math.min(26, Math.max(1, Math.round(Number(weeksRaw) || 8)));
+  const first = weekStart(now);
+  first.setUTCDate(first.getUTCDate() - (weeks - 1) * 7);
+  const starts = Array.from({ length: weeks }, (_, i) => new Date(first.getTime() + i * 7 * 86_400_000).toISOString().slice(0, 10));
+  const ids = detail.rows.map((r) => r.userId);
+  let sessions: Pick<Session, 'user_id' | 'seconds' | 'started_at'>[] = [];
+  if (ids.length) {
+    if (!db()) sessions = readerMemory().sessions.filter((s) => ids.includes(s.user_id) && s.started_at >= first.toISOString());
+    else {
+      const r = await db()!.from('reading_sessions').select('user_id,seconds,started_at').in('user_id', ids).gte('started_at', first.toISOString()).limit(50_000);
+      fail(r); sessions = r.data as typeof sessions;
+    }
+  }
+  const weekOf = (iso: string) => Math.floor((new Date(iso).getTime() - first.getTime()) / (7 * 86_400_000));
+  const rows = detail.rows.map((r) => {
+    const secs = new Array(weeks).fill(0) as number[];
+    for (const s of sessions) if (s.user_id === r.userId) { const w = weekOf(s.started_at); if (w >= 0 && w < weeks) secs[w] += s.seconds; }
+    return { ...r, weekly: secs.map((s) => Math.round(s / 60)) };
+  });
+  return {
+    id: detail.id, name: detail.name, kind: detail.kind, teacher: detail.teacher, generatedAt: now.toISOString(),
+    books: detail.books, due: detail.due, quizzes: detail.quizzes.map((q) => ({ id: q.id, bookId: q.bookId, chapterTitle: q.chapterTitle, due: q.due })),
+    weeks: starts, rows, totals: detail.totals,
+  };
+}

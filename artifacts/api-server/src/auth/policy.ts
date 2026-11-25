@@ -20,6 +20,10 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (/^\/api\/reviews\/books\/[^/]+(?:\/mine)?$/.test(normalized) && ['GET', 'PUT', 'DELETE'].includes(method)) return 'reader';
   // Follow authors (cycle 5c); the unsubscribe link is checked by its signed token.
   if (normalized === '/api/follows/unsubscribe' && ['GET', 'POST'].includes(method)) return 'self-service';
+  // Reading e-mails (Reading Intelligence phase 5): settings for readers, the signed unsubscribe link, the daily cron.
+  if (normalized === '/api/reader/digest/unsubscribe' && ['GET', 'POST'].includes(method)) return 'self-service';
+  if (normalized === '/api/reader/digest' && ['GET', 'PUT'].includes(method)) return 'reader';
+  if (normalized === '/api/internal/reader/digest' && method === 'GET') return 'self-service';
   if (/^\/api\/follows\/[a-z0-9-]+(?:\/mine)?$/.test(normalized) && ['GET', 'POST', 'DELETE'].includes(method)) return 'reader';
   // Everyone may read a prepared book's preview; the route decides who gets the whole book.
   if (method === 'GET' && /^\/api\/reader\/catalog\/[^/]+\/(?:content|images\/[^/]+)$/.test(normalized)) return 'self-service';
@@ -56,6 +60,7 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (normalized === '/api/reader/classes' && ['GET', 'POST'].includes(method)) return 'reader';
   if (normalized === '/api/reader/classes/join' && method === 'POST') return 'reader';
   if (/^\/api\/reader\/classes\/[0-9a-f-]{36}$/.test(normalized) && method === 'GET') return 'reader';
+  if (/^\/api\/reader\/classes\/[0-9a-f-]{36}\/report$/.test(normalized) && method === 'GET') return 'reader';
   if (/^\/api\/reader\/classes\/[0-9a-f-]{36}\/books$/.test(normalized) && method === 'PUT') return 'reader';
   if (/^\/api\/reader\/classes\/[0-9a-f-]{36}\/members\/[\w-]{1,80}$/.test(normalized) && method === 'DELETE') return 'reader';
   if (/^\/api\/reader\/classes\/[0-9a-f-]{36}\/quizzes$/.test(normalized) && method === 'POST') return 'reader';

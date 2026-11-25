@@ -10,8 +10,10 @@ import { useActiveReader } from './family';
 import { loadReaderFont } from '../reader/readingAids';
 import { useSpeaker } from './useSpeaker';
 import { tappedWord } from './youngVoice';
+import { ENGLISH, YOUNG_LANGS, YoungContext, loadYoung, startLang, useYoung, type YoungContent, type YoungLangId } from './youngLang';
+import { SelectBox } from '../ui/select-box';
 import { FirstWordsPanel } from './FirstWordsPanel';
-import { LEVELS, SOUNDS, STORIES, WORDS, pictureRound, sameWord, scramble, storyStars, type Level, type Story } from './youngReaders';
+import { LEVELS, SOUNDS, pictureRound, sameWord, scramble, storyStars, type Level, type Story } from './youngReaders';
 
 /** Stars earned on this device; for a signed-in family they count for the reader who is playing. */
 function useStars() {
@@ -117,13 +119,16 @@ function StoryReader({ story, onStars, onBack }: { story: Story; onStars: (n: nu
 }
 
 function Stories({ level, onStars }: { level: Level; onStars: (n: number) => void }) {
-  const [open, setOpen] = useState<Story | null>(null);
-  useEffect(() => { setOpen(null); }, [level]);
-  if (open) return <StoryReader story={open} onStars={onStars} onBack={() => setOpen(null)} />;
+  const { stories } = useYoung();
+  const [openId, setOpenId] = useState<string | null>(null);
+  useEffect(() => { setOpenId(null); }, [level]);
+  // The story follows the language: switching language while reading shows the same story translated.
+  const open = stories.find((s) => s.id === openId) ?? null;
+  if (open) return <StoryReader key={`${open.id}:${open.title}`} story={open} onStars={onStars} onBack={() => setOpenId(null)} />;
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {STORIES.filter((s) => s.level === level).map((s) => (
-        <button key={s.id} type="button" onClick={() => setOpen(s)} data-testid={`story-${s.id}`}
+      {stories.filter((s) => s.level === level).map((s) => (
+        <button key={s.id} type="button" onClick={() => setOpenId(s.id)} data-testid={`story-${s.id}`}
           className="flex items-center gap-4 rounded-3xl bg-white p-5 text-left ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
           <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-amber-50 text-4xl" aria-hidden>{s.picture}</span>
           <span><span className="block font-serif text-xl font-bold text-slate-900">{s.title}</span><span className="text-sm text-slate-500">{s.paragraphs.join(' ').split(/\s+/).length} words · 3 questions</span></span>
@@ -136,6 +141,7 @@ function Stories({ level, onStars }: { level: Level; onStars: (n: number) => voi
 // ------------------------------------------------------------------------------------------------ letter sounds
 
 function LetterSounds() {
+  const young = useYoung();
   const speaker = useSpeaker();
   const [last, setLast] = useState<string | null>(null);
   const groups: { id: 'letters' | 'pairs' | 'vowels'; title: string }[] = [
@@ -144,6 +150,7 @@ function LetterSounds() {
   return (
     <div className="space-y-6">
       {!speaker.supported && <p className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">This browser has no voice to read aloud. Try Chrome, Edge or Safari.</p>}
+      {young.id !== 'en' && <p className="rounded-2xl bg-indigo-50 p-4 text-sm text-indigo-950">Letter sounds are English phonics for now, read in English.</p>}
       {groups.map((g) => (
         <section key={g.id} aria-label={g.title}>
           <h3 className="mb-3 text-lg font-bold text-slate-900">{g.title}</h3>
@@ -175,11 +182,12 @@ function Feedback({ ok, onNext, word }: { ok: boolean; onNext: () => void; word:
 }
 
 function FindThePicture({ level, onStars }: { level: Level; onStars: (n: number) => void }) {
+  const { words } = useYoung();
   const speaker = useSpeaker();
   const [round, setRound] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
-  const r = useMemo(() => pictureRound(level, round), [level, round]);
-  useEffect(() => { setPicked(null); }, [level, round]);
+  const r = useMemo(() => pictureRound(level, round, 3, words), [level, round, words]);
+  useEffect(() => { setPicked(null); }, [level, round, words]);
   const choose = (w: string) => { if (picked) return; setPicked(w); if (w === r.target.word) onStars(1); };
   return (
     <div className="space-y-5">
@@ -200,11 +208,12 @@ function FindThePicture({ level, onStars }: { level: Level; onStars: (n: number)
 }
 
 function BuildTheWord({ level, onStars }: { level: Level; onStars: (n: number) => void }) {
+  const { words } = useYoung();
   const [round, setRound] = useState(0);
-  const target = WORDS[level][(round * 5 + 3) % WORDS[level].length]!;
+  const target = words[level][(round * 5 + 3) % words[level].length]!;
   const tiles = useMemo(() => scramble(target.word, round * 31 + level), [target.word, round, level]);
   const [used, setUsed] = useState<number[]>([]);
-  useEffect(() => { setUsed([]); }, [level, round]);
+  useEffect(() => { setUsed([]); }, [level, round, target.word]);
   const built = used.map((i) => tiles[i]).join('');
   const done = used.length === tiles.length;
   const ok = done && built === target.word;
@@ -228,12 +237,13 @@ function BuildTheWord({ level, onStars }: { level: Level; onStars: (n: number) =
 }
 
 function SpellIt({ level, onStars }: { level: Level; onStars: (n: number) => void }) {
+  const { words } = useYoung();
   const speaker = useSpeaker();
   const [round, setRound] = useState(0);
-  const target = WORDS[level][(round * 7 + 1) % WORDS[level].length]!;
+  const target = words[level][(round * 7 + 1) % words[level].length]!;
   const [value, setValue] = useState('');
   const [result, setResult] = useState<boolean | null>(null);
-  useEffect(() => { setValue(''); setResult(null); }, [level, round]);
+  useEffect(() => { setValue(''); setResult(null); }, [level, round, target.word]);
   const check = (e: React.FormEvent) => { e.preventDefault(); if (result !== null || !value.trim()) return; const ok = sameWord(value, target.word); setResult(ok); if (ok) onStars(1); };
   return (
     <form onSubmit={check} className="space-y-5">
@@ -283,17 +293,26 @@ export default function YoungReadersPage() {
     return () => { document.title = title; };
   }, []);
   const { stars, add, reader } = useStars();
+  const [langId, setLangId] = useState<YoungLangId>(() => { let saved: string | null = null; try { saved = localStorage.getItem('bookatlas:young-lang'); } catch { /* this device */ } return startLang(saved, typeof navigator === 'undefined' ? undefined : navigator.language); });
+  const [content, setContent] = useState<YoungContent>(ENGLISH);
+  useEffect(() => {
+    let live = true;
+    void loadYoung(langId).then((c) => { if (live) setContent(c); }).catch(() => { if (live) setContent(ENGLISH); });
+    try { localStorage.setItem('bookatlas:young-lang', langId); } catch { /* this device */ }
+    return () => { live = false; };
+  }, [langId]);
   const [level, setLevel] = useState<Level>(() => { try { return (Number(localStorage.getItem('bookatlas:young-level')) as Level) || 1; } catch { return 1; } });
   const pickLevel = (v: string) => { if (!v) return; const l = Number(v) as Level; setLevel(l); try { localStorage.setItem('bookatlas:young-level', String(l)); } catch { /* this device */ } };
   return (
-    <main className="min-h-[100dvh] bg-[#fffaf0]">
+    <YoungContext.Provider value={content}>
+    <main className="min-h-[100dvh] bg-[#fffaf0]" lang={content.voice.slice(0, 2)}>
       <header className="bg-[radial-gradient(ellipse_70%_120%_at_90%_0%,rgba(250,204,21,0.35),transparent),linear-gradient(to_bottom,#3730a3,#312e81)] px-4 pb-8 pt-6 text-white sm:px-6">
         <div className="mx-auto max-w-5xl">
           <Link href="/reading-intelligence" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-indigo-100 hover:text-white"><ArrowLeft className="h-4 w-4" aria-hidden />Reading Intelligence</Link>
           <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
             <div>
               <h1 className="font-serif text-4xl font-bold sm:text-5xl">Young readers</h1>
-              <p className="mt-2 max-w-xl text-indigo-100">Stories that read themselves aloud, letter sounds and word games. Pick a level, then play.</p>
+              <p className="mt-2 max-w-xl text-indigo-100">Stories that read themselves aloud, letter sounds and word games. Pick a language and a level, then play.</p>
             </div>
             <div className="flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/20" aria-live="polite">
               <Star className="h-7 w-7 fill-amber-300 text-amber-300" aria-hidden />
@@ -301,7 +320,13 @@ export default function YoungReadersPage() {
               <span className="text-sm text-indigo-100">stars{reader.name ? ` for ${reader.name}` : ''}</span>
             </div>
           </div>
-          <ToggleGroup.Root type="single" value={String(level)} onValueChange={pickLevel} aria-label="Reading level" className="mt-6 flex flex-wrap gap-2">
+          <label className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-indigo-100">Language
+            <SelectBox value={langId} onChange={(e) => setLangId(e.target.value as YoungLangId)} aria-label="Language of the stories and words" data-testid="young-lang"
+              className="min-w-[10rem] rounded-xl bg-white/10 px-3 py-2 text-sm font-bold text-white ring-1 ring-white/30 focus:outline-none focus:ring-2 focus:ring-amber-300">
+              {YOUNG_LANGS.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </SelectBox>
+          </label>
+          <ToggleGroup.Root type="single" value={String(level)} onValueChange={pickLevel} aria-label="Reading level" className="mt-4 flex flex-wrap gap-2">
             {LEVELS.map((l) => (
               <ToggleGroup.Item key={l.id} value={String(l.id)} className="rounded-2xl bg-white/10 px-4 py-2 text-left ring-1 ring-white/20 data-[state=on]:bg-white data-[state=on]:text-indigo-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 cursor-pointer">
                 <span className="block text-sm font-bold">Level {l.id}: {l.name}</span><span className="block text-xs opacity-80">Ages {l.ages}</span>
@@ -325,5 +350,6 @@ export default function YoungReadersPage() {
         <p className="mt-10 text-sm text-slate-600">Grown-ups: add your children as readers under <Link href="/reading-intelligence#family" className="font-bold text-indigo-700 hover:underline">Family reading</Link> to follow their stars, reading time and quiz scores.</p>
       </Tabs.Root>
     </main>
+    </YoungContext.Provider>
   );
 }

@@ -69,8 +69,8 @@ export const PICTURE_BOOKS: PictureBook[] = [
  * A round of "Find it": the word said, and four pictures to choose from. In a group, or from all words (the other
  * pictures then come from other groups, which is easier for the very young).
  */
-export function findRound(round: number, group: string | null) {
-  const pool = group ? FIRST_WORDS.find((g) => g.id === group)?.words ?? [] : ALL_FIRST_WORDS;
+export function findRound(round: number, group: string | null, groups: WordGroup[] = FIRST_WORDS) {
+  const pool = group ? groups.find((g) => g.id === group)?.words ?? [] : groups.flatMap((g) => g.words);
   const order = shuffle(pool, 101 + (group ? group.length : 0));
   const target = order[round % order.length]!;
   const others = shuffle(pool.filter((w) => w.word !== target.word && w.picture !== target.picture), round * 7 + 3).slice(0, 3);

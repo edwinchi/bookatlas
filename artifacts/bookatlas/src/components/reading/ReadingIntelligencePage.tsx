@@ -16,6 +16,7 @@ import { SAMPLE_PASSAGE, speedPlan, summarizeTests } from '../reader/fastRead';
 import { FamilyPanel, NextStepCard, WhoIsReading, useFamily } from './FamilySection';
 import { OwnText } from './OwnTextPanel';
 import { SchoolsSection } from './SchoolsSection';
+import { GoalsPanel } from './GoalsPanel';
 
 const BASE = import.meta.env.BASE_URL;
 const STORE = BASE;
@@ -189,6 +190,7 @@ function Progress({ speed, fam }: { speed: ReturnType<typeof useSpeedTests>; fam
                 <HoursChart byHourUtc={stats.byHourUtc ?? Array(24).fill(0)} />
               </div>
               <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200"><p className="mb-3 text-sm font-bold text-slate-900">Daily goal and achievements</p><ReaderAchievements api={api} /></div>
+              <GoalsPanel stats={stats} />
             </>
           )}
       <h3 className="pt-2 text-sm font-bold text-slate-900">Reading speed</h3>
@@ -311,7 +313,7 @@ export default function ReadingIntelligencePage() {
         </Section>
 
         <Section id="progress" icon={TrendingUp} eyebrow="My progress" title="Your reading, day by day"
-          intro="Time spent reading, your streak, the books you finished, how fast you read and when you like to read. Only you can see it.">
+          intro="Time spent reading, your streak and daily goal, the books you finished, how fast you read and when you like to read. Ask for a weekly summary or a streak reminder by e-mail if you like. Only you can see it.">
           <Progress speed={speed} fam={fam} />
         </Section>
 
@@ -321,7 +323,7 @@ export default function ReadingIntelligencePage() {
         </Section>
 
         <Section id="young" icon={Baby} eyebrow="Young readers" title="Stories, letter sounds and word games"
-          intro="From first words to confident reading: picture words and little picture books for the youngest, then stories that read themselves aloud in a natural voice with every word lit up, questions after each story, letter sounds and word games in three levels. Free, with no account needed.">
+          intro="From first words to confident reading: picture words and little picture books for the youngest, then stories that read themselves aloud in a natural voice with every word lit up, questions after each story, letter sounds and word games in three levels, in English, French, Spanish, Portuguese and Dutch. Free, with no account needed.">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Feature icon={Baby} title="First words (0–4)">Animals, colours, food, family, nature and vehicles to tap and hear, picture books and a Find it game.</Feature>
             <Feature icon={BookOpen} title="Stories read aloud">Tap Read to me and follow the words; tap any word to hear it again.</Feature>

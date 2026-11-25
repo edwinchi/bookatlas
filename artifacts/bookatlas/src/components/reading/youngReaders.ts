@@ -146,8 +146,8 @@ export function scramble(word: string, seed: number) {
 /** Spelling answers ignore case, spaces and accents. */
 export const sameWord = (a: string, b: string) => a.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '').toLowerCase() === b.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 /** A round of "find the picture": the word, and the right picture among `n` choices from the same level. */
-export function pictureRound(level: Level, round: number, n = 3) {
-  const words = WORDS[level];
+export function pictureRound(level: Level, round: number, n = 3, all: Record<Level, PictureWord[]> = WORDS) {
+  const words = all[level];
   const target = words[round % words.length]!;
   const others = shuffle(words.filter((w) => w.word !== target.word), round + 7).slice(0, n - 1);
   return { target, choices: shuffle([target, ...others], round + 13) };

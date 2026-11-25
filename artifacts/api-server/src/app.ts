@@ -54,6 +54,8 @@ app.use(
     { prefix: "/api/reader/groups", limit: 60 },
     { prefix: "/api/reader/reports", limit: 20 },
     { prefix: "/api/internal/narration/cron", limit: 5 },
+    { prefix: "/api/internal/reader/digest", limit: 5 },
+    { prefix: "/api/reader/digest", limit: 30 },
     { prefix: "/api/internal/narration/local", limit: 240 },
     { prefix: "/api/audio-samples", limit: 60 },
     { prefix: "/api/book-enquiries", limit: 5 },
