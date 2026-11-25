@@ -87,7 +87,7 @@ export const AudiobookPlayerDock: React.FC<AudiobookPlayerDockProps> = ({
   useEffect(() => { if (audio.current) audio.current.playbackRate = speed; }, [speed, state]);
   useEffect(() => { if (audio.current) { audio.current.muted = muted; audio.current.volume = volume; } }, [muted, volume]);
 
-  const toggle = () => { const a = audio.current; if (!a || state !== 'ready') return; if (a.paused) void a.play(); else a.pause(); };
+  const toggle = () => { const a = audio.current; if (!a || state !== 'ready') return; if (a.paused) void a.play().catch(() => undefined); else a.pause(); };
   const seek = (to: number) => { const a = audio.current; if (!a || !duration) return; a.currentTime = Math.max(0, Math.min(duration, to)); setTime(a.currentTime); };
   const seekRef = useRef(seek); seekRef.current = seek;
   const toggleRef = useRef(toggle); toggleRef.current = toggle;
@@ -126,7 +126,7 @@ export const AudiobookPlayerDock: React.FC<AudiobookPlayerDockProps> = ({
 
   const audioEl = (
     <audio ref={audio} preload="auto" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)}
-      onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)} onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)} />
+      onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)} onLoadedMetadata={(e) => { const d = e.currentTarget.duration; setDuration(Number.isFinite(d) && d > 0 ? d : 0); }} />
   );
   const playIcon = state === 'loading' ? <Loader2 className="h-6 w-6 animate-spin" /> : playing ? <Pause className="h-6 w-6 fill-current" /> : <Play className="h-6 w-6 translate-x-0.5 fill-current" />;
 

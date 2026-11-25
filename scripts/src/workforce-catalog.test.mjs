@@ -70,6 +70,7 @@ test('the API contract requires per-worker spending consent and a bounded task b
 
 test('the root query provider includes authenticated routes and never retries paid mutations', () => {
   const source = readFileSync(new URL('../../artifacts/bookatlas/src/main.tsx', import.meta.url), 'utf8');
-  assert.match(source, /<QueryClientProvider client=\{queryClient\}>\s*<App\s*\/>\s*<\/QueryClientProvider>/);
+  // The whole app sits inside the provider; an error boundary between them (2026-11-25) is allowed.
+  assert.match(source, /<QueryClientProvider client=\{queryClient\}>[\s\S]*?(?:<ErrorBoundary>\s*)?<App\s*\/>\s*(?:<\/ErrorBoundary>\s*)?<\/QueryClientProvider>/);
   assert.match(source, /mutations:\s*\{\s*retry:\s*false\s*\}/);
 });

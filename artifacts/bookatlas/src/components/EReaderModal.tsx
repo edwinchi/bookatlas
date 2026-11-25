@@ -433,7 +433,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             if (audio.currentTime <= 3 && thisChapter > 0) { void play(previousChapter); return; }
             audio.currentTime = 0;
           },
-          seekBy: (d) => { audio.currentTime = Math.max(0, Math.min(audio.duration || 0, audio.currentTime + d)); setPlaying(audio.paused ? 'paused' : 'playing', audio); },
+          // Before the part's length is known, a seek from the lock screen is ignored (it used to jump back to 0:00).
+          seekBy: (d) => { if (!Number.isFinite(audio.duration)) return; audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + d)); setPlaying(audio.paused ? 'paused' : 'playing', audio); },
         },
       );
       if (speechChapter.current !== seg.chapter) { speechChapter.current = seg.chapter; setCurrentChapterIndex(seg.chapter); }
@@ -564,7 +565,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   };
   const playerForward = () => {
     const a = narrationAudio.current;
-    if (natural && a) { a.currentTime = Math.min((a.duration || 0) - 0.25, a.currentTime + 15); return; }
+    // While the part is still loading its length is unknown: setting the time then threw an error.
+    if (natural && a) { if (Number.isFinite(a.duration)) a.currentTime = Math.max(0, Math.min(a.duration - 0.25, a.currentTime + 15)); return; }
     device.skip(1);
   };
   const listeningChapter = natural ? (segs[clock.k]?.chapter ?? currentChapterIndex) : device.where.c;
@@ -580,13 +582,16 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   };
   const previewVoice = (v: SpeechSynthesisVoice) => {
     if (natural) narrationAudio.current?.pause(); else if (device.state === 'playing' || device.state === 'loading') device.pause();
-    const synth = window.speechSynthesis;
-    synth.cancel();
-    const u = new SpeechSynthesisUtterance(sampleLine(baseLang(v.lang)));
-    u.voice = v;
-    u.lang = v.lang;
-    u.rate = listen.rate;
-    synth.speak(u);
+    const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
+    if (!synth) return;
+    try {
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(sampleLine(baseLang(v.lang)));
+      u.lang = v.lang;
+      try { u.voice = v; } catch { /* a voice the engine no longer has: the language alone still works */ }
+      u.rate = listen.rate;
+      synth.speak(u);
+    } catch { /* the sample is optional */ }
   };
   const playerStatus: PlayerStatus = natural
     ? (narrationPaused ? 'paused' : clock.t === 0 && !narrationAudio.current?.currentTime && narrationAudio.current?.paused ? 'loading' : 'playing')

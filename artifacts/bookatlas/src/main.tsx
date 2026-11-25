@@ -5,6 +5,7 @@ import App from './auth/AuthApp';
 import './index.css';
 import { reloadForNewRelease } from './utils/lazyPage';
 import { watchClientErrors } from './utils/reportClientError';
+import { ErrorBoundary } from './components/error-boundary';
 
 watchClientErrors();
 
@@ -21,7 +22,10 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
+      {/* Last line of defence: an error anywhere shows a message with "Try again", never an empty page. */}
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </QueryClientProvider>
   </StrictMode>,
 );

@@ -83,23 +83,32 @@ export function sampleLine(lang: string) {
 export const sentences = (text: string) =>
   text.match(/[^.!?…。！？]+[.!?…。！？]+["'”’)]*\s*|[^.!?…。！？]+$/g)?.map((s) => s.trim()).filter(Boolean) ?? [text];
 
-export const baseLang = (tag: string) => tag.replace('_', '-').split('-')[0]!.toLowerCase();
+/** Android and older browsers name some languages differently (old ISO codes, Mandarin and Cantonese, Bokmål). */
+const LANG_ALIASES: Record<string, string> = { in: 'id', iw: 'he', ji: 'yi', cmn: 'zh', yue: 'zh', fil: 'tl', nb: 'no', nn: 'no', zsm: 'ms', swh: 'sw' };
+export const baseLang = (tag: string) => {
+  const code = (tag ?? '').replaceAll('_', '-').split('-')[0]!.toLowerCase();
+  return LANG_ALIASES[code] ?? code;
+};
 
 export interface VoiceGroup { locale: string; lang: string; label: string; region: string; voices: SpeechSynthesisVoice[] }
 
 const voiceScore = (v: SpeechSynthesisVoice) =>
-  (/natural|neural|premium|enhanced|wavenet/i.test(v.name) ? 4 : 0) + (/google|microsoft|siri|samantha|daniel/i.test(v.name) ? 2 : 0) + (v.default ? 1 : 0);
+  (/natural|neural|premium|enhanced|wavenet/i.test(v.name ?? '') ? 4 : 0) + (/google|microsoft|siri|samantha|daniel/i.test(v.name ?? '') ? 2 : 0) + (v.default ? 1 : 0);
 
 /** The device's voices grouped by locale (French – France, French – Canada…), the book's language first. */
 export function groupVoices(voices: SpeechSynthesisVoice[], bookLang: string): VoiceGroup[] {
   const regions = (() => { try { return new Intl.DisplayNames(['en'], { type: 'region' }); } catch { return null; } })();
+  // Android lists voices such as "cmn-Hans-CN", "es_419" or "en-US-x-sfg-local". Only a real region subtag (two
+  // letters or three digits) is named, and a name the browser refuses falls back to the code: Intl.DisplayNames
+  // throws on anything else, which emptied the reader on Android phones (found 2026-11-25).
+  const regionName = (code: string) => { try { return regions?.of(code) ?? code; } catch { return code; } };
   const groups = new Map<string, VoiceGroup>();
   for (const v of voices) {
-    const locale = v.lang.replace('_', '-');
+    const locale = (v.lang ?? '').replaceAll('_', '-');
     const lang = baseLang(locale);
     if (!(lang in LISTEN_LANGUAGES)) continue;
-    const region = locale.split('-')[1]?.toUpperCase() ?? '';
-    const g = groups.get(locale) ?? { locale, lang, region, label: `${LISTEN_LANGUAGES[lang]}${region ? ` – ${(regions?.of(region) ?? region)}` : ''}`, voices: [] };
+    const region = locale.split('-').slice(1).find((s) => /^([a-z]{2}|\d{3})$/i.test(s))?.toUpperCase() ?? '';
+    const g = groups.get(locale) ?? { locale, lang, region, label: `${LISTEN_LANGUAGES[lang]}${region ? ` – ${regionName(region)}` : ''}`, voices: [] };
     g.voices.push(v);
     groups.set(locale, g);
   }
@@ -116,7 +125,7 @@ export function pickVoice(voices: SpeechSynthesisVoice[], lang: string, voiceURI
 
 /** A short, readable name for a device voice ("Microsoft Aria Online (Natural) - English (United States)" → "Aria (Natural)"). */
 export function voiceName(v: SpeechSynthesisVoice | null | undefined) {
-  if (!v) return 'Device voice';
+  if (!v?.name) return 'Device voice';
   const name = v.name.replace(/^(Microsoft|Google|Apple)\s+/i, '').replace(/\s+-\s+.*$/, '').replace(/\s+Online/i, '').trim();
   return name || v.name;
 }

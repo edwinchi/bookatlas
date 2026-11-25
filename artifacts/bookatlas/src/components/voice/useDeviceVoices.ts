@@ -3,11 +3,13 @@ import { useEffect, useState } from 'react';
 /** Real voices installed on this device/browser. The Web Speech API exposes name and language only, never gender. */
 export function useDeviceVoices() {
   const supported = typeof window !== 'undefined' && 'speechSynthesis' in window;
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>(() => (supported ? window.speechSynthesis.getVoices() : []));
+  // Some phones throw from getVoices() while the speech engine starts, or list a voice without a language.
+  const read = () => { try { return supported ? window.speechSynthesis.getVoices().filter((v) => !!v?.lang && !!v.name) : []; } catch { return []; } };
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>(read);
   useEffect(() => {
     if (!supported) return;
     const synth = window.speechSynthesis;
-    const update = () => setVoices(synth.getVoices());
+    const update = () => setVoices(read());
     update();
     synth.addEventListener('voiceschanged', update);
     return () => synth.removeEventListener('voiceschanged', update);

@@ -28,10 +28,12 @@ const CHUNK = 1800;
  */
 export function useDeviceVoice(o: Options) {
   const synth = typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null;
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>(() => synth?.getVoices() ?? []);
+  // Some phones throw from getVoices() while the speech engine starts, or list voices without a language.
+  const readVoices = () => { try { return (synth?.getVoices() ?? []).filter((v) => !!v?.lang); } catch { return []; } };
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>(readVoices);
   useEffect(() => {
     if (!synth) return;
-    const load = () => setVoices(synth.getVoices());
+    const load = () => setVoices(readVoices());
     load();
     synth.addEventListener?.('voiceschanged', load);
     // Some browsers fill the list late without an event.
@@ -119,17 +121,23 @@ export function useDeviceVoice(o: Options) {
       setCaption(translating ? { text: parts[i]!, via: said.via } : null);
       const lang = target();
       const voice = pickVoice(voicesRef.current, lang, opts.current.prefs.voiceURI);
-      const u = new SpeechSynthesisUtterance(parts[i]!);
-      u.rate = opts.current.prefs.rate;
-      u.lang = voice?.lang ?? lang;
-      if (voice) u.voice = voice;
-      u.onend = () => say(i + 1);
-      u.onerror = (e) => {
-        if (me !== run.current || e.error === 'interrupted' || e.error === 'canceled') return;
-        setError('The device voice stopped. Press play to continue.');
+      try {
+        const u = new SpeechSynthesisUtterance(parts[i]!);
+        u.rate = Math.min(4, Math.max(0.5, opts.current.prefs.rate || 1));
+        u.lang = voice?.lang ?? lang;
+        // A voice the engine no longer has (an Android voice pack removed) is refused: the language alone still works.
+        try { if (voice) u.voice = voice; } catch { /* keep the language */ }
+        u.onend = () => say(i + 1);
+        u.onerror = (e) => {
+          if (me !== run.current || e.error === 'interrupted' || e.error === 'canceled') return;
+          setError('The device voice stopped. Press play to continue.');
+          pause();
+        };
+        synth.speak(u);
+      } catch {
+        setError('This device could not read this passage aloud. Press play to try again.');
         pause();
-      };
-      synth.speak(u);
+      }
     };
     say(Math.min(s, parts.length - 1));
   };

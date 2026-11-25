@@ -1,4 +1,5 @@
 import { lazyPage } from './utils/lazyPage';
+import { ErrorBoundary } from './components/error-boundary';
 import { showRequirements, type RequirementsTab } from './utils/requirementsLink';
 import { AuthorProfileModal } from './components/AuthorProfileModal';
 import { useEbookApi } from './components/ebook/ebookApi';
@@ -1347,6 +1348,19 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
 
       {/* In-Browser eReader Modal */}
       {activeReadingBook && (
+        // A crash inside the reader shows a way back instead of emptying the whole page (2026-11-25).
+        <ErrorBoundary resetKey={activeReadingBook.book.id} FallbackComponent={({ resetError }) => (
+          <div role="alertdialog" aria-labelledby="reader-crash-title" className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/70 p-4">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl">
+              <h2 id="reader-crash-title" className="text-lg font-bold text-slate-900">The reader stopped unexpectedly</h2>
+              <p className="mt-2 text-sm text-slate-600">We have been told about it. Your place in the book is saved.</p>
+              <div className="mt-5 flex justify-center gap-2">
+                <button type="button" onClick={resetError} className="cursor-pointer rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">Open it again</button>
+                <button type="button" onClick={() => { setActiveReadingBook(null); setJoinGroupId(null); }} className="cursor-pointer rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Close</button>
+              </div>
+            </div>
+          </div>
+        )}>
         <React.Suspense fallback={null}>
         <EReaderModal
           book={activeReadingBook.book}
@@ -1361,6 +1375,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
           onRequireAiAccess={requireAiAccess}
         />
         </React.Suspense>
+        </ErrorBoundary>
       )}
 
       {/* Slide-out Cart Drawer */}

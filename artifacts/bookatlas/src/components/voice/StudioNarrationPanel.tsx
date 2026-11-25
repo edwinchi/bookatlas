@@ -101,7 +101,7 @@ export const StudioNarrationPanel: React.FC<Props> = ({ bookId, chapterTitle, te
     audioRef.current?.pause();
     synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    if (deviceVoice) { u.voice = deviceVoice; u.lang = deviceVoice.lang; }
+    if (deviceVoice) { u.lang = deviceVoice.lang; try { u.voice = deviceVoice; } catch { /* the language alone still works */ } }
     u.onend = () => setDeviceSpeaking(false);
     u.onerror = () => setDeviceSpeaking(false);
     synth.speak(u);

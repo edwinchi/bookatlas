@@ -32,7 +32,7 @@ export function showNowPlaying(now: NowPlaying, controls: MediaControls) {
 
 export function setPlaying(state: 'playing' | 'paused', audio?: HTMLAudioElement) {
   if (!supported()) return;
-  navigator.mediaSession.playbackState = state;
+  try { navigator.mediaSession.playbackState = state; } catch { /* ignore */ }
   if (audio && Number.isFinite(audio.duration) && audio.duration > 0) {
     try { navigator.mediaSession.setPositionState({ duration: audio.duration, position: Math.min(audio.currentTime, audio.duration), playbackRate: audio.playbackRate }); } catch { /* ignore */ }
   }
