@@ -1,8 +1,9 @@
+import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import React, { useEffect, useRef, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { BookOpenCheck, Check, GraduationCap, Languages, Loader2, MessageCircleQuestion, RotateCcw, Send, Sparkles, Volume2, X } from 'lucide-react';
 import type { Chapter } from '../../types';
-import type { AskResult, Definition, StudyKind, StudyResult, useEbookApi } from '../ebook/ebookApi';
+import type { AskResult, Definition, ExplainLevel, StudyKind, StudyResult, useEbookApi } from '../ebook/ebookApi';
 
 import { SelectBox } from '../ui/select-box';
 type Api = ReturnType<typeof useEbookApi>;
@@ -148,14 +149,18 @@ function AskTab({ api, bookId, chapterIndex, onRemaining, onJump }: { api: Api; 
 }
 
 function StudyTab({ api, bookId, chapters, chapterIndex, onRemaining }: { api: Api; bookId: string; chapters: Chapter[]; chapterIndex: number; onRemaining: (n: number) => void }) {
-  const [kind, setKind] = useState<StudyKind>('summary');
+  const [tool, setTool] = useState<'summary' | 'key_concepts' | 'flashcards' | 'quiz'>('summary');
+  // Summary lengths (Reading Intelligence 2026-11-25): one minute, five minutes or complete.
+  const [length, setLength] = useState<'summary_short' | 'summary' | 'summary_full'>('summary');
+  const kind: StudyKind = tool === 'summary' ? length : tool;
   const [ci, setCi] = useState(chapterIndex);
   const [result, setResult] = useState<StudyResult | null>(null);
   const { busy, error, run } = useRun(onRemaining);
   useEffect(() => { setCi(chapterIndex); }, [chapterIndex]);
   useEffect(() => { setResult(null); }, [ci, kind]);
   const make = async () => { const r = await run(() => api.studyChapter({ bookId, chapterIndex: ci, kind })); if (r) setResult(r); };
-  const kinds: [StudyKind, string][] = [['summary', 'Summary'], ['key_concepts', 'Key concepts'], ['flashcards', 'Flashcards'], ['quiz', 'Quiz']];
+  const kinds: [typeof tool, string][] = [['summary', 'Summary'], ['key_concepts', 'Key concepts'], ['flashcards', 'Flashcards'], ['quiz', 'Quiz']];
+  const lengths: [typeof length, string][] = [['summary_short', '1 minute'], ['summary', '5 minutes'], ['summary_full', 'Complete']];
   return (
     <div className="space-y-3">
       <label className="block text-[11px] font-bold text-slate-700">
@@ -166,17 +171,25 @@ function StudyTab({ api, bookId, chapters, chapterIndex, onRemaining }: { api: A
       </label>
       <div role="radiogroup" aria-label="Study tool" className="grid grid-cols-4 gap-1.5">
         {kinds.map(([k, label]) => (
-          <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)}
-            className={`rounded-xl border px-1 py-2 text-[11px] font-bold cursor-pointer ${kind === k ? 'border-indigo-500 bg-indigo-50 text-indigo-800' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{label}</button>
+          <button key={k} type="button" role="radio" aria-checked={tool === k} onClick={() => setTool(k)}
+            className={`rounded-xl border px-1 py-2 text-[11px] font-bold cursor-pointer ${tool === k ? 'border-indigo-500 bg-indigo-50 text-indigo-800' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{label}</button>
         ))}
       </div>
+      {tool === 'summary' && (
+        <ToggleGroup.Root type="single" value={length} onValueChange={(v) => v && setLength(v as typeof length)} aria-label="Summary length" className="flex gap-1 rounded-xl bg-slate-100 p-1">
+          {lengths.map(([k, label]) => (
+            <ToggleGroup.Item key={k} value={k} data-testid={`summary-length-${k}`}
+              className="flex-1 rounded-lg px-1 py-1.5 text-[11px] font-bold text-slate-600 data-[state=on]:bg-white data-[state=on]:text-slate-900 data-[state=on]:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">{label}</ToggleGroup.Item>
+          ))}
+        </ToggleGroup.Root>
+      )}
       {!result && <button type="button" onClick={() => void make()} disabled={busy} className="inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500 disabled:opacity-50 cursor-pointer">
-        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <BookOpenCheck className="h-3.5 w-3.5" aria-hidden />}Make {kinds.find(([k]) => k === kind)![1].toLowerCase()}
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <BookOpenCheck className="h-3.5 w-3.5" aria-hidden />}Make {tool === 'summary' ? `${lengths.find(([k]) => k === length)![1].toLowerCase()} summary` : kinds.find(([k]) => k === tool)![1].toLowerCase()}
       </button>}
       <Err text={error} />
       {result?.summary !== undefined && (
         <div className="space-y-2 text-xs leading-relaxed text-slate-800">
-          <p>{result.summary}</p>
+          <p className="whitespace-pre-line">{result.summary}</p>
           {!!result.points?.length && <ul className="list-disc space-y-1 pl-4">{result.points.map((p) => <li key={p}>{p}</li>)}</ul>}
         </div>
       )}
@@ -241,16 +254,19 @@ function Quiz({ questions }: { questions: { question: string; options: string[];
 
 function WordsTab({ api, bookId, languages, request, onRemaining }: { api: Api; bookId: string; languages: Record<string, string>; request: WordsRequest | null; onRemaining: (n: number) => void }) {
   const [target, setTarget] = useState(storedLang);
+  // Explain levels (Reading Intelligence 2026-11-25): for a child, a student or a professional.
+  const [level, setLevel] = useState<ExplainLevel>('student');
   const [out, setOut] = useState<{ kind: 'text'; title: string; text: string } | { kind: 'def'; def: Definition } | null>(null);
   const { busy, error, run } = useRun(onRemaining);
-  const go = async (req: WordsRequest, lang = target) => {
+  const go = async (req: WordsRequest, lang = target, lvl: ExplainLevel = req.action === 'simplify' ? 'child' : level) => {
     setOut(null);
     if (req.action === 'define') { const d = await run(() => api.defineWord({ bookId, word: req.text, context: req.context })); if (d) setOut({ kind: 'def', def: d }); return; }
     if (req.action === 'translate') { const t = await run(() => api.translatePassage({ bookId, text: req.text, target: lang })); if (t) setOut({ kind: 'text', title: `In ${t.language}`, text: t.translation }); return; }
-    const e = await run(() => api.explainPassage({ bookId, text: req.text, mode: req.action as 'explain' | 'simplify' }));
-    if (e) setOut({ kind: 'text', title: req.action === 'simplify' ? 'In simple words' : 'Explained', text: e.answer });
+    setLevel(lvl);
+    const e = await run(() => api.explainPassage({ bookId, text: req.text, mode: lvl }));
+    if (e) setOut({ kind: 'text', title: lvl === 'child' ? 'In simple words' : lvl === 'professional' ? 'For a professional' : 'Explained', text: e.answer });
   };
-  useEffect(() => { if (request) void go(request); }, [request?.id]);
+  useEffect(() => { if (request) void go(request, target, request.action === 'simplify' ? 'child' : 'student'); }, [request?.id]);
   const speak = (t: string) => { try { window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(t)); } catch { /* no voice */ } };
   return (
     <div className="space-y-3">
@@ -264,6 +280,14 @@ function WordsTab({ api, bookId, languages, request, onRemaining }: { api: Api; 
             {Object.entries(languages).sort((a, b) => a[1].localeCompare(b[1])).map(([code, name]) => <option key={code} value={code}>{name}</option>)}
           </SelectBox>
         </label>
+      )}
+      {(request?.action === 'explain' || request?.action === 'simplify') && (
+        <ToggleGroup.Root type="single" value={level} onValueChange={(v) => { if (v && v !== level) void go(request, target, v as ExplainLevel); }} disabled={busy} aria-label="Explain for" className="flex gap-1 rounded-xl bg-slate-100 p-1">
+          {([['child', 'A child'], ['student', 'A student'], ['professional', 'A professional']] as const).map(([k, label]) => (
+            <ToggleGroup.Item key={k} value={k} data-testid={`explain-level-${k}`}
+              className="flex-1 rounded-lg px-1 py-1.5 text-[11px] font-bold text-slate-600 data-[state=on]:bg-white data-[state=on]:text-slate-900 data-[state=on]:shadow-sm disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">{label}</ToggleGroup.Item>
+          ))}
+        </ToggleGroup.Root>
       )}
       {busy && <Spinner label="Working…" />}
       <Err text={error} />

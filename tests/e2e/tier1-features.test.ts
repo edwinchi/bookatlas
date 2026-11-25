@@ -182,12 +182,14 @@ test('F3-1: eReader default display preferences conform to design contract', () 
   assert.equal(DEFAULT_READER_SETTINGS.marginWidth, 'normal');
 });
 
-test('F3-2: eReader font sizes validate within acceptable bounds [14, 26]', () => {
+// Raised to 34 for low vision (Reading Intelligence reading aids, 2026-11-25).
+test('F3-2: eReader font sizes validate within acceptable bounds [14, 34]', () => {
   assert.ok(isValidReaderFontSize(14));
   assert.ok(isValidReaderFontSize(18));
   assert.ok(isValidReaderFontSize(26));
+  assert.ok(isValidReaderFontSize(34));
   assert.equal(isValidReaderFontSize(12), false);
-  assert.equal(isValidReaderFontSize(32), false);
+  assert.equal(isValidReaderFontSize(35), false);
   assert.equal(isValidReaderFontSize('18'), false);
 });
 

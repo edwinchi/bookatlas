@@ -114,10 +114,10 @@ export interface FilterOptions {
 }
 
 export type ReaderTheme = 'day' | 'sepia' | 'night' | 'mint' | 'black' | 'custom';
-export type ReaderFont = 'literata' | 'sans' | 'mono';
+export type ReaderFont = 'literata' | 'sans' | 'mono' | 'clear' | 'dyslexia';
 
 export interface ReaderSettings {
-  fontSize: number; // 14 to 28
+  fontSize: number; // 14 to 34 (large sizes for low vision)
   lineHeight: number; // 1.4 to 2.2
   fontFamily: ReaderFont;
   theme: ReaderTheme;

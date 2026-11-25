@@ -4,7 +4,8 @@ import * as Tabs from '@radix-ui/react-tabs';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import * as Slider from '@radix-ui/react-slider';
 import * as Switch from '@radix-ui/react-switch';
-import { AlignJustify, AlignLeft, BookOpen, Columns2, Palette, ScrollText, Sun, Type, X, RotateCcw, Hand } from 'lucide-react';
+import { AlignJustify, AlignLeft, BookOpen, Columns2, Palette, ScrollText, Sun, Type, X, RotateCcw, Hand, Bold, Focus, Rows3, AudioLines, Accessibility } from 'lucide-react';
+import { canFollowWords, loadReaderFont } from './readingAids';
 import type { ReaderFont, ReaderSettings, ReaderTheme } from '../../types';
 import { BACKGROUND_SWATCHES, TEXT_SWATCHES, type ReaderLayout } from './readerLayout';
 
@@ -18,8 +19,14 @@ const THEMES: { id: ReaderTheme; name: string; bg: string; fg: string }[] = [
 const FONTS: { id: ReaderFont; label: string; sample: string }[] = [
   { id: 'literata', label: 'Book serif', sample: 'font-serif-book' },
   { id: 'sans', label: 'Sans', sample: 'font-reader-sans' },
-  { id: 'mono', label: 'Easy read', sample: 'font-reader-mono' },
+  { id: 'mono', label: 'Mono', sample: 'font-reader-mono' },
 ];
+/** Reading aids (Reading Intelligence 2026-11-25): fonts chosen for how easily letters are told apart. */
+const AID_FONTS: { id: ReaderFont; label: string; note: string; sample: string }[] = [
+  { id: 'clear', label: 'Clear letters', note: 'Every letter shaped to be told apart, for low vision.', sample: 'font-reader-clear' },
+  { id: 'dyslexia', label: 'Dyslexia-friendly', note: 'Wide letters with extra space between letters and words.', sample: 'font-reader-dyslexia' },
+];
+export const MAX_FONT_SIZE = 34;
 
 const tab = 'flex-1 rounded-lg px-2 py-2 text-xs font-bold text-slate-600 transition-colors data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer';
 const item = 'flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-white data-[state=on]:bg-slate-900 data-[state=on]:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer';
@@ -80,6 +87,7 @@ export function ReaderPreferences({ open, onOpenChange, container, settings, set
               <Tabs.Trigger value="text" className={tab}>Text</Tabs.Trigger>
               <Tabs.Trigger value="page" className={tab}>Page</Tabs.Trigger>
               <Tabs.Trigger value="colours" className={tab}>Colours</Tabs.Trigger>
+              <Tabs.Trigger value="aids" className={tab} data-testid="tab-reading-aids">Aids</Tabs.Trigger>
             </Tabs.List>
 
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-4">
@@ -89,13 +97,14 @@ export function ReaderPreferences({ open, onOpenChange, container, settings, set
                   <ToggleGroup.Root type="single" value={settings.fontFamily} onValueChange={(v) => v && set({ fontFamily: v as ReaderFont })} aria-label="Font" className={group}>
                     {FONTS.map((f) => <ToggleGroup.Item key={f.id} value={f.id} className={`${item} ${f.sample}`}>{f.label}</ToggleGroup.Item>)}
                   </ToggleGroup.Root>
+                  {AID_FONTS.some((f) => f.id === settings.fontFamily) && <p className="text-[11px] text-slate-500">Using the {AID_FONTS.find((f) => f.id === settings.fontFamily)!.label.toLowerCase()} font from Reading aids.</p>}
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between"><p className={label}>Text size</p><span className="text-xs font-extrabold tabular-nums">{settings.fontSize}px</span></div>
                   <div className="flex items-center gap-3">
                     <button type="button" onClick={() => set({ fontSize: Math.max(14, settings.fontSize - 1) })} aria-label="Smaller text" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white font-serif text-sm font-bold ring-1 ring-slate-200 hover:bg-slate-100 cursor-pointer">A</button>
-                    <Range value={settings.fontSize} min={14} max={26} step={1} onChange={(v) => set({ fontSize: v })} aria="Text size" />
-                    <button type="button" onClick={() => set({ fontSize: Math.min(26, settings.fontSize + 1) })} aria-label="Larger text" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white font-serif text-xl font-bold ring-1 ring-slate-200 hover:bg-slate-100 cursor-pointer">A</button>
+                    <Range value={settings.fontSize} min={14} max={MAX_FONT_SIZE} step={1} onChange={(v) => set({ fontSize: v })} aria="Text size" />
+                    <button type="button" onClick={() => set({ fontSize: Math.min(MAX_FONT_SIZE, settings.fontSize + 1) })} aria-label="Larger text" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white font-serif text-xl font-bold ring-1 ring-slate-200 hover:bg-slate-100 cursor-pointer">A</button>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -171,6 +180,38 @@ export function ReaderPreferences({ open, onOpenChange, container, settings, set
                 <div className="rounded-xl p-4 font-serif text-sm leading-relaxed ring-1 ring-black/10" style={{ background: layout.customBg, color: layout.customText }}>
                   “Curiouser and curiouser!” A preview of your custom colours.
                 </div>
+              </Tabs.Content>
+
+              <Tabs.Content value="aids" className="space-y-5 focus-visible:outline-none">
+                <p className="flex items-start gap-2 text-[11px] text-slate-500"><Accessibility className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" aria-hidden />Help for dyslexia, attention and low vision. Try one at a time and keep what makes reading easier for you.</p>
+                <div className="space-y-2">
+                  <p className={label}>Reading font</p>
+                  {AID_FONTS.map((f) => (
+                    <button key={f.id} type="button" aria-pressed={settings.fontFamily === f.id}
+                      onPointerEnter={() => loadReaderFont(f.id)} onFocus={() => loadReaderFont(f.id)}
+                      onClick={() => set({ fontFamily: settings.fontFamily === f.id ? 'literata' : f.id })}
+                      className={`flex w-full items-start gap-3 rounded-xl p-3 text-left ring-1 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${settings.fontFamily === f.id ? 'bg-indigo-50 ring-indigo-500' : 'bg-white ring-slate-200 hover:bg-slate-50'}`}>
+                      <span className={`text-2xl leading-none ${f.sample}`} aria-hidden>Aa</span>
+                      <span><span className="block text-sm font-semibold">{f.label}</span><span className="block text-[11px] text-slate-500">{f.note}</span></span>
+                    </button>
+                  ))}
+                </div>
+                {([
+                  { key: 'boldStarts', icon: Bold, title: 'Bold word starts', note: 'The first letters of each word in bold, so the eye finds words faster.' },
+                  { key: 'focusParagraph', icon: Focus, title: 'Focus on one paragraph', note: 'Dims the rest of the page. Helps when attention wanders.' },
+                  { key: 'readingGuide', icon: Rows3, title: 'Reading guide', note: 'A clear band follows your finger or mouse and shades the other lines.' },
+                  { key: 'followWords', icon: AudioLines, title: 'Light up words when listening', note: canFollowWords() ? 'The device voice marks each sentence and word as it reads.' : 'This browser marks the paragraph being read.' },
+                ] as const).map((o) => (
+                  <label key={o.key} className="flex items-center justify-between gap-3 rounded-xl bg-white p-3 ring-1 ring-slate-200">
+                    <span className="flex items-start gap-2"><o.icon className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" aria-hidden />
+                      <span><span className="block text-sm font-semibold">{o.title}</span><span className="block text-[11px] text-slate-500">{o.note}</span></span></span>
+                    <Switch.Root checked={layout[o.key]} onCheckedChange={(v) => lay({ [o.key]: v } as Partial<ReaderLayout>)} aria-label={o.title} data-testid={`switch-${o.key}`}
+                      className="relative h-6 w-11 shrink-0 rounded-full bg-slate-300 transition-colors data-[state=checked]:bg-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
+                      <Switch.Thumb className="block h-5 w-5 translate-x-0.5 rounded-full bg-white shadow transition-transform data-[state=checked]:translate-x-[22px]" />
+                    </Switch.Root>
+                  </label>
+                ))}
+                <p className="text-[11px] text-slate-500">For low vision: text goes up to {MAX_FONT_SIZE}px under Text, and the Night and OLED themes under Colours give the strongest contrast.</p>
               </Tabs.Content>
             </div>
           </Tabs.Root>

@@ -16,6 +16,11 @@ interface Options {
   onPosition: (chapter: number, paragraph: number) => void;
   /** The book ended. */
   onEnd: () => void;
+  /**
+   * Where in the paragraph's text the voice is: the sentence, and the word when the browser reports it (character
+   * offsets into the paragraph as written). Not called while reading a translation.
+   */
+  onSpoken?: (chapter: number, paragraph: number, sentence: [number, number] | null, word: [number, number] | null) => void;
 }
 
 /** Up to this many characters of consecutive paragraphs are translated together (fewer requests). */
@@ -114,6 +119,11 @@ export function useDeviceVoice(o: Options) {
     if (translating) void textOf(c, p + 1).catch(() => undefined);
     setState('playing');
     const parts = sentences(said.text);
+    // Where each sentence starts in the paragraph as printed (for the read-along highlight).
+    const printed = opts.current.chapters()[c]?.content[p] ?? '';
+    const lead = printed.length - printed.trimStart().length;
+    const starts: number[] = [];
+    { let from = 0; for (const part of parts) { const at = said.text.indexOf(part, from); starts.push(at < 0 ? -1 : lead + at); if (at >= 0) from = at + part.length; } }
     const say = (i: number) => {
       if (me !== run.current) return;
       if (i >= parts.length) { void speak(me, c, p + 1, 0); return; }
@@ -127,6 +137,17 @@ export function useDeviceVoice(o: Options) {
         u.lang = voice?.lang ?? lang;
         // A voice the engine no longer has (an Android voice pack removed) is refused: the language alone still works.
         try { if (voice) u.voice = voice; } catch { /* keep the language */ }
+        const begin = starts[i] ?? -1;
+        if (!translating && begin >= 0) {
+          const sentence: [number, number] = [begin, begin + parts[i]!.length];
+          opts.current.onSpoken?.(c, p, sentence, null);
+          u.onboundary = (e) => {
+            if (me !== run.current || e.name !== 'word') return;
+            const from = begin + e.charIndex;
+            const len = e.charLength || (/^[^\s]+/.exec(parts[i]!.slice(e.charIndex))?.[0].length ?? 0);
+            if (len > 0) opts.current.onSpoken?.(c, p, sentence, [from, from + len]);
+          };
+        } else opts.current.onSpoken?.(c, p, null, null);
         u.onend = () => say(i + 1);
         u.onerror = (e) => {
           if (me !== run.current || e.error === 'interrupted' || e.error === 'canceled') return;

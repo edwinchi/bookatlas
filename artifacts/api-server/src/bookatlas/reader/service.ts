@@ -146,7 +146,23 @@ const PREF_KEYS: Record<string, (v: unknown) => unknown> = {
   ttsSpeed: (v) => (typeof v === 'number' && v >= 0.5 && v <= 3 ? v : undefined),
   // Phase 3 (cycle 10): the daily reading goal in minutes.
   dailyGoalMinutes: (v) => (int(v, 240) !== null && Number(v) >= 5 ? Number(v) : undefined),
+  // Reading Intelligence (2026-11-25): the last 30 reading-speed checks.
+  speedTests: (v) => (Array.isArray(v) ? cleanSpeedTests(v) : undefined),
 };
+
+/** Reading-speed checks as the reader saves them: date, words per minute, words and seconds; at most 30. */
+export function cleanSpeedTests(list: unknown[]) {
+  const out: { at: string; wpm: number; words: number; seconds: number; source: 'book' | 'sample' }[] = [];
+  for (const t of list.slice(-60)) {
+    if (!t || typeof t !== 'object') continue;
+    const r = t as Record<string, unknown>;
+    const at = typeof r.at === 'string' && !Number.isNaN(Date.parse(r.at)) ? new Date(Date.parse(r.at)).toISOString() : null;
+    const wpm = int(r.wpm, 3000), words = int(r.words, 20_000), seconds = int(r.seconds, 7200);
+    if (!at || wpm === null || wpm < 20 || words === null || seconds === null) continue;
+    out.push({ at, wpm, words, seconds, source: r.source === 'book' ? 'book' : 'sample' });
+  }
+  return [...new Map(out.map((t) => [t.at, t])).values()].sort((a, b) => a.at.localeCompare(b.at)).slice(-30);
+}
 
 export async function getPreferences(userId: string) {
   if (!db()) return mem.prefs.get(userId) ?? null;
@@ -214,7 +230,11 @@ export async function readingStats(userId: string, now = new Date()) {
   });
   const progress = !db() ? [...mem.progress.values()].filter((p) => p.user_id === userId)
     : ((await db()!.from('reader_progress').select('book_id,progress_percent').eq('user_id', userId)).data ?? []) as Pick<Progress, 'book_id' | 'progress_percent'>[];
+  // Reading time by hour of the day (UTC; the page shifts it to the reader's own clock), for the reading heatmap.
+  const byHour = Array.from({ length: 24 }, () => 0);
+  for (const s of sessions) { const h = new Date(s.started_at).getUTCHours(); if (Number.isInteger(h)) byHour[h] = (byHour[h] ?? 0) + s.seconds / 60; }
   return {
+    byHourUtc: byHour.map((m) => Math.round(m)),
     totalMinutes: Math.round(seconds / 60), words, wordsPerMinute: timedSeconds >= 60 ? Math.round(words / (timedSeconds / 60)) : null,
     streakDays: streak, bestStreakDays: bestStreak, todayMinutes: last30[29]!.minutes, booksStarted: progress.length, booksFinished: progress.filter((p) => p.progress_percent >= 98).length,
     sessions: sessions.length, last30,

@@ -75,6 +75,25 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
+/* Reading aids (Reading Intelligence, 2026-11-25): a very clear font, and a wide font with extra spacing that many
+   readers with dyslexia find easier. Both load from Google Fonts only when a reader picks them (loadReaderFont). */
+.font-reader-clear {
+  font-family: 'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif;
+}
+.font-reader-dyslexia {
+  font-family: 'Lexend', system-ui, -apple-system, sans-serif;
+  letter-spacing: 0.04em;
+  word-spacing: 0.16em;
+}
+
+/* The device voice's place while it reads aloud (CSS Custom Highlight API). */
+::highlight(ba-spoken-sentence) {
+  background-color: rgb(99 102 241 / 0.14);
+}
+::highlight(ba-spoken-word) {
+  background-color: rgb(250 204 21 / 0.55);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

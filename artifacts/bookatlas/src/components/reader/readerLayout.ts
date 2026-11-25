@@ -13,10 +13,18 @@ export interface ReaderLayout {
   customText: string;
   /** Tap the middle of the page to hide the toolbars. */
   tapToHide: boolean;
+  /** Reading aids (Reading Intelligence, 2026-11-25): the start of every word in bold. */
+  boldStarts: boolean;
+  /** Paragraphs other than the one being read are dimmed. */
+  focusParagraph: boolean;
+  /** A band that follows the finger or the mouse and shades the lines above and below it. */
+  readingGuide: boolean;
+  /** Words light up as the device voice reads them. */
+  followWords: boolean;
 }
 
 const KEY = 'bookatlas:reader-layout:v1';
-export const DEFAULT_LAYOUT: ReaderLayout = { mode: 'page', spread: true, align: 'left', brightness: 100, customBg: '#f4ecd8', customText: '#3b2f22', tapToHide: true };
+export const DEFAULT_LAYOUT: ReaderLayout = { mode: 'page', spread: true, align: 'left', brightness: 100, customBg: '#f4ecd8', customText: '#3b2f22', tapToHide: true, boldStarts: false, focusParagraph: false, readingGuide: false, followWords: true };
 const HEX = /^#[0-9a-f]{6}$/i;
 
 export function readLayout(): ReaderLayout {
@@ -31,6 +39,10 @@ export function readLayout(): ReaderLayout {
       customBg: typeof v.customBg === 'string' && HEX.test(v.customBg) ? v.customBg : DEFAULT_LAYOUT.customBg,
       customText: typeof v.customText === 'string' && HEX.test(v.customText) ? v.customText : DEFAULT_LAYOUT.customText,
       tapToHide: v.tapToHide !== false,
+      boldStarts: v.boldStarts === true,
+      focusParagraph: v.focusParagraph === true,
+      readingGuide: v.readingGuide === true,
+      followWords: v.followWords !== false,
     };
   } catch {
     return { ...DEFAULT_LAYOUT };

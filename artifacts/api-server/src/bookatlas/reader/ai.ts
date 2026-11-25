@@ -115,11 +115,13 @@ export async function askBook(generate: Generate, book: Book, who: Identity, bod
 
 // Study material is the same for every reader of a chapter: cache it (per book, chapter, kind, access).
 const studyCache = new Map<string, unknown>();
-export type StudyKind = 'summary' | 'key_concepts' | 'flashcards' | 'quiz';
+/** Summaries in three lengths (Reading Intelligence 2026-11-25): one minute, five minutes (the original) and complete. */
+export type StudyKind = 'summary_short' | 'summary' | 'summary_full' | 'key_concepts' | 'flashcards' | 'quiz';
+export const STUDY_KINDS: readonly StudyKind[] = ['summary_short', 'summary', 'summary_full', 'key_concepts', 'flashcards', 'quiz'];
 
 export async function studyChapter(generate: Generate, book: Book, who: Identity, body: Record<string, unknown>) {
   const kind = String(body.kind) as StudyKind;
-  if (!['summary', 'key_concepts', 'flashcards', 'quiz'].includes(kind)) throw new ReaderError('Choose summary, key concepts, flashcards or quiz.');
+  if (!STUDY_KINDS.includes(kind)) throw new ReaderError('Choose a summary, key concepts, flashcards or quiz.');
   const { access, chapters } = await readableChapters(book, who);
   const ci = Number(body.chapterIndex);
   const chapter = Number.isInteger(ci) ? chapters[ci] : undefined;
@@ -129,7 +131,9 @@ export async function studyChapter(generate: Generate, book: Book, who: Identity
   const key = `${book.id}|${ci}|${kind}|${access}`;
   if (studyCache.has(key)) return { kind, chapterIndex: ci, cached: true, ...(studyCache.get(key) as object) };
   const spec: Record<StudyKind, string> = {
+    summary_short: '{"summary": "2 sentences a reader takes in within a minute", "points": ["the 3 most important takeaways, one short line each"]}',
     summary: '{"summary": "3 to 5 sentences", "points": ["4 to 6 key takeaways"]}',
+    summary_full: '{"summary": "a complete summary in 3 to 5 short paragraphs separated by a blank line, following the chapter from start to end (names, events, arguments, conclusions)", "points": ["8 to 10 key takeaways"]}',
     key_concepts: '{"concepts": [{"term": "a key idea, name or term", "explanation": "1 to 2 sentences"}]} with 5 to 8 concepts',
     flashcards: '{"cards": [{"front": "a question or term", "back": "the answer, 1 to 2 sentences"}]} with 8 to 12 cards',
     quiz: '{"questions": [{"question": "...", "options": ["4 options"], "answer": 0, "explanation": "why, 1 sentence"}]} with 5 multiple-choice questions; "answer" is the index of the correct option',
@@ -142,7 +146,7 @@ export async function studyChapter(generate: Generate, book: Book, who: Identity
   const data = parseJson<Record<string, unknown>>(raw);
   const s = (v: unknown, max = 600) => clean(v, max);
   let result: object;
-  if (kind === 'summary') result = { summary: s(data.summary, 1500), points: (Array.isArray(data.points) ? data.points : []).map((p) => s(p, 300)).filter(Boolean).slice(0, 8) };
+  if (kind === 'summary' || kind === 'summary_short' || kind === 'summary_full') result = { summary: s(data.summary, kind === 'summary_full' ? 5000 : 1500), points: (Array.isArray(data.points) ? data.points : []).map((p) => s(p, 300)).filter(Boolean).slice(0, kind === 'summary_full' ? 12 : 8) };
   else if (kind === 'key_concepts') result = { concepts: (Array.isArray(data.concepts) ? data.concepts : []).map((c: { term?: unknown; explanation?: unknown }) => ({ term: s(c.term, 120), explanation: s(c.explanation, 400) })).filter((c) => c.term && c.explanation).slice(0, 10) };
   else if (kind === 'flashcards') result = { cards: (Array.isArray(data.cards) ? data.cards : []).map((c: { front?: unknown; back?: unknown }) => ({ front: s(c.front, 300), back: s(c.back, 500) })).filter((c) => c.front && c.back).slice(0, 15) };
   else result = {
@@ -169,16 +173,28 @@ async function readablePassage(book: Book, who: Identity, raw: unknown) {
   return text;
 }
 
+/**
+ * Explain a passage at three levels (Reading Intelligence 2026-11-25): for a child (the former "simplify"), for a
+ * student (the former "explain") and for a professional. The old names still work.
+ */
+export const EXPLAIN_LEVELS = {
+  child: 'Explain the passage to a 10-year-old: plain words, short sentences, one everyday example if it helps. Keep the meaning. End with one line: "In short: ...". At most 120 words.',
+  student: 'Explain the passage: what it says, what it means in the book, and any hard words, names or references. Use short paragraphs or bullets; at most 180 words.',
+  professional: 'Explain the passage for an expert reader: the argument or technique at work, its assumptions, the context and references it relies on, and how it connects to the rest of the book. Precise terms are welcome. Use short paragraphs or bullets; at most 250 words.',
+} as const;
+export type ExplainLevel = keyof typeof EXPLAIN_LEVELS;
+export const explainLevel = (mode: unknown): ExplainLevel =>
+  mode === 'child' || mode === 'simplify' ? 'child' : mode === 'professional' ? 'professional' : 'student';
+
 export async function explainPassage(generate: Generate, book: Book, who: Identity, body: Record<string, unknown>) {
-  const mode = body.mode === 'simplify' ? 'simplify' : 'explain';
+  const level = explainLevel(body.mode);
+  const mode = level === 'child' ? 'simplify' : level === 'student' ? 'explain' : 'professional';
   const text = await readablePassage(book, who, body.text);
   const answer = await ask(generate, {
-    systemInstruction: `${persona(book)}\n${mode === 'simplify'
-      ? 'Rewrite the passage in plain, simple language a 12-year-old understands, keeping its meaning. Then one line: "In short: ...".'
-      : 'Explain the passage: what it says, what it means in the book, and any hard words, names or references. Use short paragraphs or bullets; at most 180 words.'}`,
+    systemInstruction: `${persona(book)}\n${EXPLAIN_LEVELS[level]}`,
     messages: [{ role: 'user', text: `"""${fence(text)}"""` }],
   });
-  return { mode, answer };
+  return { mode, level, answer };
 }
 
 export const LANGUAGES: Record<string, string> = {

@@ -1,0 +1,58 @@
+# Reading Intelligence
+
+Owner request, 2026-11-25: plan and build "Reading Intelligence" in BooksAtlas from the owner's brief. The brief
+named a stack (Next.js, NestJS, Prisma, OpenAI). BooksAtlas keeps its own stack instead: Vite + React with Radix
+and Tailwind, the Express API, Supabase and the existing AI router. Everything is free for readers. AI features use
+the existing daily allowance.
+
+Site menu: **Read smarter**. Page: `/reading-intelligence`.
+
+## Phase 1: built (2026-11-25)
+
+| Brief | Where it lives | Status |
+|---|---|---|
+| Reader (fonts, dark mode, notes, highlights, bookmarks) | `EReaderModal`, `ReaderPreferences`, `ReaderNotebook` | Already built |
+| Fast Read: one word at a time (100–1,000 words a minute) | `reader/FastReadPanel.tsx`, `reader/fastRead.ts` | **New** |
+| Fast Read: word groups (2–8 words) | same | **New** |
+| Bold word starts | `reader/readingAids.tsx` (`BoldStarts`), Aa → Aids | **New** |
+| Focus mode (one paragraph, reading guide) | Aa → Aids | **New** |
+| Read + listen with word highlighting | `useDeviceVoice` `onSpoken` + CSS Custom Highlight API | **New** (sentence and word; paragraph where the browser has no highlight API) |
+| Playback speed 0.5×–3×, voice choice, 40 languages | `ListenPlayer`, `listening.ts` | Already built |
+| AI narration of uploaded books | Narration service (`docs/bookatlas-narration.md`) | Already built |
+| Summaries: 1 minute, 5 minutes, complete | `reader/ai.ts` `summary_short` / `summary` / `summary_full` | **New** lengths |
+| Explain: child, student, professional | `reader/ai.ts` `EXPLAIN_LEVELS` | **New** levels |
+| Quizzes, flashcards, key concepts | `ReaderAssistant` Study tab | Already built |
+| Book chat with citations | `ReaderAssistant` Ask tab | Already built |
+| Reading speed check, latest, average and best words per minute, plan to a goal | `SpeedCheck`, `useSpeedTests`; saved in reader settings (`speedTests`) | **New** |
+| Progress: minutes, streaks, books finished, words per minute, 30 days | `/api/reader/stats`, page "My progress" | Already built, now on the page |
+| Reading heatmap (hours of the day) | `byHourUtc` in `/api/reader/stats` | **New** |
+| Dyslexia-friendly font, clear font, text up to 34 px | Aa → Aids (Lexend, Atkinson Hyperlegible; loaded only when picked) | **New** |
+| Achievements and daily goal | `ReaderAchievements` | Already built |
+
+No database change was needed: speed checks are stored with the reader settings.
+
+## Phase 2: next
+
+1. **Family profiles.** One account, a profile per reader with its own progress, and a parent view. Needs a
+   `reader_profiles` table and profile-scoped progress, sessions and settings.
+2. **Young readers (5–12).** Reading levels on books, letter sounds, word games, and short questions after each
+   story (reuse the quiz engine with a child level).
+3. **Adaptive coach.** Suggest the next Fast Read speed, quiz level and books from speed checks, quiz results and
+   reading history.
+4. **Import your own text** (EPUB, PDF, DOCX, web page) into Fast Read and the coach. The EPUB pipeline already
+   exists for authors.
+
+## Phase 3: later
+
+- First words (0–4): picture books read aloud, words lit up, a word spoken when a picture is tapped.
+- Schools and teams: reading lists, class progress, teacher view.
+- Synced natural-voice narration with word timings (needs timings from the narration worker).
+- Multi-voice narration (a voice per character).
+
+## Choices and limits
+
+- We say "Bold word starts", not the name of any trademarked method, and we don't name competitors on the site.
+- Word highlighting depends on the browser reporting word boundaries. Chrome on Android often doesn't report
+  them for Google voices: the sentence still lights up.
+- The speed check measures speed only. Understanding is checked with the chapter quiz.
+- Pricing stays as it is. The brief's Pro and Family plans are not introduced.

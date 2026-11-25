@@ -10,12 +10,12 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   marginWidth: 'normal',
 };
 
-export const READER_FONT_FAMILIES: readonly ReaderFont[] = ['literata', 'sans', 'mono'];
+export const READER_FONT_FAMILIES: readonly ReaderFont[] = ['literata', 'sans', 'mono', 'clear', 'dyslexia'];
 export const READER_THEMES: readonly ReaderTheme[] = ['day', 'sepia', 'night', 'mint', 'black', 'custom'];
 export const READER_MARGIN_WIDTHS: readonly ReaderSettings['marginWidth'][] = ['narrow', 'normal', 'wide'];
 
 export function isValidReaderFontSize(size: unknown): size is number {
-  return typeof size === 'number' && Number.isFinite(size) && size >= 14 && size <= 26;
+  return typeof size === 'number' && Number.isFinite(size) && size >= 14 && size <= 34;
 }
 
 export function isValidReaderLineHeight(height: unknown): height is number {

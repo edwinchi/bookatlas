@@ -116,13 +116,16 @@ export interface SyncedProgress { book_id: string; chapter_index: number; paragr
 export interface ReadingStats {
   totalMinutes: number; words: number; wordsPerMinute: number | null; streakDays: number; booksStarted: number; booksFinished: number;
   sessions: number; last30: { day: string; minutes: number }[];
+  /** Minutes read in each hour of the day (UTC). */
+  byHourUtc?: number[]; bestStreakDays?: number; todayMinutes?: number;
 }
 
 export interface AskResult {
   answer: string; access: 'full' | 'preview'; remaining: number;
   sources: { n: number; chapterIndex: number; paragraphIndex: number; chapterTitle: string; excerpt: string; cited: boolean }[];
 }
-export type StudyKind = 'summary' | 'key_concepts' | 'flashcards' | 'quiz';
+export type StudyKind = 'summary_short' | 'summary' | 'summary_full' | 'key_concepts' | 'flashcards' | 'quiz';
+export type ExplainLevel = 'child' | 'student' | 'professional';
 export interface StudyResult {
   chapterIndex: number; cached: boolean;
   summary?: string; points?: string[];
@@ -212,7 +215,7 @@ export function useEbookApi() {
     askBook: (body: { bookId: string; question: string; chapterIndex: number; history: { role: 'user' | 'assistant'; text: string }[] }) =>
       json<AskResult>('/api/reader/ai/ask', 'POST', body),
     studyChapter: <K extends StudyKind>(body: { bookId: string; chapterIndex: number; kind: K }) => json<StudyResult & { kind: K; remaining: number }>('/api/reader/ai/study', 'POST', body),
-    explainPassage: (body: { bookId: string; text: string; mode: 'explain' | 'simplify' }) => json<{ mode: string; answer: string; remaining: number }>('/api/reader/ai/explain', 'POST', body),
+    explainPassage: (body: { bookId: string; text: string; mode: 'explain' | 'simplify' | ExplainLevel }) => json<{ mode: string; answer: string; remaining: number }>('/api/reader/ai/explain', 'POST', body),
     translatePassage: (body: { bookId: string; text: string; target: string }) => json<{ language: string; translation: string; remaining: number }>('/api/reader/ai/translate', 'POST', body),
     defineWord: (body: { bookId: string; word: string; context: string }) => json<Definition & { remaining: number }>('/api/reader/ai/define', 'POST', body),
     savePayout: (body: PayoutInput) => json<PayoutView>('/api/author/payout', 'PUT', body),

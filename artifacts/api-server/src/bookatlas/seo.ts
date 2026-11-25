@@ -128,7 +128,7 @@ const xml = (res: Response, body: string) => {
   res.send(`<?xml version="1.0" encoding="UTF-8"?>\n${body}`);
 };
 
-const STATIC_PAGES = ['/', '/pricing', '/privacy', '/legal', '/refunds'];
+const STATIC_PAGES = ['/', '/pricing', '/reading-intelligence', '/privacy', '/legal', '/refunds'];
 
 /**
  * IndexNow tells Bing (which ChatGPT search and Copilot use), Yandex and others about new or changed pages at

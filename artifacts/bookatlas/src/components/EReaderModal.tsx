@@ -37,7 +37,8 @@ import {
   GraduationCap,
   Users,
   Flame,
-  MoreVertical
+  MoreVertical,
+  Zap
 } from 'lucide-react';
 import { StudioNarrationPanel } from './voice/StudioNarrationPanel';
 import { Book, Chapter, ReaderSettings, ReaderTheme, ReaderFont } from '../types';
@@ -55,6 +56,8 @@ import { NaturalVoiceInfo } from './ebook/NaturalVoiceInfo';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ListenPlayer, type PlayerStatus } from './reader/ListenPlayer';
 import { ReaderPreferences } from './reader/ReaderPreferences';
+import { FastReadDialog } from './reader/FastReadPanel';
+import { BoldStarts, ReadingGuide, clearSpoken, loadReaderFont, readerFontClass, showSpoken } from './reader/readingAids';
 import { ReaderContents, GoToPopover } from './reader/ReaderNavigation';
 import { useDeviceVoice, type Translated } from './reader/useDeviceVoice';
 import { usePagedLayout } from './reader/usePagedLayout';
@@ -334,6 +337,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     const r = await ebookApi.translatePassage({ bookId: book.id, text: text.slice(0, 2000), target: to });
     return { text: r.translation, via: 'ai' };
   };
+  const followWordsRef = useRef(true);
   const device = useDeviceVoice({
     chapters: () => chaptersRef.current,
     bookLang,
@@ -345,6 +349,14 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       setCurrentParagraphIndex(p);
     },
     onEnd: () => stopSpeech(),
+    // Read-along (Reading Intelligence 2026-11-25): the sentence and word being read light up on the page.
+    onSpoken: (c, p, sentence, word) => {
+      if (!followWordsRef.current) { clearSpoken(); return; }
+      requestAnimationFrame(() => {
+        if (speechChapter.current !== c) return;
+        showSpoken(document.querySelector(`[data-para="${p}"]`), sentence, word);
+      });
+    },
   });
 
   const narrationAudio = useRef<HTMLAudioElement | null>(null);
@@ -356,6 +368,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   /** A listening key fetched again after a part was refused (an expired key). */
   const freshKey = useRef<string | undefined>(undefined);
   const stopSpeech = () => {
+    clearSpoken();
     speechRun.current += 1;
     speechChapter.current = null;
     device.stop();
@@ -864,18 +877,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     }
   };
 
-  const getFontFamilyClass = (font: ReaderFont) => {
-    switch (font) {
-      case 'literata':
-        return 'font-serif-book';
-      case 'sans':
-        return 'font-reader-sans';
-      case 'mono':
-        return 'font-reader-mono';
-      default:
-        return 'font-serif-book';
-    }
-  };
+  const getFontFamilyClass = (font: ReaderFont) => readerFontClass(font);
 
   const getMarginClass = (m: 'narrow' | 'normal' | 'wide') => {
     switch (m) {
@@ -904,6 +906,11 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   // Pages, preferences and chrome (owner request 2026-11-17: "look like the best eBook reader").
   const [layout, setLayoutState] = useState<ReaderLayout>(readLayout);
   const setLayout = (l: ReaderLayout) => { setLayoutState(l); saveLayout(l); };
+  followWordsRef.current = layout.followWords;
+  useEffect(() => { if (!layout.followWords) clearSpoken(); }, [layout.followWords]);
+  useEffect(() => { loadReaderFont(settings.fontFamily); }, [settings.fontFamily]);
+  useEffect(() => () => clearSpoken(), []);
+  const [showFastRead, setShowFastRead] = useState(false);
   const paged = layout.mode === 'page';
   const [portal, setPortal] = useState<HTMLDivElement | null>(null);
   const containerRef = useCallback((el: HTMLDivElement | null) => {
@@ -911,7 +918,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     setPortal(el);
   }, []);
   const pg = usePagedLayout(paged, layout.spread, currentChapterIndex, [
-    chapters, settings.fontSize, settings.lineHeight, settings.fontFamily, settings.marginWidth, layout.align, inPreview, fullError, isSpeaking,
+    chapters, settings.fontSize, settings.lineHeight, settings.fontFamily, settings.marginWidth, layout.align, layout.boldStarts, inPreview, fullError, isSpeaking,
   ]);
   // The chapter title's height (with its bottom margin), so a picture opening the chapter fits under it on page one.
   const [headH, setHeadH] = useState(0);
@@ -1167,6 +1174,17 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             <NotebookPen className="w-4 h-4" />
           </button>
 
+          {/* Fast Read (Reading Intelligence): one word or a few at a time, and a reading-speed check */}
+          <button
+            onClick={() => setShowFastRead(true)}
+            aria-label="Fast Read: the chapter one word or a few words at a time, and a speed check"
+            className={`hidden min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer sm:grid ${showFastRead ? 'bg-indigo-600 text-white' : 'hover:bg-black/10 opacity-75'}`}
+            title="Fast Read"
+            data-testid="button-fast-read"
+          >
+            <Zap className="w-4 h-4" />
+          </button>
+
           {/* Listen: opens the pop-up player */}
           <button
             onClick={toggleSpeech}
@@ -1208,6 +1226,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                   { label: 'Ask the book, study, translate', icon: GraduationCap, on: () => openAssistant('ask'), show: true },
                   { label: 'Readers and reading groups', icon: Users, on: toggleCommunity, show: !!book.hasReaderContent },
                   { label: 'Notebook', icon: NotebookPen, on: toggleNotebook, show: true },
+                  { label: 'Fast Read and speed check', icon: Zap, on: () => setShowFastRead(true), show: true },
                 ].filter((i) => i.show).map((i) => (
                   <DropdownMenu.Item key={i.label} onSelect={i.on}
                     className="flex min-h-11 cursor-pointer select-none items-center gap-3 rounded-xl px-3 text-sm font-medium outline-none data-[highlighted]:bg-indigo-50 data-[highlighted]:text-indigo-900">
@@ -1345,7 +1364,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                   onClick={() => handleParagraphClick(pIdx, paragraph)}
                   className={`relative transition-all cursor-text ${
                     activeHighlightMode ? 'hover:bg-amber-100/30 cursor-pointer p-1 rounded-sm' : ''
-                  } ${highlightBg} ${spokenParagraph === pIdx ? 'rounded-md bg-indigo-500/10 ring-1 ring-indigo-500/30' : ''}`}
+                  } ${highlightBg} ${spokenParagraph === pIdx ? 'rounded-md bg-indigo-500/10 ring-1 ring-indigo-500/30' : ''} ${
+                    layout.focusParagraph && pIdx !== (spokenParagraph ?? currentParagraphIndex) ? 'opacity-35 hover:opacity-80' : ''}`}
                   aria-current={spokenParagraph === pIdx ? 'true' : undefined}
                 >
                   {popularHere.has(pIdx) && (
@@ -1369,7 +1389,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                       {paragraph[0]}
                     </span>
                   )}
-                  {pIdx === 0 ? paragraph.slice(1) : paragraph}
+                  {layout.boldStarts ? <BoldStarts text={pIdx === 0 ? paragraph.slice(1) : paragraph} /> : pIdx === 0 ? paragraph.slice(1) : paragraph}
                 </p>
                 </React.Fragment>
               );
@@ -1937,6 +1957,16 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           </div>
         </div>
       )}
+
+      {/* Reading aids: the reading guide band */}
+      {layout.readingGuide && !showFastRead && <ReadingGuide dark={darkChrome} />}
+
+      {/* Fast Read (Reading Intelligence): the chapter one word or a few at a time, and a speed check */}
+      <FastReadDialog
+        open={showFastRead} onOpenChange={setShowFastRead} container={portal}
+        chapters={chapters} chapterIndex={currentChapterIndex} paragraphIndex={currentParagraphIndex}
+        onClose={(c, p) => { if (c !== currentChapterIndex || p !== currentParagraphIndex) jumpTo(c, p); }}
+      />
 
       {/* Reading preferences: text, page and colours */}
       <ReaderPreferences
