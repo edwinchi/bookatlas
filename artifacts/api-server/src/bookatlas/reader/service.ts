@@ -180,6 +180,18 @@ export async function savePreferences(userId: string, body: Record<string, unkno
   return { settings, updated_at: row.updated_at };
 }
 
+/**
+ * Writes one key of the reader settings as it is (already cleaned by its caller), keeping the other keys. Used for
+ * the family profiles (Reading Intelligence phase 2), which have their own rules in family.ts.
+ */
+export async function saveSettingsKey(userId: string, key: string, value: unknown) {
+  const settings: Record<string, unknown> = { ...((await getPreferences(userId))?.settings ?? {}), [key]: value };
+  const row = { user_id: userId, settings, updated_at: new Date().toISOString() };
+  if (!db()) mem.prefs.set(userId, { settings, updated_at: row.updated_at });
+  else fail(await db()!.from('reader_preferences').upsert(row), 'Reader settings');
+  return settings;
+}
+
 // ------------------------------------------------------------------------------------------- sessions and stats
 
 export async function recordSession(userId: string, body: Record<string, unknown>) {

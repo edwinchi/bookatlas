@@ -1,3 +1,4 @@
+import { ME, activeReader } from '../reading/family';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Chapter, ReaderSettings } from '../../types';
 import { sanitizeReaderSettings } from '../../utils/readerSettings';
@@ -97,7 +98,11 @@ export function useReaderSync(opts: {
     const s = session.current;
     if (!signedIn || s.seconds < 5) return;
     const read = [...s.paragraphs].map((k) => k.split(':').map(Number)).map(([c, p]) => chapters[c!]?.content[p!] ?? '');
-    api.recordReadingSession({ bookId, startedAt: openedAt.current, seconds: s.seconds, paragraphs: s.paragraphs.size, words: read.reduce((n, t) => n + words(t), 0), device }).catch(() => undefined);
+    const wordCount = read.reduce((n, t) => n + words(t), 0);
+    // A family member reading on this device (Reading Intelligence phase 2): the time counts for their profile.
+    const reader = activeReader();
+    if (reader.id !== ME) api.familyActivity({ profileId: reader.id, minutes: Math.max(1, Math.round(s.seconds / 60)), words: wordCount, bookId }).catch(() => undefined);
+    else api.recordReadingSession({ bookId, startedAt: openedAt.current, seconds: s.seconds, paragraphs: s.paragraphs.size, words: wordCount, device }).catch(() => undefined);
     session.current = { seconds: 0, paragraphs: new Set(), lastActive: Date.now() };
     openedAt.current = new Date().toISOString();
   }, [signedIn, bookId, chapters]);

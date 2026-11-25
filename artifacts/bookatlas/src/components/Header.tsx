@@ -43,7 +43,9 @@ import {
   Brain,
   Accessibility,
   TrendingUp,
-  Sparkle
+  Sparkle,
+  Users,
+  Star
 } from 'lucide-react';
 import { SiteNavMenu, MobileNavSections, type SiteMenu } from './HeaderNavMenu';
 import { AtlasStar } from './landing/AtlasStar';
@@ -238,9 +240,12 @@ export const Header: React.FC<HeaderProps> = ({
                 { label: 'AI reading coach', description: 'Summaries, explanations, quizzes and answers from the book itself.', icon: Brain, href: `${import.meta.env.BASE_URL}reading-intelligence#coach` },
                 { label: 'Reading aids', description: 'For dyslexia, attention and low vision: fonts, focus and a reading guide.', icon: Accessibility, href: `${import.meta.env.BASE_URL}reading-intelligence#aids` },
                 { label: 'My reading progress', description: 'Time read, streaks, books finished and words per minute.', icon: TrendingUp, href: `${import.meta.env.BASE_URL}reading-intelligence#progress` },
+                { label: 'Family reading', description: 'Up to six readers on one account, with a weekly family challenge.', icon: Users, href: `${import.meta.env.BASE_URL}reading-intelligence#family` },
+                { label: 'Your own text', description: 'Fast Read an article, a PDF, an EPUB or your notes.', icon: FileText, href: `${import.meta.env.BASE_URL}reading-intelligence#own-text` },
               ] },
               { feature: true, items: [
                 { label: 'Reading Intelligence', description: 'All the reading tools in one place, with a Fast Read you can try right now.', icon: Sparkle, badge: 'New', href: `${import.meta.env.BASE_URL}reading-intelligence` },
+                { label: 'Young readers', description: 'Stories read aloud, letter sounds and word games for children.', icon: Star, badge: 'Kids', href: `${import.meta.env.BASE_URL}reading-intelligence/young-readers` },
                 { label: 'Open a book', description: 'Every tool works inside the BooksAtlas reader.', icon: BookOpen, onSelect: () => onNavigateSection('bookstore') },
               ] },
             ] },

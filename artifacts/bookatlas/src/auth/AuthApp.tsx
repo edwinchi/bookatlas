@@ -23,6 +23,8 @@ import { CheckBox } from '../components/ui/select-box';
 const PricingPage = lazyPage(() => import('../components/pricing/PricingPage').then((m) => m.default));
 /** Reading Intelligence (owner request 2026-11-25): the reading tools and the reader's progress, loaded only when visited. */
 const ReadingIntelligencePage = lazyPage(() => import('../components/reading/ReadingIntelligencePage').then((m) => m.default));
+/** Young readers (Reading Intelligence phase 2): stories, letter sounds and word games for children. */
+const YoungReadersPage = lazyPage(() => import('../components/reading/YoungReadersPage').then((m) => m.default));
 // The admin workspace (manager portal, subscriber tools, reader preview) loads only on /admin.
 const AdminEntry = lazyPage(() => import('./AdminWorkspace').then((m) => m.AdminEntry));
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || publishableKeyFromHost(
@@ -231,6 +233,7 @@ function ProviderWithRoutes() {
         <Route path="/privacy"><PrivacyNotice /></Route>
         <Route path="/legal"><LegalNotice /></Route>
         <Route path="/refunds"><RefundPolicy /></Route>
+        <Route path="/reading-intelligence/young-readers"><React.Suspense fallback={<main className="min-h-[100dvh] bg-[#fffaf0]" />}><YoungReadersPage /></React.Suspense></Route>
         <Route path="/reading-intelligence"><React.Suspense fallback={<main className="min-h-[100dvh] bg-slate-50" />}><ReadingIntelligencePage /></React.Suspense></Route>
         <Route path="/pricing"><React.Suspense fallback={<main className="min-h-[100dvh] bg-slate-50" />}><PricingPage /></React.Suspense></Route>
         <Route path="/user-portal"><Store portal resumeCheckout={new URLSearchParams(window.location.search).get('resume') === 'checkout'} /></Route>

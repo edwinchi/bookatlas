@@ -1,3 +1,4 @@
+import { activeReader, defaultsFor } from '../reading/family';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import React, { useEffect, useRef, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
@@ -56,7 +57,7 @@ export function ReaderAssistant(props: {
           </Tabs.List>
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             <Tabs.Content value="ask" forceMount hidden={props.tab !== 'ask'}><AskTab {...{ api, bookId, chapterIndex, onRemaining: setRemaining, onJump: props.onJump }} /></Tabs.Content>
-            <Tabs.Content value="study" hidden={props.tab !== 'study'}><StudyTab {...{ api, bookId, chapters, chapterIndex, onRemaining: setRemaining }} /></Tabs.Content>
+            <Tabs.Content value="study" hidden={props.tab !== 'study'}><StudyTab {...{ api, bookId, chapters, chapterIndex, onRemaining: setRemaining, signedIn: props.signedIn }} /></Tabs.Content>
             <Tabs.Content value="words" forceMount hidden={props.tab !== 'words'}><WordsTab {...{ api, bookId, languages, request: props.request, onRemaining: setRemaining }} /></Tabs.Content>
           </div>
         </Tabs.Root>
@@ -148,7 +149,7 @@ function AskTab({ api, bookId, chapterIndex, onRemaining, onJump }: { api: Api; 
   );
 }
 
-function StudyTab({ api, bookId, chapters, chapterIndex, onRemaining }: { api: Api; bookId: string; chapters: Chapter[]; chapterIndex: number; onRemaining: (n: number) => void }) {
+function StudyTab({ api, bookId, chapters, chapterIndex, onRemaining, signedIn }: { api: Api; bookId: string; chapters: Chapter[]; chapterIndex: number; onRemaining: (n: number) => void; signedIn: boolean }) {
   const [tool, setTool] = useState<'summary' | 'key_concepts' | 'flashcards' | 'quiz'>('summary');
   // Summary lengths (Reading Intelligence 2026-11-25): one minute, five minutes or complete.
   const [length, setLength] = useState<'summary_short' | 'summary' | 'summary_full'>('summary');
@@ -195,7 +196,7 @@ function StudyTab({ api, bookId, chapters, chapterIndex, onRemaining }: { api: A
       )}
       {result?.concepts && <dl className="space-y-2 text-xs">{result.concepts.map((c) => <div key={c.term} className="rounded-xl bg-slate-50 p-2.5"><dt className="font-bold text-slate-900">{c.term}</dt><dd className="mt-0.5 text-slate-700">{c.explanation}</dd></div>)}</dl>}
       {result?.cards && <Flashcards cards={result.cards} />}
-      {result?.questions && <Quiz questions={result.questions} />}
+      {result?.questions && <Quiz questions={result.questions} onComplete={(score, total) => { if (signedIn) void api.familyActivity({ profileId: activeReader().id, quiz: { score, total }, bookId }).catch(() => undefined); }} />}
       {result && <p className="text-[10px] text-slate-400">Made by AI from the chapter text; check anything important in the book.</p>}
     </div>
   );
@@ -223,10 +224,13 @@ function Flashcards({ cards }: { cards: { front: string; back: string }[] }) {
   );
 }
 
-function Quiz({ questions }: { questions: { question: string; options: string[]; answer: number; explanation: string }[] }) {
+function Quiz({ questions, onComplete }: { questions: { question: string; options: string[]; answer: number; explanation: string }[]; onComplete?: (score: number, total: number) => void }) {
   const [picked, setPicked] = useState<Record<number, number>>({});
   const done = Object.keys(picked).length;
   const score = questions.filter((q, i) => picked[i] === q.answer).length;
+  // The first full attempt counts for the reader's progress (Reading Intelligence phase 2).
+  const reported = useRef(false);
+  useEffect(() => { if (done === questions.length && questions.length && !reported.current) { reported.current = true; onComplete?.(score, questions.length); } }, [done]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="space-y-3">
       {questions.map((q, qi) => (
@@ -255,7 +259,7 @@ function Quiz({ questions }: { questions: { question: string; options: string[];
 function WordsTab({ api, bookId, languages, request, onRemaining }: { api: Api; bookId: string; languages: Record<string, string>; request: WordsRequest | null; onRemaining: (n: number) => void }) {
   const [target, setTarget] = useState(storedLang);
   // Explain levels (Reading Intelligence 2026-11-25): for a child, a student or a professional.
-  const [level, setLevel] = useState<ExplainLevel>('student');
+  const [level, setLevel] = useState<ExplainLevel>(() => defaultsFor(activeReader().kind).explain);
   const [out, setOut] = useState<{ kind: 'text'; title: string; text: string } | { kind: 'def'; def: Definition } | null>(null);
   const { busy, error, run } = useRun(onRemaining);
   const go = async (req: WordsRequest, lang = target, lvl: ExplainLevel = req.action === 'simplify' ? 'child' : level) => {
@@ -266,7 +270,7 @@ function WordsTab({ api, bookId, languages, request, onRemaining }: { api: Api; 
     const e = await run(() => api.explainPassage({ bookId, text: req.text, mode: lvl }));
     if (e) setOut({ kind: 'text', title: lvl === 'child' ? 'In simple words' : lvl === 'professional' ? 'For a professional' : 'Explained', text: e.answer });
   };
-  useEffect(() => { if (request) void go(request, target, request.action === 'simplify' ? 'child' : 'student'); }, [request?.id]);
+  useEffect(() => { if (request) void go(request, target, request.action === 'simplify' ? 'child' : defaultsFor(activeReader().kind).explain); }, [request?.id]);
   const speak = (t: string) => { try { window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(t)); } catch { /* no voice */ } };
   return (
     <div className="space-y-3">

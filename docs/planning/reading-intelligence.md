@@ -31,16 +31,23 @@ Site menu: **Read smarter**. Page: `/reading-intelligence`.
 
 No database change was needed: speed checks are stored with the reader settings.
 
-## Phase 2: next
+## Phase 2: built (2026-11-25)
 
-1. **Family profiles.** One account, a profile per reader with its own progress, and a parent view. Needs a
-   `reader_profiles` table and profile-scoped progress, sessions and settings.
-2. **Young readers (5–12).** Reading levels on books, letter sounds, word games, and short questions after each
-   story (reuse the quiz engine with a child level).
-3. **Adaptive coach.** Suggest the next Fast Read speed, quiz level and books from speed checks, quiz results and
-   reading history.
-4. **Import your own text** (EPUB, PDF, DOCX, web page) into Fast Read and the coach. The EPUB pipeline already
-   exists for authors.
+| Brief | Where it lives |
+|---|---|
+| Family profiles: up to 6 readers per account, "who is reading" per device | `reading/FamilySection.tsx`, `reading/family.ts`; server `reader/family.ts`, `GET/PUT /api/reader/family`, `POST /api/reader/family/activity` |
+| Per-profile reading time, books, quiz scores, stars, streaks, last 14 days | Reader sessions and quizzes go to the active profile (`useReaderSync`, `ReaderAssistant` quiz) |
+| Family challenge (weekly minutes) and this week's ranking | Family section on `/reading-intelligence` |
+| Young readers (about 4–12), three reading levels | `/reading-intelligence/young-readers` (`YoungReadersPage.tsx`, `youngReaders.ts`) |
+| Stories read aloud with words lit up, tap a word to hear it, questions after each story | Six original stories, three questions each |
+| Letter sounds | 26 letters, 8 letter pairs, 8 long sounds, each with a word and a picture |
+| Word games | Find the picture, Build the word, Spell it; stars for each right answer |
+| Adaptive coach | `reading/coach.ts`: Fast Read speed up 10% only with quiz scores of 80% or more; quiz depth and explain level follow the scores; a plan for today |
+| Import your own text | `reading/ownText.ts`, `OwnTextPanel.tsx`: paste, TXT, Markdown, HTML, EPUB, Word, PDF; read in the browser, never uploaded |
+| Defaults by reader | Fast Read starts at 150 words a minute for a child (100 for first words); explanations default to the child level |
+
+Family data is kept in the account's reader settings (`settings.family`), so there's still no database change.
+Removing a profile removes its reading.
 
 ## Phase 3: later
 

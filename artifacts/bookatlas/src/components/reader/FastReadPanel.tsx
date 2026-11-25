@@ -6,6 +6,7 @@ import * as Tabs from '@radix-ui/react-tabs';
 import * as ProgressBar from '@radix-ui/react-progress';
 import { ChevronLeft, ChevronRight, Gauge, Pause, Play, RotateCcw, Rewind, Timer, X, Zap } from 'lucide-react';
 import { useAccount } from '../../auth/AuthContext';
+import { activeReader, defaultsFor } from '../reading/family';
 import { useEbookApi } from '../ebook/ebookApi';
 import type { Chapter } from '../../types';
 import {
@@ -18,10 +19,15 @@ type Mode = 'word' | 'group';
 function readPrefs(): { wpm: number; mode: Mode; group: number } {
   try {
     const v = JSON.parse(localStorage.getItem(PREFS) || 'null');
-    return { wpm: clampWpm(v?.wpm ?? 300), mode: v?.mode === 'group' ? 'group' : 'word', group: clampGroup(v?.group ?? 3) };
+    return { wpm: clampWpm(v?.wpm ?? defaultsFor(activeReader().kind).wpm), mode: v?.mode === 'group' ? 'group' : 'word', group: clampGroup(v?.group ?? 3) };
   } catch { return { wpm: 300, mode: 'word', group: 3 }; }
 }
 const savePrefs = (p: { wpm: number; mode: Mode; group: number }) => { try { localStorage.setItem(PREFS, JSON.stringify(p)); } catch { /* optional */ } };
+/** Sets the Fast Read speed from elsewhere (the adaptive coach); open players follow at once. */
+export function setFastReadSpeed(wpm: number) {
+  savePrefs({ ...readPrefs(), wpm: clampWpm(wpm) });
+  window.dispatchEvent(new Event('bookatlas:fast-read-prefs'));
+}
 
 const btn = 'grid h-11 w-11 place-items-center rounded-full text-slate-700 ring-1 ring-slate-200 bg-white hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-40 cursor-pointer';
 const item = 'min-h-10 flex-1 rounded-lg px-3 text-xs font-bold text-slate-600 data-[state=on]:bg-white data-[state=on]:text-slate-900 data-[state=on]:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer';
@@ -52,6 +58,7 @@ export function FastReadPlayer({ paragraphs, firstParagraph = 0, startParagraph,
   onEnd?: () => void; endLabel?: string; autoFocus?: boolean;
 }) {
   const [prefs, setPrefsState] = useState(readPrefs);
+  useEffect(() => { const reload = () => setPrefsState(readPrefs()); window.addEventListener('bookatlas:fast-read-prefs', reload); return () => window.removeEventListener('bookatlas:fast-read-prefs', reload); }, []);
   const setPrefs = (p: Partial<typeof prefs>) => setPrefsState((old) => { const next = { ...old, ...p }; savePrefs(next); return next; });
   const steps = useMemo(() => buildSteps(paragraphs, prefs.mode === 'word' ? 1 : prefs.group, prefs.wpm, firstParagraph), [paragraphs, prefs.mode, prefs.group, prefs.wpm, firstParagraph]);
   // The position is kept in words, so changing speed or group size keeps the place.

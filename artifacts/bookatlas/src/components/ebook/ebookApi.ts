@@ -1,3 +1,4 @@
+import type { FamilyActivity, FamilyProfile, FamilyView } from '../reading/family';
 import { useAuth } from '@clerk/react';
 import { useRef } from 'react';
 import type { SubmissionIntake } from '@workspace/bookatlas-catalog/publishing';
@@ -198,6 +199,10 @@ export function useEbookApi() {
     readingStats: () => json<ReadingStats>('/api/reader/stats'),
     // Reader Phase 3 (cycle 10): achievements, shared notes, reports, reading groups.
     achievements: () => json<AchievementsView>('/api/reader/achievements'),
+    // Reading Intelligence phase 2 (2026-11-25): family profiles and their reading.
+    family: () => json<FamilyView>('/api/reader/family'),
+    saveFamily: (body: { profiles: FamilyProfile[]; challenge?: { weeklyMinutes: number } }) => json<FamilyView>('/api/reader/family', 'PUT', body),
+    familyActivity: (body: FamilyActivity & { profileId: string }) => json<void>('/api/reader/family/activity', 'POST', body),
     shareAnnotation: (id: string, bookId: string, shared: boolean) => json<Annotation>(`/api/reader/annotations/${id}/share`, 'PATCH', { bookId, shared }),
     chapterSocial: (bookId: string, chapter: number) => json<ChapterSocial>(`/api/reader/social/${encodeURIComponent(bookId)}/${chapter}`),
     report: (kind: 'annotation' | 'post', targetId: string, reason?: string) => json<{ reported: boolean }>('/api/reader/reports', 'POST', { kind, targetId, reason }),

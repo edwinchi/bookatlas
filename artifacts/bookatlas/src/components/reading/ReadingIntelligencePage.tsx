@@ -6,7 +6,7 @@ import { SelectBox } from '../ui/select-box';
 import { enquiryHref } from '../StartBookDialog';
 import {
   Accessibility, ArrowLeft, AudioLines, Baby, Bold, BookOpen, Brain, CalendarDays, Flame, Focus, Gauge, GraduationCap,
-  Headphones, Languages, Library, Loader2, MessageSquareText, Rows3, School, Sparkles, Target, Timer, TrendingUp, Type, Users, Zap,
+  FileText, Star, Headphones, Languages, Library, Loader2, MessageSquareText, Rows3, School, Sparkles, Target, Timer, TrendingUp, Type, Users, Zap,
 } from 'lucide-react';
 import { useAccount } from '../../auth/AuthContext';
 import { useEbookApi, type ReadingStats } from '../ebook/ebookApi';
@@ -14,6 +14,8 @@ import { FastReadPlayer, SpeedCheck, useSpeedTests } from '../reader/FastReadPan
 import { ReaderAchievements } from '../reader/ReaderAchievements';
 import { BoldStarts } from '../reader/readingAids';
 import { SAMPLE_PASSAGE, speedPlan, summarizeTests } from '../reader/fastRead';
+import { FamilyPanel, NextStepCard, WhoIsReading, useFamily } from './FamilySection';
+import { OwnText } from './OwnTextPanel';
 
 const BASE = import.meta.env.BASE_URL;
 const STORE = BASE;
@@ -26,7 +28,10 @@ const SECTIONS = [
   { id: 'listen', label: 'Read and listen', icon: Headphones },
   { id: 'coach', label: 'AI coach', icon: Brain },
   { id: 'aids', label: 'Reading aids', icon: Accessibility },
+  { id: 'own-text', label: 'Your own text', icon: FileText },
   { id: 'progress', label: 'My progress', icon: TrendingUp },
+  { id: 'family', label: 'Family', icon: Users },
+  { id: 'young', label: 'Young readers', icon: Baby },
   { id: 'next', label: 'Coming next', icon: Sparkles },
 ] as const;
 
@@ -152,7 +157,7 @@ function SpeedSummary({ tests }: { tests: ReturnType<typeof useSpeedTests>['test
   );
 }
 
-function Progress({ speed }: { speed: ReturnType<typeof useSpeedTests> }) {
+function Progress({ speed, fam }: { speed: ReturnType<typeof useSpeedTests>; fam: ReturnType<typeof useFamily> }) {
   const { account } = useAccount();
   const api = useEbookApi();
   const [stats, setStats] = useState<ReadingStats | null>(null);
@@ -163,6 +168,7 @@ function Progress({ speed }: { speed: ReturnType<typeof useSpeedTests> }) {
   }, [account?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="space-y-4">
+      <NextStepCard fam={fam} tests={speed.tests} todayMinutes={stats?.todayMinutes ?? 0} streak={stats?.streakDays ?? 0} />
       {!account ? (
         <div className="flex flex-col gap-3 rounded-2xl bg-indigo-50 p-5 ring-1 ring-indigo-100 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-indigo-950">Sign in to see your reading time, streak, books finished and words per minute here, on every device. Your speed checks on this device stay below.</p>
@@ -204,6 +210,7 @@ export default function ReadingIntelligencePage() {
     return () => { document.title = title; };
   }, []);
   const speed = useSpeedTests();
+  const fam = useFamily();
   const [boldDemo, setBoldDemo] = useState(true);
   const demoParas = useMemo(() => SAMPLE_PARAS, []);
 
@@ -219,6 +226,7 @@ export default function ReadingIntelligencePage() {
           <div className="mt-6 flex flex-wrap gap-3">
             <a href="#fast-read" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-amber-400 px-5 text-sm font-bold text-slate-950 hover:bg-amber-300"><Zap className="h-4 w-4" aria-hidden />Try Fast Read now</a>
             <a href={STORE} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white/10 px-5 text-sm font-bold text-white ring-1 ring-white/25 hover:bg-white/20"><BookOpen className="h-4 w-4" aria-hidden />Open a book</a>
+            <WhoIsReading family={fam.family} accountName={fam.accountName} dark />
           </div>
         </div>
       </header>
@@ -260,6 +268,11 @@ export default function ReadingIntelligencePage() {
           </div>
         </Section>
 
+        <Section id="own-text" icon={FileText} eyebrow="Your own text" title="Fast Read anything you need to read"
+          intro="Paste an article, a report or your notes, or open an EPUB, Word, PDF or web page. Then Fast Read it, read it with bold word starts, or check your speed on it. It stays on your device: nothing is uploaded.">
+          <OwnText />
+        </Section>
+
         <Section id="listen" icon={Headphones} eyebrow="Read and listen" title="Read, listen, or both at once"
           intro="Every book you can read on BooksAtlas can also be read aloud, on any phone, tablet or computer. Switch between reading and listening and keep your place.">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -299,15 +312,30 @@ export default function ReadingIntelligencePage() {
 
         <Section id="progress" icon={TrendingUp} eyebrow="My progress" title="Your reading, day by day"
           intro="Time spent reading, your streak, the books you finished, how fast you read and when you like to read. Only you can see it.">
-          <Progress speed={speed} />
+          <Progress speed={speed} fam={fam} />
         </Section>
 
-        <Section id="next" icon={Sparkles} eyebrow="Coming next" title="Reading that grows with the whole family"
-          intro="We are building Reading Intelligence step by step. These are next, in this order.">
+        <Section id="family" icon={Users} eyebrow="Family reading" title="One account, every reader in the family"
+          intro="Add up to six readers. Choose who is reading on each phone or tablet, and their reading time, quiz scores and stars count for them. Set a weekly goal you reach together.">
+          <FamilyPanel fam={fam} />
+        </Section>
+
+        <Section id="young" icon={Baby} eyebrow="Young readers" title="Stories, letter sounds and word games"
+          intro="For children from about 4 to 12, in three reading levels: short stories that read themselves aloud with every word lit up, questions after each story, letter sounds, and three word games. Free, with no account needed.">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Feature icon={BookOpen} title="Stories read aloud">Tap Read to me and follow the words; tap any word to hear it again.</Feature>
+            <Feature icon={Type} title="Letter sounds">Every letter, and the letters that work together, with a word and a picture.</Feature>
+            <Feature icon={Star} title="Word games">Find the picture, build the word and spell it, and collect stars.</Feature>
+          </div>
+          <a href={`${BASE}reading-intelligence/young-readers`} data-testid="open-young-readers" className="mt-5 inline-flex min-h-12 items-center gap-2 rounded-2xl bg-amber-400 px-5 text-base font-bold text-slate-950 hover:bg-amber-300"><Baby className="h-5 w-5" aria-hidden />Open Young readers</a>
+        </Section>
+
+        <Section id="next" icon={Sparkles} eyebrow="Coming next" title="What we are building next"
+          intro="Reading Intelligence grows step by step. These come next, in this order.">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Feature icon={Users} title="Family profiles">One account for the household, with a profile and progress for each reader.</Feature>
-            <Feature icon={Baby} title="First words">Picture books read aloud with every word lit up, and words spoken when a picture is tapped.</Feature>
-            <Feature icon={GraduationCap} title="Young readers">Letter sounds, word games, reading levels and short questions after each story.</Feature>
+            <Feature icon={Baby} title="First words">Picture books for the youngest, read aloud, with a word spoken for every picture they tap.</Feature>
+            <Feature icon={AudioLines} title="Narration that follows every word">Natural-voice audiobooks that light up each word as it is spoken.</Feature>
+            <Feature icon={Users} title="A voice for every character">Stories narrated with a different voice for each character.</Feature>
             <Feature icon={School} title="Schools and teams">Reading lists, class progress and reading plans for teachers and companies.</Feature>
           </div>
           <p className="mt-4 text-sm text-slate-600"><CalendarDays className="mr-1 inline h-4 w-4 text-indigo-600" aria-hidden />Want one of these first? <a href={enquiryHref('question')} className="font-bold text-indigo-700 hover:underline">Tell us</a>.</p>

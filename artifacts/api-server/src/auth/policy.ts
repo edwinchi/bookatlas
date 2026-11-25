@@ -49,6 +49,9 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (method === 'GET' && (/^\/api\/reader\/state\/[^/]+$/.test(normalized) || ['/api/reader/annotations', '/api/reader/preferences', '/api/reader/stats'].includes(normalized))) return 'reader';
   if (method === 'PUT' && (/^\/api\/reader\/progress\/[^/]+$/.test(normalized) || normalized === '/api/reader/preferences')) return 'reader';
   if (method === 'POST' && (normalized === '/api/reader/annotations' || normalized === '/api/reader/sessions')) return 'reader';
+  // Family reading (Reading Intelligence phase 2, 2026-11-25): an account's own reader profiles.
+  if (normalized === '/api/reader/family' && ['GET', 'PUT'].includes(method)) return 'reader';
+  if (normalized === '/api/reader/family/activity' && method === 'POST') return 'reader';
   // Reader Phase 3 (cycle 10): achievements, shared notes, reports, reading groups; moderation for administrators.
   if (method === 'GET' && (normalized === '/api/reader/achievements' || normalized === '/api/reader/groups' || /^\/api\/reader\/social\/[^/]+\/\d+$/.test(normalized) || /^\/api\/reader\/groups\/[0-9a-f-]{36}$/.test(normalized))) return 'reader';
   if (method === 'PATCH' && /^\/api\/reader\/annotations\/[^/]+\/share$/.test(normalized)) return 'reader';

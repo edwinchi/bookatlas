@@ -3,13 +3,14 @@ import { logger } from '../../lib/logger.js';
 import type { CatalogStore } from '../catalog/store.js';
 import {
   ReaderError, addAnnotation, annotationsOf, deleteAnnotation, getPreferences, getProgress, readingStats, recordSession,
-  saveProgress, savePreferences, searchAnnotations, updateAnnotation,
+  saveProgress, savePreferences, saveSettingsKey, searchAnnotations, updateAnnotation,
 } from './service.js';
 import { readableContent } from '../ebookPrep/service.js';
 import { achievements, DEFAULT_DAILY_GOAL } from './achievements.js';
 import { chapterSocial, hideTarget, report, reportedItems, setShared, sharedAnnotationExists } from './social.js';
 import { addPost, createGroup, deletePost, groupCount, groupDetail, joinGroup, leaveGroup, myGroups, postExists } from './groups.js';
 import { DAILY_AI_LIMIT, LANGUAGES, askBook, defineWord, explainPassage, refundAiQuota, studyChapter, translatePassage, useAiQuota, type Generate } from './ai.js';
+import { FamilyError, addActivity, familyView, readFamily, weekStart, withProfiles, type Family } from './family.js';
 
 let generatorOverride: Generate | null = null;
 /** Tests substitute the AI; production uses the app's OpenRouter/Gemini text generation. */
@@ -77,6 +78,33 @@ export function mountReader(app: Express, catalog: CatalogStore, generate?: Gene
   }));
   app.get('/api/reader/stats', guarded(async (req, res) => {
     res.json(await readingStats(signedIn(req).id));
+  }));
+
+  // Reading Intelligence phase 2 (2026-11-25): family profiles, their reading, and the weekly family challenge.
+  const familyOf = async (userId: string) => readFamily((await getPreferences(userId))?.settings?.family);
+  const view = async (userId: string, f: Family) => {
+    const stats = await readingStats(userId);
+    const monday = weekStart();
+    const own = stats.last30.filter((d) => d.day >= monday).reduce((n, d) => n + d.minutes, 0);
+    return familyView(f, own);
+  };
+  const familyGuard = (fn: () => unknown) => { try { return fn(); } catch (e) { if (e instanceof FamilyError) throw new ReaderError(e.message, e.status); throw e; } };
+  app.get('/api/reader/family', guarded(async (req, res) => {
+    const who = signedIn(req);
+    res.json(await view(who.id, await familyOf(who.id)));
+  }));
+  app.put('/api/reader/family', json, guarded(async (req, res) => {
+    const who = signedIn(req);
+    const next = withProfiles(await familyOf(who.id), body(req));
+    await saveSettingsKey(who.id, 'family', next);
+    res.json(await view(who.id, next));
+  }));
+  app.post('/api/reader/family/activity', json, guarded(async (req, res) => {
+    const who = signedIn(req);
+    const f = await familyOf(who.id);
+    const updated = familyGuard(() => addActivity(f, body(req))) as Family;
+    await saveSettingsKey(who.id, 'family', updated);
+    res.status(204).end();
   }));
 
   // Reader Phase 3 (cycle 10): achievements and the daily goal, shared notes, popular highlights, reading groups.

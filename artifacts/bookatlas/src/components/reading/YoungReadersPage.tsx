@@ -1,0 +1,363 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'wouter';
+import * as Tabs from '@radix-ui/react-tabs';
+import * as ToggleGroup from '@radix-ui/react-toggle-group';
+import * as RadioGroup from '@radix-ui/react-radio-group';
+import { ArrowLeft, Check, Delete, Puzzle, RotateCcw, Sparkles, Square, Star, Volume2, X, BookOpen, Type as TypeIcon, Image as ImageIcon, PenLine } from 'lucide-react';
+import { useAccount } from '../../auth/AuthContext';
+import { useEbookApi } from '../ebook/ebookApi';
+import { useActiveReader } from './family';
+import { loadReaderFont } from '../reader/readingAids';
+import { LEVELS, SOUNDS, STORIES, WORDS, pictureRound, sameWord, scramble, storyStars, type Level, type Story } from './youngReaders';
+
+/** The device voice for children's reading: a clear English voice, a little slower than usual. */
+function useSpeaker() {
+  const synth = typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null;
+  const run = useRef(0);
+  const stop = useCallback(() => { run.current += 1; try { synth?.cancel(); } catch { /* nothing to stop */ } }, [synth]);
+  useEffect(() => stop, [stop]);
+  const voice = () => {
+    try {
+      const vs = (synth?.getVoices() ?? []).filter((v) => v?.lang && /^en[-_]/i.test(v.lang));
+      return vs.find((v) => /natural|neural|premium|enhanced/i.test(v.name ?? '')) ?? vs.find((v) => v.default) ?? vs[0] ?? null;
+    } catch { return null; }
+  };
+  /** Says the parts one after the other; `onPart` and `onWord` follow along, `onEnd` when done. */
+  const say = useCallback((parts: string[], o: { rate?: number; onPart?: (i: number) => void; onWord?: (part: number, char: number) => void; onEnd?: () => void } = {}) => {
+    if (!synth) return false;
+    stop();
+    const me = run.current;
+    const next = (i: number) => {
+      if (me !== run.current) return;
+      if (i >= parts.length) { o.onEnd?.(); return; }
+      o.onPart?.(i);
+      try {
+        const u = new SpeechSynthesisUtterance(parts[i]!);
+        const v = voice();
+        u.lang = v?.lang ?? 'en-GB';
+        try { if (v) u.voice = v; } catch { /* the language is enough */ }
+        u.rate = o.rate ?? 0.85;
+        u.onboundary = (e) => { if (me === run.current && e.name === 'word') o.onWord?.(i, e.charIndex); };
+        u.onend = () => next(i + 1);
+        u.onerror = () => { if (me === run.current) o.onEnd?.(); };
+        synth.speak(u);
+      } catch { o.onEnd?.(); }
+    };
+    next(0);
+    return true;
+  }, [synth, stop]);
+  return { supported: !!synth, say, stop };
+}
+
+/** Stars earned on this device; for a signed-in family they count for the reader who is playing. */
+function useStars() {
+  const { account } = useAccount();
+  const api = useEbookApi();
+  const reader = useActiveReader();
+  const key = `bookatlas:young-stars:${reader.id}`;
+  const read = () => { try { return Number(localStorage.getItem(key)) || 0; } catch { return 0; } };
+  const [stars, setStars] = useState(read);
+  useEffect(() => { setStars(read()); }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const add = useCallback((n: number) => {
+    if (n <= 0) return;
+    setStars((s) => { const v = s + n; try { localStorage.setItem(key, String(v)); } catch { /* this device */ } return v; });
+    if (account) void api.familyActivity({ profileId: reader.id, stars: n }).catch(() => undefined);
+  }, [account, api, key, reader.id]);
+  return { stars, add, reader };
+}
+
+const pill = 'min-h-11 rounded-full px-4 text-sm font-bold text-slate-700 data-[state=on]:bg-indigo-600 data-[state=on]:text-white data-[state=active]:bg-indigo-600 data-[state=active]:text-white bg-white ring-1 ring-slate-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer';
+const big = 'inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-5 text-base font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-300 cursor-pointer disabled:opacity-50';
+
+// ------------------------------------------------------------------------------------------------ stories
+
+/** A story read aloud: the sentence lights up, and the word too where the device reports it. Tap a word to hear it. */
+function StoryReader({ story, onStars, onBack }: { story: Story; onStars: (n: number) => void; onBack: () => void }) {
+  const speaker = useSpeaker();
+  const [playing, setPlaying] = useState(false);
+  const [at, setAt] = useState<{ p: number; word: number | null } | null>(null);
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [checked, setChecked] = useState(false);
+  // Each paragraph as words with their position, to match the voice's place.
+  const paras = useMemo(() => story.paragraphs.map((t) => [...t.matchAll(/\S+/g)].map((m) => ({ text: m[0], start: m.index ?? 0 }))), [story]);
+  const play = () => {
+    if (playing) { speaker.stop(); setPlaying(false); setAt(null); return; }
+    setPlaying(true);
+    speaker.say(story.paragraphs, {
+      onPart: (p) => setAt({ p, word: null }),
+      onWord: (p, ch) => { const w = paras[p]!.findIndex((x, i) => ch >= x.start && (i === paras[p]!.length - 1 || ch < paras[p]![i + 1]!.start)); setAt({ p, word: w < 0 ? null : w }); },
+      onEnd: () => { setPlaying(false); setAt(null); },
+    });
+  };
+  const right = story.questions.filter((q, i) => answers[i] === q.answer).length;
+  const check = () => { setChecked(true); onStars(storyStars(right, story.questions.length)); };
+  return (
+    <div className="space-y-6">
+      <button type="button" onClick={() => { speaker.stop(); onBack(); }} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-indigo-700 cursor-pointer"><ArrowLeft className="h-4 w-4" aria-hidden />All stories</button>
+      <article className="rounded-3xl bg-white p-6 ring-1 ring-slate-200 sm:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center gap-3 font-serif text-3xl font-bold text-slate-900"><span aria-hidden className="text-4xl">{story.picture}</span>{story.title}</h2>
+          {speaker.supported && (
+            <button type="button" onClick={play} data-testid="story-read-to-me" className={`${big} ${playing ? 'bg-slate-900 text-white' : 'bg-amber-400 text-slate-950 hover:bg-amber-300'}`}>
+              {playing ? <Square className="h-5 w-5" aria-hidden /> : <Volume2 className="h-5 w-5" aria-hidden />}{playing ? 'Stop' : 'Read to me'}
+            </button>
+          )}
+        </div>
+        <div className="mt-6 space-y-4 font-reader-clear text-2xl leading-relaxed text-slate-900 sm:text-[1.7rem]">
+          {paras.map((words, p) => (
+            <p key={p} className={`rounded-xl px-2 py-1 transition-colors ${at?.p === p ? 'bg-indigo-50' : ''}`}>
+              {words.map((w, i) => (
+                <React.Fragment key={i}>
+                  <button type="button" onClick={() => speaker.say([w.text.replace(/[^\p{L}\p{N}'’-]/gu, '')], { rate: 0.75 })}
+                    className={`rounded-md px-0.5 transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer ${at?.p === p && at.word === i ? 'bg-amber-300' : ''}`}>{w.text}</button>{' '}
+                </React.Fragment>
+              ))}
+            </p>
+          ))}
+        </div>
+        <p className="mt-4 text-xs text-slate-500">Tap any word to hear it.</p>
+      </article>
+
+      <section aria-labelledby="story-questions" className="rounded-3xl bg-white p-6 ring-1 ring-slate-200 sm:p-8">
+        <h3 id="story-questions" className="flex items-center gap-2 text-xl font-bold text-slate-900"><Sparkles className="h-5 w-5 text-amber-500" aria-hidden />What happened?</h3>
+        <div className="mt-4 space-y-5">
+          {story.questions.map((q, qi) => (
+            <fieldset key={qi} className="space-y-2">
+              <legend className="text-lg font-semibold text-slate-900">{qi + 1}. {q.question}</legend>
+              <RadioGroup.Root value={answers[qi] === undefined ? '' : String(answers[qi])} onValueChange={(v) => { if (!checked) setAnswers((a) => ({ ...a, [qi]: Number(v) })); }} className="grid gap-2 sm:grid-cols-3" aria-label={q.question}>
+                {q.options.map((o, oi) => {
+                  const state = !checked ? '' : oi === q.answer ? 'bg-emerald-100 ring-emerald-500' : answers[qi] === oi ? 'bg-rose-100 ring-rose-400' : '';
+                  return (
+                    <RadioGroup.Item key={oi} value={String(oi)} disabled={checked}
+                      className={`flex min-h-12 items-center gap-2 rounded-2xl px-4 text-left text-base font-semibold ring-1 ring-slate-200 data-[state=checked]:ring-2 data-[state=checked]:ring-indigo-500 data-[state=checked]:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer ${state}`}>
+                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full ring-2 ring-slate-300"><RadioGroup.Indicator className="h-2.5 w-2.5 rounded-full bg-indigo-600" /></span>{o}
+                    </RadioGroup.Item>
+                  );
+                })}
+              </RadioGroup.Root>
+            </fieldset>
+          ))}
+        </div>
+        {!checked ? (
+          <button type="button" onClick={check} disabled={Object.keys(answers).length < story.questions.length} data-testid="story-check" className={`${big} mt-6 bg-indigo-600 text-white hover:bg-indigo-500`}><Check className="h-5 w-5" aria-hidden />Check my answers</button>
+        ) : (
+          <div role="status" className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl bg-amber-50 p-4 text-lg font-bold text-amber-950">
+            <span>{right === story.questions.length ? 'All right, well done!' : `${right} of ${story.questions.length} right.`}</span>
+            <span className="flex" aria-label={`${storyStars(right, story.questions.length)} stars`}>{Array.from({ length: storyStars(right, story.questions.length) }, (_, i) => <Star key={i} className="h-6 w-6 fill-amber-400 text-amber-500" aria-hidden />)}</span>
+            <button type="button" onClick={() => { setAnswers({}); setChecked(false); }} className="ml-auto inline-flex items-center gap-1 text-sm text-indigo-700 cursor-pointer"><RotateCcw className="h-4 w-4" aria-hidden />Try again</button>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function Stories({ level, onStars }: { level: Level; onStars: (n: number) => void }) {
+  const [open, setOpen] = useState<Story | null>(null);
+  useEffect(() => { setOpen(null); }, [level]);
+  if (open) return <StoryReader story={open} onStars={onStars} onBack={() => setOpen(null)} />;
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      {STORIES.filter((s) => s.level === level).map((s) => (
+        <button key={s.id} type="button" onClick={() => setOpen(s)} data-testid={`story-${s.id}`}
+          className="flex items-center gap-4 rounded-3xl bg-white p-5 text-left ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
+          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-amber-50 text-4xl" aria-hidden>{s.picture}</span>
+          <span><span className="block font-serif text-xl font-bold text-slate-900">{s.title}</span><span className="text-sm text-slate-500">{s.paragraphs.join(' ').split(/\s+/).length} words · 3 questions</span></span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------------------------------------ letter sounds
+
+function LetterSounds() {
+  const speaker = useSpeaker();
+  const [last, setLast] = useState<string | null>(null);
+  const groups: { id: 'letters' | 'pairs' | 'vowels'; title: string }[] = [
+    { id: 'letters', title: 'Letters' }, { id: 'pairs', title: 'Letters that work together' }, { id: 'vowels', title: 'Long sounds' },
+  ];
+  return (
+    <div className="space-y-6">
+      {!speaker.supported && <p className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">This browser has no voice to read aloud. Try Chrome, Edge or Safari.</p>}
+      {groups.map((g) => (
+        <section key={g.id} aria-label={g.title}>
+          <h3 className="mb-3 text-lg font-bold text-slate-900">{g.title}</h3>
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6 lg:grid-cols-9">
+            {SOUNDS.filter((s) => s.group === g.id).map((s) => (
+              <button key={s.id} type="button" onClick={() => { setLast(s.id); speaker.say([s.say]); }} aria-label={`${s.label}, as in ${s.word}`}
+                className={`flex aspect-square flex-col items-center justify-center rounded-2xl bg-white ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer ${last === s.id ? 'ring-2 ring-indigo-500' : ''}`}>
+                <span className="font-reader-clear text-3xl font-bold text-slate-900">{s.label}</span>
+                <span className="text-xl" aria-hidden>{s.picture}</span>
+                <span className="text-[11px] font-semibold text-slate-500">{s.word}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------------------------------------ word games
+
+function Feedback({ ok, onNext, word }: { ok: boolean; onNext: () => void; word: string }) {
+  return (
+    <div role="status" className={`flex flex-wrap items-center gap-3 rounded-2xl p-4 text-lg font-bold ${ok ? 'bg-emerald-50 text-emerald-900' : 'bg-rose-50 text-rose-900'}`}>
+      {ok ? <><Star className="h-6 w-6 fill-amber-400 text-amber-500" aria-hidden />Yes! That is “{word}”.</> : <><X className="h-6 w-6" aria-hidden />Not quite: it is “{word}”.</>}
+      <button type="button" onClick={onNext} data-testid="game-next" className={`${big} ml-auto bg-indigo-600 text-white hover:bg-indigo-500`}>Next</button>
+    </div>
+  );
+}
+
+function FindThePicture({ level, onStars }: { level: Level; onStars: (n: number) => void }) {
+  const speaker = useSpeaker();
+  const [round, setRound] = useState(0);
+  const [picked, setPicked] = useState<string | null>(null);
+  const r = useMemo(() => pictureRound(level, round), [level, round]);
+  useEffect(() => { setPicked(null); }, [level, round]);
+  const choose = (w: string) => { if (picked) return; setPicked(w); if (w === r.target.word) onStars(1); };
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="font-reader-clear text-4xl font-bold text-slate-900" data-testid="picture-word">{r.target.word}</p>
+        {speaker.supported && <button type="button" onClick={() => speaker.say([r.target.word], { rate: 0.75 })} aria-label={`Hear the word ${r.target.word}`} className="grid h-12 w-12 place-items-center rounded-full bg-amber-400 text-slate-950 hover:bg-amber-300 cursor-pointer"><Volume2 className="h-5 w-5" /></button>}
+      </div>
+      <p className="text-sm text-slate-600">Which picture shows this word?</p>
+      <div className="grid grid-cols-3 gap-3">
+        {r.choices.map((c) => (
+          <button key={c.word} type="button" onClick={() => choose(c.word)} aria-label={c.word} disabled={!!picked}
+            className={`grid aspect-square place-items-center rounded-3xl text-6xl transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer sm:text-7xl ${picked && c.word === r.target.word ? 'bg-emerald-100 ring-4 ring-emerald-500' : picked === c.word ? 'bg-rose-100 ring-4 ring-rose-400' : 'bg-white ring-1 ring-slate-200'}`}>{c.picture}</button>
+        ))}
+      </div>
+      {picked && <Feedback ok={picked === r.target.word} word={r.target.word} onNext={() => setRound((n) => n + 1)} />}
+    </div>
+  );
+}
+
+function BuildTheWord({ level, onStars }: { level: Level; onStars: (n: number) => void }) {
+  const [round, setRound] = useState(0);
+  const target = WORDS[level][(round * 5 + 3) % WORDS[level].length]!;
+  const tiles = useMemo(() => scramble(target.word, round * 31 + level), [target.word, round, level]);
+  const [used, setUsed] = useState<number[]>([]);
+  useEffect(() => { setUsed([]); }, [level, round]);
+  const built = used.map((i) => tiles[i]).join('');
+  const done = used.length === tiles.length;
+  const ok = done && built === target.word;
+  useEffect(() => { if (ok) onStars(1); }, [ok]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div className="space-y-5">
+      <p className="flex items-center gap-3 text-sm text-slate-600"><span className="text-6xl" aria-hidden>{target.picture}</span>Put the letters in order to spell the picture.</p>
+      <div className="flex min-h-16 flex-wrap gap-2 rounded-2xl bg-white p-3 ring-1 ring-slate-200" aria-label="Your word" data-testid="build-answer">
+        {used.map((i, k) => <span key={k} className="grid h-14 w-12 place-items-center rounded-xl bg-indigo-600 font-reader-clear text-3xl font-bold text-white">{tiles[i]}</span>)}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {tiles.map((t, i) => (
+          <button key={i} type="button" disabled={used.includes(i) || done} onClick={() => setUsed((u) => [...u, i])} aria-label={`Letter ${t}`} data-testid="build-tile"
+            className="grid h-14 w-12 place-items-center rounded-xl bg-amber-100 font-reader-clear text-3xl font-bold text-slate-900 ring-1 ring-amber-300 hover:bg-amber-200 disabled:opacity-25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">{t}</button>
+        ))}
+        <button type="button" onClick={() => setUsed((u) => u.slice(0, -1))} disabled={!used.length || done} aria-label="Take back the last letter" className="grid h-14 w-12 place-items-center rounded-xl bg-white ring-1 ring-slate-200 disabled:opacity-30 cursor-pointer"><Delete className="h-5 w-5" /></button>
+      </div>
+      {done && <Feedback ok={ok} word={target.word} onNext={() => setRound((n) => n + 1)} />}
+    </div>
+  );
+}
+
+function SpellIt({ level, onStars }: { level: Level; onStars: (n: number) => void }) {
+  const speaker = useSpeaker();
+  const [round, setRound] = useState(0);
+  const target = WORDS[level][(round * 7 + 1) % WORDS[level].length]!;
+  const [value, setValue] = useState('');
+  const [result, setResult] = useState<boolean | null>(null);
+  useEffect(() => { setValue(''); setResult(null); }, [level, round]);
+  const check = (e: React.FormEvent) => { e.preventDefault(); if (result !== null || !value.trim()) return; const ok = sameWord(value, target.word); setResult(ok); if (ok) onStars(1); };
+  return (
+    <form onSubmit={check} className="space-y-5">
+      <div className="flex flex-wrap items-center gap-4">
+        <span className="text-6xl" aria-hidden>{target.picture}</span>
+        {speaker.supported && <button type="button" onClick={() => speaker.say([target.word], { rate: 0.7 })} className={`${big} bg-amber-400 text-slate-950 hover:bg-amber-300`}><Volume2 className="h-5 w-5" aria-hidden />Hear the word</button>}
+      </div>
+      <label className="block">
+        <span className="text-sm text-slate-600">Type the word you hear and see.</span>
+        <input value={value} onChange={(e) => setValue(e.target.value)} disabled={result !== null} autoComplete="off" autoCapitalize="off" spellCheck={false} data-testid="spell-input"
+          className="mt-2 block w-full max-w-sm rounded-2xl border border-slate-300 bg-white px-4 py-3 font-reader-clear text-3xl font-bold tracking-wider text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30" />
+      </label>
+      {result === null ? <button type="submit" disabled={!value.trim()} className={`${big} bg-indigo-600 text-white hover:bg-indigo-500`}><Check className="h-5 w-5" aria-hidden />Check</button>
+        : <Feedback ok={result} word={target.word} onNext={() => setRound((n) => n + 1)} />}
+    </form>
+  );
+}
+
+function WordGames({ level, onStars }: { level: Level; onStars: (n: number) => void }) {
+  return (
+    <Tabs.Root defaultValue="picture" className="space-y-5">
+      <Tabs.List aria-label="Word games" className="flex flex-wrap gap-2">
+        <Tabs.Trigger value="picture" className={`${pill} inline-flex items-center gap-1.5`}><ImageIcon className="h-4 w-4" aria-hidden />Find the picture</Tabs.Trigger>
+        <Tabs.Trigger value="build" className={`${pill} inline-flex items-center gap-1.5`}><Puzzle className="h-4 w-4" aria-hidden />Build the word</Tabs.Trigger>
+        <Tabs.Trigger value="spell" className={`${pill} inline-flex items-center gap-1.5`}><PenLine className="h-4 w-4" aria-hidden />Spell it</Tabs.Trigger>
+      </Tabs.List>
+      <div className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-200 sm:p-6">
+        <Tabs.Content value="picture" className="focus-visible:outline-none"><FindThePicture level={level} onStars={onStars} /></Tabs.Content>
+        <Tabs.Content value="build" className="focus-visible:outline-none"><BuildTheWord level={level} onStars={onStars} /></Tabs.Content>
+        <Tabs.Content value="spell" className="focus-visible:outline-none"><SpellIt level={level} onStars={onStars} /></Tabs.Content>
+      </div>
+    </Tabs.Root>
+  );
+}
+
+// ------------------------------------------------------------------------------------------------ page
+
+/**
+ * Young readers (Reading Intelligence phase 2): stories read aloud with the words lit up and questions after them,
+ * letter sounds, and word games, in three reading levels. Free, no account needed; stars count for a family profile.
+ */
+export default function YoungReadersPage() {
+  useEffect(() => {
+    const title = document.title;
+    document.title = 'Young readers: stories, letter sounds and word games | BooksAtlas';
+    loadReaderFont('clear');
+    return () => { document.title = title; };
+  }, []);
+  const { stars, add, reader } = useStars();
+  const [level, setLevel] = useState<Level>(() => { try { return (Number(localStorage.getItem('bookatlas:young-level')) as Level) || 1; } catch { return 1; } });
+  const pickLevel = (v: string) => { if (!v) return; const l = Number(v) as Level; setLevel(l); try { localStorage.setItem('bookatlas:young-level', String(l)); } catch { /* this device */ } };
+  return (
+    <main className="min-h-[100dvh] bg-[#fffaf0]">
+      <header className="bg-[radial-gradient(ellipse_70%_120%_at_90%_0%,rgba(250,204,21,0.35),transparent),linear-gradient(to_bottom,#3730a3,#312e81)] px-4 pb-8 pt-6 text-white sm:px-6">
+        <div className="mx-auto max-w-5xl">
+          <Link href="/reading-intelligence" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-indigo-100 hover:text-white"><ArrowLeft className="h-4 w-4" aria-hidden />Reading Intelligence</Link>
+          <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h1 className="font-serif text-4xl font-bold sm:text-5xl">Young readers</h1>
+              <p className="mt-2 max-w-xl text-indigo-100">Stories that read themselves aloud, letter sounds and word games. Pick a level, then play.</p>
+            </div>
+            <div className="flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/20" aria-live="polite">
+              <Star className="h-7 w-7 fill-amber-300 text-amber-300" aria-hidden />
+              <span className="text-2xl font-extrabold tabular-nums" data-testid="young-stars">{stars}</span>
+              <span className="text-sm text-indigo-100">stars{reader.name ? ` for ${reader.name}` : ''}</span>
+            </div>
+          </div>
+          <ToggleGroup.Root type="single" value={String(level)} onValueChange={pickLevel} aria-label="Reading level" className="mt-6 flex flex-wrap gap-2">
+            {LEVELS.map((l) => (
+              <ToggleGroup.Item key={l.id} value={String(l.id)} className="rounded-2xl bg-white/10 px-4 py-2 text-left ring-1 ring-white/20 data-[state=on]:bg-white data-[state=on]:text-indigo-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 cursor-pointer">
+                <span className="block text-sm font-bold">Level {l.id}: {l.name}</span><span className="block text-xs opacity-80">Ages {l.ages}</span>
+              </ToggleGroup.Item>
+            ))}
+          </ToggleGroup.Root>
+        </div>
+      </header>
+
+      <Tabs.Root defaultValue="stories" className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+        <Tabs.List aria-label="Activities" className="mb-6 flex flex-wrap gap-2">
+          <Tabs.Trigger value="stories" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-stories"><BookOpen className="h-4 w-4" aria-hidden />Stories</Tabs.Trigger>
+          <Tabs.Trigger value="sounds" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-sounds"><TypeIcon className="h-4 w-4" aria-hidden />Letter sounds</Tabs.Trigger>
+          <Tabs.Trigger value="games" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-games"><Puzzle className="h-4 w-4" aria-hidden />Word games</Tabs.Trigger>
+        </Tabs.List>
+        <Tabs.Content value="stories" className="focus-visible:outline-none"><Stories level={level} onStars={add} /></Tabs.Content>
+        <Tabs.Content value="sounds" className="focus-visible:outline-none"><LetterSounds /></Tabs.Content>
+        <Tabs.Content value="games" className="focus-visible:outline-none"><WordGames level={level} onStars={add} /></Tabs.Content>
+        <p className="mt-10 text-sm text-slate-600">Grown-ups: add your children as readers under <Link href="/reading-intelligence#family" className="font-bold text-indigo-700 hover:underline">Family reading</Link> to follow their stars, reading time and quiz scores.</p>
+      </Tabs.Root>
+    </main>
+  );
+}
