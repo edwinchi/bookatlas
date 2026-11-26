@@ -13,6 +13,7 @@ import { tappedWord } from './youngVoice';
 import { ENGLISH, YOUNG_LANGS, YoungContext, loadYoung, startLang, useYoung, type YoungContent, type YoungLangId } from './youngLang';
 import { SelectBox } from '../ui/select-box';
 import { FirstWordsPanel } from './FirstWordsPanel';
+import { FocusGym } from './FocusGymPanel';
 import { LEVELS, STORIES, STORY_TOPICS, pictureRound, sameWord, scramble, storyStars, topicOf, type Level, type Story, type StoryTopic } from './youngReaders';
 
 /** The shapes, numbers and geometry symbols of a maths or science story, as small tiles. */
@@ -401,11 +402,13 @@ export default function YoungReadersPage() {
           <Tabs.Trigger value="stories" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-stories"><BookOpen className="h-4 w-4" aria-hidden />Stories</Tabs.Trigger>
           <Tabs.Trigger value="sounds" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-sounds"><TypeIcon className="h-4 w-4" aria-hidden />Letter sounds</Tabs.Trigger>
           <Tabs.Trigger value="games" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-games"><Puzzle className="h-4 w-4" aria-hidden />Word games</Tabs.Trigger>
+          <Tabs.Trigger value="focus" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-focus"><Star className="h-4 w-4" aria-hidden />Focus and calm</Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="first" className="focus-visible:outline-none"><FirstWordsPanel onStars={add} /></Tabs.Content>
         <Tabs.Content value="stories" className="focus-visible:outline-none"><Stories level={level} onStars={add} readerId={reader.id} startStory={startStory} /></Tabs.Content>
         <Tabs.Content value="sounds" className="focus-visible:outline-none"><LetterSounds /></Tabs.Content>
         <Tabs.Content value="games" className="focus-visible:outline-none"><WordGames level={level} onStars={add} /></Tabs.Content>
+        <Tabs.Content value="focus" className="focus-visible:outline-none"><FocusGym forKids /></Tabs.Content>
         <p className="mt-10 text-sm text-slate-600">Grown-ups: add your children as readers under <Link href="/reading-intelligence#family" className="font-bold text-indigo-700 hover:underline">Family reading</Link> to follow their stars, reading time and quiz scores.</p>
       </Tabs.Root>
     </main>

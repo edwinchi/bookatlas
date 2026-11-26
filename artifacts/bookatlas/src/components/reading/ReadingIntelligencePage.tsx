@@ -3,12 +3,13 @@ import { Link } from 'wouter';
 import * as Toggle from '@radix-ui/react-toggle';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { SelectBox } from '../ui/select-box';
-import { Accessibility, ArrowLeft, AudioLines, Baby, Bold, BookOpen, Brain, Flame, Focus, Gauge, GraduationCap, FileText, Star, Headphones, Languages, Library, Loader2, MessageSquareText, Rows3, School, Sparkles, Target, Timer, TrendingUp, Type, Users, Zap, Clock, CalendarDays, Activity, Layers, ChevronRight, MousePointerClick, Network } from 'lucide-react';
+import { Accessibility, ArrowLeft, AudioLines, Baby, Bold, BookOpen, Brain, Flame, Focus, Gauge, GraduationCap, FileText, Star, Headphones, Languages, Library, Loader2, MessageSquareText, Rows3, School, Sparkles, Target, Timer, TrendingUp, Type, Users, Zap, Clock, CalendarDays, Activity, Layers, ChevronRight, MousePointerClick, Network, Wind } from 'lucide-react';
 import { useAccount } from '../../auth/AuthContext';
 import { useEbookApi, type CheckpointSummary, type ReadingStats } from '../ebook/ebookApi';
 import { BANDS } from '../reader/checkpoints';
 import { ReadingHeatmap } from './ReadingHeatmap';
 import type { TryTool } from '../reader/tryTools';
+import { FocusGymSection } from './FocusGymPanel';
 import { LearningScoreCard } from './LearningScoreCard';
 import { VocabularyCard } from './VocabularyCard';
 import { FlashcardReview } from '../reader/FlashcardReview';
@@ -33,6 +34,7 @@ const SECTIONS = [
   { id: 'listen', label: 'Read and listen', icon: Headphones },
   { id: 'coach', label: 'AI coach', icon: Brain },
   { id: 'aids', label: 'Reading aids', icon: Accessibility },
+  { id: 'focus', label: 'Focus gym', icon: Wind },
   { id: 'own-text', label: 'Your own text', icon: FileText },
   { id: 'progress', label: 'My progress', icon: TrendingUp },
   { id: 'family', label: 'Family', icon: Users },
@@ -349,6 +351,12 @@ export default function ReadingIntelligencePage() {
             <Feature icon={Network} title="Knowledge maps" how={[[GraduationCap, 'Coach'], [null, 'Study'], [null, 'Map']]} tryIt="map">See a chapter’s ideas, people and events as a map of how they connect; tap one to jump to it in the book.</Feature>
           </div>
           <p className="mt-3 text-[11px] text-slate-500">Open the coach with the cap icon in the reader. Signed-in readers get a number of free AI requests every day.</p>
+        </Section>
+
+        <Section id="focus" icon={Wind} eyebrow="Focus gym" title="Train your attention, a few minutes a day"
+          intro="Attention grows with practice. Breathe to settle, then short games that train the focus reading needs: steady scanning, holding back the impulse to jump, and careful looking. Then read in a focus sprint. For teens and adults, and for children with pictures and a gentler pace.">
+          <FocusGymSection />
+          <p className="mt-3 flex flex-wrap items-center gap-1 text-[11px] font-semibold text-slate-700"><span className="mr-0.5 text-slate-500">Focus sprint:</span><span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5"><BookOpen className="h-3.5 w-3.5 text-indigo-600" aria-hidden />Open a book</span><ChevronRight className="h-3 w-3 text-slate-400" aria-hidden /><span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5"><Timer className="h-3.5 w-3.5 text-indigo-600" aria-hidden />Focus sprint</span></p>
         </Section>
 
         <Section id="aids" icon={Accessibility} eyebrow="Reading aids" title="Reading made easier for every reader"

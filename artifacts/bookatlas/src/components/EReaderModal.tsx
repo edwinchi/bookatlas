@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
-import { X, ChevronLeft, ChevronRight, Sliders, List, Bookmark, Highlighter, Volume2, VolumeX, Type, Maximize2, Minimize2, Check, ShoppingBag, Sparkles, Clock, Bot, MessageSquare, HelpCircle, BookOpen, Mic, MicOff, Headphones, Compass, Layers, Map, Play, Pause, Languages, Send, Sparkle, NotebookPen, StickyNote, GraduationCap, Users, Flame, MoreVertical, Zap, Share2, CloudOff, HardDriveDownload } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Sliders, List, Bookmark, Highlighter, Volume2, VolumeX, Type, Maximize2, Minimize2, Check, ShoppingBag, Sparkles, Clock, Bot, MessageSquare, HelpCircle, BookOpen, Mic, MicOff, Headphones, Compass, Layers, Map, Play, Pause, Languages, Send, Sparkle, NotebookPen, StickyNote, GraduationCap, Users, Flame, MoreVertical, Zap, Share2, CloudOff, HardDriveDownload, Timer } from 'lucide-react';
 import { StudioNarrationPanel } from './voice/StudioNarrationPanel';
 import { Book, Chapter, ReaderSettings, ReaderTheme, ReaderFont } from '../types';
 import { useAccount } from '../auth/AuthContext';
@@ -26,6 +26,7 @@ import { CheckpointDialog, CheckpointOffer, type CheckpointRequest } from './rea
 import { ShareBookDialog, ShareQuoteDialog } from './share/ShareDialog';
 import { formatBytes, offlineBook, removeOffline, saveOffline, type OfflineBook } from './reader/offlineBooks';
 import { TRY_HINT, TRY_TARGET, type TryTool } from './reader/tryTools';
+import { FocusSprintPicker, FocusSprintRing, useFocusSprint } from './reader/FocusSprint';
 import { narrationTimeline, wordAt, type TimedWord } from './reader/narrationSync';
 import { ReaderContents, GoToPopover } from './reader/ReaderNavigation';
 import { useDeviceVoice, type Translated } from './reader/useDeviceVoice';
@@ -1003,6 +1004,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   // Pages, preferences and chrome (owner request 2026-11-17: "look like the best eBook reader").
   const [layout, setLayoutState] = useState<ReaderLayout>(readLayout);
   const setLayout = (l: ReaderLayout) => { setLayoutState(l); saveLayout(l); };
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
   followWordsRef.current = layout.followWords;
   useEffect(() => { if (!layout.followWords) clearSpoken(); }, [layout.followWords]);
   useEffect(() => { loadReaderFont(settings.fontFamily); }, [settings.fontFamily]);
@@ -1043,6 +1046,9 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const lastMove = useRef(Date.now());
   const [checkpointOffer, setCheckpointOffer] = useState<Omit<CheckpointRequest, 'id'> | null>(null);
   const [checkpoint, setCheckpoint] = useState<CheckpointRequest | null>(null);
+  // Focus sprints (2026-11-26): a timed, distraction-free read that trains attention.
+  const [sprintPicker, setSprintPicker] = useState(false);
+  const focus = useFocusSprint((on) => setLayout({ ...layoutRef.current, zen: on }));
   // "Try it now" (2026-11-26): the tool the link asked for, opened once the book is ready, with a tip.
   const [tryHint, setTryHint] = useState('');
   const [settingsTab, setSettingsTab] = useState<'text' | 'aids'>('text');
@@ -1399,6 +1405,11 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             <Type className="w-4 h-4" />
           </button>
 
+          {/* Focus sprint (2026-11-26) */}
+          <button type="button" onClick={() => (focus.sprint ? focus.end(false) : setSprintPicker(true))} aria-label={focus.sprint ? 'Stop the focus sprint' : 'Focus sprint'} title="Focus sprint: a timed, distraction-free read" data-testid="reader-sprint"
+            className={`hidden min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer sm:grid ${focus.sprint ? 'text-indigo-600' : 'hover:bg-black/10'}`}>
+            <Timer className="w-4 h-4" />
+          </button>
           {/* Offline reading (phase 11) */}
           {book.hasReaderContent && (
             <button type="button" onClick={() => void toggleOffline()} aria-label={offlineSaved ? 'Remove the offline copy' : 'Save for offline reading'} title={offlineSaved ? 'Saved on this device: remove the offline copy' : 'Save for offline reading'} data-testid="reader-offline"
@@ -1431,6 +1442,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                   { label: 'Notebook', icon: NotebookPen, on: toggleNotebook, show: true },
                   { label: 'Fast Read and speed check', icon: Zap, on: () => setShowFastRead(true), show: true },
                   { label: 'Share this book', icon: Share2, on: () => setSharing(true), show: true },
+                  { label: focus.sprint ? 'Stop the focus sprint' : 'Focus sprint', icon: Timer, on: () => (focus.sprint ? focus.end(false) : setSprintPicker(true)), show: true },
                   { label: offlineSaved ? 'Remove the offline copy' : 'Save for offline reading', icon: offlineSaved ? CloudOff : HardDriveDownload, on: () => void toggleOffline(), show: !!book.hasReaderContent },
                 ].filter((i) => i.show).map((i) => (
                   <DropdownMenu.Item key={i.label} onSelect={i.on}
@@ -1756,6 +1768,14 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       )}
       {checkpointOffer && !checkpoint && (
         <CheckpointOffer reason={checkpointOffer.reason} onStart={() => startCheckpoint(checkpointOffer)} onDismiss={() => { setCheckpointOffer(null); resetTracker(); }} />
+      )}
+      <FocusSprintPicker open={sprintPicker} onOpenChange={setSprintPicker} suggested={focus.suggested} kid={focus.kid} onStart={focus.start} container={portal} />
+      {focus.sprint && <FocusSprintRing sprint={focus.sprint} left={focus.left} onStop={() => focus.end(false)} />}
+      {focus.note && (
+        <div role="status" data-testid="sprint-note" className="fixed inset-x-3 bottom-24 z-[95] mx-auto flex max-w-md items-start gap-2 rounded-2xl bg-emerald-700 px-4 py-3 text-sm text-white shadow-xl sm:bottom-6">
+          <Timer className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /><span className="flex-1">{focus.note}</span>
+          <button type="button" onClick={() => focus.setNote('')} aria-label="Close" className="rounded-full p-0.5 text-white/80 hover:text-white cursor-pointer"><X className="h-4 w-4" /></button>
+        </div>
       )}
       {tryHint && (
         <div role="status" data-testid="try-hint" className="fixed inset-x-3 bottom-24 z-[95] mx-auto flex max-w-md items-start gap-2 rounded-2xl bg-indigo-700 px-4 py-3 text-sm text-white shadow-xl sm:bottom-6">
