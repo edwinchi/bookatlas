@@ -2,8 +2,10 @@ import { activeReader, defaultsFor } from '../reading/family';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import React, { useEffect, useRef, useState } from 'react';
 import { recordQuizPercent } from './adaptiveCoach';
+import { FlashcardReview } from './FlashcardReview';
+import * as Collapsible from '@radix-ui/react-collapsible';
 import * as Tabs from '@radix-ui/react-tabs';
-import { BookOpenCheck, Brain, Check, GraduationCap, Languages, Loader2, MessageCircleQuestion, RotateCcw, Send, Sparkles, Volume2, X } from 'lucide-react';
+import { BookOpenCheck, Brain, Check, ChevronDown, GraduationCap, Languages, Loader2, MessageCircleQuestion, RotateCcw, Send, Sparkles, Volume2, X } from 'lucide-react';
 import type { Chapter } from '../../types';
 import type { AskResult, Definition, ExplainLevel, StudyKind, StudyResult, useEbookApi } from '../ebook/ebookApi';
 
@@ -11,7 +13,7 @@ import { SelectBox } from '../ui/select-box';
 type Api = ReturnType<typeof useEbookApi>;
 export type AssistantTab = 'ask' | 'study' | 'words';
 /** What the selection toolbar asked for; the Words tab runs it. */
-export type WordsRequest = { id: number; action: 'explain' | 'simplify' | 'translate' | 'define'; text: string; context: string };
+export type WordsRequest = { id: number; action: 'explain' | 'simplify' | 'translate' | 'define' | 'flashcards'; text: string; context: string };
 
 const LAST_LANG = 'bookatlas:reader-translate-to';
 const storedLang = () => { try { return localStorage.getItem(LAST_LANG) || 'nl'; } catch { return 'nl'; } };
@@ -66,6 +68,14 @@ export function ReaderAssistant(props: {
                   className="mb-3 flex min-h-11 w-full items-center gap-2 rounded-xl bg-indigo-50 px-3 text-left text-xs font-bold text-indigo-900 ring-1 ring-indigo-100 hover:bg-indigo-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
                   <Brain className="h-4 w-4 shrink-0 text-indigo-600" aria-hidden /><span className="flex-1">Check my understanding<span className="block font-normal text-indigo-800/80">Four quick questions on what you have read in this chapter.</span></span>
                 </button>
+              )}
+              {props.signedIn && !props.inPreview && (
+                <Collapsible.Root className="mb-3 rounded-xl ring-1 ring-slate-200">
+                  <Collapsible.Trigger data-testid="flashcards-review-toggle" className="group flex min-h-11 w-full items-center justify-between px-3 text-left text-xs font-bold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl cursor-pointer">
+                    Review my flashcards for this book<ChevronDown className="h-4 w-4 text-slate-500 transition-transform group-data-[state=open]:rotate-180 motion-reduce:transition-none" aria-hidden />
+                  </Collapsible.Trigger>
+                  <Collapsible.Content className="px-3 pb-3"><FlashcardReview api={api} bookId={bookId} compact /></Collapsible.Content>
+                </Collapsible.Root>
               )}
               <StudyTab {...{ api, bookId, chapters, chapterIndex, onRemaining: setRemaining, signedIn: props.signedIn }} />
             </Tabs.Content>
@@ -206,15 +216,21 @@ function StudyTab({ api, bookId, chapters, chapterIndex, onRemaining, signedIn }
         </div>
       )}
       {result?.concepts && <dl className="space-y-2 text-xs">{result.concepts.map((c) => <div key={c.term} className="rounded-xl bg-slate-50 p-2.5"><dt className="font-bold text-slate-900">{c.term}</dt><dd className="mt-0.5 text-slate-700">{c.explanation}</dd></div>)}</dl>}
-      {result?.cards && <Flashcards cards={result.cards} />}
+      {result?.cards && <Flashcards cards={result.cards} onSave={signedIn ? () => api.saveFlashcards({ bookId, chapterIndex: ci, cards: result.cards!.map((c) => ({ question: c.front, answer: c.back })) }) : undefined} />}
       {result?.questions && <Quiz questions={result.questions} onComplete={(score, total) => { recordQuizPercent(score, total); if (signedIn) void api.familyActivity({ profileId: activeReader().id, quiz: { score, total }, bookId }).catch(() => undefined); }} />}
       {result && <p className="text-[10px] text-slate-400">Made by AI from the chapter text; check anything important in the book.</p>}
     </div>
   );
 }
 
-function Flashcards({ cards }: { cards: { front: string; back: string }[] }) {
+function Flashcards({ cards, onSave }: { cards: { front: string; back: string }[]; onSave?: () => Promise<{ added: number; skipped: number }> }) {
   const [i, setI] = useState(0);
+  const [saved, setSaved] = useState<string | null>(null);
+  const save = async () => {
+    if (!onSave) return;
+    try { const r = await onSave(); setSaved(r.added ? `${r.added} card${r.added === 1 ? '' : 's'} added to your review deck.` : 'These cards are already in your review deck.'); }
+    catch (e) { setSaved(e instanceof Error ? e.message : 'The cards could not be saved.'); }
+  };
   const [flipped, setFlipped] = useState(false);
   const [known, setKnown] = useState<Set<number>>(new Set());
   const card = cards[i]!;
@@ -231,6 +247,9 @@ function Flashcards({ cards }: { cards: { front: string; back: string }[] }) {
         <button type="button" onClick={() => { setKnown((k) => new Set(k).add(i)); go(1); }} className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1 font-bold text-white hover:bg-emerald-500 cursor-pointer"><Check className="h-3 w-3" aria-hidden />I know it</button>
         <button type="button" onClick={() => go(1)} className="rounded-full px-3 py-1 font-semibold hover:bg-slate-100 cursor-pointer">Next</button>
       </div>
+      {onSave && (saved
+        ? <p className="text-[11px] font-semibold text-emerald-700" role="status">{saved}</p>
+        : <button type="button" onClick={() => void save()} data-testid="flashcards-save" className="min-h-10 w-full rounded-xl bg-indigo-600 px-3 text-xs font-bold text-white hover:bg-indigo-500 cursor-pointer">Save to my review deck</button>)}
     </div>
   );
 }
@@ -271,10 +290,18 @@ function WordsTab({ api, bookId, languages, request, onRemaining }: { api: Api; 
   const [target, setTarget] = useState(storedLang);
   // Explain levels (master build plan M7): for a child, a student, a professional or an expert.
   const [level, setLevel] = useState<ExplainLevel>(() => defaultsFor(activeReader().kind).explain);
-  const [out, setOut] = useState<{ kind: 'text'; title: string; text: string } | { kind: 'def'; def: Definition } | null>(null);
+  const [out, setOut] = useState<{ kind: 'text'; title: string; text: string } | { kind: 'def'; def: Definition } | { kind: 'cards'; cards: { question: string; answer: string }[]; added: number } | null>(null);
   const { busy, error, run } = useRun(onRemaining);
   const go = async (req: WordsRequest, lang = target, lvl: ExplainLevel = req.action === 'simplify' ? 'child' : level) => {
     setOut(null);
+    // Flashcards from the selection (master build plan M8): made by AI and kept in the review deck.
+    if (req.action === 'flashcards') {
+      const made = await run(() => api.flashcardsFromPassage({ bookId, text: req.text }));
+      if (!made) return;
+      const saved = await api.saveFlashcards({ bookId, chapterIndex: made.chapterIndex, cards: made.cards }).catch(() => null);
+      setOut({ kind: 'cards', cards: made.cards, added: saved ? saved.added : -1 });
+      return;
+    }
     if (req.action === 'define') { const d = await run(() => api.defineWord({ bookId, word: req.text, context: req.context })); if (d) setOut({ kind: 'def', def: d }); return; }
     if (req.action === 'translate') { const t = await run(() => api.translatePassage({ bookId, text: req.text, target: lang })); if (t) setOut({ kind: 'text', title: `In ${t.language}`, text: t.translation }); return; }
     setLevel(lvl);
@@ -324,6 +351,13 @@ function WordsTab({ api, bookId, languages, request, onRemaining }: { api: Api; 
           {out.def.example && <p className="italic text-slate-600">“{out.def.example}”</p>}
           {!!out.def.synonyms.length && <p><span className="font-bold">Synonyms:</span> {out.def.synonyms.join(', ')}</p>}
           {out.def.origin && <p className="text-[11px] text-slate-500">Origin: {out.def.origin}</p>}
+        </div>
+      )}
+      {out?.kind === 'cards' && (
+        <div className="space-y-2" data-testid="selection-flashcards">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-700">Flashcards</p>
+          <p className="text-xs text-slate-700">{out.added < 0 ? 'The cards could not be saved to your review deck (it may be full).' : out.added ? `${out.added} card${out.added === 1 ? '' : 's'} added to your review deck. Review them under Study.` : 'These cards are already in your review deck.'}</p>
+          <ul className="space-y-1.5">{out.cards.map((c) => <li key={c.question} className="rounded-xl bg-slate-50 p-2.5 text-xs"><span className="block font-bold text-slate-900">{c.question}</span><span className="mt-0.5 block text-slate-700">{c.answer}</span></li>)}</ul>
         </div>
       )}
       {out && <p className="text-[10px] text-slate-400">Made by AI; it can make mistakes.</p>}

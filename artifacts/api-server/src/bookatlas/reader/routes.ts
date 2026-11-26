@@ -14,6 +14,7 @@ import { DAILY_AI_LIMIT, LANGUAGES, askBook, defineWord, explainPassage, refundA
 import { digestEmailConfigured, getDigest, resendBatch, runDigest, setDigest, unsubscribeDigest } from './digest.js';
 import { recordYoungStory, youngTitle } from './youngStories.js';
 import { checkpointQuestions, checkpointsOf, recordCheckpoint } from './checkpoints.js';
+import { flashcardsFromPassage, gradeCard, myDeck, removeCard, saveCards } from './flashcards.js';
 import { answerQuiz, classDetail, classReport, createClass, joinClass, leaveClass, myClasses, publishQuiz, removeQuiz, setClassBooks } from './classes.js';
 import { FamilyError, addActivity, familyView, readFamily, weekStart, withProfiles, type Family } from './family.js';
 
@@ -145,6 +146,11 @@ export function mountReader(app: Express, catalog: CatalogStore, generate?: Gene
   // Comprehension checkpoints (master build plan M4): results kept in the reader's settings.
   app.get('/api/reader/checkpoints', guarded(async (req, res) => { res.json(await checkpointsOf(signedIn(req).id)); }));
   app.post('/api/reader/checkpoints', json, guarded(async (req, res) => { res.json(await recordCheckpoint(signedIn(req).id, body(req))); }));
+  // Flashcards with spaced repetition (master build plan M8): the reader's review deck.
+  app.get('/api/reader/flashcards', guarded(async (req, res) => { const b = typeof req.query.bookId === 'string' ? req.query.bookId : undefined; res.json(await myDeck(signedIn(req).id, b)); }));
+  app.post('/api/reader/flashcards', json, guarded(async (req, res) => { res.json(await saveCards(signedIn(req).id, body(req))); }));
+  app.post('/api/reader/flashcards/:id/review', json, guarded(async (req, res) => { res.json(await gradeCard(signedIn(req).id, String(req.params.id), body(req))); }));
+  app.delete('/api/reader/flashcards/:id', guarded(async (req, res) => { res.json(await removeCard(signedIn(req).id, String(req.params.id))); }));
   // Schools and teams (Reading Intelligence phase 3, 2026-11-25): classes with an invite code and a reading list.
   const classId = (req: Request) => String(req.params.id);
   app.get('/api/reader/classes', guarded(async (req, res) => { res.json({ classes: await myClasses(signedIn(req), titleOf) }); }));
@@ -247,4 +253,5 @@ export function mountReader(app: Express, catalog: CatalogStore, generate?: Gene
   app.post('/api/reader/ai/translate', json, ai(translatePassage));
   app.post('/api/reader/ai/define', json, ai(defineWord));
   app.post('/api/reader/ai/checkpoint', json, ai(checkpointQuestions));
+  app.post('/api/reader/ai/flashcards', json, ai(flashcardsFromPassage));
 }

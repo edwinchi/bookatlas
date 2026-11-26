@@ -3,11 +3,12 @@ import { Link } from 'wouter';
 import * as Toggle from '@radix-ui/react-toggle';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { SelectBox } from '../ui/select-box';
-import { Accessibility, ArrowLeft, AudioLines, Baby, Bold, BookOpen, Brain, Flame, Focus, Gauge, GraduationCap, FileText, Star, Headphones, Languages, Library, Loader2, MessageSquareText, Rows3, School, Sparkles, Target, Timer, TrendingUp, Type, Users, Zap, Clock, CalendarDays, Activity } from 'lucide-react';
+import { Accessibility, ArrowLeft, AudioLines, Baby, Bold, BookOpen, Brain, Flame, Focus, Gauge, GraduationCap, FileText, Star, Headphones, Languages, Library, Loader2, MessageSquareText, Rows3, School, Sparkles, Target, Timer, TrendingUp, Type, Users, Zap, Clock, CalendarDays, Activity, Layers } from 'lucide-react';
 import { useAccount } from '../../auth/AuthContext';
 import { useEbookApi, type CheckpointSummary, type ReadingStats } from '../ebook/ebookApi';
 import { BANDS } from '../reader/checkpoints';
 import { ReadingHeatmap } from './ReadingHeatmap';
+import { FlashcardReview } from '../reader/FlashcardReview';
 import { WEEKDAY_NAMES, aggregateHeatmapData, consistencyLabel, consistencyScore, dailyActivity, hourLabel, peakDay, peakHour } from './heatmap';
 import { FastReadPlayer, SpeedCheck, useSpeedTests } from '../reader/FastReadPanel';
 import { ReaderAchievements } from '../reader/ReaderAchievements';
@@ -213,6 +214,10 @@ function Progress({ speed, fam }: { speed: ReturnType<typeof useSpeedTests>; fam
               </div>
               <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200"><p className="mb-3 text-sm font-bold text-slate-900">Daily goal and achievements</p><ReaderAchievements api={api} /></div>
               <CheckpointsCard />
+              <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200" data-testid="flashcards-card">
+                <p className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-900"><Layers className="h-4 w-4 text-indigo-600" aria-hidden />Flashcard review</p>
+                <FlashcardReview api={api} />
+              </div>
               <GoalsPanel stats={stats} />
             </>
           )}
@@ -330,6 +335,7 @@ export default function ReadingIntelligencePage() {
             <Feature icon={Type} title="Clear letters">A font whose letters are shaped to be told apart easily, for low vision.</Feature>
             <Feature icon={Bold} title="Bold word starts">The first letters of each word in bold, so the eye finds words faster.</Feature>
             <Feature icon={Focus} title="Focus modes and zen">Line, paragraph or spotlight focus keeps attention on what you are reading; zen hides everything but the text.</Feature>
+            <Feature icon={Layers} title="Flashcards that come back">Save flashcards from a chapter or a passage; grade each one Again, Hard, Good or Easy and it returns after 1, 3, 7 or 14 days.</Feature>
             <Feature icon={Brain} title="Comprehension checkpoints">Four quick questions at the end of a chapter, every 1,000 words or every 10 minutes, scored from excellent to needs improvement; the score tunes your speed coach.</Feature>
             <Feature icon={Rows3} title="Reading guide">A clear band follows your finger or mouse and shades the lines above and below.</Feature>
             <Feature icon={Accessibility} title="Large text and strong contrast">Text up to 34 pixels, night and black themes, your own colours and brightness.</Feature>

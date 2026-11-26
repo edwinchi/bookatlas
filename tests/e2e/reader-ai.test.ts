@@ -163,3 +163,30 @@ test('comprehension checkpoints (master build plan M4): four question types from
   assert.ok(mine.totalCheckpoints >= 1);
   assert.equal(mine.recent[0].bookId, bookId);
 });
+
+test('flashcards (master build plan M8): from a selection to the review deck, graded with spaced repetition', async () => {
+  const { fetch } = await getSharedTestServer();
+  const bookId = await publishBook(fetch);
+  resetQuota();
+  reply = () => JSON.stringify({ cards: [{ question: 'What is numbered?', answer: 'The paragraphs.' }, { question: '', answer: 'dropped' }, { question: 'Which chapter?', answer: 'The opening one.' }] });
+  assert.equal((await fetch('/api/reader/ai/flashcards', post('', { bookId, text: 'Some invented text that is not in this book anywhere.' }))).status, 400);
+  const made = await (await fetch('/api/reader/ai/flashcards', post('', { bookId, text: 'Paragraph 3 of the opening chapter.' }))).json();
+  assert.equal(made.cards.length, 2);
+  assert.match(calls.at(-1)!.systemInstruction!, /avoid trivial facts/);
+
+  const headers = { 'x-test-role': 'reader' };
+  const before = (await (await fetch(`/api/reader/flashcards?bookId=${bookId}`, { headers })).json()).total as number;
+  const saved = await (await fetch('/api/reader/flashcards', post('', { bookId, chapterIndex: made.chapterIndex, cards: made.cards }))).json();
+  assert.equal(saved.added, 2);
+  assert.equal((await (await fetch('/api/reader/flashcards', post('', { bookId, cards: made.cards }))).json()).skipped, 2, 'no duplicates');
+  const deck = await (await fetch(`/api/reader/flashcards?bookId=${bookId}`, { headers })).json();
+  assert.equal(deck.total, before + 2);
+  assert.ok(deck.dueCount >= 2);
+  const card = deck.due.find((c: { question: string }) => c.question === 'What is numbered?');
+  const graded = await (await fetch(`/api/reader/flashcards/${card.id}/review`, post('', { score: 3 }))).json();
+  assert.equal(graded.nextInDays, 7);
+  assert.equal(graded.card.reviews, 1);
+  assert.equal((await fetch(`/api/reader/flashcards/${card.id}/review`, post('', { score: 3 }, 'unauthenticated'))).status, 401);
+  assert.equal((await fetch(`/api/reader/flashcards/${card.id}`, { method: 'DELETE', headers })).status, 200);
+  assert.equal((await (await fetch(`/api/reader/flashcards?bookId=${bookId}`, { headers })).json()).total, before + 1);
+});

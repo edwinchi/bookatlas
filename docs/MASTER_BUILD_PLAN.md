@@ -37,7 +37,7 @@ free and BooksAtlas earns its 19% commission on sales.
 | M5 | AN-001/002 Unified analytics and heatmaps: day × hour heatmap, peak hour and day, consistency score, best/average/current WPM | ✅ done: a reading heatmap with two views (day of the week × hour, and the last 12 weeks day by day) on the reader's own clock, five shades of one colour, every cell a button (tooltip on hover or focus, Enter opens the details: minutes, words, sessions, words a minute) and a table for screen readers; peak hour, peak day, a consistency score (70 for days read in the last four weeks, 30 for how even the weeks are) and current, average and best words a minute | `api-server/.../reader/service.ts` (`activity`, `readingSpeeds`), `reading/heatmap.ts`, `reading/ReadingHeatmap.tsx`, `ReadingIntelligencePage.tsx` |
 | M6 | AI-001 Summary engine (1-minute, 5-minute, full) | ✅ done | `reader/ai.ts` `studyChapter` |
 | M7 | AI-002 Explain engine: child, student, professional, **expert** | ✅ done: four levels with distinct depth (a child; a student; a professional from outside the field: plain, practical, terms defined; an expert: method, assumptions, sources, debates, field terms), the sentences around the selection sent as context only (and only when they are from the book), the same passage and level answered from a cache (no second AI call) | `reader/ai.ts` (`EXPLAIN_LEVELS`, `explainPrompt`, `explainPassage`), `ReaderAssistant.tsx` |
-| M8 | AI-004 Flashcards with spaced repetition (Again 1 day, Hard 3, Good 7, Easy 14) | ◐ flashcards exist; review scheduling to add | `ReaderAssistant.tsx` |
+| M8 | AI-004 Flashcards with spaced repetition (Again 1 day, Hard 3, Good 7, Easy 14) | ✅ done: a review deck per reader (in the reader's settings, at most 500 cards, no duplicates per book); cards saved from a chapter's flashcards or made by AI from a selection ("Flashcard" on the selection bar: 2 to 4 cards, no trivia); review shows the question, Reveal answer (Space), then Again, Hard, Good or Easy (keys 1 to 4) with the next review in 1, 3, 7 or 14 days, Again comes back in the same session; retention and next review date; in the reader (this book) and on My progress (all books) | `api-server/.../reader/flashcards.ts`, `reader/FlashcardReview.tsx`, `ReaderAssistant.tsx`, `EReaderModal.tsx` |
 | M9 | AI-003 Book chat with citations and follow-up questions | ✅ done (BM25 retrieval) | `reader/ai.ts` `askBook` |
 | M10 | AI-005 Knowledge maps (concept graph per chapter) | ☐ | — |
 | M11 | Audiobooks: read, listen, read + listen, word highlighting, chapter sync | ✅ done | narration, `narrationSync.ts` |
@@ -56,6 +56,8 @@ free and BooksAtlas earns its 19% commission on sales.
   "rea" at 40%, which needs rounding up; rounding up is used, so its tests pass.
 - **Checkpoint storage.** The specification's `ComprehensionCheckpoint` table is kept as a list in the reader's
   settings (the last 200 results), so no migration is needed; it can move to its own table when analytics need it.
+- **Flashcard storage.** The specification's `Flashcard` and `FlashcardReview` tables are kept as one deck in the
+  reader's settings (each card holds its last grade, review count, lapses and due date), so no migration is needed.
 - **Rates.** A rewind rate is rewinds per 100 words read and a pause rate is pauses per 100 words read (both capped
   at 1); the completion rate is the share of sessions read to the end. Comprehension is the average of the
   reader's last five quiz scores, or unknown.

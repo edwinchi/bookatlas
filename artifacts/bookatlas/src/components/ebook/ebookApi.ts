@@ -266,6 +266,12 @@ export function useEbookApi() {
     saveCheckpoint: (body: { bookId: string; chapterIndex: number; right: number; total: number; reason: CheckpointReason }) =>
       json<{ band: CheckpointBand; summary: CheckpointSummary }>('/api/reader/checkpoints', 'POST', body),
     checkpoints: () => json<CheckpointSummary>('/api/reader/checkpoints'),
+    // Flashcards with spaced repetition (master build plan M8).
+    flashcardDeck: (bookId?: string) => json<FlashcardDeck>(`/api/reader/flashcards${bookId ? `?bookId=${encodeURIComponent(bookId)}` : ''}`),
+    saveFlashcards: (body: { bookId: string; chapterIndex?: number | null; cards: { question: string; answer: string }[] }) => json<{ added: number; skipped: number; total: number }>('/api/reader/flashcards', 'POST', body),
+    reviewFlashcard: (id: string, score: 1 | 2 | 3 | 4) => json<{ card: Flashcard; nextInDays: number }>(`/api/reader/flashcards/${encodeURIComponent(id)}/review`, 'POST', { score }),
+    removeFlashcard: (id: string) => json<{ removed: boolean; total: number }>(`/api/reader/flashcards/${encodeURIComponent(id)}`, 'DELETE'),
+    flashcardsFromPassage: (body: { bookId: string; text: string }) => json<{ chapterIndex: number; cards: { question: string; answer: string }[]; remaining: number }>('/api/reader/ai/flashcards', 'POST', body),
     savePayout: (body: PayoutInput) => json<PayoutView>('/api/author/payout', 'PUT', body),
     // Follow authors (cycle 5c).
     followState: (slug: string) => json<{ following: boolean }>(`/api/follows/${slug}/mine`),
@@ -380,3 +386,10 @@ export interface CheckpointSummary {
   totalCheckpoints: number; averageScore: number | null; band: CheckpointBand | null; lastFive: number | null; trend: 'up' | 'down' | 'steady' | null;
   recent: { bookId: string; chapterIndex: number; score: number; right: number; total: number; reason: CheckpointReason; at: string }[];
 }
+
+/** A card in the reader's review deck (master build plan M8). */
+export interface Flashcard {
+  id: string; bookId: string; chapterIndex: number | null; question: string; answer: string;
+  difficulty: number; reviews: number; lapses: number; createdAt: string; due: string; lastReviewedAt: string | null;
+}
+export interface FlashcardDeck { total: number; dueCount: number; newCount: number; retention: number | null; nextDue: string | null; due: Flashcard[]; cards: Flashcard[] }

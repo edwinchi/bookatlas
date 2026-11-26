@@ -1598,6 +1598,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runSelection('explain')} className="rounded-full px-2.5 py-1.5 hover:bg-white/15 cursor-pointer">Explain</button>
           <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runSelection('simplify')} className="rounded-full px-2.5 py-1.5 hover:bg-white/15 cursor-pointer">Simplify</button>
           <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runSelection('translate')} className="rounded-full px-2.5 py-1.5 hover:bg-white/15 cursor-pointer">Translate</button>
+          {selectionBar.text.split(' ').length >= 6 && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runSelection('flashcards')} data-testid="selection-flashcard" className="rounded-full px-2.5 py-1.5 hover:bg-white/15 cursor-pointer">Flashcard</button>}
           <button type="button" onClick={() => setSelectionBar(null)} aria-label="Close" className="rounded-full px-1.5 py-1.5 text-white/60 hover:bg-white/15 cursor-pointer"><X className="h-3 w-3" /></button>
         </div>
       )}
