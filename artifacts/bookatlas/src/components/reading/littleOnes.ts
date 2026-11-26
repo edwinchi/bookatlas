@@ -279,3 +279,58 @@ export function toggleDone(p: LittleProgress, activityId: string, now = new Date
   if (!next.length) delete done[key];
   return { ...p, done };
 }
+
+// ------------------------------------------------------------------------------------------- other languages
+
+/** The page's own words (buttons, headings, notes); `{n}` and `{name}` are filled in. */
+export const LITTLE_UI = {
+  intro: 'A reading program for babies and toddlers, from birth to 3 years. A few minutes a day with your voice, rhymes, pictures and, later, short stories. Free, no account needed.',
+  birthOf: '{name}’s birth month', birthYours: 'Your child’s birth month', month: 'Month', year: 'Year',
+  orPick: 'Or pick a stage below.', overThree: 'Over 3 years: Young readers is the next step.', openYoung: 'Open Young readers',
+  monthsOld: '{n} months old', monthOld: '1 month old', now: 'now', stageLabel: 'Stage',
+  today: 'Today:', inAll: 'about {n} minutes in all', weekLabel: 'Days with reading this week',
+  noScreen: 'no screen', min: 'min', showCards: 'Show the cards', openRhyme: 'Open the rhyme', open: 'Open', doneToday: 'Done today', weDid: 'We did this',
+  tips: 'Tips for this stage', notice: 'Things you may notice',
+  noticeNote: 'Every child grows at their own pace; this is not a checklist. If you have questions about your child’s development, ask your doctor, nurse or health visitor.',
+  screens: 'About screens',
+  screensText: 'For babies and toddlers, the best “screen” is your face. Use the cards and pictures here together, for a minute or two at a time, and talk about them. Most of each day’s plan works with no screen at all: rhymes, talking and real books.',
+  holdHint: 'Hold 20 to 30 cm from your baby. Talk about the shape. Stop when your baby looks away.', cardOf: '{n} of {total}', nextCard: 'Next card', previousCard: 'Previous card', close: 'Close',
+  lullaby: 'Lullaby', rhymeActions: 'Rhyme with actions', sayIt: 'Say or sing it yourself: your voice is what your child loves most. The actions are for you.',
+  hearOnce: 'Hear it once', stop: 'Stop', language: 'Language',
+};
+export type LittleUi = typeof LITTLE_UI;
+
+export interface LittleTranslation {
+  ui: LittleUi;
+  patterns: Record<ContrastPattern, string>;
+  stages: Record<StageId, { name: string; ages: string; headline: string; why: string; minutes: string; tips: string[]; notice: string[]; activities: Record<string, { title: string; how: string }> }>;
+  rhymes: Record<string, { title: string; lines: { text: string; action?: string }[] }>;
+}
+
+export interface LittleContent { ui: LittleUi; patterns: Record<ContrastPattern, string>; stages: Stage[]; rhymes: Rhyme[] }
+export const LITTLE_EN: LittleContent = { ui: LITTLE_UI, patterns: PATTERN_NAMES, stages: STAGES, rhymes: RHYMES };
+
+/** The English program with a translation's words put in; ids, kinds, minutes and links stay the same. */
+export function buildLittle(t: LittleTranslation): LittleContent {
+  return {
+    ui: t.ui, patterns: t.patterns,
+    stages: STAGES.map((s) => {
+      const x = t.stages[s.id];
+      return { ...s, name: x.name, ages: x.ages, headline: x.headline, why: x.why, minutes: x.minutes, tips: x.tips, notice: x.notice,
+        activities: s.activities.map((a) => ({ ...a, title: x.activities[a.id]?.title ?? a.title, how: x.activities[a.id]?.how ?? a.how })) };
+    }),
+    rhymes: RHYMES.map((r) => ({ ...r, title: t.rhymes[r.id]?.title ?? r.title, lines: t.rhymes[r.id]?.lines ?? r.lines })),
+  };
+}
+
+/** Fills `{n}`, `{total}` and `{name}` in a page string. */
+export const fill = (s: string, v: Record<string, string | number>) => s.replace(/\{(\w+)\}/g, (_, k: string) => String(v[k] ?? ''));
+
+const littleLoaders: Record<'fr' | 'es' | 'pt' | 'nl', () => Promise<{ default: LittleTranslation }>> = {
+  fr: () => import('./young/little/fr'), es: () => import('./young/little/es'), pt: () => import('./young/little/pt'), nl: () => import('./young/little/nl'),
+};
+/** The program in a language (English when there is no translation). */
+export async function loadLittle(lang: string): Promise<LittleContent> {
+  const load = littleLoaders[lang as keyof typeof littleLoaders];
+  return load ? buildLittle((await load()).default) : LITTLE_EN;
+}

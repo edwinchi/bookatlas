@@ -57,3 +57,33 @@ test('little ones: age from a birth month, and progress kept safely', () => {
   assert.equal(clean.stage, 'babbling');
   assert.deepEqual(readLittle('rubbish'), emptyLittle());
 });
+
+test('little ones in French, Spanish, Portuguese and Dutch: every stage, activity, rhyme and page word', async () => {
+  const { LITTLE_UI, loadLittle, fill } = await import('./littleOnes');
+  for (const lang of ['fr', 'es', 'pt', 'nl']) {
+    const c = await loadLittle(lang);
+    for (const [k, v] of Object.entries(LITTLE_UI)) {
+      const t = c.ui[k as keyof typeof LITTLE_UI];
+      assert.ok(t && t.trim(), `${lang}: ui.${k}`);
+      for (const ph of v.match(/\{\w+\}/g) ?? []) assert.ok(t.includes(ph), `${lang}: ui.${k} keeps ${ph}`);
+    }
+    assert.notEqual(c.ui.intro, LITTLE_UI.intro, `${lang}: translated`);
+    for (const [i, s] of c.stages.entries()) {
+      const en = STAGES[i]!;
+      assert.equal(s.id, en.id);
+      assert.notEqual(s.name, en.name, `${lang}: ${s.id} name`);
+      assert.ok(s.tips.length >= 3 && s.notice.length >= 3, `${lang}: ${s.id} tips and notice`);
+      for (const [j, a] of s.activities.entries()) {
+        assert.equal(a.id, en.activities[j]!.id);
+        assert.notEqual(a.how, en.activities[j]!.how, `${lang}: ${a.id} translated`);
+      }
+    }
+    for (const [i, r] of c.rhymes.entries()) {
+      assert.equal(r.id, RHYMES[i]!.id);
+      assert.notEqual(r.title, RHYMES[i]!.title, `${lang}: ${r.id} title`);
+      assert.ok(r.lines.length >= 4 && r.lines.every((l) => l.text.trim() && !/'/.test(l.text)), `${lang}: ${r.id} lines`);
+    }
+  }
+  assert.equal(fill('{n} of {total}', { n: 2, total: 12 }), '2 of 12');
+  assert.equal((await loadLittle('de')).ui.intro, LITTLE_UI.intro, 'no translation: English');
+});

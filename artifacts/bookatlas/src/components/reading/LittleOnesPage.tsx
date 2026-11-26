@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
@@ -7,9 +7,14 @@ import { SelectBox } from '../ui/select-box';
 import { useActiveReader } from './family';
 import { useSpeaker } from './useSpeaker';
 import {
-  CONTRAST_PATTERNS, PATTERN_NAMES, RHYMES, STAGES, activityLink, activityMinutes, emptyLittle, lastWeek, monthsOld, readLittle, stageFor, toggleDone,
-  type Activity, type ContrastPattern, type LittleProgress, type Rhyme, type StageId,
+  CONTRAST_PATTERNS, LITTLE_EN, activityLink, activityMinutes, emptyLittle, fill, lastWeek, loadLittle, monthsOld, readLittle, toggleDone,
+  type Activity, type ContrastPattern, type LittleContent, type LittleProgress, type Rhyme, type StageId,
 } from './littleOnes';
+import { ENGLISH, YOUNG_LANGS, YoungContext, loadYoung, startLang, type YoungContent, type YoungLangId } from './youngLang';
+
+/** The program in the chosen language (owner request 2026-11-26). */
+const LittleContext = createContext<LittleContent>(LITTLE_EN);
+const useLittleContent = () => useContext(LittleContext);
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -28,6 +33,7 @@ function useLittle() {
 
 /** A high-contrast card drawn as SVG: black and white, with red from about 3 months. It never moves or flashes. */
 export function ContrastCard({ pattern, colour, className = '' }: { pattern: ContrastPattern; colour: boolean; className?: string }) {
+  const names = useLittleContent().patterns;
   const k = '#0a0a0a', w = '#ffffff', r = colour ? '#dc2626' : '#0a0a0a';
   const shape = (() => {
     switch (pattern) {
@@ -45,10 +51,11 @@ export function ContrastCard({ pattern, colour, className = '' }: { pattern: Con
       case 'grid': return <>{[20, 40, 60, 80].map((x) => <rect key={`v${x}`} x={x - 3} y="6" width="6" height="88" fill={k} />)}{[20, 40, 60, 80].map((y) => <rect key={`h${y}`} x="6" y={y - 3} width="88" height="6" fill={y === 40 ? r : k} />)}</>;
     }
   })();
-  return <svg viewBox="0 0 100 100" className={className} role="img" aria-label={PATTERN_NAMES[pattern]}><rect width="100" height="100" fill={w} />{shape}</svg>;
+  return <svg viewBox="0 0 100 100" className={className} role="img" aria-label={names[pattern]}><rect width="100" height="100" fill={w} />{shape}</svg>;
 }
 
 function ContrastViewer({ colour, onClose }: { colour: boolean; onClose: () => void }) {
+  const { ui, patterns } = useLittleContent();
   const [i, setI] = useState(0);
   const pattern = CONTRAST_PATTERNS[i]!;
   const go = (d: number) => setI((x) => (x + d + CONTRAST_PATTERNS.length) % CONTRAST_PATTERNS.length);
@@ -59,17 +66,17 @@ function ContrastViewer({ colour, onClose }: { colour: boolean; onClose: () => v
         <Dialog.Content className="fixed inset-0 z-[81] flex flex-col bg-white outline-none" data-testid="contrast-viewer"
           onKeyDown={(e) => { if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(1); } else if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); } }}>
           <div className="flex items-center justify-between px-4 py-3">
-            <Dialog.Title className="text-sm font-bold text-slate-900">{PATTERN_NAMES[pattern]} · {i + 1} of {CONTRAST_PATTERNS.length}</Dialog.Title>
-            <Dialog.Close className="grid h-11 w-11 place-items-center rounded-full text-slate-700 hover:bg-slate-100 cursor-pointer" aria-label="Close"><X className="h-5 w-5" /></Dialog.Close>
+            <Dialog.Title className="text-sm font-bold text-slate-900">{patterns[pattern]} · {fill(ui.cardOf, { n: i + 1, total: CONTRAST_PATTERNS.length })}</Dialog.Title>
+            <Dialog.Close className="grid h-11 w-11 place-items-center rounded-full text-slate-700 hover:bg-slate-100 cursor-pointer" aria-label={ui.close}><X className="h-5 w-5" /></Dialog.Close>
           </div>
-          <Dialog.Description className="sr-only">Show one card at a time, 20 to 30 centimetres from your baby. Tap the card for the next one.</Dialog.Description>
-          <button type="button" onClick={() => go(1)} className="flex flex-1 items-center justify-center p-4 cursor-pointer" aria-label="Next card" data-testid="contrast-card">
+          <Dialog.Description className="sr-only">{ui.holdHint}</Dialog.Description>
+          <button type="button" onClick={() => go(1)} className="flex flex-1 items-center justify-center p-4 cursor-pointer" aria-label={ui.nextCard} data-testid="contrast-card">
             <ContrastCard pattern={pattern} colour={colour} className="h-full max-h-[70dvh] w-full max-w-[70dvh]" />
           </button>
           <div className="flex items-center justify-between gap-3 px-4 pb-6 text-sm text-slate-600">
-            <button type="button" onClick={() => go(-1)} className="grid h-12 w-12 place-items-center rounded-full ring-1 ring-slate-200 cursor-pointer" aria-label="Previous card"><ArrowLeft className="h-5 w-5" /></button>
-            <p className="text-center text-xs">Hold 20 to 30 cm from your baby. Talk about the shape. Stop when your baby looks away.</p>
-            <button type="button" onClick={() => go(1)} className="grid h-12 w-12 place-items-center rounded-full ring-1 ring-slate-200 cursor-pointer" aria-label="Next card"><ArrowRight className="h-5 w-5" /></button>
+            <button type="button" onClick={() => go(-1)} className="grid h-12 w-12 place-items-center rounded-full ring-1 ring-slate-200 cursor-pointer" aria-label={ui.previousCard}><ArrowLeft className="h-5 w-5" /></button>
+            <p className="text-center text-xs">{ui.holdHint}</p>
+            <button type="button" onClick={() => go(1)} className="grid h-12 w-12 place-items-center rounded-full ring-1 ring-slate-200 cursor-pointer" aria-label={ui.nextCard}><ArrowRight className="h-5 w-5" /></button>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
@@ -80,6 +87,7 @@ function ContrastViewer({ colour, onClose }: { colour: boolean; onClose: () => v
 // ------------------------------------------------------------------------------------------- rhymes
 
 function RhymePlayer({ rhyme, onClose }: { rhyme: Rhyme; onClose: () => void }) {
+  const { ui } = useLittleContent();
   const speaker = useSpeaker();
   const [at, setAt] = useState<number | null>(null);
   const play = () => {
@@ -94,12 +102,12 @@ function RhymePlayer({ rhyme, onClose }: { rhyme: Rhyme; onClose: () => void }) 
         <Dialog.Content className="fixed inset-x-0 bottom-0 z-[81] mx-auto max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-[#fffaf0] p-6 shadow-2xl outline-none sm:inset-y-0 sm:my-auto sm:h-fit sm:rounded-3xl" data-testid="rhyme-player">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-rose-600">{rhyme.kind === 'lullaby' ? 'Lullaby' : 'Rhyme with actions'}</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-rose-600">{rhyme.kind === 'lullaby' ? ui.lullaby : ui.rhymeActions}</p>
               <Dialog.Title className="font-serif text-2xl font-bold text-slate-900">{rhyme.title}</Dialog.Title>
             </div>
-            <Dialog.Close className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-600 hover:bg-white cursor-pointer" aria-label="Close"><X className="h-5 w-5" /></Dialog.Close>
+            <Dialog.Close className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-600 hover:bg-white cursor-pointer" aria-label={ui.close}><X className="h-5 w-5" /></Dialog.Close>
           </div>
-          <Dialog.Description className="mt-1 text-sm text-slate-600">Say or sing it yourself: your voice is what your child loves most. The actions are for you.</Dialog.Description>
+          <Dialog.Description className="mt-1 text-sm text-slate-600">{ui.sayIt}</Dialog.Description>
           <ol className="mt-5 space-y-3">
             {rhyme.lines.map((l, i) => (
               <li key={i} className={`rounded-2xl px-3 py-2 transition-colors motion-reduce:transition-none ${at === i ? 'bg-amber-100' : ''}`}>
@@ -110,7 +118,7 @@ function RhymePlayer({ rhyme, onClose }: { rhyme: Rhyme; onClose: () => void }) 
           </ol>
           {speaker.supported && (
             <button type="button" onClick={play} data-testid="rhyme-play" className={`mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl text-base font-bold cursor-pointer ${at !== null ? 'bg-slate-900 text-white' : 'bg-amber-400 text-slate-950 hover:bg-amber-300'}`}>
-              {at !== null ? <><Square className="h-5 w-5" aria-hidden />Stop</> : <><Volume2 className="h-5 w-5" aria-hidden />Hear it once</>}
+              {at !== null ? <><Square className="h-5 w-5" aria-hidden />{ui.stop}</> : <><Volume2 className="h-5 w-5" aria-hidden />{ui.hearOnce}</>}
             </button>
           )}
         </Dialog.Content>
@@ -124,7 +132,6 @@ function RhymePlayer({ rhyme, onClose }: { rhyme: Rhyme; onClose: () => void }) 
 const KIND_ICON: Record<Activity['kind'], React.ComponentType<{ className?: string }>> = {
   contrast: Eye, rhyme: Music, words: Sparkles, book: BookHeart, find: Sparkles, stories: BookHeart, sounds: Sparkles, talk: MessageCircleHeart,
 };
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 /**
  * Little ones (owner request 2026-11-26): a reading program for babies and toddlers from birth to 3 years. The
@@ -133,10 +140,22 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
  */
 export default function LittleOnesPage() {
   const { p, save, reader } = useLittle();
+  // The language, shared with Young readers (owner request 2026-11-26).
+  const [langId, setLangId] = useState<YoungLangId>(() => { let saved: string | null = null; try { saved = localStorage.getItem('bookatlas:young-lang'); } catch { /* this device */ } return startLang(saved, typeof navigator === 'undefined' ? undefined : navigator.language); });
+  const [content, setContent] = useState<LittleContent>(LITTLE_EN);
+  const [young, setYoung] = useState<YoungContent>(ENGLISH);
+  useEffect(() => {
+    let live = true;
+    try { localStorage.setItem('bookatlas:young-lang', langId); } catch { /* this device */ }
+    void Promise.all([loadLittle(langId), loadYoung(langId)]).then(([c, y]) => { if (live) { setContent(c); setYoung(y); } });
+    return () => { live = false; };
+  }, [langId]);
+  const { ui, stages } = content;
   const now = new Date();
   const months = monthsOld(p.birth, now);
-  const byAge = months !== null ? stageFor(months) : null;
-  const stage = STAGES.find((s) => s.id === p.stage) ?? byAge ?? STAGES[0]!;
+  const byAge = months !== null ? stages.find((s) => months >= s.from && months < s.to) ?? null : null;
+  const stage = stages.find((s) => s.id === p.stage) ?? byAge ?? stages[0]!;
+  const monthNames = useMemo(() => Array.from({ length: 12 }, (_, i) => new Date(2026, i, 15).toLocaleDateString(langId, { month: 'long' })), [langId]);
   const [open, setOpen] = useState<Activity | null>(null);
   const today = p.done[`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`] ?? [];
   const week = lastWeek(p, now);
@@ -145,39 +164,47 @@ export default function LittleOnesPage() {
   const setBirth = (y: string, m: string) => save({ ...p, birth: y && m ? `${y}-${m}` : null, stage: null });
   useEffect(() => { document.title = 'Little ones: reading from birth to 3 · BooksAtlas'; }, []);
   return (
-    <main className="min-h-[100dvh] bg-[#fffaf0]">
+    <LittleContext.Provider value={content}>
+    <YoungContext.Provider value={young}>
+    <main className="min-h-[100dvh] bg-[#fffaf0]" lang={langId}>
       <header className="bg-[radial-gradient(ellipse_70%_120%_at_90%_0%,rgba(251,113,133,0.35),transparent),linear-gradient(to_bottom,#9f1239,#831843)] px-4 pb-8 pt-6 text-white sm:px-6">
         <div className="mx-auto max-w-5xl">
           <Link href="/reading-intelligence" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-rose-100 hover:text-white"><ArrowLeft className="h-4 w-4" aria-hidden />Reading Intelligence</Link>
           <h1 className="mt-3 flex items-center gap-3 font-serif text-4xl font-bold sm:text-5xl"><Baby className="h-10 w-10" aria-hidden />Little ones</h1>
-          <p className="mt-2 max-w-2xl text-rose-100">A reading program for babies and toddlers, from birth to 3 years. A few minutes a day with your voice, rhymes, pictures and, later, short stories. Free, no account needed.</p>
+          <p className="mt-2 max-w-2xl text-rose-100">{ui.intro}</p>
           <div className="mt-5 flex flex-wrap items-end gap-3 rounded-2xl bg-white/10 p-4 ring-1 ring-white/20" data-testid="little-age">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-rose-100">{reader.name ? `${reader.name}’s birth month` : 'Your child’s birth month'}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-rose-100">{ui.language}</p>
+              <SelectBox value={langId} onChange={(e) => setLangId(e.target.value as YoungLangId)} aria-label={ui.language} data-testid="little-lang" className="mt-1 rounded-xl bg-white px-3 py-2 text-sm text-slate-900">
+                {YOUNG_LANGS.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </SelectBox>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-rose-100">{reader.name ? fill(ui.birthOf, { name: reader.name }) : ui.birthYours}</p>
               <div className="mt-1 flex gap-2">
-                <SelectBox value={bm} onChange={(e) => setBirth(by || String(now.getFullYear()), e.target.value)} aria-label="Birth month" data-testid="birth-month" className="rounded-xl bg-white px-3 py-2 text-sm text-slate-900">
-                  <option value="">Month</option>
-                  {MONTHS.map((m, i) => <option key={m} value={String(i + 1).padStart(2, '0')}>{m}</option>)}
+                <SelectBox value={bm} onChange={(e) => setBirth(by || String(now.getFullYear()), e.target.value)} aria-label={ui.month} data-testid="birth-month" className="rounded-xl bg-white px-3 py-2 text-sm text-slate-900">
+                  <option value="">{ui.month}</option>
+                  {monthNames.map((m, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>)}
                 </SelectBox>
-                <SelectBox value={by} onChange={(e) => setBirth(e.target.value, bm || '01')} aria-label="Birth year" data-testid="birth-year" className="rounded-xl bg-white px-3 py-2 text-sm text-slate-900">
-                  <option value="">Year</option>
+                <SelectBox value={by} onChange={(e) => setBirth(e.target.value, bm || '01')} aria-label={ui.year} data-testid="birth-year" className="rounded-xl bg-white px-3 py-2 text-sm text-slate-900">
+                  <option value="">{ui.year}</option>
                   {years.map((y) => <option key={y} value={String(y)}>{y}</option>)}
                 </SelectBox>
               </div>
             </div>
             <p className="pb-2 text-sm text-rose-50" aria-live="polite">
-              {months === null ? 'Or pick a stage below.' : months > 36 ? 'Over 3 years: Young readers is the next step.' : `${months} month${months === 1 ? '' : 's'} old · ${byAge?.ages ?? ''}`}
+              {months === null ? ui.orPick : months > 36 ? ui.overThree : `${months === 1 ? ui.monthOld : fill(ui.monthsOld, { n: months })} · ${byAge?.ages ?? ''}`}
             </p>
-            {months !== null && months > 36 && <a href={`${BASE}reading-intelligence/young-readers`} className="mb-1 inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-amber-400 px-4 text-sm font-bold text-slate-950">Open Young readers</a>}
+            {months !== null && months > 36 && <a href={`${BASE}reading-intelligence/young-readers`} className="mb-1 inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-amber-400 px-4 text-sm font-bold text-slate-950">{ui.openYoung}</a>}
           </div>
         </div>
       </header>
 
       <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
-        <ToggleGroup.Root type="single" value={stage.id} onValueChange={(v) => v && save({ ...p, stage: v as StageId })} aria-label="Stage" className="flex flex-wrap gap-2" data-testid="little-stages">
-          {STAGES.map((s) => (
+        <ToggleGroup.Root type="single" value={stage.id} onValueChange={(v) => v && save({ ...p, stage: v as StageId })} aria-label={ui.stageLabel} className="flex flex-wrap gap-2" data-testid="little-stages">
+          {stages.map((s) => (
             <ToggleGroup.Item key={s.id} value={s.id} className="min-h-11 rounded-full bg-white px-4 text-sm font-bold text-slate-700 ring-1 ring-slate-200 data-[state=on]:bg-rose-700 data-[state=on]:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 cursor-pointer">
-              {s.ages}{byAge?.id === s.id ? ' · now' : ''}
+              {s.ages}{byAge?.id === s.id ? ` · ${ui.now}` : ''}
             </ToggleGroup.Item>
           ))}
         </ToggleGroup.Root>
@@ -188,14 +215,14 @@ export default function LittleOnesPage() {
           <p className="mt-1 text-lg font-semibold text-slate-800">{stage.headline}</p>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600">{stage.why}</p>
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-            <p className="text-sm text-slate-700"><span className="font-bold">Today:</span> {stage.minutes} (about {activityMinutes(stage)} minutes in all).</p>
-            <div className="flex items-center gap-1.5" aria-label="Days with reading this week" data-testid="little-week">
+            <p className="text-sm text-slate-700"><span className="font-bold">{ui.today}</span> {stage.minutes} ({fill(ui.inAll, { n: activityMinutes(stage) })}).</p>
+            <div className="flex items-center gap-1.5" aria-label={ui.weekLabel} data-testid="little-week">
               {week.map((d) => <span key={d.day} title={d.day} className={`grid h-7 w-7 place-items-center rounded-full text-[10px] font-bold ${d.done ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{d.done ? <Check className="h-3.5 w-3.5" aria-label="read" /> : d.weekday}</span>)}
             </div>
           </div>
         </section>
 
-        <section aria-label="Today’s plan" className="grid gap-3 sm:grid-cols-2" data-testid="little-plan">
+        <section aria-label={stage.name} className="grid gap-3 sm:grid-cols-2" data-testid="little-plan">
           {stage.activities.map((a) => {
             const Icon = KIND_ICON[a.kind];
             const done = today.includes(a.id);
@@ -208,18 +235,18 @@ export default function LittleOnesPage() {
                     : <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-rose-50 text-rose-700"><Icon className="h-6 w-6" aria-hidden /></span>}
                   <div className="min-w-0 flex-1">
                     <h3 className="text-base font-bold text-slate-900">{a.title}</h3>
-                    <p className="text-xs text-slate-500">{a.minutes} min{a.kind === 'talk' ? ' · no screen' : ''}</p>
+                    <p className="text-xs text-slate-500">{a.minutes} {ui.min}{a.kind === 'talk' ? ` · ${ui.noScreen}` : ''}</p>
                   </div>
                 </div>
                 <p className="mt-3 flex-1 text-sm leading-relaxed text-slate-700">{a.how}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {(a.kind === 'contrast' || a.kind === 'rhyme') && (
-                    <button type="button" onClick={() => setOpen(a)} data-testid={`start-${a.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-rose-700 px-4 text-sm font-bold text-white hover:bg-rose-600 cursor-pointer">{a.kind === 'contrast' ? 'Show the cards' : 'Open the rhyme'}</button>
+                    <button type="button" onClick={() => setOpen(a)} data-testid={`start-${a.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-rose-700 px-4 text-sm font-bold text-white hover:bg-rose-600 cursor-pointer">{a.kind === 'contrast' ? ui.showCards : ui.openRhyme}</button>
                   )}
-                  {link && <a href={`${BASE}${link}`} data-testid={`open-${a.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-rose-700 px-4 text-sm font-bold text-white hover:bg-rose-600">Open<ExternalLink className="h-4 w-4" aria-hidden /></a>}
+                  {link && <a href={`${BASE}${link}`} data-testid={`open-${a.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-rose-700 px-4 text-sm font-bold text-white hover:bg-rose-600">{ui.open}<ExternalLink className="h-4 w-4" aria-hidden /></a>}
                   <button type="button" aria-pressed={done} onClick={() => save(toggleDone(p, a.id))} data-testid={`done-${a.id}`}
                     className={`inline-flex min-h-11 items-center gap-1.5 rounded-xl px-4 text-sm font-bold ring-1 cursor-pointer ${done ? 'bg-emerald-50 text-emerald-800 ring-emerald-300' : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50'}`}>
-                    <Check className="h-4 w-4" aria-hidden />{done ? 'Done today' : 'We did this'}
+                    <Check className="h-4 w-4" aria-hidden />{done ? ui.doneToday : ui.weDid}
                   </button>
                 </div>
               </article>
@@ -229,24 +256,26 @@ export default function LittleOnesPage() {
 
         <div className="grid gap-3 lg:grid-cols-2">
           <section className="rounded-3xl bg-white p-5 ring-1 ring-slate-200">
-            <h2 className="flex items-center gap-2 text-base font-bold text-slate-900"><Lightbulb className="h-5 w-5 text-amber-500" aria-hidden />Tips for this stage</h2>
+            <h2 className="flex items-center gap-2 text-base font-bold text-slate-900"><Lightbulb className="h-5 w-5 text-amber-500" aria-hidden />{ui.tips}</h2>
             <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-slate-700">{stage.tips.map((t) => <li key={t}>{t}</li>)}</ul>
           </section>
           <section className="rounded-3xl bg-white p-5 ring-1 ring-slate-200">
-            <h2 className="flex items-center gap-2 text-base font-bold text-slate-900"><Eye className="h-5 w-5 text-rose-600" aria-hidden />Things you may notice</h2>
+            <h2 className="flex items-center gap-2 text-base font-bold text-slate-900"><Eye className="h-5 w-5 text-rose-600" aria-hidden />{ui.notice}</h2>
             <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-slate-700">{stage.notice.map((t) => <li key={t}>{t}</li>)}</ul>
-            <p className="mt-3 flex gap-1.5 text-xs text-slate-500"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />Every child grows at their own pace; this is not a checklist. If you have questions about your child’s development, ask your doctor, nurse or health visitor.</p>
+            <p className="mt-3 flex gap-1.5 text-xs text-slate-500"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />{ui.noticeNote}</p>
           </section>
         </div>
 
         <section className="rounded-3xl bg-rose-50 p-5 text-sm text-rose-950 ring-1 ring-rose-100">
-          <h2 className="font-bold">About screens</h2>
-          <p className="mt-1 leading-relaxed">For babies and toddlers, the best “screen” is your face. Use the cards and pictures here together, for a minute or two at a time, and talk about them. Most of each day’s plan works with no screen at all: rhymes, talking and real books.</p>
+          <h2 className="font-bold">{ui.screens}</h2>
+          <p className="mt-1 leading-relaxed">{ui.screensText}</p>
         </section>
       </div>
 
       {open?.kind === 'contrast' && <ContrastViewer colour={open.colour} onClose={() => setOpen(null)} />}
-      {open?.kind === 'rhyme' && <RhymePlayer rhyme={RHYMES.find((r) => r.id === open.rhyme)!} onClose={() => setOpen(null)} />}
+      {open?.kind === 'rhyme' && <RhymePlayer rhyme={content.rhymes.find((r) => r.id === open.rhyme)!} onClose={() => setOpen(null)} />}
     </main>
+    </YoungContext.Provider>
+    </LittleContext.Provider>
   );
 }
