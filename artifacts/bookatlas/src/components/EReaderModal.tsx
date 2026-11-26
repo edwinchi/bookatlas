@@ -27,6 +27,7 @@ import { ShareBookDialog, ShareQuoteDialog } from './share/ShareDialog';
 import { formatBytes, offlineBook, removeOffline, saveOffline, type OfflineBook } from './reader/offlineBooks';
 import { TRY_HINT, TRY_TARGET, type TryTool } from './reader/tryTools';
 import { FocusSprintPicker, FocusSprintRing, useFocusSprint } from './reader/FocusSprint';
+import { listenFrom, partForParagraph, readPlace, resumeSecond, savePlace, startPlace } from './reader/resumePlace';
 import { narrationTimeline, wordAt, type TimedWord } from './reader/narrationSync';
 import { ReaderContents, GoToPopover } from './reader/ReaderNavigation';
 import { useDeviceVoice, type Translated } from './reader/useDeviceVoice';
@@ -75,8 +76,10 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   autoListen = false,
   initialTool = null,
 }) => {
-  const [currentChapterIndex, setCurrentChapterIndex] = useState(initialChapterIndex);
-  const [currentParagraphIndex, setCurrentParagraphIndex] = useState(initialParagraphIndex);
+  // Where the reader left off (2026-11-26): the account/library place, else this device's place for this book.
+  const startAt = useRef(startPlace({ chapter: initialChapterIndex, paragraph: initialParagraphIndex }, readPlace(book.id), Number.MAX_SAFE_INTEGER)).current;
+  const [currentChapterIndex, setCurrentChapterIndex] = useState(startAt.chapter);
+  const [currentParagraphIndex, setCurrentParagraphIndex] = useState(startAt.paragraph);
 
   // Prepared eBooks (TASK-0003): everyone reads and listens to the preview (up to the introduction);
   // the server sends the whole book to readers entitled to it.
@@ -389,16 +392,27 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
    * Natural narration: plays the recorded segments in order from this chapter, loading the next one ahead,
    * and highlights each paragraph for a share of the segment proportional to its length.
    */
-  const playNarrationFrom = (chapterIdx: number) => {
+  const playNarrationFrom = (chapterIdx: number, fromParagraph?: number) => {
     const n = narration;
     if (!n) return;
     stopSpeech();
     const run = ++speechRun.current;
     const segs = n.segments;
-    const first = segs.findIndex((s) => s.chapter >= chapterIdx);
+    // From the paragraph being read (resuming where the listener left off), else the start of the chapter.
+    const first = fromParagraph !== undefined ? partForParagraph(segs, chapterIdx, fromParagraph) : segs.findIndex((s) => s.chapter >= chapterIdx);
     if (first < 0) return;
+    let offset = 0;
+    if (fromParagraph !== undefined) {
+      const seg = segs[first]!;
+      const chapter = chaptersRef.current[seg.chapter];
+      const paras = Array.from({ length: seg.to - seg.from + 1 }, (_, i) => ({ p: seg.from + i, text: chapter?.content[seg.from + i] ?? '' }));
+      const opensChapter = seg.from === (chapter?.content.findIndex((t) => t.trim()) ?? -1);
+      const tl = narrationTimeline(paras, opensChapter ? chapter?.title ?? null : null, seg.seconds || 1);
+      const start = seg.chapter === chapterIdx ? tl.find((w) => w.p === fromParagraph)?.t0 ?? null : null;
+      offset = resumeSecond(readPlace(book.id), seg.n, fromParagraph, start);
+    }
     // One continuous stream when every part's size is known, so a locked phone never has to start a new file.
-    if (canStream(segs)) { playStream(n, first, run); return; }
+    if (canStream(segs)) { playStream(n, first, run, offset); return; }
     const url = (k: number) => ebookApi.narrationAudioUrl(book.id, segs[k]!.n, freshKey.current ?? n.key);
     const audio = narrationAudio.current ?? new Audio();
     narrationAudio.current = audio;
@@ -492,14 +506,14 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     };
     setIsSpeaking(true);
     setListenMode('natural');
-    void play(first);
+    void play(first, offset);
   };
   /**
    * The audiobook as one stream from part `first` to the end (owner request 2026-11-26: it stopped when the phone
    * locked). The part, chapter and word being heard come from the playing time; chapter skips and the lock
    * screen's next and previous move within the same stream instead of loading a new file.
    */
-  const playStream = (n: NonNullable<typeof narration>, first: number, run: number) => {
+  const playStream = (n: NonNullable<typeof narration>, first: number, run: number, offset = 0) => {
     const segs = n.segments;
     const parts = segs.slice(first) as StreamPart[];
     const sizes = parts.map((p) => p.bytes);
@@ -557,6 +571,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       }
       const w = timeline ? wordAt(timeline, at.local) : null;
       const p = w?.p ?? seg.from;
+      // The second of audio, kept with the place so listening resumes exactly here.
+      lastAudio.current = { n: seg.n, t: Math.round(at.local * 10) / 10, p, chapter: seg.chapter };
       if (p !== lastPara) { lastPara = p; setSpokenParagraph(p); setCurrentParagraphIndex(p); }
       if (followWordsRef.current && w) requestAnimationFrame(() => { if (run === speechRun.current) showSpoken(document.querySelector(`[data-para="${w.p}"]`), [w.s0, w.s1], [w.w0, w.w1]); });
     };
@@ -580,8 +596,9 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     };
     audio.onplay = () => { if (run !== speechRun.current) return; setNarrationPaused(false); setPlaying('playing', audio); };
     audio.onloadedmetadata = () => { if (run === speechRun.current) setPlaying(audio.paused ? 'paused' : 'playing', audio); };
-    audio.onpause = () => { if (run !== speechRun.current || audio.ended) return; setNarrationPaused(true); setPlaying('paused', audio); };
+    audio.onpause = () => { if (run !== speechRun.current || audio.ended) return; setNarrationPaused(true); setPlaying('paused', audio); savePlace(book.id, placeNow()); };
     audio.src = ebookApi.narrationStreamUrl(book.id, parts[0]!.n, freshKey.current ?? n.key);
+    if (offset > 0) audio.addEventListener('loadedmetadata', () => { if (run === speechRun.current) audio.currentTime = offset; }, { once: true });
     audio.defaultPlaybackRate = listenRef.current.rate;
     audio.playbackRate = listenRef.current.rate;
     setClock({ t: 0, d: parts[0]!.seconds, k: first });
@@ -617,7 +634,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const startListening = () => {
     setPendingListen(false);
     // The natural voice where it may be heard (all of it, or the preview of an audiobook add-on); the device voice after.
-    if (useNatural) { playNarrationFrom(currentChapterIndex); return; }
+    if (useNatural) { playNarrationFrom(currentChapterIndex, listenFrom(readPlace(book.id), currentChapterIndex, currentParagraphIndex)); return; }
     speakFrom(currentChapterIndex, currentParagraphIndex);
   };
   const toggleSpeech = () => {
@@ -1041,8 +1058,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   // Comprehension checkpoints (master build plan M4): words and reading time since the last one; at a chapter end,
   // after 1,000 words or after 10 minutes (the reader's choice) a gentle offer, then four questions.
   const checkpointsOn = !!account && !!book.hasReaderContent && !inPreview;
-  const tracker = useRef(startTracker(initialChapterIndex, initialParagraphIndex));
-  const lastPlace = useRef({ chapter: initialChapterIndex, paragraph: initialParagraphIndex });
+  const tracker = useRef(startTracker(startAt.chapter, startAt.paragraph));
+  const lastPlace = useRef({ chapter: startAt.chapter, paragraph: startAt.paragraph });
   const lastMove = useRef(Date.now());
   const [checkpointOffer, setCheckpointOffer] = useState<Omit<CheckpointRequest, 'id'> | null>(null);
   const [checkpoint, setCheckpoint] = useState<CheckpointRequest | null>(null);
@@ -1177,8 +1194,42 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   useEffect(() => {
     if (openedAt.current || !paged) return;
     openedAt.current = true;
-    if (initialParagraphIndex > 0) pg.openAt(initialParagraphIndex);
+    if (startAt.paragraph > 0) pg.openAt(startAt.paragraph);
   }, [paged]);
+  // Scroll mode opens at the saved paragraph too, once the text is there.
+  const scrolledToStart = useRef(false);
+  useEffect(() => {
+    if (scrolledToStart.current || paged || startAt.paragraph <= 0 || !chapters.length) return;
+    const id = window.setTimeout(() => {
+      const el = document.querySelector(`[data-para="${startAt.paragraph}"]`);
+      if (el) { scrolledToStart.current = true; el.scrollIntoView({ block: 'start' }); }
+    }, 300);
+    return () => window.clearTimeout(id);
+  }, [paged, chapters.length, fullChapters]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The place is kept on this device as the reader reads and listens (with the second of audio), for every book.
+  const lastAudio = useRef<{ n: number; t: number; p: number; chapter: number } | null>(null);
+  const placeNow = () => {
+    const chapter = currentChapterRef.current, paragraph = currentParagraphRef.current, a = lastAudio.current;
+    // The second of audio is kept while the reader is still on the page being spoken; reading on drops it.
+    const audio = a && listenFrom({ chapter: a.chapter, paragraph, at: '', audio: a }, chapter, paragraph) === a.p ? { n: a.n, t: a.t, p: a.p } : null;
+    return { chapter, paragraph, ...(audio ? { audio } : {}) };
+  };
+  const currentChapterRef = useRef(currentChapterIndex);
+  const currentParagraphRef = useRef(currentParagraphIndex);
+  currentChapterRef.current = currentChapterIndex;
+  currentParagraphRef.current = currentParagraphIndex;
+  useEffect(() => {
+    const t = window.setTimeout(() => savePlace(book.id, placeNow()), 800);
+    return () => window.clearTimeout(t);
+  }, [currentChapterIndex, currentParagraphIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const keep = () => savePlace(book.id, placeNow());
+    window.addEventListener('pagehide', keep);
+    const vis = () => { if (document.visibilityState === 'hidden') keep(); };
+    document.addEventListener('visibilitychange', vis);
+    return () => { keep(); window.removeEventListener('pagehide', keep); document.removeEventListener('visibilitychange', vis); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Any place in the book by percentage. */
   const goToPercent = (pct: number) => {

@@ -244,3 +244,22 @@ export function pictureRound(level: Level, round: number, n = 3, all: Record<Lev
 }
 /** Stars for a story quiz: one per right answer, and a bonus star for all right. */
 export const storyStars = (right: number, total: number) => right + (right === total && total > 0 ? 1 : 0);
+
+/**
+ * "Listen and catch" (owner request 2026-11-26: keep children's attention): the word a child listens for while a
+ * story is read aloud. A word of three letters or more that comes at least twice, the most frequent first (on a
+ * tie, the longest), skipping little words; null when no word repeats.
+ */
+const LISTEN_SKIP = new Set('the and was his her she they them then with that this have has had what when where who said says into from for are but not you your our out off its all one two can will just very look looks les des une est dans pour avec qui que sur elle ils une mais son sa ses aux una los las con por del para como pero uno sus uma com dos das não mas seu sua een het van met voor zijn die dat niet maar ook naar hij zij was'.split(' '));
+export function listenWord(paragraphs: string[]): { word: string; times: number } | null {
+  const counts = new Map<string, number>();
+  for (const w of paragraphs.join(' ').toLowerCase().match(/[\p{L}’']+/gu) ?? []) {
+    const k = w.replace(/[’']s$/, '');
+    if (k.length < 3 || LISTEN_SKIP.has(k)) continue;
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  const best = [...counts].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0];
+  return best ? { word: best[0], times: best[1] } : null;
+}
+/** Whether a spoken word is the one listened for (case, a possessive "’s" and punctuation do not matter). */
+export const isListenWord = (spoken: string, word: string) => spoken.toLowerCase().replace(/[^\p{L}’']/gu, '').replace(/[’']s$/, '') === word;

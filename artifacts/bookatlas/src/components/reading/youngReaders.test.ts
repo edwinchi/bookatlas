@@ -46,3 +46,12 @@ test('young readers: 33 stories at every level, with maths, science and bedtime 
   assert.ok(shapes.words.length >= 12 && shapes.words.every((w) => [...w.picture].length === 1), 'shapes are drawn as geometry symbols');
   assert.ok(PICTURE_BOOKS.some((b) => b.id === 'shapes-around'));
 });
+
+test('young readers: the listen-and-catch word repeats and is not a little word', async () => {
+  const { listenWord, isListenWord, STORIES } = await import('./youngReaders');
+  assert.deepEqual(listenWord(['The kite flew. The kite fell.', 'A kite again!']), { word: 'kite', times: 3 });
+  assert.equal(listenWord(['No word comes twice here.']), null);
+  assert.ok(isListenWord('Kite!', 'kite') && isListenWord('kite’s', 'kite') && !isListenWord('kites', 'kite'));
+  const withWord = STORIES.filter((s) => listenWord(s.paragraphs)).length;
+  assert.ok(withWord / STORIES.length > 0.8, `most stories have a word to listen for (${withWord} of ${STORIES.length})`);
+});
