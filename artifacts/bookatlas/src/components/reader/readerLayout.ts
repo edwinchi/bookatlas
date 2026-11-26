@@ -1,3 +1,4 @@
+import { DEFAULT_CHECKPOINT_MODE, cleanCheckpointMode, type CheckpointMode } from './checkpoints';
 import { DEFAULT_BOLD_STRENGTH, cleanBoldStrength } from './fastRead';
 /**
  * Page layout preferences kept on this device (owner request 2026-11-17): pages or scrolling, two pages side by side,
@@ -26,12 +27,14 @@ export interface ReaderLayout {
   spotlight: boolean;
   /** Zen: only the text; toolbars and community markers stay hidden until a tap or Escape (master build plan M3). */
   zen: boolean;
+  /** When a comprehension checkpoint is offered (master build plan M4): off, chapter end, 1,000 words, 10 minutes. */
+  checkpoints: CheckpointMode;
   /** Words light up as the device voice reads them. */
   followWords: boolean;
 }
 
 const KEY = 'bookatlas:reader-layout:v1';
-export const DEFAULT_LAYOUT: ReaderLayout = { mode: 'page', spread: true, align: 'left', brightness: 100, customBg: '#f4ecd8', customText: '#3b2f22', tapToHide: true, boldStarts: false, boldStrength: DEFAULT_BOLD_STRENGTH, focusParagraph: false, readingGuide: false, spotlight: false, zen: false, followWords: true };
+export const DEFAULT_LAYOUT: ReaderLayout = { mode: 'page', spread: true, align: 'left', brightness: 100, customBg: '#f4ecd8', customText: '#3b2f22', tapToHide: true, boldStarts: false, boldStrength: DEFAULT_BOLD_STRENGTH, focusParagraph: false, readingGuide: false, spotlight: false, zen: false, checkpoints: DEFAULT_CHECKPOINT_MODE, followWords: true };
 const HEX = /^#[0-9a-f]{6}$/i;
 
 export function readLayout(): ReaderLayout {
@@ -52,6 +55,7 @@ export function readLayout(): ReaderLayout {
       readingGuide: v.readingGuide === true,
       spotlight: v.spotlight === true,
       zen: v.zen === true,
+      checkpoints: cleanCheckpointMode(v.checkpoints),
       followWords: v.followWords !== false,
     };
   } catch {

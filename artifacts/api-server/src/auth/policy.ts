@@ -60,6 +60,8 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (normalized === '/api/reader/classes' && ['GET', 'POST'].includes(method)) return 'reader';
   if (normalized === '/api/reader/classes/join' && method === 'POST') return 'reader';
   if (normalized === '/api/reader/young/stories' && method === 'POST') return 'reader';
+  // Comprehension checkpoints (master build plan M4).
+  if (normalized === '/api/reader/checkpoints' && ['GET', 'POST'].includes(method)) return 'reader';
   if (/^\/api\/reader\/classes\/[0-9a-f-]{36}$/.test(normalized) && method === 'GET') return 'reader';
   if (/^\/api\/reader\/classes\/[0-9a-f-]{36}\/report$/.test(normalized) && method === 'GET') return 'reader';
   if (/^\/api\/reader\/classes\/[0-9a-f-]{36}\/books$/.test(normalized) && method === 'PUT') return 'reader';
@@ -75,7 +77,7 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (/^\/api\/manager\/reader-reports(?:\/|$)/.test(normalized)) return 'admin';
   if (['PATCH', 'DELETE'].includes(method) && /^\/api\/reader\/annotations\/[^/]+$/.test(normalized)) return 'reader';
   // Reader Phase 2 (cycle 8): AI tools for signed-in readers; the language list is public.
-  if (method === 'POST' && /^\/api\/reader\/ai\/(?:ask|study|explain|translate|define)$/.test(normalized)) return 'reader';
+  if (method === 'POST' && /^\/api\/reader\/ai\/(?:ask|study|explain|translate|define|checkpoint)$/.test(normalized)) return 'reader';
   if (method === 'GET' && normalized === '/api/reader/ai/config') return 'public';
   // Narration (TASK-0008): authors order and listen to samples; the step authenticates with its own key.
   if (method === 'GET' && /^\/api\/narration\/(?:books\/[^/]+|samples\/[^/]+)$/.test(normalized)) return 'reader';

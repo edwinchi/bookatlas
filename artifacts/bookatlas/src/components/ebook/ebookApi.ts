@@ -1,4 +1,5 @@
 import type { FamilyActivity, FamilyProfile, FamilyView } from '../reading/family';
+import type { CheckpointBand, CheckpointQuestion, CheckpointReason } from '../reader/checkpoints';
 import { useAuth } from '@clerk/react';
 import { useRef } from 'react';
 import type { SubmissionIntake } from '@workspace/bookatlas-catalog/publishing';
@@ -255,6 +256,12 @@ export function useEbookApi() {
     explainPassage: (body: { bookId: string; text: string; mode: 'explain' | 'simplify' | ExplainLevel }) => json<{ mode: string; answer: string; remaining: number }>('/api/reader/ai/explain', 'POST', body),
     translatePassage: (body: { bookId: string; text: string; target: string }) => json<{ language: string; translation: string; remaining: number }>('/api/reader/ai/translate', 'POST', body),
     defineWord: (body: { bookId: string; word: string; context: string }) => json<Definition & { remaining: number }>('/api/reader/ai/define', 'POST', body),
+    // Comprehension checkpoints (master build plan M4).
+    checkpointQuestions: (body: { bookId: string; chapterIndex: number; from?: number; to?: number }) =>
+      json<{ chapterIndex: number; from: number; to: number; questions: CheckpointQuestion[]; remaining: number }>('/api/reader/ai/checkpoint', 'POST', body),
+    saveCheckpoint: (body: { bookId: string; chapterIndex: number; right: number; total: number; reason: CheckpointReason }) =>
+      json<{ band: CheckpointBand; summary: CheckpointSummary }>('/api/reader/checkpoints', 'POST', body),
+    checkpoints: () => json<CheckpointSummary>('/api/reader/checkpoints'),
     savePayout: (body: PayoutInput) => json<PayoutView>('/api/author/payout', 'PUT', body),
     // Follow authors (cycle 5c).
     followState: (slug: string) => json<{ following: boolean }>(`/api/follows/${slug}/mine`),
@@ -362,4 +369,10 @@ export function saveBlob(blob: Blob, fileName: string) {
   a.download = fileName;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+/** A reader's checkpoint results (master build plan M4): the specification's ComprehensionMetrics. */
+export interface CheckpointSummary {
+  totalCheckpoints: number; averageScore: number | null; band: CheckpointBand | null; lastFive: number | null; trend: 'up' | 'down' | 'steady' | null;
+  recent: { bookId: string; chapterIndex: number; score: number; right: number; total: number; reason: CheckpointReason; at: string }[];
 }

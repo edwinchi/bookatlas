@@ -33,7 +33,7 @@ free and BooksAtlas earns its 19% commission on sales.
 | M1 | **SR-001/002 Fast Read v2: RSVP + Chunk Reader** — 100–1500 WPM, ORP fixation point, ±25-word jumps, keyboard, progress and time left, drift-corrected timing, session metrics, adaptive speed and chunk-size coach with confidence, reduced motion | ✅ done (this milestone) | `reader/fastRead.ts`, `reader/adaptiveCoach.ts`, `reader/FastReadPanel.tsx` |
 | M2 | SR-003 Bionic strength levels (25–60%) | ✅ done: 25, 40 (default), 50 or 60% of each word, rounded up, at least one letter; under Aids in the reader with a live sample | `reader/fastRead.ts` `boldStartPieces`, `readerLayout.ts` `boldStrength`, `ReaderPreferences.tsx` |
 | M3 | SR-004 Focus Reader modes: line, paragraph, spotlight, zen | ✅ done: one Focus choice (Off, Line = the guide band, Paragraph = the rest dimmed, Spotlight = the rest dimmed and blurred, no blur with reduced motion) and a Zen switch (text only; toolbars and reader notes hidden in page and scroll mode, a tap or Escape shows them) | `readerLayout.ts` (`focusModeOf`, `paragraphFocusClass`, `zenLayout`), `EReaderModal.tsx`, `ReaderPreferences.tsx` |
-| M4 | SR-005 Comprehension checkpoints (every chapter, manual), scored excellent/good/fair/needs improvement, feeding the coach | ◐ chapter quizzes exist; checkpoint prompts and scoring bands to add | `reader/ai.ts`, `ReaderAssistant.tsx` |
+| M4 | SR-005 Comprehension checkpoints (every chapter, manual), scored excellent/good/fair/needs improvement, feeding the coach | ✅ done: offered at a chapter end (default), every 1,000 words or every 10 minutes of reading (reader's choice under Aids, or off), and by hand from the reading assistant; a gentle offer first, then four AI questions on the passage just read (multiple choice, true/false, fill the blank, key concept), the band and the speed advice (< 70 slower, > 90 faster); the score feeds the coach on the device and is kept in the reader's settings (`checkpoints`, no new table); average, band and trend on My progress | `api-server/.../reader/checkpoints.ts` (`POST /api/reader/ai/checkpoint`, `GET/POST /api/reader/checkpoints`), `reader/checkpoints.ts`, `reader/CheckpointDialog.tsx`, `EReaderModal.tsx`, `ReadingIntelligencePage.tsx` |
 | M5 | AN-001/002 Unified analytics and heatmaps: day × hour heatmap, peak hour and day, consistency score, best/average/current WPM | ◐ days chart, hours chart, speed summary exist; day × hour grid and consistency to add | `ReadingIntelligencePage.tsx` |
 | M6 | AI-001 Summary engine (1-minute, 5-minute, full) | ✅ done | `reader/ai.ts` `studyChapter` |
 | M7 | AI-002 Explain engine: child, student, professional, **expert** | ◐ expert level to add | `reader/ai.ts` `EXPLAIN_LEVELS` |
@@ -54,6 +54,8 @@ free and BooksAtlas earns its 19% commission on sales.
   (completion exactly 0.9 → 575) needs "≥ 0.9", which is used.
 - **Bold strength.** The specification's formula says `floor(length × strength)` but its tests expect "reading" →
   "rea" at 40%, which needs rounding up; rounding up is used, so its tests pass.
+- **Checkpoint storage.** The specification's `ComprehensionCheckpoint` table is kept as a list in the reader's
+  settings (the last 200 results), so no migration is needed; it can move to its own table when analytics need it.
 - **Rates.** A rewind rate is rewinds per 100 words read and a pause rate is pauses per 100 words read (both capped
   at 1); the completion rate is the share of sessions read to the end. Comprehension is the average of the
   reader's last five quiz scores, or unknown.

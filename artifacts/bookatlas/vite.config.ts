@@ -58,6 +58,8 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    // Recorded voices are written into public/audio while the app runs (tools/local-narrator); they never need a reload.
+    watch: { ignored: ['**/public/audio/**'] },
   },
   preview: {
     port,

@@ -116,3 +116,37 @@ test('reader AI: ask with sources, study tools, explain, translate and define; h
   assert.match((await blocked.json()).error, /40 AI requests/);
   resetQuota();
 });
+
+test('comprehension checkpoints (master build plan M4): four question types from the passage, scored and kept', async () => {
+  const { fetch } = await getSharedTestServer();
+  const bookId = await publishBook(fetch);
+  resetQuota();
+  calls.length = 0;
+  reply = () => JSON.stringify({ questions: [
+    { type: 'multiple_choice', question: 'What is numbered?', options: ['Paragraphs', 'Rivers', 'Stars', 'Doors'], answer: 0, explanation: 'The chapter numbers its paragraphs.' },
+    { type: 'true_false', question: 'The chapter has paragraphs.', options: ['True', 'False'], answer: 0 },
+    { type: 'fill_blank', question: 'Each paragraph has a ____.', options: ['number', 'colour', 'song', 'smell'], answer: 0 },
+    { type: 'key_concept', question: 'What is this passage about?', options: ['Order', 'Chaos', 'Food', 'Weather'], answer: 0 },
+  ] });
+  assert.equal((await fetch('/api/reader/ai/checkpoint', post('', { bookId, chapterIndex: 0 }, 'unauthenticated'))).status, 401);
+  // The chapter with the text (the same way the study test finds it).
+  const replyQuestions = reply;
+  reply = () => 'The opening chapter [1].';
+  const chapterIndex = (await (await fetch('/api/reader/ai/ask', post('', { bookId, question: 'What is the opening chapter about?' }))).json()).sources[0].chapterIndex as number;
+  reply = replyQuestions;
+  calls.length = 0;
+  const r = await fetch('/api/reader/ai/checkpoint', post('', { bookId, chapterIndex, from: 0, to: 999 }));
+  const body = await r.json();
+  assert.equal(r.status, 200, JSON.stringify(body));
+  assert.deepEqual(body.questions.map((q: { type: string }) => q.type), ['multiple_choice', 'true_false', 'fill_blank', 'key_concept']);
+  assert.equal(typeof body.remaining, 'number');
+  assert.match(calls.at(-1)!.systemInstruction!, /one of each type/);
+  assert.equal((await fetch('/api/reader/ai/checkpoint', post('', { bookId, chapterIndex: 99 }))).status, 404);
+
+  assert.equal((await fetch('/api/reader/checkpoints', post('', { bookId, chapterIndex, right: 3, total: 4, reason: 'chapter' }, 'unauthenticated'))).status, 401);
+  const saved = await (await fetch('/api/reader/checkpoints', post('', { bookId, chapterIndex, right: 3, total: 4, reason: 'chapter' }))).json();
+  assert.equal(saved.band, 'good');
+  const mine = await (await fetch('/api/reader/checkpoints', { headers: { 'x-test-role': 'reader' } })).json();
+  assert.ok(mine.totalCheckpoints >= 1);
+  assert.equal(mine.recent[0].bookId, bookId);
+});

@@ -8,7 +8,8 @@ import {
   FileText, Star, Headphones, Languages, Library, Loader2, MessageSquareText, Rows3, School, Sparkles, Target, Timer, TrendingUp, Type, Users, Zap,
 } from 'lucide-react';
 import { useAccount } from '../../auth/AuthContext';
-import { useEbookApi, type ReadingStats } from '../ebook/ebookApi';
+import { useEbookApi, type CheckpointSummary, type ReadingStats } from '../ebook/ebookApi';
+import { BANDS } from '../reader/checkpoints';
 import { FastReadPlayer, SpeedCheck, useSpeedTests } from '../reader/FastReadPanel';
 import { ReaderAchievements } from '../reader/ReaderAchievements';
 import { BoldStarts } from '../reader/readingAids';
@@ -158,6 +159,28 @@ function SpeedSummary({ tests }: { tests: ReturnType<typeof useSpeedTests>['test
   );
 }
 
+/** Comprehension checkpoints (master build plan M4): average, band, how many and the trend. */
+function CheckpointsCard() {
+  const api = useEbookApi();
+  const [s, setS] = useState<CheckpointSummary | null>(null);
+  useEffect(() => { api.checkpoints().then(setS).catch(() => setS(null)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!s) return null;
+  return (
+    <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200" data-testid="checkpoints-card">
+      <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Brain className="h-4 w-4 text-indigo-600" aria-hidden />Comprehension checkpoints</p>
+      {!s.totalCheckpoints || s.averageScore === null || !s.band
+        ? <p className="mt-2 text-sm text-slate-600">In the reader, a quick check of four questions comes at the end of a chapter (or every 1,000 words or 10 minutes, as you choose in the reader's settings, under Aids). You can start one any time from the reading assistant. Your scores show here.</p>
+        : (
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="text-3xl font-extrabold tabular-nums text-slate-900">{s.averageScore}%</span>
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${BANDS[s.band].className}`}>{BANDS[s.band].label}</span>
+            <span className="text-sm text-slate-600">{s.totalCheckpoints} checkpoint{s.totalCheckpoints === 1 ? '' : 's'}{s.lastFive !== null ? ` · last five ${s.lastFive}%` : ''}{s.trend === 'up' ? ' · improving' : s.trend === 'down' ? ' · lower lately: try reading a little slower' : ''}</span>
+          </div>
+        )}
+    </div>
+  );
+}
+
 function Progress({ speed, fam }: { speed: ReturnType<typeof useSpeedTests>; fam: ReturnType<typeof useFamily> }) {
   const { account } = useAccount();
   const api = useEbookApi();
@@ -190,6 +213,7 @@ function Progress({ speed, fam }: { speed: ReturnType<typeof useSpeedTests>; fam
                 <HoursChart byHourUtc={stats.byHourUtc ?? Array(24).fill(0)} />
               </div>
               <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200"><p className="mb-3 text-sm font-bold text-slate-900">Daily goal and achievements</p><ReaderAchievements api={api} /></div>
+              <CheckpointsCard />
               <GoalsPanel stats={stats} />
             </>
           )}
@@ -307,6 +331,7 @@ export default function ReadingIntelligencePage() {
             <Feature icon={Type} title="Clear letters">A font whose letters are shaped to be told apart easily, for low vision.</Feature>
             <Feature icon={Bold} title="Bold word starts">The first letters of each word in bold, so the eye finds words faster.</Feature>
             <Feature icon={Focus} title="Focus modes and zen">Line, paragraph or spotlight focus keeps attention on what you are reading; zen hides everything but the text.</Feature>
+            <Feature icon={Brain} title="Comprehension checkpoints">Four quick questions at the end of a chapter, every 1,000 words or every 10 minutes, scored from excellent to needs improvement; the score tunes your speed coach.</Feature>
             <Feature icon={Rows3} title="Reading guide">A clear band follows your finger or mouse and shades the lines above and below.</Feature>
             <Feature icon={Accessibility} title="Large text and strong contrast">Text up to 34 pixels, night and black themes, your own colours and brightness.</Feature>
           </div>

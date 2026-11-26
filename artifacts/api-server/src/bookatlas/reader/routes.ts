@@ -13,6 +13,7 @@ import { addPost, createGroup, deletePost, groupCount, groupDetail, joinGroup, l
 import { DAILY_AI_LIMIT, LANGUAGES, askBook, defineWord, explainPassage, refundAiQuota, studyChapter, translatePassage, useAiQuota, type Generate } from './ai.js';
 import { digestEmailConfigured, getDigest, resendBatch, runDigest, setDigest, unsubscribeDigest } from './digest.js';
 import { recordYoungStory, youngTitle } from './youngStories.js';
+import { checkpointQuestions, checkpointsOf, recordCheckpoint } from './checkpoints.js';
 import { answerQuiz, classDetail, classReport, createClass, joinClass, leaveClass, myClasses, publishQuiz, removeQuiz, setClassBooks } from './classes.js';
 import { FamilyError, addActivity, familyView, readFamily, weekStart, withProfiles, type Family } from './family.js';
 
@@ -141,6 +142,9 @@ export function mountReader(app: Express, catalog: CatalogStore, generate?: Gene
   // Books and, on class lists, Young readers stories ("ya.<id>", phase 8).
   const titleOf = async (id: string) => youngTitle(id) ?? (await catalog.get(id))?.title ?? null;
   app.post('/api/reader/young/stories', json, guarded(async (req, res) => { res.json(await recordYoungStory(signedIn(req).id, body(req))); }));
+  // Comprehension checkpoints (master build plan M4): results kept in the reader's settings.
+  app.get('/api/reader/checkpoints', guarded(async (req, res) => { res.json(await checkpointsOf(signedIn(req).id)); }));
+  app.post('/api/reader/checkpoints', json, guarded(async (req, res) => { res.json(await recordCheckpoint(signedIn(req).id, body(req))); }));
   // Schools and teams (Reading Intelligence phase 3, 2026-11-25): classes with an invite code and a reading list.
   const classId = (req: Request) => String(req.params.id);
   app.get('/api/reader/classes', guarded(async (req, res) => { res.json({ classes: await myClasses(signedIn(req), titleOf) }); }));
@@ -242,4 +246,5 @@ export function mountReader(app: Express, catalog: CatalogStore, generate?: Gene
   app.post('/api/reader/ai/explain', json, ai(explainPassage));
   app.post('/api/reader/ai/translate', json, ai(translatePassage));
   app.post('/api/reader/ai/define', json, ai(defineWord));
+  app.post('/api/reader/ai/checkpoint', json, ai(checkpointQuestions));
 }

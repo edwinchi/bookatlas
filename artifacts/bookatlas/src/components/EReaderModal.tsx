@@ -59,6 +59,8 @@ import { ReaderPreferences } from './reader/ReaderPreferences';
 import { FastReadDialog } from './reader/FastReadPanel';
 import { BoldStarts, ReadingGuide, clearSpoken, loadReaderFont, readerFontClass, showSpoken } from './reader/readingAids';
 import { focusModeOf, paragraphFocusClass, zenLayout } from './reader/readerLayout';
+import { checkpointDue, startTracker, wordsBetween, type CheckpointReason } from './reader/checkpoints';
+import { CheckpointDialog, CheckpointOffer, type CheckpointRequest } from './reader/CheckpointDialog';
 import { narrationTimeline, wordAt, type TimedWord } from './reader/narrationSync';
 import { ReaderContents, GoToPopover } from './reader/ReaderNavigation';
 import { useDeviceVoice, type Translated } from './reader/useDeviceVoice';
@@ -942,6 +944,48 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const zen = zenLayout(layout.zen);
   const focusMode = focusModeOf(layout);
   useEffect(() => { setChromeHidden(layout.zen); }, [layout.zen]);
+
+  // Comprehension checkpoints (master build plan M4): words and reading time since the last one; at a chapter end,
+  // after 1,000 words or after 10 minutes (the reader's choice) a gentle offer, then four questions.
+  const checkpointsOn = !!account && !!book.hasReaderContent && !inPreview;
+  const tracker = useRef(startTracker(initialChapterIndex, initialParagraphIndex));
+  const lastPlace = useRef({ chapter: initialChapterIndex, paragraph: initialParagraphIndex });
+  const lastMove = useRef(Date.now());
+  const [checkpointOffer, setCheckpointOffer] = useState<Omit<CheckpointRequest, 'id'> | null>(null);
+  const [checkpoint, setCheckpoint] = useState<CheckpointRequest | null>(null);
+  const resetTracker = () => { tracker.current = startTracker(currentChapterIndex, currentParagraphIndex); };
+  const passageFor = (reason: CheckpointReason, prev: { chapter: number; paragraph: number }): Omit<CheckpointRequest, 'id'> => {
+    const t = tracker.current;
+    if (reason === 'chapter') return { reason, chapterIndex: prev.chapter, from: t.chapter === prev.chapter ? t.paragraph : 0 };
+    // What was read in this chapter; at the very start of a chapter, the end of the one before.
+    const here = wordsBetween(chapters, { chapter: currentChapterIndex, paragraph: t.chapter === currentChapterIndex ? t.paragraph : 0 }, { chapter: currentChapterIndex, paragraph: currentParagraphIndex + 1 });
+    if (here < 150 && t.chapter < currentChapterIndex) return { reason, chapterIndex: t.chapter, from: t.paragraph };
+    return { reason, chapterIndex: currentChapterIndex, from: t.chapter === currentChapterIndex ? t.paragraph : 0, to: currentParagraphIndex };
+  };
+  useEffect(() => {
+    const prev = lastPlace.current;
+    const now = { chapter: currentChapterIndex, paragraph: currentParagraphIndex };
+    lastPlace.current = now;
+    lastMove.current = Date.now();
+    if (!checkpointsOn) return;
+    const read = wordsBetween(chapters, prev, now);
+    // A jump far ahead (the contents, a search) or back is not reading: start counting again from here.
+    if (read >= 3000 || (read === 0 && (now.chapter !== prev.chapter || now.paragraph < prev.paragraph))) { tracker.current = startTracker(now.chapter, now.paragraph); return; }
+    tracker.current.words += read;
+    const reason = checkpointDue(layout.checkpoints, tracker.current, { chapterFinished: now.chapter === prev.chapter + 1 });
+    if (reason && !checkpointOffer && !checkpoint) setCheckpointOffer(passageFor(reason, prev));
+  }, [currentChapterIndex, currentParagraphIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!checkpointsOn || layout.checkpoints !== 'time') return;
+    const t = window.setInterval(() => {
+      // Reading time counts while the page is shown and the reader moved in the last three minutes.
+      if (document.visibilityState !== 'visible' || Date.now() - lastMove.current > 180_000) return;
+      tracker.current.activeMs += 15_000;
+      if (checkpointDue('time', tracker.current) && !checkpointOffer && !checkpoint) setCheckpointOffer(passageFor('time', lastPlace.current));
+    }, 15_000);
+    return () => window.clearInterval(t);
+  }, [checkpointsOn, layout.checkpoints, checkpointOffer, checkpoint]); // eslint-disable-line react-hooks/exhaustive-deps
+  const startCheckpoint = (req: Omit<CheckpointRequest, 'id'>) => { setCheckpointOffer(null); resetTracker(); setCheckpoint({ ...req, id: Date.now() }); };
   const darkChrome = settings.theme === 'night' || settings.theme === 'black' || (settings.theme === 'custom' && isDarkColour(layout.customBg));
 
   /** Turn a page (or, scrolling, a chapter); past the last page the next chapter opens, before the first the previous one at its end. */
@@ -1562,8 +1606,13 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           api={ebookApi} signedIn={!!account} onSignIn={() => requireSignIn('the reading assistant')} bookId={book.id} chapters={chapters}
           chapterIndex={currentChapterIndex} inPreview={inPreview || !book.hasReaderContent} tab={assistantTab} onTab={setAssistantTab} request={wordsRequest}
           onJump={(c, p) => jumpTo(c, p)} onClose={() => setShowAssistant(false)}
+          onCheckpoint={() => startCheckpoint({ reason: 'manual', chapterIndex: currentChapterIndex, from: 0, to: Math.max(currentParagraphIndex, Math.min(chapters[currentChapterIndex]?.content.length ?? 1, 8) - 1) })}
         />
       )}
+      {checkpointOffer && !checkpoint && (
+        <CheckpointOffer reason={checkpointOffer.reason} onStart={() => startCheckpoint(checkpointOffer)} onDismiss={() => { setCheckpointOffer(null); resetTracker(); }} />
+      )}
+      <CheckpointDialog api={ebookApi} bookId={book.id} chapterTitle={checkpoint ? chapters[checkpoint.chapterIndex]?.title ?? '' : ''} request={checkpoint} onClose={() => setCheckpoint(null)} />
       {showNotebook && (
         <ReaderNotebook
           api={ebookApi} signedIn={!!account} status={sync.status} title={book.title} author={book.author} chapters={chapters}

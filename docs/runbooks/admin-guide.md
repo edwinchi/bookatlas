@@ -149,6 +149,7 @@ file for each feature are in `docs/planning/reading-intelligence.md`.
 - **Your own text:** paste an article or open a PDF or EPUB to Fast Read it.
 - **My progress:** reading time, streak, daily goal, the week against the goal, books finished, speed and favourite reading hours.
 - **Family reading:** up to 6 profiles. The reader picks who is reading, and each profile has its own minutes, streak, stars and quizzes.
+- **Comprehension checkpoints** (in the reader, signed-in readers of the full book): four quick questions at a chapter end, every 1,000 words or every 10 minutes (the reader chooses in the reader settings (the T button) → Aids, or turns them off) and from the reading assistant's Study tab. Each one uses one AI request of the reader's daily 40. Scores show under My progress as an average with a band (excellent 90+, good 75+, fair 60+, needs improvement).
 - **Young readers** (`/reading-intelligence/young-readers`):
   - First words (with a Shapes group drawn as geometry symbols), picture books, 99 stories with questions (33 at each of the three levels: everyday, bedtime, maths and science; a filter picks the kind; maths and science stories show their shapes and symbols), a tick on each one a child finished, letter sounds and word games.
   - Available in English, French, Spanish, Portuguese and Dutch, each with a recorded natural voice and every word lit up.

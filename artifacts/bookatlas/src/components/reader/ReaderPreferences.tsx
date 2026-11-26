@@ -4,11 +4,12 @@ import * as Tabs from '@radix-ui/react-tabs';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import * as Slider from '@radix-ui/react-slider';
 import * as Switch from '@radix-ui/react-switch';
-import { AlignJustify, AlignLeft, BookOpen, Columns2, Palette, ScrollText, Sun, Type, X, RotateCcw, Hand, Bold, Focus, Rows3, AudioLines, Accessibility } from 'lucide-react';
+import { AlignJustify, AlignLeft, BookOpen, Columns2, Palette, ScrollText, Sun, Type, X, RotateCcw, Hand, Bold, Focus, Rows3, AudioLines, Accessibility, Brain } from 'lucide-react';
 import { BoldStarts, canFollowWords, loadReaderFont } from './readingAids';
 import { BOLD_STRENGTHS } from './fastRead';
 import type { ReaderFont, ReaderSettings, ReaderTheme } from '../../types';
 import { BACKGROUND_SWATCHES, FOCUS_MODES, TEXT_SWATCHES, focusModeOf, withFocusMode, type FocusMode, type ReaderLayout } from './readerLayout';
+import { CHECKPOINT_MODES, type CheckpointMode } from './checkpoints';
 
 const FOCUS_LABELS: Record<FocusMode, { label: string; note: string }> = {
   off: { label: 'Off', note: 'The whole page as it is.' },
@@ -234,6 +235,15 @@ export function ReaderPreferences({ open, onOpenChange, container, settings, set
                     <Switch.Thumb className="block h-5 w-5 translate-x-0.5 rounded-full bg-white shadow transition-transform data-[state=checked]:translate-x-[22px]" />
                   </Switch.Root>
                 </label>
+                <div className="space-y-2 rounded-xl bg-white p-3 ring-1 ring-slate-200" data-testid="checkpoint-mode">
+                  <p className="flex items-center gap-2 text-sm font-semibold"><Brain className="h-4 w-4 text-indigo-600" aria-hidden />Comprehension checkpoints</p>
+                  <ToggleGroup.Root type="single" value={layout.checkpoints} onValueChange={(v) => v && lay({ checkpoints: v as CheckpointMode })} aria-label="When to offer a checkpoint" className="grid grid-cols-4 gap-1 rounded-xl bg-slate-100 p-1">
+                    {CHECKPOINT_MODES.map((m) => (
+                      <ToggleGroup.Item key={m.id} value={m.id} className="rounded-lg px-1 py-2 text-[11px] font-bold text-slate-600 data-[state=on]:bg-white data-[state=on]:text-slate-900 data-[state=on]:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">{m.label}</ToggleGroup.Item>
+                    ))}
+                  </ToggleGroup.Root>
+                  <p className="text-[11px] text-slate-500">{CHECKPOINT_MODES.find((m) => m.id === layout.checkpoints)!.note} Four quick questions; your score helps the speed coach. Signed-in readers only.</p>
+                </div>
                 {layout.boldStarts && (
                   <div className="space-y-2 rounded-xl bg-white p-3 ring-1 ring-slate-200" data-testid="bold-strength">
                     <p className="text-sm font-semibold">How much of each word is bold</p>

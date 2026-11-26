@@ -3,7 +3,7 @@ import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import React, { useEffect, useRef, useState } from 'react';
 import { recordQuizPercent } from './adaptiveCoach';
 import * as Tabs from '@radix-ui/react-tabs';
-import { BookOpenCheck, Check, GraduationCap, Languages, Loader2, MessageCircleQuestion, RotateCcw, Send, Sparkles, Volume2, X } from 'lucide-react';
+import { BookOpenCheck, Brain, Check, GraduationCap, Languages, Loader2, MessageCircleQuestion, RotateCcw, Send, Sparkles, Volume2, X } from 'lucide-react';
 import type { Chapter } from '../../types';
 import type { AskResult, Definition, ExplainLevel, StudyKind, StudyResult, useEbookApi } from '../ebook/ebookApi';
 
@@ -25,6 +25,8 @@ export function ReaderAssistant(props: {
   api: Api; signedIn: boolean; onSignIn: () => void; bookId: string; chapters: Chapter[]; chapterIndex: number;
   inPreview: boolean; tab: AssistantTab; onTab: (t: AssistantTab) => void; request: WordsRequest | null;
   onJump: (chapterIndex: number, paragraphIndex: number) => void; onClose: () => void;
+  /** Start a comprehension checkpoint on the chapter so far (master build plan M4). */
+  onCheckpoint?: () => void;
 }) {
   const { api, signedIn, bookId, chapters, chapterIndex } = props;
   const [remaining, setRemaining] = useState<number | null>(null);
@@ -58,7 +60,15 @@ export function ReaderAssistant(props: {
           </Tabs.List>
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             <Tabs.Content value="ask" forceMount hidden={props.tab !== 'ask'}><AskTab {...{ api, bookId, chapterIndex, onRemaining: setRemaining, onJump: props.onJump }} /></Tabs.Content>
-            <Tabs.Content value="study" hidden={props.tab !== 'study'}><StudyTab {...{ api, bookId, chapters, chapterIndex, onRemaining: setRemaining, signedIn: props.signedIn }} /></Tabs.Content>
+            <Tabs.Content value="study" hidden={props.tab !== 'study'}>
+              {props.onCheckpoint && props.signedIn && !props.inPreview && (
+                <button type="button" onClick={props.onCheckpoint} data-testid="checkpoint-manual"
+                  className="mb-3 flex min-h-11 w-full items-center gap-2 rounded-xl bg-indigo-50 px-3 text-left text-xs font-bold text-indigo-900 ring-1 ring-indigo-100 hover:bg-indigo-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
+                  <Brain className="h-4 w-4 shrink-0 text-indigo-600" aria-hidden /><span className="flex-1">Check my understanding<span className="block font-normal text-indigo-800/80">Four quick questions on what you have read in this chapter.</span></span>
+                </button>
+              )}
+              <StudyTab {...{ api, bookId, chapters, chapterIndex, onRemaining: setRemaining, signedIn: props.signedIn }} />
+            </Tabs.Content>
             <Tabs.Content value="words" forceMount hidden={props.tab !== 'words'}><WordsTab {...{ api, bookId, languages, request: props.request, onRemaining: setRemaining }} /></Tabs.Content>
           </div>
         </Tabs.Root>
