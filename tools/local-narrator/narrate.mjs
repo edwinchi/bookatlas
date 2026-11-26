@@ -232,7 +232,10 @@ async function young() {
   const speed = Number(opts.speed ?? (piper ? 1.1 : 0.9));
   let manifest = { voice: engineVoice, speed, clips: {} };
   try { const m = JSON.parse(readFileSync(file, 'utf8')); if (m.voice === engineVoice && m.speed === speed && m.clips) manifest = m; } catch { /* a first run */ }
-  const texts = yv.youngClipTexts(content);
+  // Little ones (owner request 2026-11-26): the rhymes and lullabies of the 0–3 program, in the same voice.
+  const little = await (await tsImport(pathToFileURL(join(reading, 'littleOnes.ts')).href, import.meta.url)).loadLittle(lang);
+  const rhymeLines = little.rhymes.flatMap((r) => r.lines.map((l) => l.text.replace(/\s+/g, ' ').trim())).filter(Boolean);
+  const texts = [...new Set([...yv.youngClipTexts(content), ...rhymeLines])];
   const keys = new Map(texts.map((t) => [yv.clipKey(t), t]));
   for (const k of Object.keys(manifest.clips)) if (!keys.has(k)) delete manifest.clips[k];
   for (const f of readdirSync(dir)) if (f.endsWith('.mp3') && !(f.slice(0, -4) in manifest.clips) && !keys.has(f.slice(0, -4))) rmSync(join(dir, f));

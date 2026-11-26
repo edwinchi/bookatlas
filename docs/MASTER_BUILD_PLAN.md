@@ -45,6 +45,8 @@ free and BooksAtlas earns its 19% commission on sales.
 | M13 | Family system: parent/adult/teen/child profiles, challenges, household analytics | ✅ done | `reader/family.ts`, `FamilySection.tsx` |
 | M14 | Future modules (Baby, Kids, Teen readers, School mode, Teacher dashboard) | ✅ built ahead: Young readers, Schools and teams, reports; **Baby Reader** as Little ones (0–3 years, owner request 2026-11-26): six stages by age, a daily plan per stage, high-contrast cards, 12 rhymes and lullabies with actions, links into First words, picture books and Level 1 stories | `reading/*`, `reading/littleOnes.ts`, `reading/LittleOnesPage.tsx` |
 
+| M15 | AN-002 Retention analytics and AN-003 Learning score (the specification's "NEXT" list) | ✅ done: "Your learning score" on My progress, 0 to 100 from four parts: comprehension (checkpoints, else quizzes, 40), retention (flashcards remembered, 25), consistency (days read in four weeks, 20) and focus (Fast Read sessions finished with few pauses, 15); parts without data are left out and the rest reweighted; a tip for the weakest part | `reading/learningScore.ts`, `reading/LearningScoreCard.tsx` |
+
 ### Notes on the specification
 
 - **Adaptive speed rules.** Implemented exactly: comprehension ≥ 90 → +100, ≥ 80 → +50, < 60 → −100; rewind rate

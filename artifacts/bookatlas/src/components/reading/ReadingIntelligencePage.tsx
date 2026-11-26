@@ -8,6 +8,7 @@ import { useAccount } from '../../auth/AuthContext';
 import { useEbookApi, type CheckpointSummary, type ReadingStats } from '../ebook/ebookApi';
 import { BANDS } from '../reader/checkpoints';
 import { ReadingHeatmap } from './ReadingHeatmap';
+import { LearningScoreCard } from './LearningScoreCard';
 import { FlashcardReview } from '../reader/FlashcardReview';
 import { WEEKDAY_NAMES, aggregateHeatmapData, consistencyLabel, consistencyScore, dailyActivity, hourLabel, peakDay, peakHour } from './heatmap';
 import { FastReadPlayer, SpeedCheck, useSpeedTests } from '../reader/FastReadPanel';
@@ -208,6 +209,7 @@ function Progress({ speed, fam }: { speed: ReturnType<typeof useSpeedTests>; fam
                 <Tile icon={Gauge} label="While reading" value={stats.wordsPerMinute ? `${stats.wordsPerMinute}` : '–'} note={stats.wordsPerMinute ? 'words a minute in the reader' : 'shows after a few minutes of reading'} />
               </div>
               <ReadingBehaviour stats={stats} />
+              <LearningScoreCard api={api} stats={stats} />
               <div className="grid gap-3 lg:grid-cols-2">
                 <ReadingHeatmap activity={stats.activity ?? []} />
                 <DaysChart days={stats.last30} />
