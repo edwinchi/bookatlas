@@ -3,6 +3,8 @@ import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import React, { useEffect, useRef, useState } from 'react';
 import { recordQuizPercent } from './adaptiveCoach';
 import { FlashcardReview } from './FlashcardReview';
+import { KnowledgeMapView } from './KnowledgeMapView';
+import type { MapEdge, MapNode } from './knowledgeMap';
 import * as Collapsible from '@radix-ui/react-collapsible';
 import * as Tabs from '@radix-ui/react-tabs';
 import { BookOpenCheck, Brain, Check, ChevronDown, GraduationCap, Languages, Loader2, MessageCircleQuestion, RotateCcw, Send, Sparkles, Volume2, X } from 'lucide-react';
@@ -77,7 +79,7 @@ export function ReaderAssistant(props: {
                   <Collapsible.Content className="px-3 pb-3"><FlashcardReview api={api} bookId={bookId} compact /></Collapsible.Content>
                 </Collapsible.Root>
               )}
-              <StudyTab {...{ api, bookId, chapters, chapterIndex, onRemaining: setRemaining, signedIn: props.signedIn }} />
+              <StudyTab {...{ api, bookId, chapters, chapterIndex, onRemaining: setRemaining, signedIn: props.signedIn, onJump: props.onJump }} />
             </Tabs.Content>
             <Tabs.Content value="words" forceMount hidden={props.tab !== 'words'}><WordsTab {...{ api, bookId, languages, request: props.request, onRemaining: setRemaining }} /></Tabs.Content>
           </div>
@@ -170,18 +172,23 @@ function AskTab({ api, bookId, chapterIndex, onRemaining, onJump }: { api: Api; 
   );
 }
 
-function StudyTab({ api, bookId, chapters, chapterIndex, onRemaining, signedIn }: { api: Api; bookId: string; chapters: Chapter[]; chapterIndex: number; onRemaining: (n: number) => void; signedIn: boolean }) {
-  const [tool, setTool] = useState<'summary' | 'key_concepts' | 'flashcards' | 'quiz'>('summary');
+function StudyTab({ api, bookId, chapters, chapterIndex, onRemaining, signedIn, onJump }: { api: Api; bookId: string; chapters: Chapter[]; chapterIndex: number; onRemaining: (n: number) => void; signedIn: boolean; onJump?: (chapterIndex: number, paragraphIndex: number) => void }) {
+  const [tool, setTool] = useState<'summary' | 'key_concepts' | 'flashcards' | 'quiz' | 'map'>('summary');
   // Summary lengths (Reading Intelligence 2026-11-25): one minute, five minutes or complete.
   const [length, setLength] = useState<'summary_short' | 'summary' | 'summary_full'>('summary');
-  const kind: StudyKind = tool === 'summary' ? length : tool;
+  const kind: StudyKind | 'map' = tool === 'summary' ? length : tool;
+  const [map, setMap] = useState<{ title: string; nodes: MapNode[]; edges: MapEdge[] } | null>(null);
   const [ci, setCi] = useState(chapterIndex);
   const [result, setResult] = useState<StudyResult | null>(null);
   const { busy, error, run } = useRun(onRemaining);
   useEffect(() => { setCi(chapterIndex); }, [chapterIndex]);
-  useEffect(() => { setResult(null); }, [ci, kind]);
-  const make = async () => { const r = await run(() => api.studyChapter({ bookId, chapterIndex: ci, kind })); if (r) setResult(r); };
-  const kinds: [typeof tool, string][] = [['summary', 'Summary'], ['key_concepts', 'Key concepts'], ['flashcards', 'Flashcards'], ['quiz', 'Quiz']];
+  useEffect(() => { setResult(null); setMap(null); }, [ci, kind]);
+  const make = async () => {
+    // The knowledge map (master build plan M10): the chapter's ideas and how they connect.
+    if (kind === 'map') { const m = await run(() => api.knowledgeMap({ bookId, chapterIndex: ci })); if (m) setMap(m); return; }
+    const r = await run(() => api.studyChapter({ bookId, chapterIndex: ci, kind })); if (r) setResult(r);
+  };
+  const kinds: [typeof tool, string][] = [['summary', 'Summary'], ['key_concepts', 'Key concepts'], ['flashcards', 'Flashcards'], ['quiz', 'Quiz'], ['map', 'Map']];
   const lengths: [typeof length, string][] = [['summary_short', '1 minute'], ['summary', '5 minutes'], ['summary_full', 'Complete']];
   return (
     <div className="space-y-3">
@@ -191,9 +198,9 @@ function StudyTab({ api, bookId, chapters, chapterIndex, onRemaining, signedIn }
           {chapters.map((c, i) => <option key={i} value={i}>{i + 1}. {c.title}</option>)}
         </SelectBox>
       </label>
-      <div role="radiogroup" aria-label="Study tool" className="grid grid-cols-4 gap-1.5">
+      <div role="radiogroup" aria-label="Study tool" className="grid grid-cols-5 gap-1">
         {kinds.map(([k, label]) => (
-          <button key={k} type="button" role="radio" aria-checked={tool === k} onClick={() => setTool(k)}
+          <button key={k} type="button" role="radio" aria-checked={tool === k} onClick={() => setTool(k)} data-testid={`study-tool-${k}`}
             className={`rounded-xl border px-1 py-2 text-[11px] font-bold cursor-pointer ${tool === k ? 'border-indigo-500 bg-indigo-50 text-indigo-800' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{label}</button>
         ))}
       </div>
@@ -205,10 +212,12 @@ function StudyTab({ api, bookId, chapters, chapterIndex, onRemaining, signedIn }
           ))}
         </ToggleGroup.Root>
       )}
-      {!result && <button type="button" onClick={() => void make()} disabled={busy} className="inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500 disabled:opacity-50 cursor-pointer">
-        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <BookOpenCheck className="h-3.5 w-3.5" aria-hidden />}Make {tool === 'summary' ? `${lengths.find(([k]) => k === length)![1].toLowerCase()} summary` : kinds.find(([k]) => k === tool)![1].toLowerCase()}
+      {!result && !map && <button type="button" onClick={() => void make()} disabled={busy} className="inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500 disabled:opacity-50 cursor-pointer">
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <BookOpenCheck className="h-3.5 w-3.5" aria-hidden />}Make {tool === 'summary' ? `${lengths.find(([k]) => k === length)![1].toLowerCase()} summary` : tool === 'map' ? 'knowledge map' : kinds.find(([k]) => k === tool)![1].toLowerCase()}
       </button>}
       <Err text={error} />
+      {map && <KnowledgeMapView title={map.title} nodes={map.nodes} edges={map.edges} onJump={onJump ? (p) => onJump(ci, p) : undefined} />}
+      {map && <p className="text-[10px] text-slate-400">Made by AI from the chapter text; check anything important in the book.</p>}
       {result?.summary !== undefined && (
         <div className="space-y-2 text-xs leading-relaxed text-slate-800">
           <p className="whitespace-pre-line">{result.summary}</p>

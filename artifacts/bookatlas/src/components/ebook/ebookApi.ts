@@ -271,6 +271,8 @@ export function useEbookApi() {
     saveFlashcards: (body: { bookId: string; chapterIndex?: number | null; cards: { question: string; answer: string }[] }) => json<{ added: number; skipped: number; total: number }>('/api/reader/flashcards', 'POST', body),
     reviewFlashcard: (id: string, score: 1 | 2 | 3 | 4) => json<{ card: Flashcard; nextInDays: number }>(`/api/reader/flashcards/${encodeURIComponent(id)}/review`, 'POST', { score }),
     removeFlashcard: (id: string) => json<{ removed: boolean; total: number }>(`/api/reader/flashcards/${encodeURIComponent(id)}`, 'DELETE'),
+    // Knowledge maps (master build plan M10).
+    knowledgeMap: (body: { bookId: string; chapterIndex: number }) => json<{ chapterIndex: number; title: string; nodes: import('../reader/knowledgeMap').MapNode[]; edges: import('../reader/knowledgeMap').MapEdge[]; remaining: number }>('/api/reader/ai/map', 'POST', body),
     flashcardsFromPassage: (body: { bookId: string; text: string }) => json<{ chapterIndex: number; cards: { question: string; answer: string }[]; remaining: number }>('/api/reader/ai/flashcards', 'POST', body),
     savePayout: (body: PayoutInput) => json<PayoutView>('/api/author/payout', 'PUT', body),
     // Follow authors (cycle 5c).

@@ -81,7 +81,7 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (/^\/api\/manager\/reader-reports(?:\/|$)/.test(normalized)) return 'admin';
   if (['PATCH', 'DELETE'].includes(method) && /^\/api\/reader\/annotations\/[^/]+$/.test(normalized)) return 'reader';
   // Reader Phase 2 (cycle 8): AI tools for signed-in readers; the language list is public.
-  if (method === 'POST' && /^\/api\/reader\/ai\/(?:ask|study|explain|translate|define|checkpoint|flashcards)$/.test(normalized)) return 'reader';
+  if (method === 'POST' && /^\/api\/reader\/ai\/(?:ask|study|explain|translate|define|checkpoint|flashcards|map)$/.test(normalized)) return 'reader';
   if (method === 'GET' && normalized === '/api/reader/ai/config') return 'public';
   // Narration (TASK-0008): authors order and listen to samples; the step authenticates with its own key.
   if (method === 'GET' && /^\/api\/narration\/(?:books\/[^/]+|samples\/[^/]+)$/.test(normalized)) return 'reader';

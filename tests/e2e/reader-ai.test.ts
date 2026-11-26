@@ -190,3 +190,27 @@ test('flashcards (master build plan M8): from a selection to the review deck, gr
   assert.equal((await fetch(`/api/reader/flashcards/${card.id}`, { method: 'DELETE', headers })).status, 200);
   assert.equal((await (await fetch(`/api/reader/flashcards?bookId=${bookId}`, { headers })).json()).total, before + 1);
 });
+
+test('knowledge maps (master build plan M10): a chapter’s ideas and links, cleaned and cached', async () => {
+  const { fetch } = await getSharedTestServer();
+  const bookId = await publishBook(fetch);
+  resetQuota();
+  reply = () => 'The opening chapter [1].';
+  const chapterIndex = (await (await fetch('/api/reader/ai/ask', post('', { bookId, question: 'What is the opening chapter about?' }))).json()).sources[0].chapterIndex as number;
+  calls.length = 0;
+  reply = () => JSON.stringify({ title: 'Numbered paragraphs', nodes: [
+    { id: 'a', label: 'Paragraphs', kind: 'term', summary: 'The units of the chapter.', paragraph: 1 },
+    { id: 'b', label: 'Numbers', kind: 'idea', summary: 'Each paragraph has one.', paragraph: 2 },
+    { id: 'c', label: 'Opening chapter', kind: 'idea', summary: 'Where it all starts.', paragraph: 999 },
+  ], edges: [{ from: 'b', to: 'a', label: 'label' }, { from: 'a', to: 'c', label: 'make up' }, { from: 'a', to: 'zzz', label: 'dropped' }] });
+  assert.equal((await fetch('/api/reader/ai/map', post('', { bookId, chapterIndex }, 'unauthenticated'))).status, 401);
+  const map = await (await fetch('/api/reader/ai/map', post('', { bookId, chapterIndex }))).json();
+  assert.equal(map.title, 'Numbered paragraphs');
+  assert.deepEqual(map.nodes.map((n: { id: string; paragraph: number | null }) => [n.id, n.paragraph]), [['paragraphs', 0], ['numbers', 1], ['opening-chapter', null]]);
+  assert.equal(map.edges.length, 2);
+  assert.match(calls[0]!.messages[0]!.text, /\[1\] /, 'paragraphs are numbered for the AI');
+  const again = await (await fetch('/api/reader/ai/map', post('', { bookId, chapterIndex }))).json();
+  assert.equal(again.cached, true);
+  assert.equal(calls.length, 1);
+  assert.equal((await fetch('/api/reader/ai/map', post('', { bookId, chapterIndex: 99 }))).status, 404);
+});

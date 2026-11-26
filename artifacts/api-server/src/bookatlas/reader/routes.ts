@@ -15,6 +15,7 @@ import { digestEmailConfigured, getDigest, resendBatch, runDigest, setDigest, un
 import { recordYoungStory, youngTitle } from './youngStories.js';
 import { checkpointQuestions, checkpointsOf, recordCheckpoint } from './checkpoints.js';
 import { flashcardsFromPassage, gradeCard, myDeck, removeCard, saveCards } from './flashcards.js';
+import { knowledgeMap } from './knowledgeMap.js';
 import { answerQuiz, classDetail, classReport, createClass, joinClass, leaveClass, myClasses, publishQuiz, removeQuiz, setClassBooks } from './classes.js';
 import { FamilyError, addActivity, familyView, readFamily, weekStart, withProfiles, type Family } from './family.js';
 
@@ -254,4 +255,5 @@ export function mountReader(app: Express, catalog: CatalogStore, generate?: Gene
   app.post('/api/reader/ai/define', json, ai(defineWord));
   app.post('/api/reader/ai/checkpoint', json, ai(checkpointQuestions));
   app.post('/api/reader/ai/flashcards', json, ai(flashcardsFromPassage));
+  app.post('/api/reader/ai/map', json, ai(knowledgeMap));
 }
