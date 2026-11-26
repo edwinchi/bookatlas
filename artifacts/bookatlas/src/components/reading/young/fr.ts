@@ -1,4 +1,5 @@
 import { cap, makeSounds, type YoungTranslation } from '../youngLang';
+import { shapes, shapesBook, stories as moreStories } from './more/fr';
 
 /** Young readers in French (Reading Intelligence phase 5). Written for BooksAtlas, in the order of the English. */
 const fr: YoungTranslation = {
@@ -24,6 +25,7 @@ const fr: YoungTranslation = {
     3: ['fusée', 'tortue', 'crayon', 'jardin', 'lapin', 'planète', 'château', 'dragon', 'banane', 'île', 'photo', 'guitare'],
   },
   groups: {
+    shapes,
     animals: { name: 'Animaux', words: ['le chien', 'le chat', 'la vache', 'le canard', 'le lion', 'le poisson', 'l’oiseau', 'l’éléphant'] },
     colours: { name: 'Couleurs', words: ['le rouge', 'le bleu', 'le jaune', 'le vert', 'l’orange', 'le violet', 'le marron', 'le noir'] },
     food: { name: 'À manger', words: ['la pomme', 'la banane', 'le pain', 'le lait', 'l’œuf', 'le riz', 'la carotte', 'l’orange'] },
@@ -32,11 +34,13 @@ const fr: YoungTranslation = {
     vehicles: { name: 'Véhicules', words: ['la voiture', 'le bus', 'le train', 'le bateau', 'l’avion', 'le vélo', 'le tracteur', 'la fusée'] },
   },
   books: {
+    'shapes-around': shapesBook,
     'good-night': { title: 'Bonne nuit, lune et étoiles', pages: ['Le soleil se couche.', 'Bonjour, la lune !', 'Une petite étoile. Deux petites étoiles.', 'Le hibou fait hou, hou.', 'Au lit, on y va.', 'Bonne nuit !'] },
     'at-the-farm': { title: 'À la ferme', pages: ['La vache fait meuh.', 'Le cochon fait groin groin.', 'La poule fait cot cot.', 'Le mouton fait bêê.', 'Le tracteur fait vroum !', 'Au revoir, la ferme !'] },
     'colours-everywhere': { title: 'Des couleurs partout', pages: ['Une pomme rouge.', 'Une banane jaune.', 'Une grenouille verte.', 'Une baleine bleue.', 'Des raisins violets.', 'Toutes les couleurs ensemble !'] },
   },
   stories: {
+    ...moreStories,
     'red-hat': {
       title: 'Le chapeau rouge',
       paragraphs: ['Sam a un chapeau rouge.', 'Le vent prend le chapeau. Il monte, il monte !', 'Un chien court et court. Le chien attrape le chapeau.', 'Sam est content. « Bon chien ! » dit Sam.'],

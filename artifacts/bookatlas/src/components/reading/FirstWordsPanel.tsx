@@ -57,7 +57,7 @@ function WordCards({ onHeard, clock }: { onHeard: (key: string) => void; clock: 
       </ToggleGroup.Root>
       {shown && (
         <div className="flex items-center justify-center gap-6 rounded-3xl bg-white py-6 ring-1 ring-rose-200" aria-live="polite">
-          <span className="text-8xl" aria-hidden>{shown.picture}</span>
+          <span className="text-indigo-600 text-8xl" aria-hidden>{shown.picture}</span>
           <span className="font-reader-clear text-5xl font-bold text-slate-900 sm:text-6xl">{shown.word}</span>
         </div>
       )}
@@ -65,7 +65,7 @@ function WordCards({ onHeard, clock }: { onHeard: (key: string) => void; clock: 
         {g.words.map((w) => (
           <button key={w.word} type="button" onClick={() => say(w)} aria-label={w.word} data-testid={`first-word-${w.word}`}
             className="flex aspect-square flex-col items-center justify-center gap-2 rounded-3xl bg-white ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
-            <span className="text-6xl sm:text-7xl" aria-hidden>{w.picture}</span>
+            <span className="text-indigo-600 text-6xl sm:text-7xl" aria-hidden>{w.picture}</span>
             <span className="font-reader-clear text-xl font-bold text-slate-800">{w.word}</span>
           </button>
         ))}
@@ -100,7 +100,7 @@ function BookReader({ book, onBack, clock }: { book: PictureBook; onBack: () => 
       <button type="button" onClick={() => { go(0); onBack(); }} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-indigo-700 cursor-pointer"><ArrowLeft className="h-4 w-4" aria-hidden />All picture books</button>
       <div className="rounded-[2rem] bg-white p-6 text-center ring-1 ring-slate-200 sm:p-10" data-testid="picture-book-page">
         <p className="text-sm font-bold text-slate-400">{book.title} · {page + 1} of {book.pages.length}</p>
-        <div className="my-6 text-[7rem] leading-none sm:text-[9rem]" aria-hidden>{pg.picture}</div>
+        <div className="text-indigo-600 my-6 text-[7rem] leading-none sm:text-[9rem]" aria-hidden>{pg.picture}</div>
         <p className="font-reader-clear text-4xl font-bold leading-snug text-slate-900 sm:text-5xl">
           {words.map((w, i) => <React.Fragment key={i}><span className={`rounded-lg px-1 transition-colors ${word === i ? 'bg-amber-300' : ''}`}>{w.text}</span>{' '}</React.Fragment>)}
         </p>

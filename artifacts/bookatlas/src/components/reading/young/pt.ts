@@ -1,4 +1,5 @@
 import { cap, makeSounds, type YoungTranslation } from '../youngLang';
+import { shapes, shapesBook, stories as moreStories } from './more/pt';
 
 /**
  * Young readers in Portuguese (Reading Intelligence phase 5), in European Portuguese as used in Portugal and in
@@ -26,6 +27,7 @@ const pt: YoungTranslation = {
     3: ['foguetão', 'tartaruga', 'lápis', 'jardim', 'coelho', 'planeta', 'castelo', 'dragão', 'banana', 'ilha', 'câmara', 'guitarra'],
   },
   groups: {
+    shapes,
     animals: { name: 'Animais', words: ['o cão', 'o gato', 'a vaca', 'o pato', 'o leão', 'o peixe', 'o pássaro', 'o elefante'] },
     colours: { name: 'Cores', words: ['o vermelho', 'o azul', 'o amarelo', 'o verde', 'o laranja', 'o roxo', 'o castanho', 'o preto'] },
     food: { name: 'Comida', words: ['a maçã', 'a banana', 'o pão', 'o leite', 'o ovo', 'o arroz', 'a cenoura', 'a laranja'] },
@@ -34,11 +36,13 @@ const pt: YoungTranslation = {
     vehicles: { name: 'Veículos', words: ['o carro', 'o autocarro', 'o comboio', 'o barco', 'o avião', 'a bicicleta', 'o trator', 'o foguetão'] },
   },
   books: {
+    'shapes-around': shapesBook,
     'good-night': { title: 'Boa noite, lua e estrelas', pages: ['O sol põe-se.', 'Olá, lua!', 'Uma estrelinha. Duas estrelinhas.', 'O mocho faz uu, uu.', 'Vamos para a cama.', 'Boa noite!'] },
     'at-the-farm': { title: 'Na quinta', pages: ['A vaca faz muu.', 'O porco faz oinc.', 'A galinha faz có-có.', 'A ovelha faz mé.', 'O trator faz brrum!', 'Adeus, quinta!'] },
     'colours-everywhere': { title: 'Cores por todo o lado', pages: ['Uma maçã vermelha.', 'Uma banana amarela.', 'Um sapo verde.', 'Uma baleia azul.', 'Uvas roxas.', 'Todas as cores juntas!'] },
   },
   stories: {
+    ...moreStories,
     'red-hat': {
       title: 'O chapéu vermelho',
       paragraphs: ['O Sam tem um chapéu vermelho.', 'O vento leva o chapéu. Sobe, sobe!', 'Um cão corre e corre. O cão apanha o chapéu.', 'O Sam fica contente. «Bom cão!», diz o Sam.'],

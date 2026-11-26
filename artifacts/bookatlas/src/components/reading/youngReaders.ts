@@ -3,6 +3,7 @@
  * stories with questions, in three reading levels. All texts were written for BooksAtlas. Pure data and helpers,
  * tested in youngReaders.test.ts.
  */
+import { MORE_STORIES } from './youngStoriesMore';
 
 export type Level = 1 | 2 | 3;
 export const LEVELS: { id: Level; name: string; ages: string; note: string }[] = [
@@ -48,8 +49,20 @@ export const WORDS: Record<Level, PictureWord[]> = {
 };
 
 export interface Question { question: string; options: string[]; answer: number }
-export interface Story { id: string; level: Level; title: string; picture: string; paragraphs: string[]; questions: Question[] }
-export const STORIES: Story[] = [
+/** What a story is about (owner request 2026-11-26): everyday stories, bedtime stories, maths and science. */
+export type StoryTopic = 'everyday' | 'bedtime' | 'maths' | 'science';
+export const STORY_TOPICS: { id: StoryTopic; name: string; icon: string }[] = [
+  { id: 'everyday', name: 'Stories', icon: '📖' }, { id: 'bedtime', name: 'Bedtime', icon: '🌙' }, { id: 'maths', name: 'Maths', icon: '📐' }, { id: 'science', name: 'Science', icon: '🔬' },
+];
+export interface Story {
+  id: string; level: Level; title: string; picture: string; paragraphs: string[]; questions: Question[];
+  /** Everyday when not given. */
+  topic?: StoryTopic;
+  /** Shapes, numbers and geometry symbols shown with a maths or science story. */
+  symbols?: string[];
+}
+export const topicOf = (s: Pick<Story, 'topic'>): StoryTopic => s.topic ?? 'everyday';
+const FIRST_STORIES: Story[] = [
   {
     id: 'red-hat', level: 1, title: 'The Red Hat', picture: '🎩',
     paragraphs: ['Sam has a red hat.', 'The wind takes the hat. Up, up it goes!', 'A dog runs and runs. The dog gets the hat.', 'Sam is glad. "Good dog!" says Sam.'],
@@ -200,6 +213,8 @@ export const STORIES: Story[] = [
     ],
   },
 ];
+/** Every story: the first twelve, then 29 more at each level (33 a level). */
+export const STORIES: Story[] = [...FIRST_STORIES, ...MORE_STORIES];
 
 /** A small seeded random (the same puzzle for the same round, so a test or a reload does not reshuffle). */
 export function seeded(seed: number) {

@@ -32,6 +32,12 @@ export const FIRST_WORDS: WordGroup[] = [
     { word: 'car', picture: '🚗' }, { word: 'bus', picture: '🚌' }, { word: 'train', picture: '🚆' }, { word: 'boat', picture: '⛵' },
     { word: 'plane', picture: '✈️' }, { word: 'bike', picture: '🚲' }, { word: 'tractor', picture: '🚜' }, { word: 'rocket', picture: '🚀' },
   ] },
+  // Shapes (owner request 2026-11-26): each shape drawn as its geometry symbol.
+  { id: 'shapes', name: 'Shapes', icon: '🔷', words: [
+    { word: 'circle', picture: '●' }, { word: 'square', picture: '■' }, { word: 'triangle', picture: '▲' }, { word: 'rectangle', picture: '▬' },
+    { word: 'oval', picture: '⬬' }, { word: 'diamond', picture: '◆' }, { word: 'star', picture: '★' }, { word: 'heart', picture: '♥' },
+    { word: 'pentagon', picture: '⬟' }, { word: 'hexagon', picture: '⬢' }, { word: 'octagon', picture: '⯃' }, { word: 'cross', picture: '✚' },
+  ] },
 ];
 export const ALL_FIRST_WORDS = FIRST_WORDS.flatMap((g) => g.words.map((w) => ({ ...w, group: g.id })));
 export const wordKey = (group: string, word: string) => `${group}:${word}`;
@@ -62,6 +68,14 @@ export const PICTURE_BOOKS: PictureBook[] = [
     { picture: '🐳', text: 'A blue whale.' },
     { picture: '🍇', text: 'Purple grapes.' },
     { picture: '🌈', text: 'All the colours together!' },
+  ] },
+  { id: 'shapes-around', title: 'Shapes All Around', cover: '🔷', pages: [
+    { picture: '●', text: 'A ball is a circle.' },
+    { picture: '■', text: 'A window is a square.' },
+    { picture: '▲', text: 'A slice of pizza is a triangle.' },
+    { picture: '▬', text: 'A door is a rectangle.' },
+    { picture: '◆', text: 'A kite is a diamond.' },
+    { picture: '★', text: 'Shapes are everywhere!' },
   ] },
 ];
 

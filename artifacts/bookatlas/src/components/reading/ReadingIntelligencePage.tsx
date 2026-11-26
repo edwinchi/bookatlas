@@ -325,8 +325,8 @@ export default function ReadingIntelligencePage() {
         <Section id="young" icon={Baby} eyebrow="Young readers" title="Stories, letter sounds and word games"
           intro="From first words to confident reading: picture words and little picture books for the youngest, then stories that read themselves aloud in a natural voice with every word lit up, questions after each story, letter sounds and word games in three levels, in English, French, Spanish, Portuguese and Dutch, each with its own natural voice. Free, with no account needed.">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Feature icon={Baby} title="First words (0–4)">Animals, colours, food, family, nature and vehicles to tap and hear, picture books and a Find it game.</Feature>
-            <Feature icon={BookOpen} title="Stories read aloud">Tap Read to me and follow the words; tap any word to hear it again.</Feature>
+            <Feature icon={Baby} title="First words (0–4)">Animals, colours, food, family, nature, vehicles and shapes to tap and hear, picture books and a Find it game.</Feature>
+            <Feature icon={BookOpen} title="99 stories read aloud">33 at every level: everyday, bedtime, maths and science stories. Tap Read to me and follow the words; tap any word to hear it again.</Feature>
             <Feature icon={Type} title="Letter sounds">Every letter, and the letters that work together, with a word and a picture.</Feature>
             <Feature icon={Star} title="Word games">Find the picture, build the word and spell it, and collect stars.</Feature>
           </div>

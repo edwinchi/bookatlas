@@ -2,15 +2,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ALL_FIRST_WORDS, FIRST_WORDS, PICTURE_BOOKS, findRound, readFirstProgress, recognition, wordKey } from './firstWords';
 
-test('first words: the six groups from the brief, eight words each, picture books with pages', () => {
-  assert.deepEqual(FIRST_WORDS.map((g) => g.name), ['Animals', 'Colours', 'Food', 'Family', 'Nature', 'Vehicles']);
-  for (const g of FIRST_WORDS) assert.equal(g.words.length, 8, g.id);
-  assert.equal(ALL_FIRST_WORDS.length, 48);
+test('first words: the six groups from the brief (eight words each) and Shapes (twelve), picture books with pages', () => {
+  assert.deepEqual(FIRST_WORDS.map((g) => g.name), ['Animals', 'Colours', 'Food', 'Family', 'Nature', 'Vehicles', 'Shapes']);
+  for (const g of FIRST_WORDS) assert.equal(g.words.length, g.id === 'shapes' ? 12 : 8, g.id);
+  assert.equal(ALL_FIRST_WORDS.length, 60);
   for (const b of PICTURE_BOOKS) assert.ok(b.pages.length >= 5 && b.pages.every((p) => p.text && p.picture), b.id);
 });
 
 test('first words: "Find it" has four different pictures, one of them right', () => {
-  for (const group of [null, 'animals', 'colours']) {
+  for (const group of [null, 'animals', 'colours', 'shapes']) {
     for (let round = 0; round < 12; round += 1) {
       const r = findRound(round, group);
       assert.equal(r.choices.length, 4);

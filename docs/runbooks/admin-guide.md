@@ -150,7 +150,7 @@ file for each feature are in `docs/planning/reading-intelligence.md`.
 - **My progress:** reading time, streak, daily goal, the week against the goal, books finished, speed and favourite reading hours.
 - **Family reading:** up to 6 profiles. The reader picks who is reading, and each profile has its own minutes, streak, stars and quizzes.
 - **Young readers** (`/reading-intelligence/young-readers`):
-  - First words, picture books, 12 stories with questions (a tick on each one a child finished), letter sounds and word games, in three levels.
+  - First words (with a Shapes group drawn as geometry symbols), picture books, 99 stories with questions (33 at each of the three levels: everyday, bedtime, maths and science; a filter picks the kind; maths and science stories show their shapes and symbols), a tick on each one a child finished, letter sounds and word games.
   - Available in English, French, Spanish, Portuguese and Dutch, each with a recorded natural voice and every word lit up.
   - No account needed.
 - **Schools and teams:**

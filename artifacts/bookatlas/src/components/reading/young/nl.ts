@@ -1,4 +1,5 @@
 import { cap, makeSounds, type YoungTranslation } from '../youngLang';
+import { shapes, shapesBook, stories as moreStories } from './more/nl';
 
 /** Young readers in Dutch (Reading Intelligence phase 5). Written for BooksAtlas, in the order of the English. */
 const nl: YoungTranslation = {
@@ -23,6 +24,7 @@ const nl: YoungTranslation = {
     3: ['raket', 'schildpad', 'potlood', 'tuin', 'konijn', 'planeet', 'kasteel', 'draak', 'banaan', 'eiland', 'camera', 'gitaar'],
   },
   groups: {
+    shapes,
     animals: { name: 'Dieren', words: ['de hond', 'de kat', 'de koe', 'de eend', 'de leeuw', 'de vis', 'de vogel', 'de olifant'] },
     colours: { name: 'Kleuren', words: ['rood', 'blauw', 'geel', 'groen', 'oranje', 'paars', 'bruin', 'zwart'] },
     food: { name: 'Eten', words: ['de appel', 'de banaan', 'het brood', 'de melk', 'het ei', 'de rijst', 'de wortel', 'de sinaasappel'] },
@@ -31,11 +33,13 @@ const nl: YoungTranslation = {
     vehicles: { name: 'Voertuigen', words: ['de auto', 'de bus', 'de trein', 'de boot', 'het vliegtuig', 'de fiets', 'de tractor', 'de raket'] },
   },
   books: {
+    'shapes-around': shapesBook,
     'good-night': { title: 'Welterusten, maan en sterren', pages: ['De zon gaat onder.', 'Hallo, maan!', 'Eén klein sterretje. Twee kleine sterretjes.', 'De uil zegt oehoe, oehoe.', 'We gaan naar bed.', 'Welterusten!'] },
     'at-the-farm': { title: 'Op de boerderij', pages: ['De koe zegt boe.', 'Het varken zegt knor.', 'De kip zegt tok tok.', 'Het schaap zegt bè.', 'De tractor doet brrrm!', 'Dag, boerderij!'] },
     'colours-everywhere': { title: 'Overal kleuren', pages: ['Een rode appel.', 'Een gele banaan.', 'Een groene kikker.', 'Een blauwe walvis.', 'Paarse druiven.', 'Alle kleuren samen!'] },
   },
   stories: {
+    ...moreStories,
     'red-hat': {
       title: 'De rode hoed',
       paragraphs: ['Sam heeft een rode hoed.', 'De wind pakt de hoed. Omhoog, omhoog!', 'Een hond rent en rent. De hond pakt de hoed.', 'Sam is blij. "Goede hond!" zegt Sam.'],

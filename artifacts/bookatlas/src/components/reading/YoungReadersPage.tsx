@@ -13,7 +13,17 @@ import { tappedWord } from './youngVoice';
 import { ENGLISH, YOUNG_LANGS, YoungContext, loadYoung, startLang, useYoung, type YoungContent, type YoungLangId } from './youngLang';
 import { SelectBox } from '../ui/select-box';
 import { FirstWordsPanel } from './FirstWordsPanel';
-import { LEVELS, STORIES, pictureRound, sameWord, scramble, storyStars, type Level, type Story } from './youngReaders';
+import { LEVELS, STORIES, STORY_TOPICS, pictureRound, sameWord, scramble, storyStars, topicOf, type Level, type Story, type StoryTopic } from './youngReaders';
+
+/** The shapes, numbers and geometry symbols of a maths or science story, as small tiles. */
+function Symbols({ symbols, big: large = false }: { symbols?: string[]; big?: boolean }) {
+  if (!symbols?.length) return null;
+  return (
+    <span className="flex flex-wrap gap-1" aria-hidden data-testid="story-symbols">
+      {symbols.map((s, i) => <span key={i} className={`inline-grid place-items-center rounded-lg bg-indigo-50 font-bold tabular-nums text-indigo-700 ring-1 ring-indigo-100 ${large ? 'min-w-10 h-10 px-2 text-xl' : 'min-w-7 h-7 px-1.5 text-sm'}`}>{s}</span>)}
+    </span>
+  );
+}
 
 /** Stars earned on this device; for a signed-in family they count for the reader who is playing. */
 function useStars() {
@@ -77,7 +87,10 @@ function StoryReader({ story, onStars, onBack, onDone }: { story: Story; onStars
       <button type="button" onClick={() => { speaker.stop(); onBack(); }} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-indigo-700 cursor-pointer"><ArrowLeft className="h-4 w-4" aria-hidden />All stories</button>
       <article className="rounded-3xl bg-white p-6 ring-1 ring-slate-200 sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-3 font-serif text-3xl font-bold text-slate-900"><span aria-hidden className="text-4xl">{story.picture}</span>{story.title}</h2>
+          <div className="space-y-2">
+            <h2 className="flex items-center gap-3 font-serif text-3xl font-bold text-slate-900"><span aria-hidden className="text-4xl text-indigo-600">{story.picture}</span>{story.title}</h2>
+            <Symbols symbols={story.symbols} big />
+          </div>
           {speaker.supported && (
             <button type="button" onClick={play} data-testid="story-read-to-me" className={`${big} ${playing ? 'bg-slate-900 text-white' : 'bg-amber-400 text-slate-950 hover:bg-amber-300'}`}>
               {playing ? <Square className="h-5 w-5" aria-hidden /> : <Volume2 className="h-5 w-5" aria-hidden />}{playing ? 'Stop' : 'Read to me'}
@@ -139,6 +152,9 @@ function Stories({ level, onStars, readerId, startStory }: { level: Level; onSta
   const { account } = useAccount();
   const api = useEbookApi();
   const [openId, setOpenId] = useState<string | null>(startStory);
+  // Which kind of story is shown (owner request 2026-11-26): all, everyday, bedtime, maths or science; kept on this device.
+  const [topic, setTopicState] = useState<StoryTopic | 'all'>(() => { try { const v = localStorage.getItem('bookatlas:young-topic'); return v && (v === 'all' || STORY_TOPICS.some((t) => t.id === v)) ? v as StoryTopic | 'all' : 'all'; } catch { return 'all'; } });
+  const setTopic = (v: StoryTopic | 'all') => { setTopicState(v); try { localStorage.setItem('bookatlas:young-topic', v); } catch { /* this device */ } };
   // Changing the level closes the open story (not the first render, which may open one from a class link).
   const shownLevel = useRef(level);
   useEffect(() => { if (shownLevel.current !== level) { shownLevel.current = level; setOpenId(null); } }, [level]);
@@ -147,20 +163,27 @@ function Stories({ level, onStars, readerId, startStory }: { level: Level; onSta
   // The story follows the language: switching language while reading shows the same story translated.
   const open = stories.find((s) => s.id === openId) ?? null;
   if (open) return <StoryReader key={`${open.id}:${open.title}`} story={open} onStars={onStars} onBack={() => setOpenId(null)} onDone={(right) => finished(open.id, right)} />;
-  const here = stories.filter((s) => s.level === level);
-  const read = here.filter((s) => s.id in done).length;
+  const atLevel = stories.filter((s) => s.level === level);
+  const here = topic === 'all' ? atLevel : atLevel.filter((s) => topicOf(s) === topic);
+  const read = atLevel.filter((s) => s.id in done).length;
   return (
     <div className="space-y-4">
     <p className="flex items-center gap-2 text-sm font-semibold text-slate-700" data-testid="stories-read">
       <span className="inline-flex h-2 w-24 overflow-hidden rounded-full bg-slate-200" aria-hidden><span className="h-full rounded-full bg-emerald-500" style={{ width: `${here.length ? (read / here.length) * 100 : 0}%` }} /></span>
-      {read} of {here.length} stories read at this level
+      {read} of {atLevel.length} stories read at this level
     </p>
+    <ToggleGroup.Root type="single" value={topic} onValueChange={(v) => v && setTopic(v as StoryTopic | 'all')} aria-label="Kind of story" className="flex flex-wrap gap-2" data-testid="story-topics">
+      <ToggleGroup.Item value="all" className={pill}>All · {atLevel.length}</ToggleGroup.Item>
+      {STORY_TOPICS.map((t) => (
+        <ToggleGroup.Item key={t.id} value={t.id} className={pill} data-testid={`topic-${t.id}`}><span aria-hidden className="mr-1">{t.icon}</span>{t.name} · {atLevel.filter((s) => topicOf(s) === t.id).length}</ToggleGroup.Item>
+      ))}
+    </ToggleGroup.Root>
     <div className="grid gap-4 sm:grid-cols-2">
       {here.map((s) => (
         <button key={s.id} type="button" onClick={() => setOpenId(s.id)} data-testid={`story-${s.id}`}
           className="flex items-center gap-4 rounded-3xl bg-white p-5 text-left ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
-          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-amber-50 text-4xl" aria-hidden>{s.picture}</span>
-          <span className="min-w-0 flex-1"><span className="block font-serif text-xl font-bold text-slate-900">{s.title}</span><span className="text-sm text-slate-500">{s.paragraphs.join(' ').split(/\s+/).length} words · {s.questions.length} questions</span></span>
+          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-amber-50 text-4xl text-indigo-600" aria-hidden>{s.picture}</span>
+          <span className="min-w-0 flex-1 space-y-1"><span className="block font-serif text-xl font-bold text-slate-900">{s.title}</span><span className="block text-sm text-slate-500">{STORY_TOPICS.find((t) => t.id === topicOf(s))!.name} · {s.paragraphs.join(' ').split(/\s+/).length} words · {s.questions.length} questions</span><Symbols symbols={s.symbols} /></span>
           {s.id in done && <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-500 text-white" title={`Read · ${done[s.id]} of ${s.questions.length} right`} data-testid="story-done"><Check className="h-5 w-5" aria-hidden /><span className="sr-only">Read, {done[s.id]} of {s.questions.length} right</span></span>}
         </button>
       ))}

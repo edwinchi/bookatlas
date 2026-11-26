@@ -27,3 +27,22 @@ test('young readers: games are fair and repeatable', () => {
   assert.equal(storyStars(3, 3), 4);
   assert.equal(storyStars(2, 3), 2);
 });
+
+test('young readers: 33 stories at every level, with maths, science and bedtime stories at each', async () => {
+  const { STORY_TOPICS, topicOf } = await import('./youngReaders');
+  const { FIRST_WORDS, PICTURE_BOOKS } = await import('./firstWords');
+  for (const level of [1, 2, 3] as const) {
+    const here = STORIES.filter((s) => s.level === level);
+    assert.equal(here.length, 33, `level ${level}`);
+    for (const t of ['maths', 'science', 'bedtime'] as const) assert.ok(here.filter((s) => topicOf(s) === t).length >= 9, `level ${level}: ${t}`);
+    assert.ok(here.filter((s) => topicOf(s) === 'maths').every((s) => s.symbols?.length), `level ${level}: every maths story shows its symbols`);
+  }
+  assert.ok(STORIES.every((s) => STORY_TOPICS.some((t) => t.id === topicOf(s))));
+  assert.ok(STORIES.every((s) => s.paragraphs.length === 4 && s.paragraphs.every((p) => p.trim() && !/'/.test(p))), 'four paragraphs each, typographic apostrophes');
+  // Answers are not always in the same place.
+  const firsts = STORIES.map((s) => s.questions[0]!.answer);
+  assert.ok(new Set(firsts).size > 1);
+  const shapes = FIRST_WORDS.find((g) => g.id === 'shapes')!;
+  assert.ok(shapes.words.length >= 12 && shapes.words.every((w) => [...w.picture].length === 1), 'shapes are drawn as geometry symbols');
+  assert.ok(PICTURE_BOOKS.some((b) => b.id === 'shapes-around'));
+});

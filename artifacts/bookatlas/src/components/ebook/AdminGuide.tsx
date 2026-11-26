@@ -80,7 +80,7 @@ const SECTIONS: { id: string; title: string; blocks: Block[] }[] = [
   },
   {
     id: 'read-smarter', title: 'Read smarter (Reading Intelligence)', blocks: [
-      { p: 'Read smarter in the menu opens /reading-intelligence. Everything is free for readers: Fast Read and the speed check, reading aids, AI summaries and explanations, your own text, My progress with goals and streaks, family profiles, Young readers (12 stories in 3 levels, 5 languages, recorded natural voices, a tick on each story read) and Schools and teams.' },
+      { p: 'Read smarter in the menu opens /reading-intelligence. Everything is free for readers: Fast Read and the speed check, reading aids, AI summaries and explanations, your own text, My progress with goals and streaks, family profiles, Young readers (99 stories, 33 in each of 3 levels: everyday, bedtime, maths and science; a Shapes word group with geometry symbols; 5 languages, recorded natural voices, a tick on each story read) and Schools and teams.' },
       { steps: [
         'Schools and teams need two SQL files, once, in this order in the Supabase SQL editor: migrations-2026-11-25-reading-classes.sql, then migrations-2026-11-25-class-assignments.sql (both in artifacts/api-server/src/bookatlas/db/). Until then the section says it is not available.',
         'Teachers make a class, share the 8-letter code, set the reading list (books and children’s stories) with due dates, set quizzes made from a chapter (one of their 40 AI requests), and download a CSV or PDF report of minutes per week, progress and quiz scores.',

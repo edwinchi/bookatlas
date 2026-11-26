@@ -1,4 +1,5 @@
 import { cap, makeSounds, type YoungTranslation } from '../youngLang';
+import { shapes, shapesBook, stories as moreStories } from './more/es';
 
 /** Young readers in Spanish (Reading Intelligence phase 5). Written for BooksAtlas, in the order of the English. */
 const es: YoungTranslation = {
@@ -24,6 +25,7 @@ const es: YoungTranslation = {
     3: ['cohete', 'tortuga', 'lápiz', 'jardín', 'conejo', 'planeta', 'castillo', 'dragón', 'plátano', 'isla', 'cámara', 'guitarra'],
   },
   groups: {
+    shapes,
     animals: { name: 'Animales', words: ['el perro', 'el gato', 'la vaca', 'el pato', 'el león', 'el pez', 'el pájaro', 'el elefante'] },
     colours: { name: 'Colores', words: ['el rojo', 'el azul', 'el amarillo', 'el verde', 'el naranja', 'el morado', 'el marrón', 'el negro'] },
     food: { name: 'Comida', words: ['la manzana', 'el plátano', 'el pan', 'la leche', 'el huevo', 'el arroz', 'la zanahoria', 'la naranja'] },
@@ -32,11 +34,13 @@ const es: YoungTranslation = {
     vehicles: { name: 'Vehículos', words: ['el coche', 'el autobús', 'el tren', 'el barco', 'el avión', 'la bici', 'el tractor', 'el cohete'] },
   },
   books: {
+    'shapes-around': shapesBook,
     'good-night': { title: 'Buenas noches, luna y estrellas', pages: ['El sol se esconde.', '¡Hola, luna!', 'Una estrellita. Dos estrellitas.', 'El búho hace uh, uh.', 'Nos vamos a la cama.', '¡Buenas noches!'] },
     'at-the-farm': { title: 'En la granja', pages: ['La vaca hace muu.', 'El cerdo hace oinc.', 'La gallina hace cocó.', 'La oveja hace bee.', '¡El tractor hace brrum!', '¡Adiós, granja!'] },
     'colours-everywhere': { title: 'Colores por todas partes', pages: ['Una manzana roja.', 'Un plátano amarillo.', 'Una rana verde.', 'Una ballena azul.', 'Uvas moradas.', '¡Todos los colores juntos!'] },
   },
   stories: {
+    ...moreStories,
     'red-hat': {
       title: 'El sombrero rojo',
       paragraphs: ['Sam tiene un sombrero rojo.', 'El viento se lleva el sombrero. ¡Sube y sube!', 'Un perro corre y corre. El perro atrapa el sombrero.', 'Sam está contento. «¡Buen perro!», dice Sam.'],
