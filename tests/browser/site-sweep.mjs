@@ -175,7 +175,7 @@ for (const [menu, item, check] of [
   await page.getByRole('button', { name: 'Open bookstore menu' }).click();
   const menu = page.locator('#bookstore-mobile-menu');
   const sections = await menu.locator('nav[aria-label="Site menu"] h3 > button').allInnerTexts();
-  ok('Mobile menu lists Bookstore, Products, Publish, Author hub, Resources, About', sections.map((t) => t.trim()).join('|') === 'Bookstore|Products|Publish|Author hub|Resources|About', sections.join('|'));
+  ok('Mobile menu lists Bookstore, Read smarter, Products, Publish, Author hub, Resources, About', sections.map((t) => t.trim()).join('|') === 'Bookstore|Read smarter|Products|Publish|Author hub|Resources|About', sections.join('|'));
   await page.getByRole('button', { name: 'Close bookstore menu' }).click();
   for (const [section, label, id] of [['Publish', 'eBook publishing', 'pricing'], ['Publish', 'Create and self-publish', 'how-it-works'], ['Publish', 'Pricing and royalties', 'earnings'], ['Bookstore', 'All eBooks', 'bookstore'], ['About', 'Who we are', 'about'], ['Resources', 'Who it is for', 'solutions']]) {
     await page.getByRole('button', { name: 'Open bookstore menu' }).click();
