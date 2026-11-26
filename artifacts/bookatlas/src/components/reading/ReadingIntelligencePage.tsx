@@ -3,11 +3,12 @@ import { Link } from 'wouter';
 import * as Toggle from '@radix-ui/react-toggle';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { SelectBox } from '../ui/select-box';
-import { Accessibility, ArrowLeft, AudioLines, Baby, Bold, BookOpen, Brain, Flame, Focus, Gauge, GraduationCap, FileText, Star, Headphones, Languages, Library, Loader2, MessageSquareText, Rows3, School, Sparkles, Target, Timer, TrendingUp, Type, Users, Zap, Clock, CalendarDays, Activity, Layers } from 'lucide-react';
+import { Accessibility, ArrowLeft, AudioLines, Baby, Bold, BookOpen, Brain, Flame, Focus, Gauge, GraduationCap, FileText, Star, Headphones, Languages, Library, Loader2, MessageSquareText, Rows3, School, Sparkles, Target, Timer, TrendingUp, Type, Users, Zap, Clock, CalendarDays, Activity, Layers, ChevronRight, MousePointerClick, Network } from 'lucide-react';
 import { useAccount } from '../../auth/AuthContext';
 import { useEbookApi, type CheckpointSummary, type ReadingStats } from '../ebook/ebookApi';
 import { BANDS } from '../reader/checkpoints';
 import { ReadingHeatmap } from './ReadingHeatmap';
+import type { TryTool } from '../reader/tryTools';
 import { LearningScoreCard } from './LearningScoreCard';
 import { VocabularyCard } from './VocabularyCard';
 import { FlashcardReview } from '../reader/FlashcardReview';
@@ -50,11 +51,28 @@ function Section({ id, icon: Icon, eyebrow, title, intro, children }: { id: stri
   );
 }
 
-function Feature({ icon: Icon, title, children }: { icon: React.ComponentType<{ className?: string }>; title: string; children: React.ReactNode }) {
+type Step = [React.ComponentType<{ className?: string }> | null, string];
+/**
+ * A tool: what it does, where to find it (the path through the reader's own buttons) and, when it lives in the
+ * reader, "Try it now", which opens a free book on that tool with a tip (owner request 2026-11-26).
+ */
+function Feature({ icon: Icon, title, children, how, tryIt }: { icon: React.ComponentType<{ className?: string }>; title: string; children: React.ReactNode; how?: Step[]; tryIt?: TryTool }) {
   return (
-    <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+    <div className="flex flex-col rounded-2xl bg-white p-4 ring-1 ring-slate-200" data-testid={tryIt ? `feature-${tryIt}` : undefined}>
       <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Icon className="h-4 w-4 text-indigo-600" aria-hidden />{title}</p>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-slate-600">{children}</p>
+      <p className="mt-1.5 flex-1 text-[13px] leading-relaxed text-slate-600">{children}</p>
+      {how && (
+        <p className="mt-3 flex flex-wrap items-center gap-1 text-[11px] font-semibold text-slate-700" aria-label={`Where: ${how.map((x) => x[1]).join(', then ')}`}>
+          <span className="mr-0.5 text-slate-500" aria-hidden>Where:</span>
+          {how.map(([I, label], i) => (
+            <React.Fragment key={i}>
+              {i > 0 && <ChevronRight className="h-3 w-3 text-slate-400" aria-hidden />}
+              <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5" aria-hidden>{I && <I className="h-3.5 w-3.5 text-indigo-600" />}{label}</span>
+            </React.Fragment>
+          ))}
+        </p>
+      )}
+      {tryIt && <a href={`${BASE}?try=${tryIt}`} className="mt-3 inline-flex min-h-9 w-fit items-center gap-1 rounded-lg bg-indigo-50 px-3 text-xs font-bold text-indigo-800 ring-1 ring-indigo-100 hover:bg-indigo-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">Try it now<ChevronRight className="h-3.5 w-3.5" aria-hidden /></a>}
     </div>
   );
 }
@@ -279,9 +297,9 @@ export default function ReadingIntelligencePage() {
           <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
             <FastReadPlayer paragraphs={demoParas} />
             <div className="space-y-3">
-              <Feature icon={Zap} title="One word">Each word appears on the same spot, with the letter your eye should rest on marked in red. Pauses are longer after a full stop or a long word.</Feature>
-              <Feature icon={Rows3} title="Word groups">Groups of 2 to 8 words, ending at a full stop, so you take in a phrase at a glance.</Feature>
-              <Feature icon={Gauge} title="100 to 1,500 words a minute">Change the speed while you read: the arrow keys jump 25 words and change the speed, and space pauses. The speed coach suggests a speed from your sessions and quiz scores.</Feature>
+              <Feature icon={Zap} title="One word" how={[[BookOpen, 'Open a book'], [Zap, 'Fast Read'], [null, 'One word']]} tryIt="fast-read">Each word appears on the same spot, with the letter your eye should rest on marked in red. Pauses are longer after a full stop or a long word.</Feature>
+              <Feature icon={Rows3} title="Word groups" how={[[BookOpen, 'Open a book'], [Zap, 'Fast Read'], [null, 'Groups']]} tryIt="fast-read">Groups of 2 to 8 words, ending at a full stop, so you take in a phrase at a glance.</Feature>
+              <Feature icon={Gauge} title="100 to 1,500 words a minute" how={[[BookOpen, 'Open a book'], [Zap, 'Fast Read'], [null, 'Speed']]} tryIt="fast-read">Change the speed while you read: the arrow keys jump 25 words and change the speed, and space pauses. The speed coach suggests a speed from your sessions and quiz scores.</Feature>
             </div>
           </div>
           <div className="mt-6 rounded-2xl bg-white p-5 ring-1 ring-slate-200">
@@ -310,39 +328,40 @@ export default function ReadingIntelligencePage() {
         <Section id="listen" icon={Headphones} eyebrow="Read and listen" title="Read, listen, or both at once"
           intro="Every book you can read on BooksAtlas can also be read aloud, on any phone, tablet or computer. Switch between reading and listening and keep your place.">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Feature icon={AudioLines} title="Words light up">While your device’s voice reads, the sentence and the word being spoken are marked on the page, so you can follow along.</Feature>
-            <Feature icon={Headphones} title="Natural-voice audiobooks">Books with a narrated edition play in a natural studio voice, with each word lighting up as it is spoken, from the lock screen too.</Feature>
-            <Feature icon={Gauge} title="Half speed to 3×">Slow down for a hard passage or speed up for a familiar one. The pace you choose is kept.</Feature>
-            <Feature icon={Languages} title="In your own language">Listen in 40 languages: the book is translated paragraph by paragraph as it is read.</Feature>
-            <Feature icon={Type} title="Choose the voice">Pick any voice your device has, grouped by language and country, and hear a sample first.</Feature>
-            <Feature icon={BookOpen} title="Pick up where you stopped">Reading and listening share one place in the book, on all your devices.</Feature>
+            <Feature icon={AudioLines} title="Words light up" how={[[BookOpen, 'Open a book'], [Headphones, 'Listen']]} tryIt="listen">While your device’s voice reads, the sentence and the word being spoken are marked on the page, so you can follow along.</Feature>
+            <Feature icon={Headphones} title="Natural-voice audiobooks" how={[[BookOpen, 'Open a book'], [Headphones, 'Listen']]} tryIt="listen">Books with a narrated edition play in a natural studio voice, with each word lighting up as it is spoken, from the lock screen too.</Feature>
+            <Feature icon={Gauge} title="Half speed to 3×" how={[[Headphones, 'Listen'], [null, 'Speed']]} tryIt="listen">Slow down for a hard passage or speed up for a familiar one. The pace you choose is kept.</Feature>
+            <Feature icon={Languages} title="In your own language" how={[[Headphones, 'Listen'], [null, 'Language']]} tryIt="listen">Listen in 40 languages: the book is translated paragraph by paragraph as it is read.</Feature>
+            <Feature icon={Type} title="Choose the voice" how={[[Headphones, 'Listen'], [null, 'Voice']]} tryIt="listen">Pick any voice your device has, grouped by language and country, and hear a sample first.</Feature>
+            <Feature icon={BookOpen} title="Pick up where you stopped" how={[[null, 'Automatic: open the book again']]}>Reading and listening share one place in the book, on all your devices.</Feature>
           </div>
         </Section>
 
         <Section id="coach" icon={Brain} eyebrow="AI coach" title="Understand and remember what you read"
           intro="Speed means little if the meaning is lost. The AI coach works from the text of the book you are reading, points to the page it used, and never makes up what the book does not say.">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Feature icon={MessageSquareText} title="Ask the book">Ask anything about the book and get an answer with links to the passages it came from.</Feature>
-            <Feature icon={Timer} title="Summaries in three lengths">A one-minute summary, a five-minute summary, or a complete one for each chapter.</Feature>
-            <Feature icon={GraduationCap} title="Explained for you">Select a passage and have it explained for a child, a student or a professional.</Feature>
-            <Feature icon={Brain} title="Quizzes and flashcards">Test yourself on a chapter, or learn its key ideas with cards that flip.</Feature>
-            <Feature icon={Languages} title="Define and translate">Tap a word for its meaning and pronunciation, or translate a passage into another language.</Feature>
-            <Feature icon={Sparkles} title="Key concepts">The names, ideas and terms that matter in each chapter, in a sentence or two.</Feature>
+            <Feature icon={MessageSquareText} title="Ask the book" how={[[BookOpen, 'Open a book'], [GraduationCap, 'Coach'], [null, 'Ask']]} tryIt="ask">Ask anything about the book and get an answer with links to the passages it came from.</Feature>
+            <Feature icon={Timer} title="Summaries in three lengths" how={[[GraduationCap, 'Coach'], [null, 'Study'], [null, 'Summary']]} tryIt="summary">A one-minute summary, a five-minute summary, or a complete one for each chapter.</Feature>
+            <Feature icon={GraduationCap} title="Explained for you" how={[[MousePointerClick, 'Select text'], [null, 'Explain']]} tryIt="explain">Select a passage and have it explained for a child, a student, a professional or an expert.</Feature>
+            <Feature icon={Brain} title="Quizzes and flashcards" how={[[GraduationCap, 'Coach'], [null, 'Study'], [null, 'Quiz or Flashcards']]} tryIt="quiz">Test yourself on a chapter, or learn its key ideas with cards that flip.</Feature>
+            <Feature icon={Languages} title="Define and translate" how={[[MousePointerClick, 'Select text'], [null, 'Define or Translate']]} tryIt="define">Tap a word for its meaning and pronunciation, or translate a passage into another language.</Feature>
+            <Feature icon={Sparkles} title="Key concepts" how={[[GraduationCap, 'Coach'], [null, 'Study'], [null, 'Key concepts']]} tryIt="concepts">The names, ideas and terms that matter in each chapter, in a sentence or two.</Feature>
+            <Feature icon={Network} title="Knowledge maps" how={[[GraduationCap, 'Coach'], [null, 'Study'], [null, 'Map']]} tryIt="map">See a chapter’s ideas, people and events as a map of how they connect; tap one to jump to it in the book.</Feature>
           </div>
           <p className="mt-3 text-[11px] text-slate-500">Open the coach with the cap icon in the reader. Signed-in readers get a number of free AI requests every day.</p>
         </Section>
 
         <Section id="aids" icon={Accessibility} eyebrow="Reading aids" title="Reading made easier for every reader"
-          intro="Small changes can make a big difference for readers with dyslexia, attention difficulties or low vision. Find them in the reader under Aa → Aids, and keep what helps.">
+          intro="Small changes can make a big difference for readers with dyslexia, attention difficulties or low vision. In the reader, tap the T button at the top, then Text or Aids, and keep what helps.">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Feature icon={Type} title="Dyslexia-friendly font">Wide letters with extra space between letters and words.</Feature>
-            <Feature icon={Type} title="Clear letters">A font whose letters are shaped to be told apart easily, for low vision.</Feature>
-            <Feature icon={Bold} title="Bold word starts">The first letters of each word in bold, so the eye finds words faster.</Feature>
-            <Feature icon={Focus} title="Focus modes and zen">Line, paragraph or spotlight focus keeps attention on what you are reading; zen hides everything but the text.</Feature>
-            <Feature icon={Layers} title="Flashcards that come back">Save flashcards from a chapter or a passage; grade each one Again, Hard, Good or Easy and it returns after 1, 3, 7 or 14 days.</Feature>
-            <Feature icon={Brain} title="Comprehension checkpoints">Four quick questions at the end of a chapter, every 1,000 words or every 10 minutes, scored from excellent to needs improvement; the score tunes your speed coach.</Feature>
-            <Feature icon={Rows3} title="Reading guide">A clear band follows your finger or mouse and shades the lines above and below.</Feature>
-            <Feature icon={Accessibility} title="Large text and strong contrast">Text up to 34 pixels, night and black themes, your own colours and brightness.</Feature>
+            <Feature icon={Type} title="Dyslexia-friendly font" how={[[BookOpen, 'Open a book'], [Type, 'T'], [null, 'Text'], [null, 'Font']]} tryIt="text">Wide letters with extra space between letters and words.</Feature>
+            <Feature icon={Type} title="Clear letters" how={[[Type, 'T'], [null, 'Text'], [null, 'Font']]} tryIt="text">A font whose letters are shaped to be told apart easily, for low vision.</Feature>
+            <Feature icon={Bold} title="Bold word starts" how={[[Type, 'T'], [null, 'Aids'], [null, 'Bold word starts']]} tryIt="aids">The first letters of each word in bold, so the eye finds words faster.</Feature>
+            <Feature icon={Focus} title="Focus modes and zen" how={[[Type, 'T'], [null, 'Aids'], [null, 'Focus · Zen']]} tryIt="aids">Line, paragraph or spotlight focus keeps attention on what you are reading; zen hides everything but the text.</Feature>
+            <Feature icon={Layers} title="Flashcards that come back" how={[[GraduationCap, 'Coach'], [null, 'Study'], [null, 'Flashcards'], [null, 'Save']]} tryIt="flashcards">Save flashcards from a chapter or a passage; grade each one Again, Hard, Good or Easy and it returns after 1, 3, 7 or 14 days.</Feature>
+            <Feature icon={Brain} title="Comprehension checkpoints" how={[[GraduationCap, 'Coach'], [null, 'Study'], [null, 'Check my understanding']]} tryIt="checkpoint">Four quick questions at the end of a chapter, every 1,000 words or every 10 minutes, scored from excellent to needs improvement; the score tunes your speed coach.</Feature>
+            <Feature icon={Rows3} title="Reading guide" how={[[Type, 'T'], [null, 'Aids'], [null, 'Focus · Line']]} tryIt="aids">A clear band follows your finger or mouse and shades the lines above and below.</Feature>
+            <Feature icon={Accessibility} title="Large text and strong contrast" how={[[Type, 'T'], [null, 'Text · Colours']]} tryIt="text">Text up to 34 pixels, night and black themes, your own colours and brightness.</Feature>
           </div>
         </Section>
 

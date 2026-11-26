@@ -25,6 +25,7 @@ import { checkpointDue, startTracker, wordsBetween, type CheckpointReason } from
 import { CheckpointDialog, CheckpointOffer, type CheckpointRequest } from './reader/CheckpointDialog';
 import { ShareBookDialog, ShareQuoteDialog } from './share/ShareDialog';
 import { formatBytes, offlineBook, removeOffline, saveOffline, type OfflineBook } from './reader/offlineBooks';
+import { TRY_HINT, TRY_TARGET, type TryTool } from './reader/tryTools';
 import { narrationTimeline, wordAt, type TimedWord } from './reader/narrationSync';
 import { ReaderContents, GoToPopover } from './reader/ReaderNavigation';
 import { useDeviceVoice, type Translated } from './reader/useDeviceVoice';
@@ -55,6 +56,8 @@ interface EReaderModalProps {
   openGroupId?: string | null;
   /** Start listening as soon as the book is ready, with the pop-up player open (the "Listen" buttons). */
   autoListen?: boolean;
+  /** "Try it now" (2026-11-26): open this tool once the book is ready, with a tip on what to do. */
+  initialTool?: TryTool | null;
 }
 
 export const EReaderModal: React.FC<EReaderModalProps> = ({
@@ -69,6 +72,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   onRequireAiAccess,
   openGroupId = null,
   autoListen = false,
+  initialTool = null,
 }) => {
   const [currentChapterIndex, setCurrentChapterIndex] = useState(initialChapterIndex);
   const [currentParagraphIndex, setCurrentParagraphIndex] = useState(initialParagraphIndex);
@@ -1039,6 +1043,23 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const lastMove = useRef(Date.now());
   const [checkpointOffer, setCheckpointOffer] = useState<Omit<CheckpointRequest, 'id'> | null>(null);
   const [checkpoint, setCheckpoint] = useState<CheckpointRequest | null>(null);
+  // "Try it now" (2026-11-26): the tool the link asked for, opened once the book is ready, with a tip.
+  const [tryHint, setTryHint] = useState('');
+  const [settingsTab, setSettingsTab] = useState<'text' | 'aids'>('text');
+  const [studyTool, setStudyTool] = useState<'summary' | 'key_concepts' | 'flashcards' | 'quiz' | 'map' | undefined>(undefined);
+  const triedTool = useRef(false);
+  useEffect(() => {
+    if (!initialTool || triedTool.current || (book.hasReaderContent && !fullChapters && !fullError)) return;
+    triedTool.current = true;
+    const t = TRY_TARGET[initialTool];
+    if (t.kind === 'coach') { setStudyTool(t.study); openAssistant(t.tab === 'words' ? 'words' : t.tab); }
+    else if (t.kind === 'settings') { setSettingsTab(t.tab); setShowSettings(true); }
+    else if (t.kind === 'fast-read') setShowFastRead(true);
+    setTryHint(TRY_HINT[initialTool]);
+  }, [initialTool, fullChapters, fullError]); // eslint-disable-line react-hooks/exhaustive-deps
+  // After the settings close (not on first load), they open on Text again.
+  const settingsWereOpen = useRef(false);
+  useEffect(() => { if (showSettings) settingsWereOpen.current = true; else if (settingsWereOpen.current) { settingsWereOpen.current = false; setSettingsTab('text'); } }, [showSettings]);
   // Offline reading (phase 11): this book saved on the device, and whether this is that copy.
   const [offlineSaved, setOfflineSaved] = useState(false);
   const [readingOffline, setReadingOffline] = useState(false);
@@ -1729,11 +1750,19 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           api={ebookApi} signedIn={!!account} onSignIn={() => requireSignIn('the reading assistant')} bookId={book.id} chapters={chapters}
           chapterIndex={currentChapterIndex} inPreview={inPreview || !book.hasReaderContent} tab={assistantTab} onTab={setAssistantTab} request={wordsRequest}
           onJump={(c, p) => jumpTo(c, p)} onClose={() => setShowAssistant(false)}
+          studyTool={studyTool}
           onCheckpoint={() => startCheckpoint({ reason: 'manual', chapterIndex: currentChapterIndex, from: 0, to: Math.max(currentParagraphIndex, Math.min(chapters[currentChapterIndex]?.content.length ?? 1, 8) - 1) })}
         />
       )}
       {checkpointOffer && !checkpoint && (
         <CheckpointOffer reason={checkpointOffer.reason} onStart={() => startCheckpoint(checkpointOffer)} onDismiss={() => { setCheckpointOffer(null); resetTracker(); }} />
+      )}
+      {tryHint && (
+        <div role="status" data-testid="try-hint" className="fixed inset-x-3 bottom-24 z-[95] mx-auto flex max-w-md items-start gap-2 rounded-2xl bg-indigo-700 px-4 py-3 text-sm text-white shadow-xl sm:bottom-6">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden />
+          <span className="flex-1">{tryHint}</span>
+          <button type="button" onClick={() => setTryHint('')} aria-label="Close the tip" className="rounded-full p-0.5 text-white/80 hover:text-white cursor-pointer"><X className="h-4 w-4" /></button>
+        </div>
       )}
       {(offlineNote || readingOffline) && (
         <div role="status" data-testid="offline-note" className="fixed inset-x-3 top-16 z-[70] mx-auto flex max-w-md items-start gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white shadow-xl">
@@ -2170,7 +2199,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
       {/* Reading preferences: text, page and colours */}
       <ReaderPreferences
-        open={showSettings} onOpenChange={setShowSettings} container={portal}
+        open={showSettings} onOpenChange={setShowSettings} container={portal} initialTab={settingsTab}
         settings={settings} setSettings={setSettings} layout={layout} setLayout={setLayout}
         onReset={() => { setSettings({ ...DEFAULT_READER_SETTINGS }); setLayout({ ...DEFAULT_LAYOUT }); }}
         wide={pg.size.w >= 900}

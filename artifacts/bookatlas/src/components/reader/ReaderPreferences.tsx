@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Tabs from '@radix-ui/react-tabs';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
@@ -71,11 +71,16 @@ function Swatches({ colours, value, onPick, name }: { colours: string[]; value: 
  * The reader's preferences window (owner request 2026-11-17, after the best eBook readers): text, page and
  * colours, each change visible at once behind the window.
  */
-export function ReaderPreferences({ open, onOpenChange, container, settings, setSettings, layout, setLayout, onReset, wide }: {
+export function ReaderPreferences({ open, onOpenChange, container, settings, setSettings, layout, setLayout, onReset, wide, initialTab = 'text' }: {
+  /** The tab it opens on ("Try it now" links open Aids). */
+  initialTab?: 'text' | 'page' | 'colours' | 'aids';
   open: boolean; onOpenChange: (o: boolean) => void; container: HTMLElement | null;
   settings: ReaderSettings; setSettings: React.Dispatch<React.SetStateAction<ReaderSettings>>;
   layout: ReaderLayout; setLayout: (l: ReaderLayout) => void; onReset: () => void; wide: boolean;
 }) {
+  // The tab it opens on follows the link each time it opens ("Try it now").
+  const [tab, setTab] = useState<string>(initialTab);
+  useEffect(() => { if (open) setTab(initialTab); }, [open, initialTab]);
   const set = (p: Partial<ReaderSettings>) => setSettings((s) => ({ ...s, ...p }));
   const lay = (p: Partial<ReaderLayout>) => setLayout({ ...layout, ...p });
   return (
@@ -91,7 +96,7 @@ export function ReaderPreferences({ open, onOpenChange, container, settings, set
             <Dialog.Close aria-label="Close reading settings" className="grid h-10 w-10 place-items-center rounded-full text-slate-500 hover:bg-slate-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer"><X className="h-5 w-5" /></Dialog.Close>
           </div>
 
-          <Tabs.Root defaultValue="text" className="flex min-h-0 flex-1 flex-col">
+          <Tabs.Root value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
             <Tabs.List aria-label="Preferences" className="mx-5 flex shrink-0 gap-1 rounded-xl bg-slate-200/70 p-1">
               <Tabs.Trigger value="text" className={tab}>Text</Tabs.Trigger>
               <Tabs.Trigger value="page" className={tab}>Page</Tabs.Trigger>

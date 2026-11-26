@@ -31,6 +31,8 @@ export function ReaderAssistant(props: {
   onJump: (chapterIndex: number, paragraphIndex: number) => void; onClose: () => void;
   /** Start a comprehension checkpoint on the chapter so far (master build plan M4). */
   onCheckpoint?: () => void;
+  /** The study tool to show first ("Try it now" links). */
+  studyTool?: 'summary' | 'key_concepts' | 'flashcards' | 'quiz' | 'map';
 }) {
   const { api, signedIn, bookId, chapters, chapterIndex } = props;
   const [remaining, setRemaining] = useState<number | null>(null);
@@ -79,7 +81,7 @@ export function ReaderAssistant(props: {
                   <Collapsible.Content className="px-3 pb-3"><FlashcardReview api={api} bookId={bookId} compact /></Collapsible.Content>
                 </Collapsible.Root>
               )}
-              <StudyTab {...{ api, bookId, chapters, chapterIndex, onRemaining: setRemaining, signedIn: props.signedIn, onJump: props.onJump }} />
+              <StudyTab {...{ api, bookId, chapters, chapterIndex, onRemaining: setRemaining, signedIn: props.signedIn, onJump: props.onJump, initialTool: props.studyTool }} />
             </Tabs.Content>
             <Tabs.Content value="words" forceMount hidden={props.tab !== 'words'}><WordsTab {...{ api, bookId, languages, request: props.request, onRemaining: setRemaining }} /></Tabs.Content>
           </div>
@@ -172,8 +174,8 @@ function AskTab({ api, bookId, chapterIndex, onRemaining, onJump }: { api: Api; 
   );
 }
 
-function StudyTab({ api, bookId, chapters, chapterIndex, onRemaining, signedIn, onJump }: { api: Api; bookId: string; chapters: Chapter[]; chapterIndex: number; onRemaining: (n: number) => void; signedIn: boolean; onJump?: (chapterIndex: number, paragraphIndex: number) => void }) {
-  const [tool, setTool] = useState<'summary' | 'key_concepts' | 'flashcards' | 'quiz' | 'map'>('summary');
+function StudyTab({ api, bookId, chapters, chapterIndex, onRemaining, signedIn, onJump, initialTool = 'summary' }: { api: Api; bookId: string; chapters: Chapter[]; chapterIndex: number; onRemaining: (n: number) => void; signedIn: boolean; onJump?: (chapterIndex: number, paragraphIndex: number) => void; initialTool?: 'summary' | 'key_concepts' | 'flashcards' | 'quiz' | 'map' }) {
+  const [tool, setTool] = useState<'summary' | 'key_concepts' | 'flashcards' | 'quiz' | 'map'>(initialTool);
   // Summary lengths (Reading Intelligence 2026-11-25): one minute, five minutes or complete.
   const [length, setLength] = useState<'summary_short' | 'summary' | 'summary_full'>('summary');
   const kind: StudyKind | 'map' = tool === 'summary' ? length : tool;

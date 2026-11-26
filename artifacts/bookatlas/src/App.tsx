@@ -15,6 +15,7 @@ import { BookCard } from './components/BookCard';
 import { HorizontalProductCarousel } from './components/HorizontalProductCarousel';
 import { PromotionalFeatureBanner, EditorialCuratorBlock } from './components/EditorialBlock';
 import { ReadingIntelligenceShowcase } from './components/reading/ReadingIntelligenceShowcase';
+import { parseTryTool, type TryTool } from './components/reader/tryTools';
 import { honestSample, isSampleTitle } from './utils/ratings';
 import { StartBookDialog } from './components/StartBookDialog';
 import { EmptyCategory } from './components/EmptyCategory';
@@ -506,6 +507,21 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
       tone: 'ok', text: 'Payment received for your natural audiobook, thank you. An administrator approves it, usually within 2 working days; follow its progress under Publish, on your book. Your invoice is under "Orders & invoices".',
     }));
   }, [account?.id]);
+  // "Try it now" (2026-11-26): /?try=<tool> opens a book that has the full reader, on that tool.
+  const [tryTool, setTryTool] = useState<TryTool | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tool = parseTryTool(params.get('try'));
+    if (!tool || !books.length) return;
+    const book = books.find((b) => b.hasReaderContent) ?? books[0]!;
+    params.delete('try');
+    window.history.replaceState(null, '', `${window.location.pathname}${params.size ? `?${params}` : ''}${window.location.hash}`);
+    setTryTool(tool);
+    void handleReadSample(book, { listen: tool === 'listen' });
+  }, [books.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Closing the reader ends the "try" (the next book opens normally); only after it was open.
+  const readerWasOpen = useRef(false);
+  useEffect(() => { if (activeReadingBook) readerWasOpen.current = true; else if (readerWasOpen.current) { readerWasOpen.current = false; setTryTool(null); } }, [activeReadingBook]);
   // Reader Phase 3 (cycle 10): an invite link (?join=CODE) joins the reading group and opens its book.
   const readerApi = useEbookApi();
   const [joinGroupId, setJoinGroupId] = useState<string | null>(null);
@@ -1374,6 +1390,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
           initialChapterIndex={activeReadingBook.chapterIndex}
           initialParagraphIndex={activeReadingBook.paragraphIndex}
           autoListen={!!activeReadingBook.listen}
+          initialTool={tryTool}
           onSaveProgress={handleSaveProgress}
           hasAiAccess={hasAiAccess}
           onRequireAiAccess={requireAiAccess}
