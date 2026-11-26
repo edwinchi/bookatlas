@@ -102,7 +102,7 @@ function RhymePlayer({ rhyme, onClose }: { rhyme: Rhyme; onClose: () => void }) 
         <Dialog.Content className="fixed inset-x-0 bottom-0 z-[81] mx-auto max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-[#fffaf0] p-6 shadow-2xl outline-none sm:inset-y-0 sm:my-auto sm:h-fit sm:rounded-3xl" data-testid="rhyme-player">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-rose-600">{rhyme.kind === 'lullaby' ? ui.lullaby : ui.rhymeActions}</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-rose-700">{rhyme.kind === 'lullaby' ? ui.lullaby : ui.rhymeActions}</p>
               <Dialog.Title className="font-serif text-2xl font-bold text-slate-900">{rhyme.title}</Dialog.Title>
             </div>
             <Dialog.Close className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-600 hover:bg-white cursor-pointer" aria-label={ui.close}><X className="h-5 w-5" /></Dialog.Close>
