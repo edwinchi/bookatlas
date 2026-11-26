@@ -215,6 +215,18 @@ async function sessionsOf(userId: string, sinceIso?: string): Promise<Session[]>
   return r.data as Session[];
 }
 
+/**
+ * Words a minute while reading (master build plan M5): current (the last five timed sessions), average (all of
+ * them) and best (one session of at least three minutes). Sessions under a minute say too little to count.
+ */
+export function readingSpeeds(sessions: Pick<Session, 'started_at' | 'seconds' | 'words'>[]) {
+  const timed = sessions.filter((s) => s.words > 0 && s.seconds >= 60).sort((a, b) => a.started_at.localeCompare(b.started_at));
+  if (!timed.length) return { current: null, average: null, best: null };
+  const wpm = (list: typeof timed) => Math.round(list.reduce((n, s) => n + s.words, 0) / (list.reduce((n, s) => n + s.seconds, 0) / 60));
+  const long = timed.filter((s) => s.seconds >= 180);
+  return { current: wpm(timed.slice(-5)), average: wpm(timed), best: long.length ? Math.max(...long.map((s) => Math.round(s.words / (s.seconds / 60)))) : null };
+}
+
 /** Reading statistics: time, words, speed, streak and the last 30 days (UTC days). */
 export async function readingStats(userId: string, now = new Date()) {
   const sessions = await sessionsOf(userId);
@@ -245,7 +257,13 @@ export async function readingStats(userId: string, now = new Date()) {
   // Reading time by hour of the day (UTC; the page shifts it to the reader's own clock), for the reading heatmap.
   const byHour = Array.from({ length: 24 }, () => 0);
   for (const s of sessions) { const h = new Date(s.started_at).getUTCHours(); if (Number.isInteger(h)) byHour[h] = (byHour[h] ?? 0) + s.seconds / 60; }
+  // The reading heatmap (master build plan M5, specification AN-002): every session of the last 12 weeks as
+  // [start, minutes, words]; the page groups them by day and hour on the reader's own clock.
+  const since = now.getTime() - 84 * 86_400_000;
+  const activity = sessions.filter((s) => Date.parse(s.started_at) >= since).sort((a, b) => a.started_at.localeCompare(b.started_at)).slice(-3000)
+    .map((s) => [s.started_at, Math.round((s.seconds / 60) * 10) / 10, s.words] as [string, number, number]);
   return {
+    activity, speed: readingSpeeds(sessions),
     byHourUtc: byHour.map((m) => Math.round(m)),
     totalMinutes: Math.round(seconds / 60), words, wordsPerMinute: timedSeconds >= 60 ? Math.round(words / (timedSeconds / 60)) : null,
     streakDays: streak, bestStreakDays: bestStreak, todayMinutes: last30[29]!.minutes, booksStarted: progress.length, booksFinished: progress.filter((p) => p.progress_percent >= 98).length,

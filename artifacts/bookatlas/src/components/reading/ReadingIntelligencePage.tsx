@@ -3,13 +3,12 @@ import { Link } from 'wouter';
 import * as Toggle from '@radix-ui/react-toggle';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { SelectBox } from '../ui/select-box';
-import {
-  Accessibility, ArrowLeft, AudioLines, Baby, Bold, BookOpen, Brain, Flame, Focus, Gauge, GraduationCap,
-  FileText, Star, Headphones, Languages, Library, Loader2, MessageSquareText, Rows3, School, Sparkles, Target, Timer, TrendingUp, Type, Users, Zap,
-} from 'lucide-react';
+import { Accessibility, ArrowLeft, AudioLines, Baby, Bold, BookOpen, Brain, Flame, Focus, Gauge, GraduationCap, FileText, Star, Headphones, Languages, Library, Loader2, MessageSquareText, Rows3, School, Sparkles, Target, Timer, TrendingUp, Type, Users, Zap, Clock, CalendarDays, Activity } from 'lucide-react';
 import { useAccount } from '../../auth/AuthContext';
 import { useEbookApi, type CheckpointSummary, type ReadingStats } from '../ebook/ebookApi';
 import { BANDS } from '../reader/checkpoints';
+import { ReadingHeatmap } from './ReadingHeatmap';
+import { WEEKDAY_NAMES, aggregateHeatmapData, consistencyLabel, consistencyScore, dailyActivity, hourLabel, peakDay, peakHour } from './heatmap';
 import { FastReadPlayer, SpeedCheck, useSpeedTests } from '../reader/FastReadPanel';
 import { ReaderAchievements } from '../reader/ReaderAchievements';
 import { BoldStarts } from '../reader/readingAids';
@@ -105,30 +104,6 @@ function DaysChart({ days }: { days: ReadingStats['last30'] }) {
   );
 }
 
-/** When the reader reads: minutes in each hour of the day, on the reader's own clock. */
-function HoursChart({ byHourUtc }: { byHourUtc: number[] }) {
-  const shift = -new Date().getTimezoneOffset() / 60;
-  const hours = Array.from({ length: 24 }, (_, h) => byHourUtc[((h - Math.round(shift)) % 24 + 24) % 24] ?? 0);
-  const max = Math.max(1, ...hours);
-  const peak = hours.indexOf(Math.max(...hours));
-  const label = (h: number) => `${String(h).padStart(2, '0')}:00`;
-  return (
-    <figure className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-      <figcaption className="text-sm font-bold text-slate-900">When you read</figcaption>
-      <p className="text-[11px] text-slate-500">{hours.some(Boolean) ? `You read most around ${label(peak)}.` : 'Read a little and your reading hours show here.'}</p>
-      <div className="mt-3 grid grid-cols-12 gap-[2px] sm:grid-cols-24">
-        {hours.map((m, h) => (
-          <Tip key={h} text={`${label(h)}: ${m} min`}>
-            <div className="h-8 rounded-[4px] ring-1 ring-inset ring-slate-200" style={{ background: m ? `rgb(79 70 229 / ${0.15 + 0.85 * (m / max)})` : '#f8fafc' }} />
-          </Tip>
-        ))}
-      </div>
-      <div className="mt-1 flex justify-between text-[10px] text-slate-400" aria-hidden><span>00:00</span><span>12:00</span><span>23:00</span></div>
-      <table className="sr-only"><caption>Minutes read by hour of the day</caption><tbody>{hours.map((m, h) => <tr key={h}><th scope="row">{label(h)}</th><td>{m} minutes</td></tr>)}</tbody></table>
-    </figure>
-  );
-}
-
 function SpeedSummary({ tests }: { tests: ReturnType<typeof useSpeedTests>['tests'] }) {
   const s = summarizeTests(tests);
   const [target, setTarget] = useState(500);
@@ -181,6 +156,29 @@ function CheckpointsCard() {
   );
 }
 
+/**
+ * Reading behaviour and performance (master build plan M5, specification AN-001/002): peak hour and day,
+ * consistency over four weeks, and current, average and best words a minute while reading.
+ */
+function ReadingBehaviour({ stats }: { stats: ReadingStats }) {
+  const now = new Date();
+  const activity = stats.activity ?? [];
+  const cells = aggregateHeatmapData(activity, now.getTimezoneOffset());
+  const hour = peakHour(cells), day = peakDay(cells);
+  const consistency = consistencyScore(dailyActivity(activity, now.getTimezoneOffset(), now));
+  const sp = stats.speed;
+  return (
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-6" data-testid="reading-behaviour">
+      <Tile icon={Clock} label="Peak hour" value={hour === null ? '–' : hourLabel(hour)} note={hour === null ? 'read a little to see it' : 'when you read most'} />
+      <Tile icon={CalendarDays} label="Peak day" value={day === null ? '–' : WEEKDAY_NAMES[day]!} note="over the last 12 weeks" />
+      <Tile icon={Activity} label="Consistency" value={`${consistency}`} note={`${consistencyLabel(consistency)} · out of 100, last 4 weeks`} />
+      <Tile icon={Gauge} label="Current speed" value={sp?.current ? `${sp.current}` : '–'} note="words a minute, last 5 sessions" />
+      <Tile icon={TrendingUp} label="Average speed" value={sp?.average ? `${sp.average}` : '–'} note="words a minute, all reading" />
+      <Tile icon={Flame} label="Best speed" value={sp?.best ? `${sp.best}` : '–'} note="one session of 3+ minutes" />
+    </div>
+  );
+}
+
 function Progress({ speed, fam }: { speed: ReturnType<typeof useSpeedTests>; fam: ReturnType<typeof useFamily> }) {
   const { account } = useAccount();
   const api = useEbookApi();
@@ -208,9 +206,10 @@ function Progress({ speed, fam }: { speed: ReturnType<typeof useSpeedTests>; fam
                 <Tile icon={Library} label="Books" value={`${stats.booksFinished} finished`} note={`${stats.booksStarted} started`} />
                 <Tile icon={Gauge} label="While reading" value={stats.wordsPerMinute ? `${stats.wordsPerMinute}` : '–'} note={stats.wordsPerMinute ? 'words a minute in the reader' : 'shows after a few minutes of reading'} />
               </div>
+              <ReadingBehaviour stats={stats} />
               <div className="grid gap-3 lg:grid-cols-2">
+                <ReadingHeatmap activity={stats.activity ?? []} />
                 <DaysChart days={stats.last30} />
-                <HoursChart byHourUtc={stats.byHourUtc ?? Array(24).fill(0)} />
               </div>
               <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200"><p className="mb-3 text-sm font-bold text-slate-900">Daily goal and achievements</p><ReaderAchievements api={api} /></div>
               <CheckpointsCard />

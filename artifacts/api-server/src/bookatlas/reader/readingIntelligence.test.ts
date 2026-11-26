@@ -29,3 +29,16 @@ test('explain levels and summary lengths (the old names keep working)', () => {
   assert.deepEqual(Object.keys(EXPLAIN_LEVELS), ['child', 'student', 'professional']);
   assert.ok(STUDY_KINDS.includes('summary') && STUDY_KINDS.includes('summary_short') && STUDY_KINDS.includes('summary_full'));
 });
+
+test('reading speeds (master build plan M5): current, average and best words a minute', async () => {
+  const { readingSpeeds } = await import('./service.js');
+  assert.deepEqual(readingSpeeds([]), { current: null, average: null, best: null });
+  const at = (d: number) => new Date(Date.UTC(2026, 10, d)).toISOString();
+  const list = [
+    { started_at: at(1), seconds: 600, words: 2000 }, // 200
+    { started_at: at(2), seconds: 300, words: 1500 }, // 300
+    { started_at: at(3), seconds: 120, words: 800 }, // 400, too short to be the best
+    { started_at: at(4), seconds: 30, words: 500 }, // under a minute: left out
+  ];
+  assert.deepEqual(readingSpeeds(list), { current: 253, average: 253, best: 300 });
+});

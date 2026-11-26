@@ -138,6 +138,10 @@ export interface ReadingStats {
   sessions: number; last30: { day: string; minutes: number }[];
   /** Minutes read in each hour of the day (UTC). */
   byHourUtc?: number[]; bestStreakDays?: number; todayMinutes?: number;
+  /** The last 12 weeks of sessions as [start, minutes, words], for the reading heatmap (master build plan M5). */
+  activity?: [string, number, number][];
+  /** Words a minute while reading: the last five sessions, all of them, and the best long one. */
+  speed?: { current: number | null; average: number | null; best: number | null };
 }
 
 export interface AskResult {
