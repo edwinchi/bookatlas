@@ -5,6 +5,7 @@ import { EBOOK_REQUIREMENTS, PRINT_REQUIREMENTS, AMAZON_PRINT_REQUIREMENTS, LULU
 import { useAccount } from '../../auth/AuthContext';
 import { EbookApiError, saveBlob, useEbookApi, type FeedbackOverview, type Submission } from './ebookApi';
 import { AuthorSalesDashboard } from './AuthorSalesDashboard';
+import { AuthorInsights } from './AuthorInsights';
 import { ServicesOverview } from './ServicesOverview';
 import { AuthorHub } from './AuthorHub';
 import { NarrationPanel } from './NarrationPanel';
@@ -201,6 +202,8 @@ export const EbookPublishing: React.FC = () => {
 
           {/* Sales of the signed-in author's own published books (cycle 3). */}
           {submissions?.some((s) => s.status === 'published') && <AuthorSalesDashboard api={api} />}
+          {/* How readers read the author's books (phase 9): aggregates only. */}
+          {submissions?.some((s) => s.status === 'published') && <AuthorInsights api={api} />}
 
           <section id="your-ebooks" className="space-y-4 scroll-mt-40">
             <h2 className="font-serif text-xl font-bold text-slate-900">{isAdmin ? 'All submissions' : 'Your eBooks'}</h2>

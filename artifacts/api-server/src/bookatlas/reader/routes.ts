@@ -16,6 +16,7 @@ import { recordYoungStory, youngTitle } from './youngStories.js';
 import { checkpointQuestions, checkpointsOf, recordCheckpoint } from './checkpoints.js';
 import { flashcardsFromPassage, gradeCard, myDeck, removeCard, saveCards } from './flashcards.js';
 import { knowledgeMap } from './knowledgeMap.js';
+import { authorInsights } from './authorInsights.js';
 import { answerQuiz, classDetail, classReport, createClass, joinClass, leaveClass, myClasses, publishQuiz, removeQuiz, setClassBooks } from './classes.js';
 import { FamilyError, addActivity, familyView, readFamily, weekStart, withProfiles, type Family } from './family.js';
 
@@ -147,6 +148,8 @@ export function mountReader(app: Express, catalog: CatalogStore, generate?: Gene
   // Comprehension checkpoints (master build plan M4): results kept in the reader's settings.
   app.get('/api/reader/checkpoints', guarded(async (req, res) => { res.json(await checkpointsOf(signedIn(req).id)); }));
   app.post('/api/reader/checkpoints', json, guarded(async (req, res) => { res.json(await recordCheckpoint(signedIn(req).id, body(req))); }));
+  // Reading insights for authors (phase 9): aggregates for the signed-in author's own books.
+  app.get('/api/author/insights', guarded(async (req, res) => { res.setHeader('Cache-Control', 'private, no-store'); res.json(await authorInsights(signedIn(req).id)); }));
   // Flashcards with spaced repetition (master build plan M8): the reader's review deck.
   app.get('/api/reader/flashcards', guarded(async (req, res) => { const b = typeof req.query.bookId === 'string' ? req.query.bookId : undefined; res.json(await myDeck(signedIn(req).id, b)); }));
   app.post('/api/reader/flashcards', json, guarded(async (req, res) => { res.json(await saveCards(signedIn(req).id, body(req))); }));

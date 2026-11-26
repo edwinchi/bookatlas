@@ -62,6 +62,8 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (normalized === '/api/reader/young/stories' && method === 'POST') return 'reader';
   // Comprehension checkpoints (master build plan M4).
   if (normalized === '/api/reader/checkpoints' && ['GET', 'POST'].includes(method)) return 'reader';
+  // Reading insights for authors (phase 9): own books only, aggregates only.
+  if (normalized === '/api/author/insights' && method === 'GET') return 'reader';
   // Flashcards with spaced repetition (master build plan M8).
   if (normalized === '/api/reader/flashcards' && ['GET', 'POST'].includes(method)) return 'reader';
   if (/^\/api\/reader\/flashcards\/[\w-]{6,64}\/review$/.test(normalized) && method === 'POST') return 'reader';

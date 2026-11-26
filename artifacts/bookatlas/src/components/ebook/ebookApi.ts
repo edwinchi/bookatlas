@@ -202,6 +202,8 @@ export function useEbookApi() {
 
   return {
     authorSales: () => json<AuthorSales>('/api/author/sales'),
+    // Reading insights for authors (phase 9).
+    authorInsights: () => json<AuthorInsightsData>('/api/author/insights'),
     /** Author hub (cycle 6): files fetched with the sign-in token, returned as blobs. */
     salesCsv: async () => (await request('/api/author/sales.csv')).blob(),
     statementHtml: async (month: string) => (await request(`/api/author/statements/${month}`)).text(),
@@ -395,3 +397,17 @@ export interface Flashcard {
   difficulty: number; reviews: number; lapses: number; createdAt: string; due: string; lastReviewedAt: string | null;
 }
 export interface FlashcardDeck { total: number; dueCount: number; newCount: number; retention: number | null; nextDue: string | null; due: Flashcard[]; cards: Flashcard[] }
+
+/** Mirrors GET /api/author/insights (reader/authorInsights.ts): aggregates only, from 5 readers. */
+export interface AuthorInsightsData {
+  minReaders: number;
+  books: {
+    bookId: string; title: string; readers: number; enoughReaders: boolean;
+    finished?: number; completionRate?: number; medianProgress?: number;
+    chapters?: { index: number; title: string; reached: number; stoppedHere: number }[];
+    biggestDrop?: { index: number; title: string; drop: number } | null;
+    minutesRead?: number; minutesPerReader?: number; wordsPerMinute?: number | null;
+    activeLast30?: number; daily?: { day: string; readers: number }[];
+    passages?: { chapterIndex: number; paragraphIndex: number; excerpt: string; readers: number }[];
+  }[];
+}

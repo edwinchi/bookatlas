@@ -214,3 +214,31 @@ test('knowledge maps (master build plan M10): a chapter’s ideas and links, cle
   assert.equal(calls.length, 1);
   assert.equal((await fetch('/api/reader/ai/map', post('', { bookId, chapterIndex: 99 }))).status, 404);
 });
+
+test('reading insights for authors (phase 9): own books only, nothing before 5 readers', async () => {
+  const { fetch } = await getSharedTestServer();
+  const bookId = await publishBook(fetch);
+  const asAuthor = { headers: { 'x-test-role': 'admin' } };
+  assert.equal((await fetch('/api/author/insights', { headers: { 'x-test-role': 'unauthenticated' } })).status, 401);
+  const before = await (await fetch('/api/author/insights', asAuthor)).json();
+  const mine = before.books.find((b: { bookId: string }) => b.bookId === bookId);
+  assert.ok(mine, 'the author sees their own book');
+  assert.equal(mine.enoughReaders, false);
+  const { readerMemory } = await import('../../artifacts/api-server/src/bookatlas/reader/service.ts');
+  const m = readerMemory();
+  const now = new Date().toISOString();
+  for (const [i, pct] of [10, 40, 60, 100, 100].entries()) {
+    m.progress.set(`insight_reader_${i}:${bookId}`, { user_id: `insight_reader_${i}`, book_id: bookId, chapter_index: pct === 100 ? 4 : Math.floor(pct / 25), paragraph_index: 0, progress_percent: pct, device: null, updated_at: now });
+    m.sessions.push({ id: `insight-s-${i}`, user_id: `insight_reader_${i}`, book_id: bookId, started_at: now, seconds: 600, paragraphs: 10, words: 2400, device: null });
+  }
+  const after = (await (await fetch('/api/author/insights', asAuthor)).json()).books.find((b: { bookId: string }) => b.bookId === bookId);
+  assert.equal(after.enoughReaders, true);
+  assert.equal(after.readers, 5);
+  assert.equal(after.completionRate, 40);
+  assert.equal(after.chapters[0].reached, 100);
+  assert.equal(after.wordsPerMinute, 240);
+  assert.equal(JSON.stringify(after).includes('insight_reader'), false, 'no reader is named');
+  // Another account does not see this book.
+  const other = await (await fetch('/api/author/insights', { headers: { 'x-test-role': 'reader' } })).json();
+  assert.equal(other.books.some((b: { bookId: string }) => b.bookId === bookId), false);
+});
