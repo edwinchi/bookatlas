@@ -112,6 +112,9 @@ test('reader AI: ask with sources, study tools, explain, translate and define; h
   assert.equal((await fetch('/api/reader/ai/define', post('', { bookId, word: '<script>' }))).status, 400);
   const def = await (await fetch('/api/reader/ai/define', post('', { bookId, word: 'opening', context: 'Paragraph 3 of the opening chapter.' }))).json();
   assert.deepEqual([def.word, def.definitions[0], def.synonyms.length], ['opening', 'coming at the beginning', 2]);
+  // Vocabulary growth: the word looked up is in the reader's word list.
+  const vocab = await (await fetch('/api/reader/vocabulary', { headers: { 'x-test-role': 'reader' } })).json();
+  assert.ok(vocab.recent.some((w: { word: string; definition: string }) => w.word === 'opening' && w.definition === 'coming at the beginning'));
 
   // No AI answer: an honest error, and the request does not count.
   reply = () => null;

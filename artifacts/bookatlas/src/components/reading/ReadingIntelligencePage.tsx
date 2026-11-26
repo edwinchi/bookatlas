@@ -9,6 +9,7 @@ import { useEbookApi, type CheckpointSummary, type ReadingStats } from '../ebook
 import { BANDS } from '../reader/checkpoints';
 import { ReadingHeatmap } from './ReadingHeatmap';
 import { LearningScoreCard } from './LearningScoreCard';
+import { VocabularyCard } from './VocabularyCard';
 import { FlashcardReview } from '../reader/FlashcardReview';
 import { WEEKDAY_NAMES, aggregateHeatmapData, consistencyLabel, consistencyScore, dailyActivity, hourLabel, peakDay, peakHour } from './heatmap';
 import { FastReadPlayer, SpeedCheck, useSpeedTests } from '../reader/FastReadPanel';
@@ -210,6 +211,7 @@ function Progress({ speed, fam }: { speed: ReturnType<typeof useSpeedTests>; fam
               </div>
               <ReadingBehaviour stats={stats} />
               <LearningScoreCard api={api} stats={stats} />
+              <VocabularyCard api={api} />
               <div className="grid gap-3 lg:grid-cols-2">
                 <ReadingHeatmap activity={stats.activity ?? []} />
                 <DaysChart days={stats.last30} />

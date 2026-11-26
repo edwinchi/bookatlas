@@ -268,6 +268,9 @@ export function useEbookApi() {
     saveCheckpoint: (body: { bookId: string; chapterIndex: number; right: number; total: number; reason: CheckpointReason }) =>
       json<{ band: CheckpointBand; summary: CheckpointSummary }>('/api/reader/checkpoints', 'POST', body),
     checkpoints: () => json<CheckpointSummary>('/api/reader/checkpoints'),
+    // Vocabulary growth: the words the reader looked up with Define.
+    vocabulary: () => json<VocabularySummary>('/api/reader/vocabulary'),
+    forgetWord: (word: string) => json<VocabularySummary>(`/api/reader/vocabulary/${encodeURIComponent(word)}`, 'DELETE'),
     // Flashcards with spaced repetition (master build plan M8).
     flashcardDeck: (bookId?: string) => json<FlashcardDeck>(`/api/reader/flashcards${bookId ? `?bookId=${encodeURIComponent(bookId)}` : ''}`),
     saveFlashcards: (body: { bookId: string; chapterIndex?: number | null; cards: { question: string; answer: string }[] }) => json<{ added: number; skipped: number; total: number }>('/api/reader/flashcards', 'POST', body),
@@ -420,4 +423,10 @@ export interface AuthorInsightsData {
     activeLast30?: number; daily?: { day: string; readers: number }[];
     passages?: { chapterIndex: number; paragraphIndex: number; excerpt: string; readers: number }[];
   }[];
+}
+
+/** Mirrors GET /api/reader/vocabulary (reader/vocabulary.ts). */
+export interface VocabularySummary {
+  total: number; thisWeek: number; weeks: { week: string; words: number }[];
+  recent: { word: string; definition: string; bookId: string; at: string; looks: number }[];
 }

@@ -64,6 +64,9 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (normalized === '/api/reader/checkpoints' && ['GET', 'POST'].includes(method)) return 'reader';
   // Reading insights for authors (phase 9): own books only, aggregates only.
   if (normalized === '/api/author/insights' && method === 'GET') return 'reader';
+  // Vocabulary growth: a reader's own word list.
+  if (normalized === '/api/reader/vocabulary' && method === 'GET') return 'reader';
+  if (/^\/api\/reader\/vocabulary\/[^/]{1,180}$/.test(normalized) && method === 'DELETE') return 'reader';
   // Flashcards with spaced repetition (master build plan M8).
   if (normalized === '/api/reader/flashcards' && ['GET', 'POST'].includes(method)) return 'reader';
   if (/^\/api\/reader\/flashcards\/[\w-]{6,64}\/review$/.test(normalized) && method === 'POST') return 'reader';

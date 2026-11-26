@@ -17,6 +17,7 @@ import { checkpointQuestions, checkpointsOf, recordCheckpoint } from './checkpoi
 import { flashcardsFromPassage, gradeCard, myDeck, removeCard, saveCards } from './flashcards.js';
 import { knowledgeMap } from './knowledgeMap.js';
 import { authorInsights } from './authorInsights.js';
+import { forgetWord, myVocabulary, recordLookup } from './vocabulary.js';
 import { answerQuiz, classDetail, classReport, createClass, joinClass, leaveClass, myClasses, publishQuiz, removeQuiz, setClassBooks } from './classes.js';
 import { FamilyError, addActivity, familyView, readFamily, weekStart, withProfiles, type Family } from './family.js';
 
@@ -150,6 +151,9 @@ export function mountReader(app: Express, catalog: CatalogStore, generate?: Gene
   app.post('/api/reader/checkpoints', json, guarded(async (req, res) => { res.json(await recordCheckpoint(signedIn(req).id, body(req))); }));
   // Reading insights for authors (phase 9): aggregates for the signed-in author's own books.
   app.get('/api/author/insights', guarded(async (req, res) => { res.setHeader('Cache-Control', 'private, no-store'); res.json(await authorInsights(signedIn(req).id)); }));
+  // Vocabulary growth: the words a reader looked up.
+  app.get('/api/reader/vocabulary', guarded(async (req, res) => { res.setHeader('Cache-Control', 'private, no-store'); res.json(await myVocabulary(signedIn(req).id)); }));
+  app.delete('/api/reader/vocabulary/:word', guarded(async (req, res) => { res.json(await forgetWord(signedIn(req).id, String(req.params.word))); }));
   // Flashcards with spaced repetition (master build plan M8): the reader's review deck.
   app.get('/api/reader/flashcards', guarded(async (req, res) => { const b = typeof req.query.bookId === 'string' ? req.query.bookId : undefined; res.json(await myDeck(signedIn(req).id, b)); }));
   app.post('/api/reader/flashcards', json, guarded(async (req, res) => { res.json(await saveCards(signedIn(req).id, body(req))); }));
@@ -255,7 +259,12 @@ export function mountReader(app: Express, catalog: CatalogStore, generate?: Gene
   app.post('/api/reader/ai/study', json, ai(studyChapter));
   app.post('/api/reader/ai/explain', json, ai(explainPassage));
   app.post('/api/reader/ai/translate', json, ai(translatePassage));
-  app.post('/api/reader/ai/define', json, ai(defineWord));
+  // Vocabulary growth: a word looked up is kept in the reader's word list (a failure there never blocks the meaning).
+  app.post('/api/reader/ai/define', json, ai(async (gen, book, who, b) => {
+    const d = await defineWord(gen, book, who, b);
+    await recordLookup(who.id, d.word, d.definitions[0]!, book.id).catch(() => undefined);
+    return d;
+  }));
   app.post('/api/reader/ai/checkpoint', json, ai(checkpointQuestions));
   app.post('/api/reader/ai/flashcards', json, ai(flashcardsFromPassage));
   app.post('/api/reader/ai/map', json, ai(knowledgeMap));
