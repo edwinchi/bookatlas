@@ -470,6 +470,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
         if (!timeline && length > 0) timeline = narrationTimeline(paras, opensChapter ? chapter?.title ?? null : null, length);
         const w = timeline ? wordAt(timeline, audio.currentTime || 0) : null;
         const p = w?.p ?? seg.from;
+        lastAudio.current = { n: seg.n, t: Math.round((audio.currentTime || 0) * 10) / 10, p, chapter: seg.chapter };
         if (p !== lastPara) { lastPara = p; setSpokenParagraph(p); setCurrentParagraphIndex(p); }
         if (followWordsRef.current && w) requestAnimationFrame(() => { if (run === speechRun.current) showSpoken(document.querySelector(`[data-para="${w.p}"]`), [w.s0, w.s1], [w.w0, w.w1]); });
       };
@@ -488,7 +489,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       audio.onplay = () => { if (run !== speechRun.current) return; setNarrationPaused(false); setPlaying('playing', audio); };
       audio.onloadedmetadata = () => { if (run === speechRun.current) setPlaying(audio.paused ? 'paused' : 'playing', audio); };
       // A pause from the lock screen, headphones or another app; the end of a part is not a pause.
-      audio.onpause = () => { if (run !== speechRun.current || audio.ended) return; setNarrationPaused(true); setPlaying('paused', audio); };
+      audio.onpause = () => { if (run !== speechRun.current || audio.ended) return; setNarrationPaused(true); setPlaying('paused', audio); savePlace(book.id, placeNow()); };
       audio.src = src;
       if (at > 0) audio.addEventListener('loadedmetadata', () => { audio.currentTime = at; }, { once: true });
       // The chosen speed (a new source resets it).

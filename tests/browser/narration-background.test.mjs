@@ -193,3 +193,28 @@ test('when the narration details never arrive, Listen still opens the player and
   await player.waitFor({ state: 'detached' });
   await context.close();
 });
+
+// "Store where I left off" (owner request 2026-11-26): the place in every book, with the second of audio, is kept on
+// the device for everyone, so reopening the book and pressing Listen carries on there instead of starting over.
+test('reopening a book resumes listening where it stopped', async () => {
+  const { context, page } = await openNarratedReader();
+  await page.waitForFunction(() => window.__audio && window.__audio.currentTime > 1, null, { timeout: 10_000 });
+  await page.evaluate(() => window.__handlers.pause());
+  await page.getByRole('button', { name: /resume listening/i }).waitFor();
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('bookatlas:places') || '{}'));
+  const [id] = Object.keys(saved);
+  assert.ok(id && saved[id].audio && saved[id].audio.n === 0 && saved[id].audio.t > 0.5, `pausing keeps the part and second (${JSON.stringify(saved)})`);
+
+  // Leave the book further on, in part 2 at 2.5 seconds, then come back to it.
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.evaluate((bookId) => localStorage.setItem('bookatlas:places', JSON.stringify({ [bookId]: { chapter: 1, paragraph: 0, audio: { n: 1, t: 2.5, p: 0 }, at: new Date().toISOString() } })), id);
+  await page.evaluate(() => { window.__log.length = 0; });
+  await page.locator('[title="Read Free Preview in Browser"]').first().click();
+  await page.getByText('Paragraph one of chapter 2.').first().waitFor();
+  await page.getByRole('button', { name: /listen to the book/i }).click();
+  await page.waitForFunction(() => window.__log.length >= 1);
+  assert.match(await page.evaluate(() => window.__log[0].src), /\/narration\/1(\?|$)/, 'the part it stopped in');
+  await page.waitForFunction(() => window.__audio.currentTime >= 0.4, null, { timeout: 5000 });
+  assert.ok(await page.evaluate(() => window.__audio.currentTime < 1.5), 'a couple of seconds before where it stopped');
+  await context.close();
+});
