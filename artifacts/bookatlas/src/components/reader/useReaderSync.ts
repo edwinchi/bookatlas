@@ -1,4 +1,7 @@
 import { ME, activeReader } from '../reading/family';
+import { addPending, flushQueue, type Pending } from './offlineBooks';
+/** No connection (not a refusal): worth trying again later. */
+const unreachable = (e: unknown) => (typeof navigator !== 'undefined' && navigator.onLine === false) || e instanceof TypeError;
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Chapter, ReaderSettings } from '../../types';
 import { sanitizeReaderSettings } from '../../utils/readerSettings';
@@ -42,6 +45,18 @@ export function useReaderSync(opts: {
   }, [chapterIndex, paragraphIndex]);
   const openedAt = useRef(new Date().toISOString());
 
+  // Offline reading (phase 11): what waited while offline is sent now, and whenever the connection comes back.
+  useEffect(() => {
+    if (!signedIn) return;
+    const send = (p: Pending) => (p.kind === 'progress'
+      ? api.saveReaderProgress(p.bookId, p.body as Parameters<Api['saveReaderProgress']>[1])
+      : api.recordReadingSession(p.body as Parameters<Api['recordReadingSession']>[0]));
+    const flush = () => { void flushQueue(send); };
+    flush();
+    window.addEventListener('online', flush);
+    return () => window.removeEventListener('online', flush);
+  }, [signedIn]);
+
   // Load the account's marks and place for this book.
   useEffect(() => {
     if (!signedIn) { setStatus('local'); return; }
@@ -75,7 +90,9 @@ export function useReaderSync(opts: {
 
   const savePlace = useCallback(() => {
     if (!signedIn) return;
-    api.saveReaderProgress(bookId, { ...place.current, device, at: new Date().toISOString() }).catch(() => undefined);
+    const body = { ...place.current, device, at: new Date().toISOString() };
+    // Offline (phase 11): the place waits on this device and is sent when the connection is back.
+    api.saveReaderProgress(bookId, body).catch((e) => { if (unreachable(e)) addPending({ kind: 'progress', bookId, body, at: body.at }); });
   }, [signedIn, bookId]);
   useEffect(() => {
     if (!signedIn || status === 'loading') return;
@@ -102,7 +119,10 @@ export function useReaderSync(opts: {
     // A family member reading on this device (Reading Intelligence phase 2): the time counts for their profile.
     const reader = activeReader();
     if (reader.id !== ME) api.familyActivity({ profileId: reader.id, minutes: Math.max(1, Math.round(s.seconds / 60)), words: wordCount, bookId }).catch(() => undefined);
-    else api.recordReadingSession({ bookId, startedAt: openedAt.current, seconds: s.seconds, paragraphs: s.paragraphs.size, words: wordCount, device }).catch(() => undefined);
+    else {
+      const body = { bookId, startedAt: openedAt.current, seconds: s.seconds, paragraphs: s.paragraphs.size, words: wordCount, device };
+      api.recordReadingSession(body).catch((e) => { if (unreachable(e)) addPending({ kind: 'session', bookId, body, at: new Date().toISOString() }); });
+    }
     session.current = { seconds: 0, paragraphs: new Set(), lastActive: Date.now() };
     openedAt.current = new Date().toISOString();
   }, [signedIn, bookId, chapters]);

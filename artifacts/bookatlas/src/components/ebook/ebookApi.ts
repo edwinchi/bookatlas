@@ -354,7 +354,15 @@ export function useEbookApi() {
     narrationAudioUrl: (bookId: string, n: number, key?: string) => `/api/reader/catalog/${encodeURIComponent(bookId)}/narration/${n}${key ? `?k=${encodeURIComponent(key)}` : ''}`,
     readerContent: (bookId: string) => json<{ chapters: import('../../types').Chapter[]; access: 'full' | 'preview' }>(`/api/reader/catalog/${bookId}/content`),
     async readerImage(bookId: string, name: string) {
-      return URL.createObjectURL(await (await request(`/api/reader/catalog/${bookId}/images/${name}`)).blob());
+      try { return URL.createObjectURL(await this.readerImageBlob(bookId, name)); } catch (e) {
+        // Offline reading (phase 11): the picture saved with the book on this device.
+        const saved = await import('../reader/offlineBooks').then((m) => m.offlinePicture(bookId, name));
+        if (saved) return URL.createObjectURL(saved);
+        throw e;
+      }
+    },
+    async readerImageBlob(bookId: string, name: string) {
+      return (await request(`/api/reader/catalog/${bookId}/images/${name}`)).blob();
     },
   };
 }

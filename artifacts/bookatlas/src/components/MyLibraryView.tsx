@@ -28,6 +28,7 @@ import {
   TrendingUp,
   Award
 } from 'lucide-react';
+import { OfflineShelf } from './reader/OfflineShelf';
 import { UserLibraryItem, Book } from '../types';
 import { exportUserLibraryPDF } from '../utils/exportLibraryPdf';
 import { OrdersPanel, ORDERS_SECTION_ID } from './AccountInvoices';
@@ -73,14 +74,6 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
   const [pdfSuccessBanner, setPdfSuccessBanner] = useState(false);
   const [libraryNotice, setLibraryNotice] = useState('');
   
-  // Offline Caching State
-  const [offlineEnabled, setOfflineEnabled] = useState<boolean>(() => {
-    try { return localStorage.getItem(`${storagePrefix}offline_enabled`) === 'true'; } catch { return false; }
-  });
-  const [cachedItemsCount, setCachedItemsCount] = useState(() => {
-    try { const cached = JSON.parse(localStorage.getItem(`${storagePrefix}offline_library`) || '[]'); return Array.isArray(cached) ? cached.length : 0; } catch { return 0; }
-  });
-
   // Dynamic Reading Stats
   const currentlyReading = library.filter((item) => !item.finished && item.progressPercent < 100);
   const finishedBooks = library.filter((item) => item.finished || item.progressPercent >= 100);
@@ -101,24 +94,6 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
     } catch {
       setLibraryNotice(language === 'nl' ? 'PDF downloaden mislukt. Probeer het opnieuw.' : 'PDF download failed. Please try again.');
     } finally { setIsExportingPdf(false); }
-  };
-
-  const handleToggleOffline = () => {
-    setLibraryNotice('');
-    try {
-      if (offlineEnabled) {
-        localStorage.removeItem(`${storagePrefix}offline_library`);
-        localStorage.setItem(`${storagePrefix}offline_enabled`, 'false');
-        setCachedItemsCount(0);
-      } else {
-        localStorage.setItem(`${storagePrefix}offline_library`, JSON.stringify(library));
-        localStorage.setItem(`${storagePrefix}offline_enabled`, 'true');
-        setCachedItemsCount(library.length);
-      }
-      setOfflineEnabled(!offlineEnabled);
-    } catch {
-      setLibraryNotice(language === 'nl' ? 'Opslaan mislukt. Controleer de browseropslag.' : 'Could not update saved books. Browser storage may be full or disabled.');
-    }
   };
 
   const getFilteredItems = () => {
@@ -149,6 +124,8 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
     <div className="space-y-8 animate-fadeIn">
       
       {libraryNotice && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">{libraryNotice}</p>}
+      {/* Offline reading (phase 11): books saved on this device, readable with no connection. */}
+      <OfflineShelf onOpen={(b) => { const item = library.find((i) => i.book.id === b.id); if (item) onOpenReader(item); else onOpenBookDetail(b.book as Book); }} />
       {/* PDF Success Alert Banner */}
       {pdfSuccessBanner && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl flex items-center justify-between shadow-sm animate-fadeIn">
@@ -208,7 +185,7 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
               </div>
             </div>
 
-            {/* Action Bar: Export PDF & Offline Toggle */}
+            {/* Action Bar: orders and Export PDF */}
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <a href={`#${ORDERS_SECTION_ID}`}
                 onClick={(e) => { e.preventDefault(); document.getElementById(ORDERS_SECTION_ID)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); history.replaceState(null, '', `#${ORDERS_SECTION_ID}`); }}
@@ -235,26 +212,7 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
                 )}
               </button>
 
-              <button
-                onClick={handleToggleOffline}
-                className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 cursor-pointer ${
-                  offlineEnabled
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
-                    : 'bg-white/10 text-slate-300 border-white/15 hover:bg-white/15'
-                }`}
-              >
-                {offlineEnabled ? (
-                  <>
-                    <Wifi className="w-4 h-4 text-emerald-400" />
-                    <span>{language === 'nl' ? 'Op dit apparaat opgeslagen' : 'Saved on this device'} ({cachedItemsCount})</span>
-                  </>
-                ) : (
-                  <>
-                    <HardDriveDownload className="w-4 h-4 text-slate-300" />
-                    <span>{language === 'nl' ? 'Op dit apparaat opslaan' : 'Save on this device'}</span>
-                  </>
-                )}
-              </button>
+
             </div>
           </div>
 

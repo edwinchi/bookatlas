@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
-import { X, ChevronLeft, ChevronRight, Sliders, List, Bookmark, Highlighter, Volume2, VolumeX, Type, Maximize2, Minimize2, Check, ShoppingBag, Sparkles, Clock, Bot, MessageSquare, HelpCircle, BookOpen, Mic, MicOff, Headphones, Compass, Layers, Map, Play, Pause, Languages, Send, Sparkle, NotebookPen, StickyNote, GraduationCap, Users, Flame, MoreVertical, Zap, Share2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Sliders, List, Bookmark, Highlighter, Volume2, VolumeX, Type, Maximize2, Minimize2, Check, ShoppingBag, Sparkles, Clock, Bot, MessageSquare, HelpCircle, BookOpen, Mic, MicOff, Headphones, Compass, Layers, Map, Play, Pause, Languages, Send, Sparkle, NotebookPen, StickyNote, GraduationCap, Users, Flame, MoreVertical, Zap, Share2, CloudOff, HardDriveDownload } from 'lucide-react';
 import { StudioNarrationPanel } from './voice/StudioNarrationPanel';
 import { Book, Chapter, ReaderSettings, ReaderTheme, ReaderFont } from '../types';
 import { useAccount } from '../auth/AuthContext';
@@ -24,6 +24,7 @@ import { focusModeOf, paragraphFocusClass, zenLayout } from './reader/readerLayo
 import { checkpointDue, startTracker, wordsBetween, type CheckpointReason } from './reader/checkpoints';
 import { CheckpointDialog, CheckpointOffer, type CheckpointRequest } from './reader/CheckpointDialog';
 import { ShareBookDialog, ShareQuoteDialog } from './share/ShareDialog';
+import { formatBytes, offlineBook, removeOffline, saveOffline, type OfflineBook } from './reader/offlineBooks';
 import { narrationTimeline, wordAt, type TimedWord } from './reader/narrationSync';
 import { ReaderContents, GoToPopover } from './reader/ReaderNavigation';
 import { useDeviceVoice, type Translated } from './reader/useDeviceVoice';
@@ -87,9 +88,26 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
         if (cancelled) return;
         setFullChapters(r.chapters);
         setAccess(r.access);
+        setReadingOffline(false);
         setCurrentChapterIndex((i) => Math.min(i, Math.max(0, r.chapters.length - 1)));
+        // A book saved for offline reading keeps its copy up to date (phase 11).
+        void offlineBook(book.id).then((saved) => {
+          if (cancelled) return;
+          setOfflineSaved(!!saved);
+          if (saved && JSON.stringify(saved.chapters) !== JSON.stringify(r.chapters)) void saveOffline({ id: book.id, book: offlineMeta(), chapters: r.chapters, access: r.access }, (n) => ebookApi.readerImageBlob(book.id, n)).catch(() => undefined);
+        });
       })
-      .catch(() => { if (!cancelled) setFullError('The book could not be loaded, so the free sample is shown. Please retry later.'); });
+      .catch(async () => {
+        // No connection: the copy saved on this device, when there is one (phase 11).
+        const saved = await offlineBook(book.id);
+        if (cancelled) return;
+        if (saved) {
+          setFullChapters(saved.chapters); setAccess(saved.access); setReadingOffline(true); setOfflineSaved(true);
+          setCurrentChapterIndex((i) => Math.min(i, Math.max(0, saved.chapters.length - 1)));
+          return;
+        }
+        setFullError('The book could not be loaded, so the free sample is shown. Please retry later.');
+      });
     // A natural Gemini narration (TASK-0008) replaces the device voice when the book has one.
     setNarrationChecked(false);
     ebookApi.readerNarration(book.id)
@@ -1021,6 +1039,23 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const lastMove = useRef(Date.now());
   const [checkpointOffer, setCheckpointOffer] = useState<Omit<CheckpointRequest, 'id'> | null>(null);
   const [checkpoint, setCheckpoint] = useState<CheckpointRequest | null>(null);
+  // Offline reading (phase 11): this book saved on the device, and whether this is that copy.
+  const [offlineSaved, setOfflineSaved] = useState(false);
+  const [readingOffline, setReadingOffline] = useState(false);
+  const [offlineNote, setOfflineNote] = useState('');
+  const offlineMeta = () => ({ id: book.id, title: book.title, author: book.author, coverImage: book.coverImage, hasReaderContent: book.hasReaderContent, price: book.price, format: book.format } as OfflineBook['book']);
+  const toggleOffline = async () => {
+    setOfflineNote('');
+    try {
+      if (offlineSaved) { await removeOffline(book.id); setOfflineSaved(false); setOfflineNote('The copy on this device was removed.'); return; }
+      if (!fullChapters) { setOfflineNote('Wait until the book has loaded, then try again.'); return; }
+      setOfflineNote('Saving the book on this device…');
+      const saved = await saveOffline({ id: book.id, book: offlineMeta(), chapters: fullChapters, access }, (n) => ebookApi.readerImageBlob(book.id, n));
+      setOfflineSaved(true);
+      setOfflineNote(`Saved on this device (${formatBytes(saved.bytes)}${saved.pictures ? `, ${saved.pictures} picture${saved.pictures === 1 ? '' : 's'}` : ''}). You can read it with no connection.${access === 'preview' ? ' This is the free preview.' : ''}`);
+    } catch (e) { setOfflineNote(e instanceof Error ? e.message : 'The book could not be saved on this device.'); }
+  };
+  useEffect(() => { if (!offlineNote || offlineNote.endsWith('…')) return; const t = window.setTimeout(() => setOfflineNote(''), 6000); return () => window.clearTimeout(t); }, [offlineNote]);
   // Share and invite (phase 10): the book, or a selected passage as a quote card.
   const [sharing, setSharing] = useState(false);
   const [quote, setQuote] = useState<string | null>(null);
@@ -1343,6 +1378,13 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             <Type className="w-4 h-4" />
           </button>
 
+          {/* Offline reading (phase 11) */}
+          {book.hasReaderContent && (
+            <button type="button" onClick={() => void toggleOffline()} aria-label={offlineSaved ? 'Remove the offline copy' : 'Save for offline reading'} title={offlineSaved ? 'Saved on this device: remove the offline copy' : 'Save for offline reading'} data-testid="reader-offline"
+              className={`hidden min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer sm:grid ${offlineSaved ? 'text-emerald-600' : 'hover:bg-black/10'}`}>
+              {offlineSaved ? <CloudOff className="w-4 h-4" /> : <HardDriveDownload className="w-4 h-4" />}
+            </button>
+          )}
           {/* Share and invite (phase 10) */}
           <button type="button" onClick={() => setSharing(true)} aria-label="Share this book" title="Share this book" data-testid="reader-share"
             className="hidden min-h-12 min-w-12 place-items-center rounded-lg hover:bg-black/10 transition-colors cursor-pointer sm:grid">
@@ -1368,6 +1410,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                   { label: 'Notebook', icon: NotebookPen, on: toggleNotebook, show: true },
                   { label: 'Fast Read and speed check', icon: Zap, on: () => setShowFastRead(true), show: true },
                   { label: 'Share this book', icon: Share2, on: () => setSharing(true), show: true },
+                  { label: offlineSaved ? 'Remove the offline copy' : 'Save for offline reading', icon: offlineSaved ? CloudOff : HardDriveDownload, on: () => void toggleOffline(), show: !!book.hasReaderContent },
                 ].filter((i) => i.show).map((i) => (
                   <DropdownMenu.Item key={i.label} onSelect={i.on}
                     className="flex min-h-11 cursor-pointer select-none items-center gap-3 rounded-xl px-3 text-sm font-medium outline-none data-[highlighted]:bg-indigo-50 data-[highlighted]:text-indigo-900">
@@ -1691,6 +1734,13 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       )}
       {checkpointOffer && !checkpoint && (
         <CheckpointOffer reason={checkpointOffer.reason} onStart={() => startCheckpoint(checkpointOffer)} onDismiss={() => { setCheckpointOffer(null); resetTracker(); }} />
+      )}
+      {(offlineNote || readingOffline) && (
+        <div role="status" data-testid="offline-note" className="fixed inset-x-3 top-16 z-[70] mx-auto flex max-w-md items-start gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white shadow-xl">
+          {readingOffline && !offlineNote ? <CloudOff className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden /> : <HardDriveDownload className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden />}
+          <span className="flex-1">{offlineNote || 'No connection: you are reading the copy saved on this device. Your place is kept and sent when you are back online.'}</span>
+          {readingOffline && !offlineNote && <button type="button" onClick={() => setReadingOffline(false)} aria-label="Close" className="rounded-full p-0.5 text-white/70 hover:text-white cursor-pointer"><X className="h-4 w-4" /></button>}
+        </div>
       )}
       <ShareBookDialog book={{ id: book.id, title: book.title, author: book.author }} open={sharing} onOpenChange={setSharing} />
       <ShareQuoteDialog book={{ id: book.id, title: book.title, author: book.author }} quote={quote ?? ''} open={quote !== null} onOpenChange={(o) => { if (!o) setQuote(null); }} />
