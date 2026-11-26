@@ -269,7 +269,7 @@ function Quiz({ questions, onComplete }: { questions: { question: string; option
 
 function WordsTab({ api, bookId, languages, request, onRemaining }: { api: Api; bookId: string; languages: Record<string, string>; request: WordsRequest | null; onRemaining: (n: number) => void }) {
   const [target, setTarget] = useState(storedLang);
-  // Explain levels (Reading Intelligence 2026-11-25): for a child, a student or a professional.
+  // Explain levels (master build plan M7): for a child, a student, a professional or an expert.
   const [level, setLevel] = useState<ExplainLevel>(() => defaultsFor(activeReader().kind).explain);
   const [out, setOut] = useState<{ kind: 'text'; title: string; text: string } | { kind: 'def'; def: Definition } | null>(null);
   const { busy, error, run } = useRun(onRemaining);
@@ -278,8 +278,8 @@ function WordsTab({ api, bookId, languages, request, onRemaining }: { api: Api; 
     if (req.action === 'define') { const d = await run(() => api.defineWord({ bookId, word: req.text, context: req.context })); if (d) setOut({ kind: 'def', def: d }); return; }
     if (req.action === 'translate') { const t = await run(() => api.translatePassage({ bookId, text: req.text, target: lang })); if (t) setOut({ kind: 'text', title: `In ${t.language}`, text: t.translation }); return; }
     setLevel(lvl);
-    const e = await run(() => api.explainPassage({ bookId, text: req.text, mode: lvl }));
-    if (e) setOut({ kind: 'text', title: lvl === 'child' ? 'In simple words' : lvl === 'professional' ? 'For a professional' : 'Explained', text: e.answer });
+    const e = await run(() => api.explainPassage({ bookId, text: req.text, context: req.context, mode: lvl }));
+    if (e) setOut({ kind: 'text', title: lvl === 'child' ? 'In simple words' : lvl === 'professional' ? 'For a professional' : lvl === 'expert' ? 'For an expert' : 'Explained', text: e.answer });
   };
   useEffect(() => { if (request) void go(request, target, request.action === 'simplify' ? 'child' : defaultsFor(activeReader().kind).explain); }, [request?.id]);
   const speak = (t: string) => { try { window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(t)); } catch { /* no voice */ } };
@@ -298,7 +298,7 @@ function WordsTab({ api, bookId, languages, request, onRemaining }: { api: Api; 
       )}
       {(request?.action === 'explain' || request?.action === 'simplify') && (
         <ToggleGroup.Root type="single" value={level} onValueChange={(v) => { if (v && v !== level) void go(request, target, v as ExplainLevel); }} disabled={busy} aria-label="Explain for" className="flex gap-1 rounded-xl bg-slate-100 p-1">
-          {([['child', 'A child'], ['student', 'A student'], ['professional', 'A professional']] as const).map(([k, label]) => (
+          {([['child', 'A child'], ['student', 'A student'], ['professional', 'A professional'], ['expert', 'An expert']] as const).map(([k, label]) => (
             <ToggleGroup.Item key={k} value={k} data-testid={`explain-level-${k}`}
               className="flex-1 rounded-lg px-1 py-1.5 text-[11px] font-bold text-slate-600 data-[state=on]:bg-white data-[state=on]:text-slate-900 data-[state=on]:shadow-sm disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">{label}</ToggleGroup.Item>
           ))}

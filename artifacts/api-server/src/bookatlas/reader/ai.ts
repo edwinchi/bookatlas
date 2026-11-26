@@ -174,27 +174,49 @@ async function readablePassage(book: Book, who: Identity, raw: unknown) {
 }
 
 /**
- * Explain a passage at three levels (Reading Intelligence 2026-11-25): for a child (the former "simplify"), for a
- * student (the former "explain") and for a professional. The old names still work.
+ * Explain a passage at four levels (master build plan M7, specification AI-002): for a child (the former
+ * "simplify"), a student (the former "explain"), a professional and an expert. The old names still work.
  */
 export const EXPLAIN_LEVELS = {
   child: 'Explain the passage to a 10-year-old: plain words, short sentences, one everyday example if it helps. Keep the meaning. End with one line: "In short: ...". At most 120 words.',
-  student: 'Explain the passage: what it says, what it means in the book, and any hard words, names or references. Use short paragraphs or bullets; at most 180 words.',
-  professional: 'Explain the passage for an expert reader: the argument or technique at work, its assumptions, the context and references it relies on, and how it connects to the rest of the book. Precise terms are welcome. Use short paragraphs or bullets; at most 250 words.',
+  student: 'Explain the passage for a student: what it says, what it means in the book, and any hard words, names or references, with one example. Use short paragraphs or bullets; at most 180 words.',
+  professional: 'Explain the passage for a capable professional from outside this field: the main point in precise but plain terms, why it matters, how it could be applied or used at work, and one concrete example. Define any specialist term you use. Use short paragraphs or bullets; at most 220 words.',
+  expert: 'Explain the passage for a specialist in its field: the argument, method or technique at work; its assumptions and their limits; the context, sources and traditions it relies on; where it agrees or disagrees with established views or other positions; and how it connects to the rest of the book. Use the field’s exact terms without defining the basics. Use short paragraphs or bullets; at most 280 words.',
 } as const;
 export type ExplainLevel = keyof typeof EXPLAIN_LEVELS;
 export const explainLevel = (mode: unknown): ExplainLevel =>
-  mode === 'child' || mode === 'simplify' ? 'child' : mode === 'professional' ? 'professional' : 'student';
+  mode === 'child' || mode === 'simplify' ? 'child' : mode === 'professional' || mode === 'expert' ? mode : 'student';
 
+/** The prompt (the specification's ExplainPromptBuilder): the level's instructions, and the surrounding text as context only. */
+export function explainPrompt(level: ExplainLevel, passage: string, context?: string) {
+  return {
+    instruction: `${EXPLAIN_LEVELS[level]} Keep the meaning of the passage; explain the difficult ideas.${context ? ' The text around the passage is given for context only; explain the passage itself.' : ''}`,
+    message: `${context ? `Around the passage (context only):
+"""${fence(context)}"""
+
+` : ''}Passage:
+"""${fence(passage)}"""`,
+  };
+}
+
+// The same passage at the same level is explained once per book (the specification's ExplainCache), at most 500 kept.
+const explainCache = new Map<string, string>();
 export async function explainPassage(generate: Generate, book: Book, who: Identity, body: Record<string, unknown>) {
   const level = explainLevel(body.mode);
-  const mode = level === 'child' ? 'simplify' : level === 'student' ? 'explain' : 'professional';
+  const mode = level === 'child' ? 'simplify' : level === 'student' ? 'explain' : level;
   const text = await readablePassage(book, who, body.text);
-  const answer = await ask(generate, {
-    systemInstruction: `${persona(book)}\n${EXPLAIN_LEVELS[level]}`,
-    messages: [{ role: 'user', text: `"""${fence(text)}"""` }],
-  });
-  return { mode, level, answer };
+  // Context (the sentences around a selection) is used only when it is from the book too.
+  const rawContext = clean(body.context, 1500);
+  const context = rawContext && rawContext !== text ? await readablePassage(book, who, rawContext).catch(() => '') : '';
+  const key = `${book.id}|${level}|${text}|${context}`;
+  const known = explainCache.get(key);
+  if (known) return { mode, level, answer: known, cached: true };
+  const p = explainPrompt(level, text, context);
+  const answer = await ask(generate, { systemInstruction: `${persona(book)}
+${p.instruction}`, messages: [{ role: 'user', text: p.message }] });
+  if (explainCache.size >= 500) explainCache.delete(explainCache.keys().next().value!);
+  explainCache.set(key, answer);
+  return { mode, level, answer, cached: false };
 }
 
 export const LANGUAGES: Record<string, string> = {

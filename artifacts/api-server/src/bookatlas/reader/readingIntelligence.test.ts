@@ -1,7 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cleanSpeedTests } from './service.js';
-import { EXPLAIN_LEVELS, STUDY_KINDS, explainLevel } from './ai.js';
+import { EXPLAIN_LEVELS, STUDY_KINDS, explainLevel, explainPrompt } from './ai.js';
+
+test('explain prompt (master build plan M7): the passage, with the surrounding text as context only', () => {
+  const p = explainPrompt('expert', 'The passage.', 'Before. The passage. After.');
+  assert.match(p.instruction, /specialist/);
+  assert.match(p.instruction, /context only/);
+  assert.match(p.message, /^Around the passage \(context only\):/);
+  assert.ok(p.message.endsWith('Passage:\n"""The passage."""'));
+  const plain = explainPrompt('child', 'Text """with fences""".');
+  assert.doesNotMatch(plain.message, /context/);
+  assert.equal(plain.message, 'Passage:\n"""Text "with fences"."""', 'the passage cannot close the quotes early');
+});
 
 test('reading speed checks are cleaned, deduplicated and capped at 30', () => {
   const ok = { at: '2026-11-25T10:00:00.000Z', wpm: 280, words: 290, seconds: 62, source: 'sample' };
@@ -26,7 +37,13 @@ test('explain levels and summary lengths (the old names keep working)', () => {
   assert.equal(explainLevel('explain'), 'student');
   assert.equal(explainLevel('professional'), 'professional');
   assert.equal(explainLevel('anything'), 'student');
-  assert.deepEqual(Object.keys(EXPLAIN_LEVELS), ['child', 'student', 'professional']);
+  assert.equal(explainLevel('expert'), 'expert');
+  assert.deepEqual(Object.keys(EXPLAIN_LEVELS), ['child', 'student', 'professional', 'expert']);
+  // The four levels ask for different depths (master build plan M7).
+  assert.match(EXPLAIN_LEVELS.child, /10-year-old/);
+  assert.match(EXPLAIN_LEVELS.professional, /outside this field/);
+  assert.match(EXPLAIN_LEVELS.expert, /specialist/);
+  assert.equal(new Set(Object.values(EXPLAIN_LEVELS)).size, 4);
   assert.ok(STUDY_KINDS.includes('summary') && STUDY_KINDS.includes('summary_short') && STUDY_KINDS.includes('summary_full'));
 });
 

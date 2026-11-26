@@ -22,7 +22,7 @@ export interface CoachStep {
   speedReason: string;
   /** "easy" when understanding needs work, "stretch" when it is solid. */
   quizLevel: 'easy' | 'normal' | 'stretch';
-  explain: 'child' | 'student' | 'professional';
+  explain: 'child' | 'student' | 'professional' | 'expert';
   plan: string[];
 }
 
