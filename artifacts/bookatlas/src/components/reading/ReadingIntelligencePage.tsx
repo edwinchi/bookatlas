@@ -361,6 +361,7 @@ export default function ReadingIntelligencePage() {
             <Feature icon={Star} title="Word games">Find the picture, build the word and spell it, and collect stars.</Feature>
           </div>
           <a href={`${BASE}reading-intelligence/young-readers`} data-testid="open-young-readers" className="mt-5 inline-flex min-h-12 items-center gap-2 rounded-2xl bg-amber-400 px-5 text-base font-bold text-slate-950 hover:bg-amber-300"><Baby className="h-5 w-5" aria-hidden />Open Young readers</a>
+          <a href={`${BASE}reading-intelligence/little-ones`} data-testid="open-little-ones" className="ml-2 mt-5 inline-flex min-h-12 items-center gap-2 rounded-2xl bg-rose-700 px-5 text-base font-bold text-white hover:bg-rose-600"><Baby className="h-5 w-5" aria-hidden />Little ones (0–3 years)</a>
         </Section>
 
         <Section id="schools" icon={School} eyebrow="Schools and teams" title="Read together as a class or a team"

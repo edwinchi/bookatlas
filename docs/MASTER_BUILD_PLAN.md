@@ -43,7 +43,7 @@ free and BooksAtlas earns its 19% commission on sales.
 | M11 | Audiobooks: read, listen, read + listen, word highlighting, chapter sync | ✅ done | narration, `narrationSync.ts` |
 | M12 | Accessibility center: dyslexia fonts and spacing, guide lines, paragraph chunking, large fonts, high contrast, read-aloud anything | ✅ done | reader Aids tab, Your own text |
 | M13 | Family system: parent/adult/teen/child profiles, challenges, household analytics | ✅ done | `reader/family.ts`, `FamilySection.tsx` |
-| M14 | Future modules (Baby, Kids, Teen readers, School mode, Teacher dashboard) | ✅ built ahead: Young readers, Schools and teams, reports | `reading/*` |
+| M14 | Future modules (Baby, Kids, Teen readers, School mode, Teacher dashboard) | ✅ built ahead: Young readers, Schools and teams, reports; **Baby Reader** as Little ones (0–3 years, owner request 2026-11-26): six stages by age, a daily plan per stage, high-contrast cards, 12 rhymes and lullabies with actions, links into First words, picture books and Level 1 stories | `reading/*`, `reading/littleOnes.ts`, `reading/LittleOnesPage.tsx` |
 
 ### Notes on the specification
 

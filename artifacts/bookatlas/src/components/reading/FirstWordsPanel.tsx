@@ -10,6 +10,8 @@ import { emptyFirstProgress, findRound, readFirstProgress, recognition, wordKey,
 
 const pill = 'inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white px-4 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 data-[state=active]:bg-rose-500 data-[state=active]:text-white data-[state=on]:bg-rose-500 data-[state=on]:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer';
 
+/** A value from the address (links from Little ones open a group, a book or a game). */
+const qp = (k: string) => { try { return new URLSearchParams(window.location.search).get(k); } catch { return null; } };
 /** First-words progress on this device, per reader: words heard, pictures found, listening time. */
 function useFirstProgress() {
   const reader = useActiveReader();
@@ -40,7 +42,7 @@ function useListenClock(update: ReturnType<typeof useFirstProgress>['update']) {
 function WordCards({ onHeard, clock }: { onHeard: (key: string) => void; clock: ReturnType<typeof useListenClock> }) {
   const { firstWords } = useYoung();
   const speaker = useSpeaker();
-  const [group, setGroup] = useState(firstWords[0]!.id);
+  const [group, setGroup] = useState(() => { const g = qp('group'); return firstWords.some((x) => x.id === g) ? g! : firstWords[0]!.id; });
   const [shown, setShown] = useState<{ word: string; picture: string } | null>(null);
   useEffect(() => { setShown(null); }, [firstWords]);
   const g = firstWords.find((x) => x.id === group)!;
@@ -119,7 +121,7 @@ function BookReader({ book, onBack, clock }: { book: PictureBook; onBack: () => 
 
 function PictureBooks({ clock }: { clock: ReturnType<typeof useListenClock> }) {
   const { pictureBooks } = useYoung();
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(() => qp('book'));
   const open = pictureBooks.find((b) => b.id === openId) ?? null;
   if (open) return <BookReader key={`${open.id}:${open.title}`} book={open} onBack={() => setOpenId(null)} clock={clock} />;
   return (
@@ -190,7 +192,7 @@ export function FirstWordsPanel({ onStars }: { onStars: (n: number) => void }) {
   const rec = recognition(p);
   return (
     <div className="space-y-6">
-      <Tabs.Root defaultValue="words" className="space-y-5">
+      <Tabs.Root defaultValue={['words', 'books', 'find'].includes(qp('first') ?? '') ? qp('first')! : 'words'} className="space-y-5">
         <Tabs.List aria-label="First words" className="flex flex-wrap gap-2">
           <Tabs.Trigger value="words" className={pill} data-testid="first-tab-words"><Grid3x3 className="h-4 w-4" aria-hidden />Words</Tabs.Trigger>
           <Tabs.Trigger value="books" className={pill} data-testid="first-tab-books"><BookHeart className="h-4 w-4" aria-hidden />Picture books</Tabs.Trigger>

@@ -25,6 +25,9 @@ function Symbols({ symbols, big: large = false }: { symbols?: string[]; big?: bo
   );
 }
 
+/** A value from the address (links from Little ones and class lists open the right place). */
+const qp = (k: string) => { try { return new URLSearchParams(window.location.search).get(k); } catch { return null; } };
+
 /** Stars earned on this device; for a signed-in family they count for the reader who is playing. */
 function useStars() {
   const { account } = useAccount();
@@ -356,7 +359,7 @@ export default function YoungReadersPage() {
     try { localStorage.setItem('bookatlas:young-lang', langId); } catch { /* this device */ }
     return () => { live = false; };
   }, [langId]);
-  const [level, setLevel] = useState<Level>(() => { const s = STORIES.find((x) => x.id === startStory); if (s) return s.level; try { return (Number(localStorage.getItem('bookatlas:young-level')) as Level) || 1; } catch { return 1; } });
+  const [level, setLevel] = useState<Level>(() => { const s = STORIES.find((x) => x.id === startStory); if (s) return s.level; const fromLink = Number(qp('level')); if ([1, 2, 3].includes(fromLink)) return fromLink as Level; try { return (Number(localStorage.getItem('bookatlas:young-level')) as Level) || 1; } catch { return 1; } });
   const pickLevel = (v: string) => { if (!v) return; const l = Number(v) as Level; setLevel(l); try { localStorage.setItem('bookatlas:young-level', String(l)); } catch { /* this device */ } };
   return (
     <YoungContext.Provider value={content}>
@@ -368,6 +371,7 @@ export default function YoungReadersPage() {
             <div>
               <h1 className="font-serif text-4xl font-bold sm:text-5xl">Young readers</h1>
               <p className="mt-2 max-w-xl text-indigo-100">Stories that read themselves aloud, letter sounds and word games. Pick a language and a level, then play.</p>
+              <a href={`${import.meta.env.BASE_URL}reading-intelligence/little-ones`} className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-amber-200 underline-offset-4 hover:underline">For babies and toddlers (0–3 years): Little ones</a>
             </div>
             <div className="flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/20" aria-live="polite">
               <Star className="h-7 w-7 fill-amber-300 text-amber-300" aria-hidden />
@@ -391,7 +395,7 @@ export default function YoungReadersPage() {
         </div>
       </header>
 
-      <Tabs.Root defaultValue={startStory ? 'stories' : reader.kind === 'early' || window.location.hash === '#first-words' ? 'first' : 'stories'} className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <Tabs.Root defaultValue={startStory ? 'stories' : ['first', 'stories', 'sounds', 'games'].includes(qp('tab') ?? '') ? qp('tab')! : reader.kind === 'early' || window.location.hash === '#first-words' ? 'first' : 'stories'} className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <Tabs.List aria-label="Activities" className="mb-6 flex flex-wrap gap-2">
           <Tabs.Trigger value="first" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-first"><Baby className="h-4 w-4" aria-hidden />First words</Tabs.Trigger>
           <Tabs.Trigger value="stories" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-stories"><BookOpen className="h-4 w-4" aria-hidden />Stories</Tabs.Trigger>
