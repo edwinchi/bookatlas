@@ -58,6 +58,7 @@ import { ListenPlayer, type PlayerStatus } from './reader/ListenPlayer';
 import { ReaderPreferences } from './reader/ReaderPreferences';
 import { FastReadDialog } from './reader/FastReadPanel';
 import { BoldStarts, ReadingGuide, clearSpoken, loadReaderFont, readerFontClass, showSpoken } from './reader/readingAids';
+import { focusModeOf, paragraphFocusClass, zenLayout } from './reader/readerLayout';
 import { narrationTimeline, wordAt, type TimedWord } from './reader/narrationSync';
 import { ReaderContents, GoToPopover } from './reader/ReaderNavigation';
 import { useDeviceVoice, type Translated } from './reader/useDeviceVoice';
@@ -922,7 +923,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     setPortal(el);
   }, []);
   const pg = usePagedLayout(paged, layout.spread, currentChapterIndex, [
-    chapters, settings.fontSize, settings.lineHeight, settings.fontFamily, settings.marginWidth, layout.align, layout.boldStarts, inPreview, fullError, isSpeaking,
+    chapters, settings.fontSize, settings.lineHeight, settings.fontFamily, settings.marginWidth, layout.align, layout.boldStarts, layout.boldStrength, inPreview, fullError, isSpeaking,
   ]);
   // The chapter title's height (with its bottom margin), so a picture opening the chapter fits under it on page one.
   const [headH, setHeadH] = useState(0);
@@ -936,7 +937,11 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     measure();
   }, []);
   const [chromeHidden, setChromeHidden] = useState(false);
-  const chromeOff = paged && chromeHidden;
+  // Toolbars hide on a tap in page mode, and in zen mode in both page and scroll (master build plan M3).
+  const chromeOff = chromeHidden && (paged || layout.zen);
+  const zen = zenLayout(layout.zen);
+  const focusMode = focusModeOf(layout);
+  useEffect(() => { setChromeHidden(layout.zen); }, [layout.zen]);
   const darkChrome = settings.theme === 'night' || settings.theme === 'black' || (settings.theme === 'custom' && isDarkColour(layout.customBg));
 
   /** Turn a page (or, scrolling, a chapter); past the last page the next chapter opens, before the first the previous one at its end. */
@@ -972,6 +977,16 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     if (fx < 0.28) turn(-1);
     else if (fx > 0.72) turn(1);
     else if (layout.tapToHide) setChromeHidden((h) => !h);
+  };
+
+  // Zen while scrolling: a plain tap shows or hides the toolbars.
+  const onZenPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    const g = gesture.current;
+    gesture.current = null;
+    if (!g || Math.abs(e.clientX - g.x) > 8 || Math.abs(e.clientY - g.y) > 8 || Date.now() - g.t > 500 || activeHighlightMode) return;
+    if ((e.target as HTMLElement).closest('button, a, input, select, textarea, figure, [role="button"]')) return;
+    if (window.getSelection()?.toString()) return;
+    setChromeHidden((h) => !h);
   };
 
   // The reading place follows the page shown (unless the voice is leading).
@@ -1282,8 +1297,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           <div
             ref={paged ? pg.wrapRef : undefined}
             className={paged ? 'h-full w-full [touch-action:pinch-zoom]' : undefined}
-            onPointerDown={paged ? onPagePointerDown : undefined}
-            onPointerUp={paged ? onPagePointerUp : undefined}
+            onPointerDown={paged || layout.zen ? onPagePointerDown : undefined}
+            onPointerUp={paged ? onPagePointerUp : layout.zen ? onZenPointerUp : undefined}
           >
           <div
             ref={paged ? pg.flowRef : undefined}
@@ -1369,15 +1384,15 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                   className={`relative transition-all cursor-text ${
                     activeHighlightMode ? 'hover:bg-amber-100/30 cursor-pointer p-1 rounded-sm' : ''
                   } ${highlightBg} ${spokenParagraph === pIdx ? 'rounded-md bg-indigo-500/10 ring-1 ring-indigo-500/30' : ''} ${
-                    layout.focusParagraph && pIdx !== (spokenParagraph ?? currentParagraphIndex) ? 'opacity-35 hover:opacity-80' : ''}`}
+                    focusMode === 'off' ? '' : paragraphFocusClass(focusMode, pIdx === (spokenParagraph ?? currentParagraphIndex))}`}
                   aria-current={spokenParagraph === pIdx ? 'true' : undefined}
                 >
-                  {popularHere.has(pIdx) && (
+                  {zen.community && popularHere.has(pIdx) && (
                     <button type="button" tabIndex={-1} onClick={(e) => { e.stopPropagation(); setCommunityTab('chapter'); setShowCommunity(true); }}
                       title={`${popularHere.get(pIdx)} readers highlighted this passage`} aria-hidden
                       className="absolute -right-6 top-1 hidden text-orange-500 sm:block cursor-pointer"><Flame className="h-3.5 w-3.5" /></button>
                   )}
-                  {!popularHere.has(pIdx) && sharedHere.has(pIdx) && (
+                  {zen.community && !popularHere.has(pIdx) && sharedHere.has(pIdx) && (
                     <button type="button" tabIndex={-1} onClick={(e) => { e.stopPropagation(); setCommunityTab('chapter'); setShowCommunity(true); }}
                       title="Other readers shared a note here" aria-hidden
                       className="absolute -right-6 top-1 hidden text-indigo-500 sm:block cursor-pointer"><Users className="h-3.5 w-3.5" /></button>
@@ -1393,7 +1408,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                       {paragraph[0]}
                     </span>
                   )}
-                  {layout.boldStarts ? <BoldStarts text={pIdx === 0 ? paragraph.slice(1) : paragraph} /> : pIdx === 0 ? paragraph.slice(1) : paragraph}
+                  {layout.boldStarts ? <BoldStarts text={pIdx === 0 ? paragraph.slice(1) : paragraph} strength={layout.boldStrength} /> : pIdx === 0 ? paragraph.slice(1) : paragraph}
                 </p>
                 </React.Fragment>
               );

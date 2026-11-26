@@ -25,9 +25,9 @@ export function loadReaderFont(font: ReaderFont) {
 export const readerFontClass = (font: ReaderFont) =>
   font === 'sans' ? 'font-reader-sans' : font === 'mono' ? 'font-reader-mono' : font === 'clear' ? 'font-reader-clear' : font === 'dyslexia' ? 'font-reader-dyslexia' : 'font-serif-book';
 
-/** A paragraph with the start of each word in bold. The text itself is unchanged. */
-export function BoldStarts({ text }: { text: string }) {
-  return <>{boldStartPieces(text).map((p, i) => (p.bold ? <b key={i} className="font-bold">{p.text}</b> : <React.Fragment key={i}>{p.text}</React.Fragment>))}</>;
+/** A paragraph with the start of each word in bold, at the reader's strength. The text itself is unchanged. */
+export function BoldStarts({ text, strength }: { text: string; strength?: number }) {
+  return <>{boldStartPieces(text, strength).map((p, i) => (p.bold ? <b key={i} className="font-bold">{p.text}</b> : <React.Fragment key={i}>{p.text}</React.Fragment>))}</>;
 }
 
 type HighlightRegistry = { set: (name: string, h: unknown) => void; delete: (name: string) => void };

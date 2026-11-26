@@ -5,9 +5,17 @@ import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import * as Slider from '@radix-ui/react-slider';
 import * as Switch from '@radix-ui/react-switch';
 import { AlignJustify, AlignLeft, BookOpen, Columns2, Palette, ScrollText, Sun, Type, X, RotateCcw, Hand, Bold, Focus, Rows3, AudioLines, Accessibility } from 'lucide-react';
-import { canFollowWords, loadReaderFont } from './readingAids';
+import { BoldStarts, canFollowWords, loadReaderFont } from './readingAids';
+import { BOLD_STRENGTHS } from './fastRead';
 import type { ReaderFont, ReaderSettings, ReaderTheme } from '../../types';
-import { BACKGROUND_SWATCHES, TEXT_SWATCHES, type ReaderLayout } from './readerLayout';
+import { BACKGROUND_SWATCHES, FOCUS_MODES, TEXT_SWATCHES, focusModeOf, withFocusMode, type FocusMode, type ReaderLayout } from './readerLayout';
+
+const FOCUS_LABELS: Record<FocusMode, { label: string; note: string }> = {
+  off: { label: 'Off', note: 'The whole page as it is.' },
+  line: { label: 'Line', note: 'A clear band follows your finger or mouse and shades the other lines.' },
+  paragraph: { label: 'Paragraph', note: 'Dims the rest of the page. Helps when attention wanders.' },
+  spotlight: { label: 'Spotlight', note: 'Dims and softly blurs everything but the paragraph you are reading.' },
+};
 
 const THEMES: { id: ReaderTheme; name: string; bg: string; fg: string }[] = [
   { id: 'day', name: 'Day', bg: '#ffffff', fg: '#1c1d1f' },
@@ -198,8 +206,6 @@ export function ReaderPreferences({ open, onOpenChange, container, settings, set
                 </div>
                 {([
                   { key: 'boldStarts', icon: Bold, title: 'Bold word starts', note: 'The first letters of each word in bold, so the eye finds words faster.' },
-                  { key: 'focusParagraph', icon: Focus, title: 'Focus on one paragraph', note: 'Dims the rest of the page. Helps when attention wanders.' },
-                  { key: 'readingGuide', icon: Rows3, title: 'Reading guide', note: 'A clear band follows your finger or mouse and shades the other lines.' },
                   { key: 'followWords', icon: AudioLines, title: 'Light up words when listening', note: canFollowWords() ? 'The device voice marks each sentence and word as it reads.' : 'This browser marks the paragraph being read.' },
                 ] as const).map((o) => (
                   <label key={o.key} className="flex items-center justify-between gap-3 rounded-xl bg-white p-3 ring-1 ring-slate-200">
@@ -211,6 +217,34 @@ export function ReaderPreferences({ open, onOpenChange, container, settings, set
                     </Switch.Root>
                   </label>
                 ))}
+                <div className="space-y-2 rounded-xl bg-white p-3 ring-1 ring-slate-200" data-testid="focus-mode">
+                  <p className="flex items-center gap-2 text-sm font-semibold"><Focus className="h-4 w-4 text-indigo-600" aria-hidden />Focus</p>
+                  <ToggleGroup.Root type="single" value={focusModeOf(layout)} onValueChange={(v) => v && lay(withFocusMode(v as FocusMode))} aria-label="Focus mode" className="grid grid-cols-4 gap-1 rounded-xl bg-slate-100 p-1">
+                    {FOCUS_MODES.map((m) => (
+                      <ToggleGroup.Item key={m} value={m} className="rounded-lg px-1 py-2 text-xs font-bold text-slate-600 data-[state=on]:bg-white data-[state=on]:text-slate-900 data-[state=on]:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">{FOCUS_LABELS[m].label}</ToggleGroup.Item>
+                    ))}
+                  </ToggleGroup.Root>
+                  <p className="text-[11px] text-slate-500">{FOCUS_LABELS[focusModeOf(layout)].note}</p>
+                </div>
+                <label className="flex items-center justify-between gap-3 rounded-xl bg-white p-3 ring-1 ring-slate-200">
+                  <span className="flex items-start gap-2"><Rows3 className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" aria-hidden />
+                    <span><span className="block text-sm font-semibold">Zen</span><span className="block text-[11px] text-slate-500">Only the text: the toolbars and reader notes stay hidden. Tap the page or press Escape to see them.</span></span></span>
+                  <Switch.Root checked={layout.zen} onCheckedChange={(v) => lay({ zen: v })} aria-label="Zen" data-testid="switch-zen"
+                    className="relative h-6 w-11 shrink-0 rounded-full bg-slate-300 transition-colors data-[state=checked]:bg-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
+                    <Switch.Thumb className="block h-5 w-5 translate-x-0.5 rounded-full bg-white shadow transition-transform data-[state=checked]:translate-x-[22px]" />
+                  </Switch.Root>
+                </label>
+                {layout.boldStarts && (
+                  <div className="space-y-2 rounded-xl bg-white p-3 ring-1 ring-slate-200" data-testid="bold-strength">
+                    <p className="text-sm font-semibold">How much of each word is bold</p>
+                    <ToggleGroup.Root type="single" value={String(layout.boldStrength)} onValueChange={(v) => v && lay({ boldStrength: Number(v) })} aria-label="Bold word starts strength" className="grid grid-cols-4 gap-1 rounded-xl bg-slate-100 p-1">
+                      {BOLD_STRENGTHS.map((s) => (
+                        <ToggleGroup.Item key={s} value={String(s)} className="rounded-lg px-2 py-2 text-xs font-bold text-slate-600 data-[state=on]:bg-white data-[state=on]:text-slate-900 data-[state=on]:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">{Math.round(s * 100)}%</ToggleGroup.Item>
+                      ))}
+                    </ToggleGroup.Root>
+                    <p className="text-[12px] leading-relaxed text-slate-700" aria-hidden><BoldStarts text="Reading becomes easier when the eye finds each word quickly." strength={layout.boldStrength} /></p>
+                  </div>
+                )}
                 <p className="text-[11px] text-slate-500">For low vision: text goes up to {MAX_FONT_SIZE}px under Text, and the Night and OLED themes under Colours give the strongest contrast.</p>
               </Tabs.Content>
             </div>

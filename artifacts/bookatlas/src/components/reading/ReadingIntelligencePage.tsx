@@ -306,7 +306,7 @@ export default function ReadingIntelligencePage() {
             <Feature icon={Type} title="Dyslexia-friendly font">Wide letters with extra space between letters and words.</Feature>
             <Feature icon={Type} title="Clear letters">A font whose letters are shaped to be told apart easily, for low vision.</Feature>
             <Feature icon={Bold} title="Bold word starts">The first letters of each word in bold, so the eye finds words faster.</Feature>
-            <Feature icon={Focus} title="Focus on one paragraph">The rest of the page is dimmed, so attention stays on what you are reading.</Feature>
+            <Feature icon={Focus} title="Focus modes and zen">Line, paragraph or spotlight focus keeps attention on what you are reading; zen hides everything but the text.</Feature>
             <Feature icon={Rows3} title="Reading guide">A clear band follows your finger or mouse and shades the lines above and below.</Feature>
             <Feature icon={Accessibility} title="Large text and strong contrast">Text up to 34 pixels, night and black themes, your own colours and brightness.</Feature>
           </div>

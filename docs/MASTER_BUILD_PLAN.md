@@ -31,8 +31,8 @@ free and BooksAtlas earns its 19% commission on sales.
 | M0 | Import engine: EPUB, PDF, DOCX, TXT, HTML | ✅ done | publishing import; "Your own text" (article, PDF, EPUB) |
 | M0 | Mobile reader: drawers, bottom actions | ✅ done | reader toolbars and Radix dialogs |
 | M1 | **SR-001/002 Fast Read v2: RSVP + Chunk Reader** — 100–1500 WPM, ORP fixation point, ±25-word jumps, keyboard, progress and time left, drift-corrected timing, session metrics, adaptive speed and chunk-size coach with confidence, reduced motion | ✅ done (this milestone) | `reader/fastRead.ts`, `reader/adaptiveCoach.ts`, `reader/FastReadPanel.tsx` |
-| M2 | SR-003 Bionic strength levels (25–60%) | ☐ next | `reader/fastRead.ts` (bold word starts) |
-| M3 | SR-004 Focus Reader modes: line, paragraph, spotlight, zen | ◐ paragraph focus, reading guide and hidden toolbars exist; spotlight and a named zen mode to add | `readerLayout.ts`, `readingAids.tsx` |
+| M2 | SR-003 Bionic strength levels (25–60%) | ✅ done: 25, 40 (default), 50 or 60% of each word, rounded up, at least one letter; under Aids in the reader with a live sample | `reader/fastRead.ts` `boldStartPieces`, `readerLayout.ts` `boldStrength`, `ReaderPreferences.tsx` |
+| M3 | SR-004 Focus Reader modes: line, paragraph, spotlight, zen | ✅ done: one Focus choice (Off, Line = the guide band, Paragraph = the rest dimmed, Spotlight = the rest dimmed and blurred, no blur with reduced motion) and a Zen switch (text only; toolbars and reader notes hidden in page and scroll mode, a tap or Escape shows them) | `readerLayout.ts` (`focusModeOf`, `paragraphFocusClass`, `zenLayout`), `EReaderModal.tsx`, `ReaderPreferences.tsx` |
 | M4 | SR-005 Comprehension checkpoints (every chapter, manual), scored excellent/good/fair/needs improvement, feeding the coach | ◐ chapter quizzes exist; checkpoint prompts and scoring bands to add | `reader/ai.ts`, `ReaderAssistant.tsx` |
 | M5 | AN-001/002 Unified analytics and heatmaps: day × hour heatmap, peak hour and day, consistency score, best/average/current WPM | ◐ days chart, hours chart, speed summary exist; day × hour grid and consistency to add | `ReadingIntelligencePage.tsx` |
 | M6 | AI-001 Summary engine (1-minute, 5-minute, full) | ✅ done | `reader/ai.ts` `studyChapter` |
@@ -52,6 +52,8 @@ free and BooksAtlas earns its 19% commission on sales.
   specification's "heavy rewinds" test expects 625, which its own rules do not give (650 + 50 − 75 + 25 = 650);
   its worked examples (825 and 475) match the rules, so the rules win and the test says 650. Its "moderate" test
   (completion exactly 0.9 → 575) needs "≥ 0.9", which is used.
+- **Bold strength.** The specification's formula says `floor(length × strength)` but its tests expect "reading" →
+  "rea" at 40%, which needs rounding up; rounding up is used, so its tests pass.
 - **Rates.** A rewind rate is rewinds per 100 words read and a pause rate is pauses per 100 words read (both capped
   at 1); the completion rate is the share of sessions read to the end. Comprehension is the average of the
   reader's last five quiz scores, or unknown.

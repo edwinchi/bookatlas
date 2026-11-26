@@ -66,11 +66,18 @@ export function focusIndex(word: string) {
   return Math.min(word.length - 1, lead + offset);
 }
 
+/** Strength levels for bold word starts (master build plan M2, specification SR-003): the share of each word in bold. */
+export const BOLD_STRENGTHS = [0.25, 0.4, 0.5, 0.6] as const;
+export const DEFAULT_BOLD_STRENGTH = 0.4;
+export const cleanBoldStrength = (v: unknown) => (BOLD_STRENGTHS as readonly number[]).includes(Number(v)) ? Number(v) : DEFAULT_BOLD_STRENGTH;
+/** Letters in bold at the start of a word: at least one, then the strength's share, rounded up. */
+export const boldLength = (length: number, strength = DEFAULT_BOLD_STRENGTH) => Math.min(length, Math.max(1, Math.ceil(length * strength)));
+
 /**
  * Bold starts: splits a paragraph into pieces; in a `bold` piece the eye finds the start of a word quickly.
  * Joined together the pieces are exactly the original text (the read-along highlight depends on that).
  */
-export function boldStartPieces(text: string): { text: string; bold: boolean }[] {
+export function boldStartPieces(text: string, strength = DEFAULT_BOLD_STRENGTH): { text: string; bold: boolean }[] {
   const out: { text: string; bold: boolean }[] = [];
   const push = (t: string, bold: boolean) => {
     if (!t) return;
@@ -81,8 +88,9 @@ export function boldStartPieces(text: string): { text: string; bold: boolean }[]
     const m = /^([^\p{L}\p{N}]*)([\p{L}\p{N}][\p{L}\p{N}\p{M}'’-]*)(.*)$/su.exec(part);
     if (!m || /^\s+$/.test(part)) { push(part, false); continue; }
     const [, lead, word, tail] = m as unknown as [string, string, string, string];
-    const n = word.length <= 3 ? 1 : Math.ceil(word.length * 0.45);
-    push(lead, false); push(word.slice(0, n), true); push(word.slice(n) + tail, false);
+    const n = boldLength([...word].length, strength);
+    const chars = [...word];
+    push(lead, false); push(chars.slice(0, n).join(''), true); push(chars.slice(n).join('') + tail, false);
   }
   return out;
 }

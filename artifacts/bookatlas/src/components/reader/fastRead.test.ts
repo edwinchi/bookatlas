@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { boldStartPieces, buildSteps, clampWpm, focusIndex, measuredWpm, speedPlan, stepMs, summarizeTests, wordsOf, SAMPLE_PASSAGE } from './fastRead';
+import { BOLD_STRENGTHS, boldLength, boldStartPieces, buildSteps, cleanBoldStrength, clampWpm, focusIndex, measuredWpm, speedPlan, stepMs, summarizeTests, wordsOf, SAMPLE_PASSAGE } from './fastRead';
 
 test('fast read: one word at a time, and groups that stop at the end of a sentence', () => {
   const steps = buildSteps(['The cat jumped over the fence. It ran home.'], 1, 300);
@@ -38,7 +38,7 @@ test('bold starts keep the text exactly as it was', () => {
   const text = '“Reading intelligence,” she said — and smiled at 3 o’clock.  Twice!';
   const pieces = boldStartPieces(text);
   assert.equal(pieces.map((p) => p.text).join(''), text);
-  assert.deepEqual(pieces.filter((p) => p.bold).map((p) => p.text).slice(0, 4), ['Read', 'intell', 's', 'sa']);
+  assert.deepEqual(pieces.filter((p) => p.bold).map((p) => p.text).slice(0, 4), ['Rea', 'intel', 'sh', 'sa']);
   assert.equal(boldStartPieces('').length, 0);
   assert.equal(boldStartPieces('Ça va très bien').map((p) => p.text).join(''), 'Ça va très bien');
 });
@@ -58,4 +58,20 @@ test('reading speed: measured, summarised and planned', () => {
   assert.equal(plan.steps[plan.steps.length - 1], 600);
   assert.ok(plan.weeks >= 9 && plan.weeks <= 11, String(plan.weeks));
   assert.equal(speedPlan(500, 400).weeks, 0);
+});
+
+test('bold word starts: strength levels from the specification (SR-003)', () => {
+  const bold = (word: string, s?: number) => boldStartPieces(word, s).filter((p) => p.bold).map((p) => p.text).join('');
+  assert.equal(bold('reading'), 'rea', 'the specification: "reading" at 40% → "rea"');
+  assert.equal(bold('platform', 0.5), 'plat', 'the specification: "platform" at 50% → 4 letters');
+  assert.equal(bold('platform', 0.25), 'pl');
+  assert.equal(bold('platform', 0.6), 'plat' + 'f');
+  assert.equal(bold('a'), 'a', 'at least one letter');
+  assert.equal(boldStartPieces('').length, 0);
+  assert.equal(bold('élève', 0.4), 'él', 'letters, not bytes');
+  const text = '“Hello,” said Ama — twice!  Ça va?';
+  for (const s of BOLD_STRENGTHS) assert.equal(boldStartPieces(text, s).map((p) => p.text).join(''), text, `the text is unchanged at ${s}`);
+  assert.equal(cleanBoldStrength('0.5'), 0.5);
+  assert.equal(cleanBoldStrength(0.9), 0.4);
+  assert.equal(boldLength(10, 0.6), 6);
 });
