@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import * as Tabs from '@radix-ui/react-tabs';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import * as RadioGroup from '@radix-ui/react-radio-group';
-import { ArrowLeft, Baby, Check, Delete, Puzzle, RotateCcw, Sparkles, Square, Star, Volume2, X, BookOpen, Type as TypeIcon, Image as ImageIcon, PenLine } from 'lucide-react';
+import { ArrowLeft, Baby, Check, Ear, Delete, Puzzle, RotateCcw, Sparkles, Square, Star, Volume2, X, BookOpen, Type as TypeIcon, Image as ImageIcon, PenLine } from 'lucide-react';
 import { useAccount } from '../../auth/AuthContext';
 import { useEbookApi } from '../ebook/ebookApi';
 import { useActiveReader } from './family';
@@ -14,7 +14,7 @@ import { ENGLISH, YOUNG_LANGS, YoungContext, loadYoung, startLang, useYoung, typ
 import { SelectBox } from '../ui/select-box';
 import { FirstWordsPanel } from './FirstWordsPanel';
 import { FocusGym } from './FocusGymPanel';
-import { LEVELS, STORIES, STORY_TOPICS, pictureRound, sameWord, scramble, storyStars, topicOf, type Level, type Story, type StoryTopic } from './youngReaders';
+import { LEVELS, STORIES, STORY_TOPICS, isListenWord, listenWord, pictureRound, sameWord, scramble, storyStars, topicOf, type Level, type Story, type StoryTopic } from './youngReaders';
 
 /** The shapes, numbers and geometry symbols of a maths or science story, as small tiles. */
 function Symbols({ symbols, big: large = false }: { symbols?: string[]; big?: boolean }) {
@@ -75,14 +75,58 @@ function StoryReader({ story, onStars, onBack, onDone }: { story: Story; onStars
   const [checked, setChecked] = useState(false);
   // Each paragraph as words with their position, to match the voice's place.
   const paras = useMemo(() => story.paragraphs.map((t) => [...t.matchAll(/\S+/g)].map((m) => ({ text: m[0], start: m.index ?? 0 }))), [story]);
-  const play = () => {
+  // Listen and catch (2026-11-26, attention training): one word comes back in the story; tap when you hear it.
+  const target = useMemo(() => listenWord(story.paragraphs), [story]);
+  // Shown as the story writes it (a name keeps its capital).
+  const targetShown = useMemo(() => { if (!target) return ''; for (const words of paras) for (const w of words) if (isListenWord(w.text, target.word)) return w.text.replace(/[^\p{L}’']/gu, '').replace(/[’']s$/, ''); return target.word; }, [paras, target]);
+  const [catchOn, setCatchOn] = useState(false);
+  const [caught, setCaught] = useState<string[]>([]);
+  const [catchNote, setCatchNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const [catchDone, setCatchDone] = useState<number | null>(null);
+  const spoken = useRef<{ p: number; i: number; at: number }[]>([]);
+  const partNow = useRef(-1);
+  const wordsReported = useRef(false);
+  const caughtRef = useRef<string[]>([]);
+  const play = (withCatch = false) => {
     if (playing) { speaker.stop(); setPlaying(false); setAt(null); return; }
     setPlaying(true);
+    setCatchOn(withCatch);
+    if (withCatch) { setCaught([]); caughtRef.current = []; setCatchNote(null); setCatchDone(null); }
+    spoken.current = []; partNow.current = -1; wordsReported.current = false;
     speaker.say(story.paragraphs, {
-      onPart: (p) => setAt({ p, word: null }),
-      onWord: (p, ch) => { const w = paras[p]!.findIndex((x, i) => ch >= x.start && (i === paras[p]!.length - 1 || ch < paras[p]![i + 1]!.start)); setAt({ p, word: w < 0 ? null : w }); },
-      onEnd: () => { setPlaying(false); setAt(null); },
+      onPart: (p) => { partNow.current = p; setAt({ p, word: null }); },
+      onWord: (p, ch) => {
+        const w = paras[p]!.findIndex((x, i) => ch >= x.start && (i === paras[p]!.length - 1 || ch < paras[p]![i + 1]!.start));
+        if (w >= 0) { wordsReported.current = true; spoken.current = [...spoken.current.slice(-12), { p, i: w, at: Date.now() }]; }
+        setAt({ p, word: w < 0 ? null : w });
+      },
+      onEnd: () => {
+        setPlaying(false); setAt(null);
+        if (withCatch && target) {
+          const n = caughtRef.current.length;
+          setCatchDone(n);
+          const stars = n >= target.times ? 2 : n > 0 ? 1 : 0;
+          if (stars) onStars(stars);
+        }
+      },
     });
+  };
+  // A tap counts for a time the word was said in the last two seconds (or in this paragraph, when the device's
+  // voice does not report words), each time once.
+  const heard = () => {
+    if (!target) return;
+    const free = (p: number, i: number) => !caughtRef.current.includes(`${p}:${i}`) && isListenWord(paras[p]![i]!.text, target.word);
+    const recent = spoken.current.filter((s) => Date.now() - s.at < 2000 && free(s.p, s.i)).pop();
+    let hit = recent ? `${recent.p}:${recent.i}` : null;
+    if (!hit && !wordsReported.current && partNow.current >= 0) {
+      const i = paras[partNow.current]!.findIndex((_, k) => free(partNow.current, k));
+      if (i >= 0) hit = `${partNow.current}:${i}`;
+    }
+    if (hit) {
+      caughtRef.current = [...caughtRef.current, hit];
+      setCaught(caughtRef.current);
+      setCatchNote({ ok: true, text: `Caught it! ${caughtRef.current.length} of ${target.times}` });
+    } else setCatchNote({ ok: false, text: `Not yet. Keep listening for “${targetShown}”.` });
   };
   const right = story.questions.filter((q, i) => answers[i] === q.answer).length;
   const check = () => { setChecked(true); onStars(storyStars(right, story.questions.length)); onDone(right); };
@@ -96,7 +140,7 @@ function StoryReader({ story, onStars, onBack, onDone }: { story: Story; onStars
             <Symbols symbols={story.symbols} big />
           </div>
           {speaker.supported && (
-            <button type="button" onClick={play} data-testid="story-read-to-me" className={`${big} ${playing ? 'bg-slate-900 text-white' : 'bg-amber-400 text-slate-950 hover:bg-amber-300'}`}>
+            <button type="button" onClick={() => play(false)} data-testid="story-read-to-me" className={`${big} ${playing ? 'bg-slate-900 text-white' : 'bg-amber-400 text-slate-950 hover:bg-amber-300'}`}>
               {playing ? <Square className="h-5 w-5" aria-hidden /> : <Volume2 className="h-5 w-5" aria-hidden />}{playing ? 'Stop' : 'Read to me'}
             </button>
           )}
@@ -115,6 +159,29 @@ function StoryReader({ story, onStars, onBack, onDone }: { story: Story; onStars
         </div>
         <p className="mt-4 text-xs text-slate-500">Tap any word to hear it.</p>
       </article>
+
+      {speaker.supported && target && (
+        <section aria-labelledby="listen-catch" className="rounded-3xl bg-gradient-to-br from-sky-50 to-indigo-50 p-6 ring-1 ring-sky-200 sm:p-8" data-testid="listen-catch">
+          <h3 id="listen-catch" className="flex items-center gap-2 text-xl font-bold text-slate-900"><Ear className="h-5 w-5 text-sky-600" aria-hidden />Listen and catch</h3>
+          <p className="mt-2 text-base text-slate-700">Close your eyes or look away from the words. The word <strong className="rounded-lg bg-white px-2 py-0.5 font-reader-clear text-lg text-sky-800 ring-1 ring-sky-200">{targetShown}</strong> comes {target.times} times. Each time you hear it, tap <em>I heard it!</em></p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {catchOn && playing ? (
+              <button type="button" onClick={heard} data-testid="catch-heard" className={`${big} min-h-16 bg-sky-700 px-8 text-lg text-white hover:bg-sky-800`}><Ear className="h-6 w-6" aria-hidden />I heard it!</button>
+            ) : (
+              <button type="button" onClick={() => play(true)} disabled={playing} data-testid="catch-start" className={`${big} bg-sky-700 text-white hover:bg-sky-800`}><Volume2 className="h-5 w-5" aria-hidden />{catchDone === null ? 'Start listening' : 'Play again'}</button>
+            )}
+            {catchOn && playing && <button type="button" onClick={() => play()} className={`${big} bg-white text-slate-700 ring-1 ring-slate-200`}><Square className="h-5 w-5" aria-hidden />Stop</button>}
+            <span className="flex gap-1" role="img" aria-label={`${caught.length} of ${target.times} caught`}>
+              {Array.from({ length: target.times }, (_, i) => <span key={i} aria-hidden className={`grid h-9 w-9 place-items-center rounded-full text-lg ring-2 transition ${i < caught.length ? 'bg-sky-500 text-white ring-sky-500 scale-110' : 'bg-white text-slate-300 ring-slate-200'}`}>{i < caught.length ? '★' : '·'}</span>)}
+            </span>
+          </div>
+          <p role="status" aria-live="polite" className={`mt-3 min-h-6 text-base font-semibold ${catchNote?.ok ? 'text-sky-800' : 'text-slate-600'}`}>
+            {catchDone !== null
+              ? catchDone >= target.times ? `You caught all ${target.times}! Great listening: 2 stars.` : catchDone > 0 ? `You caught ${catchDone} of ${target.times}: 1 star. Play again to catch them all.` : 'Play again and listen closely for the word.'
+              : catchNote?.text ?? ''}
+          </p>
+        </section>
+      )}
 
       <section aria-labelledby="story-questions" className="rounded-3xl bg-white p-6 ring-1 ring-slate-200 sm:p-8">
         <h3 id="story-questions" className="flex items-center gap-2 text-xl font-bold text-slate-900"><Sparkles className="h-5 w-5 text-amber-500" aria-hidden />What happened?</h3>
