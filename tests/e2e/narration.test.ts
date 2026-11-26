@@ -159,6 +159,21 @@ test('natural narration: author orders and pays, an administrator approves, step
   assert.equal(audio.headers.get('content-type'), 'audio/mpeg');
   const bytes = new Uint8Array(await audio.arrayBuffer());
   assert.ok(bytes[0] === 0xff && (bytes[1]! & 0xe0) === 0xe0, 'an MP3');
+  // One continuous stream (2026-11-26, keeps playing on a locked phone): exactly the parts joined, in byte ranges.
+  assert.ok(preview.segments.every((s: { bytes: number }) => s.bytes > 0), 'part sizes are known');
+  const parts = await Promise.all(preview.segments.map(async (s: { n: number }) => new Uint8Array(await (await fetch(`/api/reader/catalog/${bookId}/narration/${s.n}`, as('reader'))).arrayBuffer())));
+  const joined = Buffer.concat(parts);
+  const head = await fetch(`/api/reader/catalog/${bookId}/narration/stream/${preview.segments[0].n}`, { headers: { ...as('reader').headers, range: 'bytes=0-1' } });
+  assert.equal(head.status, 206);
+  assert.equal(head.headers.get('content-range'), `bytes 0-1/${joined.length}`);
+  const streamed = new Uint8Array(await (await fetch(`/api/reader/catalog/${bookId}/narration/stream/${preview.segments[0].n}`, { headers: { ...as('reader').headers, range: 'bytes=0-' } })).arrayBuffer());
+  assert.ok(Buffer.from(streamed).equals(joined.subarray(0, streamed.length)), 'the stream is the parts joined');
+  if (parts.length > 1) {
+    const edge = parts[0]!.length - 2;
+    const across = new Uint8Array(await (await fetch(`/api/reader/catalog/${bookId}/narration/stream/${preview.segments[0].n}`, { headers: { ...as('reader').headers, range: `bytes=${edge}-${edge + 3}` } })).arrayBuffer());
+    assert.ok(Buffer.from(across).equals(joined.subarray(edge, edge + 4)), 'a range across two parts');
+  }
+  assert.equal((await fetch(`/api/reader/catalog/${bookId}/narration/stream/${preview.segments[0].n}`, { headers: { ...as('reader').headers, range: `bytes=${joined.length + 10}-` } })).status, 416);
   // Segments outside the preview are refused (this one-chapter test book's preview is the whole book).
   const locked = full.segments.find((s: { n: number }) => !preview.segments.some((p: { n: number }) => p.n === s.n));
   if (locked) assert.equal((await fetch(`/api/reader/catalog/${bookId}/narration/${locked.n}`, as('reader'))).status, 403);

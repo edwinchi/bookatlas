@@ -14,6 +14,7 @@ import { MobileFilters } from './components/MobileFilters';
 import { BookCard } from './components/BookCard';
 import { HorizontalProductCarousel } from './components/HorizontalProductCarousel';
 import { PromotionalFeatureBanner, EditorialCuratorBlock } from './components/EditorialBlock';
+import { ReadingIntelligenceShowcase } from './components/reading/ReadingIntelligenceShowcase';
 import { honestSample, isSampleTitle } from './utils/ratings';
 import { StartBookDialog } from './components/StartBookDialog';
 import { EmptyCategory } from './components/EmptyCategory';
@@ -969,6 +970,9 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
                   wishlistIds={wishlist.map((w) => w.id)}
                   currencySymbol={currencySymbol}
                 />
+
+                {/* Read smarter (owner request 2026-11-26): the Reading Intelligence tools and the children's programs. */}
+                <ReadingIntelligenceShowcase onOpenBook={() => handleViewAllCategory('All Genres')} />
 
                 {/* Carousel 2: Consciousness Community, Kemetic Science & Quantum Wisdom */}
                 <HorizontalProductCarousel

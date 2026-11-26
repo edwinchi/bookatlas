@@ -13,6 +13,7 @@ import { audioProductOf } from '../audioEdition';
 import { ReaderCommunity, type CommunityTab } from './reader/ReaderCommunity';
 import type { ChapterSocial } from './ebook/ebookApi';
 import { clearNowPlaying, setPlaying, showNowPlaying } from './reader/mediaSession';
+import { bytesPerSecond, canStream, partAt, streamLayout, timeOfPart, type StreamPart } from './reader/narrationStream';
 import { NaturalVoiceInfo } from './ebook/NaturalVoiceInfo';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ListenPlayer, type PlayerStatus } from './reader/ListenPlayer';
@@ -373,6 +374,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     const segs = n.segments;
     const first = segs.findIndex((s) => s.chapter >= chapterIdx);
     if (first < 0) return;
+    // One continuous stream when every part's size is known, so a locked phone never has to start a new file.
+    if (canStream(segs)) { playStream(n, first, run); return; }
     const url = (k: number) => ebookApi.narrationAudioUrl(book.id, segs[k]!.n, freshKey.current ?? n.key);
     const audio = narrationAudio.current ?? new Audio();
     narrationAudio.current = audio;
@@ -468,6 +471,109 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     setListenMode('natural');
     void play(first);
   };
+  /**
+   * The audiobook as one stream from part `first` to the end (owner request 2026-11-26: it stopped when the phone
+   * locked). The part, chapter and word being heard come from the playing time; chapter skips and the lock
+   * screen's next and previous move within the same stream instead of loading a new file.
+   */
+  const playStream = (n: NonNullable<typeof narration>, first: number, run: number) => {
+    const segs = n.segments;
+    const parts = segs.slice(first) as StreamPart[];
+    const sizes = parts.map((p) => p.bytes);
+    const { starts, total } = streamLayout(parts);
+    const audio = narrationAudio.current ?? new Audio();
+    narrationAudio.current = audio;
+    audio.preload = 'auto';
+    const bps = () => bytesPerSecond(total, audio.duration);
+    const timelines: Record<number, TimedWord[]> = {};
+    let lastPart = -1, lastPara = -1, retried = false;
+    const seekToPart = (i: number) => { if (run !== speechRun.current) return; audio.currentTime = timeOfPart(starts, i, bps()); };
+    const indexOfChapter = (c: number) => parts.findIndex((p) => p.chapter === c);
+    const nowPlaying = (i: number) => {
+      const seg = parts[i]!;
+      const chapter = chaptersRef.current[seg.chapter];
+      const next = parts.findIndex((p) => p.chapter > seg.chapter);
+      const thisChapter = indexOfChapter(seg.chapter);
+      showNowPlaying(
+        { title: chapter?.title || `Chapter ${seg.chapter + 1}`, artist: book.author, album: book.title, artwork: book.coverImage },
+        {
+          play: () => { void audio.play().catch(() => undefined); },
+          pause: () => audio.pause(),
+          stop: () => { if (run === speechRun.current) stopSpeech(); },
+          next: next >= 0 ? () => seekToPart(next) : undefined,
+          // Back to the start of the chapter, or to the chapter before when already at its start.
+          previous: () => {
+            if (run !== speechRun.current) return;
+            const here = partAt(starts, sizes, audio.currentTime || 0, bps());
+            const intoChapter = (audio.currentTime || 0) - timeOfPart(starts, thisChapter, bps());
+            if ((here.index !== thisChapter || intoChapter > 3) || thisChapter === 0) { seekToPart(thisChapter); return; }
+            seekToPart(indexOfChapter(parts[thisChapter - 1]!.chapter));
+          },
+          seekBy: (d) => { if (!Number.isFinite(audio.duration)) return; audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + d)); setPlaying(audio.paused ? 'paused' : 'playing', audio); },
+        },
+      );
+    };
+    const highlight = () => {
+      if (run !== speechRun.current) return;
+      const at = partAt(starts, sizes, audio.currentTime || 0, bps());
+      const seg = parts[at.index]!;
+      const k = first + at.index;
+      setClock({ t: at.local, d: at.length || seg.seconds, k });
+      const chapter = chaptersRef.current[seg.chapter];
+      if (at.index !== lastPart) {
+        lastPart = at.index;
+        if (speechChapter.current !== seg.chapter) { speechChapter.current = seg.chapter; setCurrentChapterIndex(seg.chapter); }
+        nowPlaying(at.index);
+      }
+      let timeline = timelines[at.index];
+      if (!timeline && at.length > 0) {
+        const paras = Array.from({ length: seg.to - seg.from + 1 }, (_, i) => ({ p: seg.from + i, text: chapter?.content[seg.from + i] ?? '' }));
+        const opensChapter = seg.from === (chapter?.content.findIndex((t) => t.trim()) ?? -1);
+        timeline = narrationTimeline(paras, opensChapter ? chapter?.title ?? null : null, at.length);
+        timelines[at.index] = timeline;
+      }
+      const w = timeline ? wordAt(timeline, at.local) : null;
+      const p = w?.p ?? seg.from;
+      if (p !== lastPara) { lastPara = p; setSpokenParagraph(p); setCurrentParagraphIndex(p); }
+      if (followWordsRef.current && w) requestAnimationFrame(() => { if (run === speechRun.current) showSpoken(document.querySelector(`[data-para="${w.p}"]`), [w.s0, w.s1], [w.w0, w.w1]); });
+    };
+    audio.ontimeupdate = highlight;
+    audio.onended = () => { if (run === speechRun.current) stopSpeech(); };
+    // A refused stream (an expired listening key, a dropped connection): a new key, the same place, once.
+    audio.onerror = () => {
+      if (run !== speechRun.current) return;
+      if (retried) { stopSpeech(); return; }
+      retried = true;
+      const from = audio.currentTime || 0;
+      ebookApi.readerNarration(book.id)
+        .then((fresh) => {
+          if (run !== speechRun.current) return;
+          freshKey.current = fresh?.key;
+          audio.src = ebookApi.narrationStreamUrl(book.id, parts[0]!.n, freshKey.current ?? n.key);
+          audio.addEventListener('loadedmetadata', () => { audio.currentTime = from; }, { once: true });
+          void audio.play().catch(() => undefined);
+        })
+        .catch(() => { if (run === speechRun.current) stopSpeech(); });
+    };
+    audio.onplay = () => { if (run !== speechRun.current) return; setNarrationPaused(false); setPlaying('playing', audio); };
+    audio.onloadedmetadata = () => { if (run === speechRun.current) setPlaying(audio.paused ? 'paused' : 'playing', audio); };
+    audio.onpause = () => { if (run !== speechRun.current || audio.ended) return; setNarrationPaused(true); setPlaying('paused', audio); };
+    audio.src = ebookApi.narrationStreamUrl(book.id, parts[0]!.n, freshKey.current ?? n.key);
+    audio.defaultPlaybackRate = listenRef.current.rate;
+    audio.playbackRate = listenRef.current.rate;
+    setClock({ t: 0, d: parts[0]!.seconds, k: first });
+    nowPlaying(0);
+    highlight();
+    setIsSpeaking(true);
+    setListenMode('natural');
+    void audio.play().catch((e: unknown) => {
+      if (run !== speechRun.current) return;
+      const name = (e as { name?: string })?.name;
+      if (name === 'NotAllowedError') { setNarrationPaused(true); setPlaying('paused', audio); return; }
+      if (name !== 'AbortError') stopSpeech();
+    });
+  };
+
   useEffect(() => () => {
     narrationAudio.current?.pause();
     clearNowPlaying();

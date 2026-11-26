@@ -54,7 +54,7 @@ self.addEventListener('fetch', (event) => {
 
   // Audio goes straight to the network without this worker (2026-11-23): Safari streams it in byte ranges and has
   // refused range answers relayed by a service worker.
-  if (request.headers.has('range') || request.destination === 'audio' || /^\/api\/(?:audio-samples\/|reader\/catalog\/[^/]+\/narration\/\d+$)/.test(url.pathname)) {
+  if (request.headers.has('range') || request.destination === 'audio' || /^\/api\/(?:audio-samples\/|reader\/catalog\/[^/]+\/narration\/(?:stream\/)?\d+$)/.test(url.pathname)) {
     return;
   }
 

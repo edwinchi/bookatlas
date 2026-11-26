@@ -46,7 +46,7 @@ export interface AuthorSales {
 export type NarrationVoice = 'Sulafat' | 'Charon';
 export type NarrationStatus = 'awaiting_payment' | 'paid' | 'approved' | 'running' | 'done' | 'failed' | 'declined' | 'refunded';
 export interface NarrationSummary { id: string; bookId: string; title: string; voice: NarrationVoice; status: NarrationStatus; priceCents: number; words: number; done: number; total: number; seconds: number; error: string | null; createdAt: string; updatedAt: string }
-export interface ReaderNarration { /** Sulafat or Charon, or the Kokoro voice name for a book narrated on the owner's computer. */ voice: string; seconds: number; access: 'full' | 'preview'; audioPrice?: number; segments: { n: number; chapter: number; from: number; to: number; seconds: number }[]; /** Plays the whole audiobook from the part's address (readers who have it). */ key?: string }
+export interface ReaderNarration { /** Sulafat or Charon, or the Kokoro voice name for a book narrated on the owner's computer. */ voice: string; seconds: number; access: 'full' | 'preview'; audioPrice?: number; segments: { n: number; chapter: number; from: number; to: number; seconds: number; /** The part's size, for the continuous stream. */ bytes?: number }[]; /** Plays the whole audiobook from the part's address (readers who have it). */ key?: string }
 export interface NarrationQuote { bookId: string; title: string; words: number; priceCents: number; hours: number; voices: NarrationVoice[]; current: NarrationSummary | null; free?: boolean; sale?: NarrationSale | null }
 /** Cycle 9: how readers get the finished audiobook (audioPrice 0 = included with the eBook). */
 export interface NarrationSale { ebookPrice: number; audioPrice: number; audioPricedAt: string | null }
@@ -349,6 +349,8 @@ export function useEbookApi() {
       try { return await once(); } catch (e) { if (e instanceof EbookApiError && e.status < 500) throw e; return once(); }
     },
     /** A part's address. The player streams it: phones refuse the audio as a blob (found 2026-11-23). */
+    // The whole audiobook from a part as one stream, so playback continues with the phone locked (2026-11-26).
+    narrationStreamUrl: (bookId: string, from: number, key?: string) => `/api/reader/catalog/${encodeURIComponent(bookId)}/narration/stream/${from}${key ? `?k=${encodeURIComponent(key)}` : ''}`,
     narrationAudioUrl: (bookId: string, n: number, key?: string) => `/api/reader/catalog/${encodeURIComponent(bookId)}/narration/${n}${key ? `?k=${encodeURIComponent(key)}` : ''}`,
     readerContent: (bookId: string) => json<{ chapters: import('../../types').Chapter[]; access: 'full' | 'preview' }>(`/api/reader/catalog/${bookId}/content`),
     async readerImage(bookId: string, name: string) {

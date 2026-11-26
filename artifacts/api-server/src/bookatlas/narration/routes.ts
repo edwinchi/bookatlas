@@ -3,13 +3,13 @@ import express, { type Express, type Request, type Response } from 'express';
 import { waitUntil } from '@vercel/functions';
 import type { Book } from '@workspace/bookatlas-catalog/types';
 import { logger } from '../../lib/logger.js';
-import { sendAudio } from '../../lib/sendAudio.js';
+import { byteRange, sendAudio } from '../../lib/sendAudio.js';
 import { derivedKey } from '../../lib/serverSecret.js';
 import { audioKey, validAudioKey } from './audioKey.js';
 import { PrepError } from '../ebookPrep/archive.js';
 import { PaymentError } from '../payments/purchases.js';
 import { confirmCheckout } from '../payments/checkout.js';
-import { NarrationError, decide, getNarration, listNarrations, narrationsDue, order, quote, readerManifest, readerSegment, setAudioPrice, step, summary, voiceSample } from './service.js';
+import { NarrationError, decide, getNarration, listNarrations, narrationsDue, order, quote, readerManifest, readerSegment, readerStreamParts, streamPlan, STREAM_CHUNK, setAudioPrice, step, summary, voiceSample } from './service.js';
 import { audioAccess } from './edition.js';
 import { MAX_PART_BYTES, claimLocal, openForLocal, releaseLocal, uploadLocalPart, workerAllowed } from './local.js';
 
@@ -166,6 +166,34 @@ export function mountNarration(app: Express, findBook: (id: string) => Promise<B
     // cannot send the sign-in header, so a reader with the whole audiobook gets a short-lived key for this book.
     const key = manifest?.access === 'full' ? audioKey(bookId) : undefined;
     res.json({ narration: manifest && { ...manifest, audioPrice: book?.audioPrice ?? 0, ...(key ? { key } : {}) } });
+  }));
+  // One continuous stream from a part to the end of the book (owner request 2026-11-26: keeps playing on a locked
+  // phone). Answers byte ranges of at most STREAM_CHUNK bytes; the player asks for the next range by itself.
+  app.get('/api/reader/catalog/:bookId/narration/stream/:from', guarded(async (req, res) => {
+    const bookId = String(req.params.bookId);
+    const from = Number(req.params.from);
+    if (!/^atlas-ebook-[0-9a-f]{8}$/.test(bookId) || !Number.isSafeInteger(from) || from < 0) throw new NarrationError('Narration not found.', 404);
+    const access = validAudioKey(bookId, req.query.k) ? 'full' : await accessOf(req, bookId);
+    const stream = await readerStreamParts(bookId, from, access);
+    if (!stream) throw new NarrationError('This audiobook plays part by part.', 409);
+    const total = stream.parts.reduce((t, p) => t + p.bytes, 0);
+    const range = byteRange(req.get('range'), total);
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    if (range === 'invalid') { res.setHeader('Content-Range', `bytes */${total}`); res.status(416).end(); return; }
+    const plan = streamPlan(stream.parts, range ? range.start : 0, range ? Math.min(STREAM_CHUNK, range.end - range.start + 1) : STREAM_CHUNK);
+    const chunks: Buffer[] = [];
+    for (const s of plan.slices) {
+      const bytes = await stream.load(s.n);
+      chunks.push(Buffer.from(bytes.buffer, bytes.byteOffset + s.from, Math.min(s.to, bytes.byteLength - 1) - s.from + 1));
+    }
+    const body = Buffer.concat(chunks);
+    const start = range ? range.start : 0;
+    res.status(206);
+    res.setHeader('Content-Range', `bytes ${start}-${start + body.length - 1}/${total}`);
+    res.setHeader('Content-Length', String(body.length));
+    res.end(body);
   }));
   app.get('/api/reader/catalog/:bookId/narration/:n', guarded(async (req, res) => {
     const bookId = String(req.params.bookId);

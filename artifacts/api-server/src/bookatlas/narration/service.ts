@@ -532,7 +532,8 @@ export async function readerManifest(bookId: string, access: 'full' | 'preview')
   if (!n) return null;
   const { chapters } = await bookContent(bookId);
   const preview = access === 'full' ? null : previewChapters(chapters as never) as unknown as Chapter[];
-  const segments = n.segments.map((s, i) => ({ n: i, chapter: s.chapter, from: s.from, to: s.to, seconds: s.seconds ?? 0 }))
+  // `bytes` lets the player use one continuous stream (owner request 2026-11-26: keep playing with the phone locked).
+  const segments = n.segments.map((s, i) => ({ n: i, chapter: s.chapter, from: s.from, to: s.to, seconds: s.seconds ?? 0, bytes: (s as { bytes?: number }).bytes ?? 0 }))
     .filter((s) => !preview || inPreview(n.segments[s.n]!, preview));
   return { voice: localVoiceLabel(n) ?? n.voice, seconds: Math.round(n.seconds), access, segments };
 }
@@ -542,6 +543,40 @@ export async function readerSegment(bookId: string, index: number, access: 'full
   if (!manifest?.segments.some((s) => s.n === index)) throw new NarrationError(access === 'preview' ? 'Buy this book to hear the rest of it.' : 'Narration not found.', access === 'preview' ? 403 : 404);
   const n = (await finishedForBook(bookId))!;
   return getObject(segKey(n.id, index));
+}
+
+/**
+ * The audiobook as one continuous stream from part `from` to the end (owner request 2026-11-26: it stopped when the
+ * phone locked, because a locked phone may refuse to start the next file). The parts are constant-bitrate MP3s
+ * without tags, so they join byte for byte. Phones fetch audio in byte ranges; each answer carries at most
+ * `maxChunk` bytes (a Vercel response must stay under 4.5 MB) and the player simply asks for the next range.
+ */
+export const STREAM_CHUNK = 3_500_000;
+export function streamPlan(parts: { n: number; bytes: number }[], start: number, maxChunk = STREAM_CHUNK) {
+  const total = parts.reduce((t, p) => t + p.bytes, 0);
+  if (start < 0 || start >= total) return { total, slices: [] as { n: number; from: number; to: number }[], end: start - 1 };
+  const end = Math.min(total - 1, start + maxChunk - 1);
+  const slices: { n: number; from: number; to: number }[] = [];
+  let offset = 0;
+  for (const p of parts) {
+    const a = offset, b = offset + p.bytes - 1;
+    offset += p.bytes;
+    if (b < start) continue;
+    if (a > end) break;
+    slices.push({ n: p.n, from: Math.max(start, a) - a, to: Math.min(end, b) - a });
+  }
+  return { total, slices, end };
+}
+
+/** The parts the stream joins, in order: those the reader may hear, from `from`; null when a size is unknown. */
+export async function readerStreamParts(bookId: string, from: number, access: 'full' | 'preview') {
+  const manifest = await readerManifest(bookId, access);
+  if (!manifest) throw new NarrationError('Narration not found.', 404);
+  const parts = manifest.segments.filter((s) => s.n >= from);
+  if (!parts.length) throw new NarrationError(access === 'preview' ? 'Buy this book to hear the rest of it.' : 'Narration not found.', access === 'preview' ? 403 : 404);
+  if (parts.some((p) => !p.bytes)) return null;
+  const n = (await finishedForBook(bookId))!;
+  return { parts: parts.map((p) => ({ n: p.n, bytes: p.bytes })), load: (index: number) => getObject(segKey(n.id, index)) };
 }
 
 export { PaymentError };

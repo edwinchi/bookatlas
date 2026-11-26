@@ -103,7 +103,7 @@ export function accessFor(method: string, path: string): 'public' | 'self-servic
   if (method === 'GET' && normalized === '/api/internal/narration/local') return 'self-service';
   if (method === 'POST' && /^\/api\/internal\/narration\/local\/[0-9a-f-]{36}\/(?:claim|release)$/.test(normalized)) return 'self-service';
   if (method === 'PUT' && /^\/api\/internal\/narration\/local\/[0-9a-f-]{36}\/parts\/\d{1,5}$/.test(normalized)) return 'self-service';
-  if (method === 'GET' && /^\/api\/reader\/catalog\/[^/]+\/narration(?:\/\d+)?$/.test(normalized)) return 'self-service';
+  if (method === 'GET' && /^\/api\/reader\/catalog\/[^/]+\/narration(?:\/\d+|\/stream\/\d+)?$/.test(normalized)) return 'self-service';
   if (method === 'GET' && /^\/api\/invoices(?:\/\d+)?$/.test(normalized)) return 'reader';
   if (method === 'POST' && /^\/api\/invoices\/\d+\/refund-request$/.test(normalized)) return 'reader';
   // The EPUBCheck worker authenticates with its bearer token inside the route.
