@@ -1,45 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
-import { 
-  X, 
-  ChevronLeft, 
-  ChevronRight, 
-  Sliders, 
-  List, 
-  Bookmark, 
-  Highlighter, 
-  Volume2, 
-  VolumeX, 
-  Type, 
-  Maximize2, 
-  Minimize2,
-  Check,
-  ShoppingBag,
-  Sparkles,
-  Clock,
-  Bot,
-  MessageSquare,
-  HelpCircle,
-  BookOpen,
-  Mic,
-  MicOff,
-  Headphones,
-  Compass,
-  Layers,
-  Map,
-  Play,
-  Pause,
-  Languages,
-  Send,
-  Sparkle,
-  NotebookPen,
-  StickyNote,
-  GraduationCap,
-  Users,
-  Flame,
-  MoreVertical,
-  Zap
-} from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Sliders, List, Bookmark, Highlighter, Volume2, VolumeX, Type, Maximize2, Minimize2, Check, ShoppingBag, Sparkles, Clock, Bot, MessageSquare, HelpCircle, BookOpen, Mic, MicOff, Headphones, Compass, Layers, Map, Play, Pause, Languages, Send, Sparkle, NotebookPen, StickyNote, GraduationCap, Users, Flame, MoreVertical, Zap, Share2 } from 'lucide-react';
 import { StudioNarrationPanel } from './voice/StudioNarrationPanel';
 import { Book, Chapter, ReaderSettings, ReaderTheme, ReaderFont } from '../types';
 import { useAccount } from '../auth/AuthContext';
@@ -61,6 +22,7 @@ import { BoldStarts, ReadingGuide, clearSpoken, loadReaderFont, readerFontClass,
 import { focusModeOf, paragraphFocusClass, zenLayout } from './reader/readerLayout';
 import { checkpointDue, startTracker, wordsBetween, type CheckpointReason } from './reader/checkpoints';
 import { CheckpointDialog, CheckpointOffer, type CheckpointRequest } from './reader/CheckpointDialog';
+import { ShareBookDialog, ShareQuoteDialog } from './share/ShareDialog';
 import { narrationTimeline, wordAt, type TimedWord } from './reader/narrationSync';
 import { ReaderContents, GoToPopover } from './reader/ReaderNavigation';
 import { useDeviceVoice, type Translated } from './reader/useDeviceVoice';
@@ -953,6 +915,9 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const lastMove = useRef(Date.now());
   const [checkpointOffer, setCheckpointOffer] = useState<Omit<CheckpointRequest, 'id'> | null>(null);
   const [checkpoint, setCheckpoint] = useState<CheckpointRequest | null>(null);
+  // Share and invite (phase 10): the book, or a selected passage as a quote card.
+  const [sharing, setSharing] = useState(false);
+  const [quote, setQuote] = useState<string | null>(null);
   const resetTracker = () => { tracker.current = startTracker(currentChapterIndex, currentParagraphIndex); };
   const passageFor = (reason: CheckpointReason, prev: { chapter: number; paragraph: number }): Omit<CheckpointRequest, 'id'> => {
     const t = tracker.current;
@@ -1272,6 +1237,12 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             <Type className="w-4 h-4" />
           </button>
 
+          {/* Share and invite (phase 10) */}
+          <button type="button" onClick={() => setSharing(true)} aria-label="Share this book" title="Share this book" data-testid="reader-share"
+            className="hidden min-h-12 min-w-12 place-items-center rounded-lg hover:bg-black/10 transition-colors cursor-pointer sm:grid">
+            <Share2 className="w-4 h-4" />
+          </button>
+
           {/* Phones: the other tools in a menu */}
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
@@ -1290,6 +1261,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                   { label: 'Readers and reading groups', icon: Users, on: toggleCommunity, show: !!book.hasReaderContent },
                   { label: 'Notebook', icon: NotebookPen, on: toggleNotebook, show: true },
                   { label: 'Fast Read and speed check', icon: Zap, on: () => setShowFastRead(true), show: true },
+                  { label: 'Share this book', icon: Share2, on: () => setSharing(true), show: true },
                 ].filter((i) => i.show).map((i) => (
                   <DropdownMenu.Item key={i.label} onSelect={i.on}
                     className="flex min-h-11 cursor-pointer select-none items-center gap-3 rounded-xl px-3 text-sm font-medium outline-none data-[highlighted]:bg-indigo-50 data-[highlighted]:text-indigo-900">
@@ -1598,6 +1570,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runSelection('explain')} className="rounded-full px-2.5 py-1.5 hover:bg-white/15 cursor-pointer">Explain</button>
           <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runSelection('simplify')} className="rounded-full px-2.5 py-1.5 hover:bg-white/15 cursor-pointer">Simplify</button>
           <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runSelection('translate')} className="rounded-full px-2.5 py-1.5 hover:bg-white/15 cursor-pointer">Translate</button>
+          <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { setQuote(selectionBar.text); setSelectionBar(null); window.getSelection()?.removeAllRanges(); }} data-testid="selection-share" className="rounded-full px-2.5 py-1.5 hover:bg-white/15 cursor-pointer">Share</button>
           {selectionBar.text.split(' ').length >= 6 && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runSelection('flashcards')} data-testid="selection-flashcard" className="rounded-full px-2.5 py-1.5 hover:bg-white/15 cursor-pointer">Flashcard</button>}
           <button type="button" onClick={() => setSelectionBar(null)} aria-label="Close" className="rounded-full px-1.5 py-1.5 text-white/60 hover:bg-white/15 cursor-pointer"><X className="h-3 w-3" /></button>
         </div>
@@ -1613,6 +1586,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       {checkpointOffer && !checkpoint && (
         <CheckpointOffer reason={checkpointOffer.reason} onStart={() => startCheckpoint(checkpointOffer)} onDismiss={() => { setCheckpointOffer(null); resetTracker(); }} />
       )}
+      <ShareBookDialog book={{ id: book.id, title: book.title, author: book.author }} open={sharing} onOpenChange={setSharing} />
+      <ShareQuoteDialog book={{ id: book.id, title: book.title, author: book.author }} quote={quote ?? ''} open={quote !== null} onOpenChange={(o) => { if (!o) setQuote(null); }} />
       <CheckpointDialog api={ebookApi} bookId={book.id} chapterTitle={checkpoint ? chapters[checkpoint.chapterIndex]?.title ?? '' : ''} request={checkpoint} onClose={() => setCheckpoint(null)} />
       {showNotebook && (
         <ReaderNotebook

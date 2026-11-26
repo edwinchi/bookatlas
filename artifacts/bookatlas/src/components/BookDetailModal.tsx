@@ -7,29 +7,8 @@ import * as Tabs from '@radix-ui/react-tabs';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import * as ScrollArea from '@radix-ui/react-scroll-area';
 import { AppModal } from './ui/app-modal';
-import { 
-  X, 
-  Star, 
-  BookOpen, 
-  ShoppingBag, 
-  Heart, 
-  Headphones, 
-  ShieldCheck, 
-  Globe, 
-  Calendar, 
-  FileText, 
-  Building, 
-  Sparkles, 
-  Check, 
-  MessageSquare,
-  ThumbsUp,
-  BrainCircuit,
-  Wand2,
-  BookmarkCheck,
-  ExternalLink,
-  Lock,
-  PlayCircle,
-} from 'lucide-react';
+import { X, Star, BookOpen, ShoppingBag, Heart, Headphones, ShieldCheck, Globe, Calendar, FileText, Building, Sparkles, Check, MessageSquare, ThumbsUp, BrainCircuit, Wand2, BookmarkCheck, ExternalLink, Lock, PlayCircle, Share2 } from 'lucide-react';
+import { ShareBookDialog } from './share/ShareDialog';
 import { Book } from '../types';
 import { ReaderPublicationAccess } from './publishing/ReaderPublicationAccess';
 import { useAccount } from '../auth/AuthContext';
@@ -93,6 +72,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
   const openFullBook = () => { if (account) onReadSample(book); else requireSignIn('reading the full book'); };
 
   const [activeTab, setActiveTab] = useState<'overview' | 'ai_summary' | 'reviews' | 'author'>('overview');
+  const [sharing, setSharing] = useState(false);
   /** The book's real chapter titles (prepared books), for "Sample excerpt included". */
   const [outline, setOutline] = useState<{ title: string; subtitle: string | null; preview: boolean }[] | null>(null);
   useEffect(() => {
@@ -236,6 +216,13 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                   <BookOpen className="w-4 h-4 text-amber-400" />
                   <span>{opensInFull && account ? 'Open the Book' : prepared ? 'Read & Listen to the Free Preview' : 'Read Free Instant Sample'}</span>
                 </button>
+
+                {/* Share and invite (phase 10): send the book to a friend. */}
+                <button type="button" onClick={() => setSharing(true)} data-testid="share-book-button"
+                  className="w-full py-2.5 px-4 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-semibold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer">
+                  <Share2 className="w-4 h-4 text-indigo-600" aria-hidden /><span>Share with a friend</span>
+                </button>
+                <ShareBookDialog book={{ id: book.id, title: book.title, author: book.author }} open={sharing} onOpenChange={setSharing} />
 
                 {/* Owner request 2026-11-16: every book has a real audio sample, for everyone. */}
                 {(

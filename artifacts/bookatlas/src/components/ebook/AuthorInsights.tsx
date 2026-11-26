@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import { BookOpenCheck, Clock, Gauge, Highlighter, Loader2, LineChart, RefreshCw, ShieldCheck, TrendingDown, Users } from 'lucide-react';
+import { BookOpenCheck, Clock, Gauge, Highlighter, Loader2, LineChart, RefreshCw, ShieldCheck, TrendingDown, Users, Share2 } from 'lucide-react';
 import { SelectBox } from '../ui/select-box';
 import type { AuthorInsightsData, useEbookApi } from './ebookApi';
+import { ShareBookDialog } from '../share/ShareDialog';
 
 function Tile({ icon: Icon, label, value, note }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string; note?: string }) {
   return (
@@ -18,11 +19,12 @@ function Tile({ icon: Icon, label, value, note }: { icon: React.ComponentType<{ 
  * Reading insights for an author's own books (phase 9): how many read, how far they get, where they stop, how
  * long they read and the passages they highlight most. Aggregates only; nothing before 5 readers.
  */
-export function AuthorInsights({ api }: { api: ReturnType<typeof useEbookApi> }) {
+export function AuthorInsights({ api, authorName = '' }: { api: ReturnType<typeof useEbookApi>; authorName?: string }) {
   const [data, setData] = useState<AuthorInsightsData | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [bookId, setBookId] = useState('');
+  const [sharing, setSharing] = useState(false);
   const load = () => { setLoading(true); setError(''); api.authorInsights().then((d) => { setData(d); setBookId((b) => b || d.books[0]?.bookId || ''); }).catch(() => setError('Your reading insights could not be loaded.')).finally(() => setLoading(false)); };
   useEffect(load, []); // eslint-disable-line react-hooks/exhaustive-deps
   const book = data?.books.find((b) => b.bookId === bookId) ?? data?.books[0];
@@ -38,6 +40,11 @@ export function AuthorInsights({ api }: { api: ReturnType<typeof useEbookApi> })
       {data && !data.books.length && <p className="text-sm text-slate-600">Publish a book and its reading insights show here.</p>}
       {data && book && (
         <>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => setSharing(true)} data-testid="author-share" className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 text-sm font-bold text-white hover:bg-emerald-500 cursor-pointer"><Share2 className="h-4 w-4" aria-hidden />Share your book</button>
+            <span className="text-xs text-slate-500">A link with the cover and a free preview, for your readers and friends.</span>
+          </div>
+          <ShareBookDialog book={{ id: book.bookId, title: book.title, author: authorName }} mood="author" open={sharing} onOpenChange={setSharing} />
           {data.books.length > 1 && (
             <SelectBox value={book.bookId} onChange={(e) => setBookId(e.target.value)} aria-label="Book" className="w-full max-w-sm rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
               {data.books.map((b) => <option key={b.bookId} value={b.bookId}>{b.title}</option>)}
