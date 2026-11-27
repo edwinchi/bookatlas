@@ -1069,6 +1069,13 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   const focus = useFocusSprint((on) => setLayout({ ...layoutRef.current, zen: on }));
   // "Try it now" (2026-11-26): the tool the link asked for, opened once the book is ready, with a tip.
   const [tryHint, setTryHint] = useState('');
+  // Welcome back (2026-11-27): a book opened past its start says where, with a way back to page one. It goes by itself.
+  const [welcomeBack, setWelcomeBack] = useState(startAt.chapter > 0 || startAt.paragraph > 0);
+  useEffect(() => {
+    if (!welcomeBack) return;
+    const t = window.setTimeout(() => setWelcomeBack(false), 10000);
+    return () => window.clearTimeout(t);
+  }, [welcomeBack]);
   const [settingsTab, setSettingsTab] = useState<'text' | 'aids'>('text');
   const [studyTool, setStudyTool] = useState<'summary' | 'key_concepts' | 'flashcards' | 'quiz' | 'map' | undefined>(undefined);
   const triedTool = useRef(false);
@@ -1837,6 +1844,14 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden />
           <span className="flex-1">{tryHint}</span>
           <button type="button" onClick={() => setTryHint('')} aria-label="Close the tip" className="rounded-full p-0.5 text-white/80 hover:text-white cursor-pointer"><X className="h-4 w-4" /></button>
+        </div>
+      )}
+      {welcomeBack && !offlineNote && !readingOffline && (
+        <div role="status" data-testid="welcome-back" className="fixed inset-x-3 top-16 z-[70] mx-auto flex max-w-md flex-wrap items-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white shadow-xl">
+          <BookOpen className="h-4 w-4 shrink-0 text-amber-300" aria-hidden />
+          <span className="min-w-0 flex-1">Welcome back. You are {progressPercent}% in{currentChapter?.title ? <>, at <strong className="font-semibold">{currentChapter.title}</strong></> : null}.</span>
+          <button type="button" onClick={() => { setWelcomeBack(false); jumpTo(0, 0); }} data-testid="start-over" className="cursor-pointer rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white hover:bg-white/25">Start from the beginning</button>
+          <button type="button" onClick={() => setWelcomeBack(false)} aria-label="Close" className="rounded-full p-0.5 text-white/80 hover:text-white cursor-pointer"><X className="h-4 w-4" /></button>
         </div>
       )}
       {(offlineNote || readingOffline) && (

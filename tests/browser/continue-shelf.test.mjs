@@ -41,6 +41,15 @@ test('a started book shows on the home page, opens at its place, and can be remo
     await page.waitForTimeout(1500);
     const after = await page.evaluate((bookId) => JSON.parse(localStorage.getItem('bookatlas:places'))[bookId], id);
     assert.equal(after.chapter, 1, 'opened at the saved chapter, not the start');
+    // The reader says where it opened, with a way back to page one (the row test below seeds its place again).
+    const note = page.getByTestId('welcome-back');
+    await note.waitFor();
+    assert.match(await note.innerText(), /Welcome back\. You are \d+% in/);
+    const axeNote = await new AxeBuilder({ page }).include('[data-testid="welcome-back"]').analyze();
+    assert.deepEqual(axeNote.violations.map((v) => v.id), []);
+    await page.getByTestId('start-over').click();
+    await note.waitFor({ state: 'detached' });
+    await page.waitForFunction((bookId) => JSON.parse(localStorage.getItem('bookatlas:places'))[bookId].chapter === 0, id, { timeout: 5000 });
 
     // When chapter 2 is the end of the free sample, the book counts as finished and leaves the row.
     await page.goto(base + '/', { waitUntil: 'load' });
