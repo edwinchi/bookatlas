@@ -1214,8 +1214,11 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     const chapter = currentChapterRef.current, paragraph = currentParagraphRef.current, a = lastAudio.current;
     // The second of audio is kept while the reader is still on the page being spoken; reading on drops it.
     const audio = a && listenFrom({ chapter: a.chapter, paragraph, at: '', audio: a }, chapter, paragraph) === a.p ? { n: a.n, t: a.t, p: a.p } : null;
-    return { chapter, paragraph, ...(audio ? { audio } : {}) };
+    const shown = { title: book.title, author: book.author, cover: book.coverImage, pct: progressRef.current };
+    return { chapter, paragraph, ...(audio ? { audio } : {}), book: shown };
   };
+  const progressRef = useRef(progressPercent);
+  progressRef.current = progressPercent;
   const currentChapterRef = useRef(currentChapterIndex);
   const currentParagraphRef = useRef(currentParagraphIndex);
   currentChapterRef.current = currentChapterIndex;

@@ -6,7 +6,20 @@
  * tested in resumePlace.test.ts.
  */
 /** `audio.p` is the paragraph being spoken, which can sit lower on the page than the page's first paragraph. */
-export interface Place { chapter: number; paragraph: number; audio?: { n: number; t: number; p?: number }; at: string }
+export interface Place { chapter: number; paragraph: number; audio?: { n: number; t: number; p?: number }; at: string; book?: PlaceBook }
+/** Enough to show the book on the home page's Continue row without loading it (2026-11-27). */
+export interface PlaceBook { title: string; author: string; cover: string; pct: number }
+
+const text = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+/** Covers are links (https or this site), never inline data, so the stored places stay small. */
+const coverOk = (v: string) => /^(https:\/\/|\/(?!\/))/.test(v) && v.length <= 600;
+export function cleanBook(raw: unknown): PlaceBook | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  const title = text(r.title, 200), author = text(r.author, 120), cover = text(r.cover, 600), pct = Math.round(Number(r.pct));
+  if (!title || !Number.isFinite(pct) || pct < 0 || pct > 100) return undefined;
+  return { title, author, cover: coverOk(cover) ? cover : '', pct };
+}
 
 const KEY = 'bookatlas:places';
 const MAX_BOOKS = 300;
@@ -20,7 +33,8 @@ export function cleanPlaces(raw: unknown): Record<string, Place> {
     if (!/^[\w.-]{1,120}$/.test(id) || !Number.isInteger(chapter) || chapter < 0 || !Number.isInteger(paragraph) || paragraph < 0 || typeof r.at !== 'string') continue;
     const a = (r.audio && typeof r.audio === 'object' ? r.audio : null) as Record<string, unknown> | null;
     const audio = a && Number.isInteger(a.n) && (a.n as number) >= 0 && Number.isFinite(a.t) && (a.t as number) >= 0 ? { n: a.n as number, t: a.t as number, ...(Number.isInteger(a.p) && (a.p as number) >= 0 ? { p: a.p as number } : {}) } : undefined;
-    out[id] = { chapter, paragraph, at: r.at, ...(audio ? { audio } : {}) };
+    const book = cleanBook(r.book);
+    out[id] = { chapter, paragraph, at: r.at, ...(audio ? { audio } : {}), ...(book ? { book } : {}) };
   }
   return out;
 }
@@ -38,6 +52,27 @@ const readAll = () => { try { return cleanPlaces(JSON.parse(localStorage.getItem
 export const readPlace = (bookId: string): Place | null => readAll()[bookId] ?? null;
 export function savePlace(bookId: string, place: Omit<Place, 'at'>) {
   try { localStorage.setItem(KEY, JSON.stringify(withPlace(readAll(), bookId, place))); } catch { /* storage full or off */ }
+  try { window.dispatchEvent(new Event(PLACES_EVENT)); } catch { /* no window */ }
+}
+export const PLACES_EVENT = 'bookatlas:places-changed';
+
+export interface RecentBook extends PlaceBook { id: string; at: string; listening: boolean }
+/** The books to continue, most recent first: started (past the first page) and not finished. */
+export function recentBooks(all: Record<string, Place>, limit = 10): RecentBook[] {
+  return Object.entries(all)
+    .filter(([, p]) => p.book && p.book.pct < 100 && (p.chapter > 0 || p.paragraph > 0 || !!p.audio))
+    .sort(([, a], [, b]) => b.at.localeCompare(a.at))
+    .slice(0, limit)
+    .map(([id, p]) => ({ ...p.book!, id, at: p.at, listening: !!p.audio }));
+}
+export const readRecentBooks = (limit?: number) => recentBooks(readAll(), limit);
+/** Takes a book off the Continue row; the place itself is kept, and reading it again puts it back. */
+export function hideRecent(bookId: string) {
+  const all = readAll();
+  const p = all[bookId];
+  if (!p?.book) return;
+  const { book: _gone, ...rest } = p;
+  try { localStorage.setItem(KEY, JSON.stringify({ ...all, [bookId]: rest })); window.dispatchEvent(new Event(PLACES_EVENT)); } catch { /* storage off */ }
 }
 
 /**

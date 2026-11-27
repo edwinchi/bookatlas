@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanPlaces, listenFrom, partForParagraph, resumeSecond, startPlace, withPlace } from './resumePlace';
+import { cleanPlaces, listenFrom, partForParagraph, recentBooks, resumeSecond, startPlace, withPlace } from './resumePlace';
 
 test('resume: places are kept per book, cleaned, at most 300 books', () => {
   let all = withPlace({}, 'book-a', { chapter: 3, paragraph: 12, audio: { n: 7, t: 41.5 } }, new Date('2026-11-26T10:00:00Z'));
@@ -37,4 +37,20 @@ test('resume: listening picks up at the paragraph last spoken while the reader i
   assert.equal(listenFrom({ ...saved, audio: { n: 5, t: 30 } }, 2, 8), 8);
   assert.equal(resumeSecond(saved, 5, 11, 4), 28);
   assert.deepEqual(cleanPlaces({ b: saved }).b?.audio, { n: 5, t: 30, p: 11 });
+});
+
+test('resume: the Continue row lists started, unfinished books, newest first, with safe covers', () => {
+  const book = (title: string, pct: number, cover = 'https://cdn.example/c.jpg') => ({ title, author: 'A. Writer', cover, pct });
+  let all = withPlace({}, 'new', { chapter: 0, paragraph: 0, book: book('Not started', 0) }, new Date('2026-11-27T08:00:00Z'));
+  all = withPlace(all, 'old', { chapter: 2, paragraph: 3, book: book('Older', 40) }, new Date('2026-11-27T09:00:00Z'));
+  all = withPlace(all, 'done', { chapter: 9, paragraph: 50, book: book('Finished', 100) }, new Date('2026-11-27T10:00:00Z'));
+  all = withPlace(all, 'heard', { chapter: 0, paragraph: 0, audio: { n: 1, t: 20 }, book: book('Listened', 3, 'data:image/png;base64,AAAA') }, new Date('2026-11-27T11:00:00Z'));
+  all = withPlace(all, 'bare', { chapter: 1, paragraph: 1 }, new Date('2026-11-27T12:00:00Z'));
+  const clean = cleanPlaces(JSON.parse(JSON.stringify(all)));
+  const row = recentBooks(clean);
+  assert.deepEqual(row.map((b) => b.id), ['heard', 'old']);
+  assert.equal(row[0]!.cover, '', 'inline covers are not kept');
+  assert.equal(row[0]!.listening, true);
+  assert.equal(row[1]!.cover, 'https://cdn.example/c.jpg');
+  assert.equal(cleanPlaces({ x: { chapter: 1, paragraph: 1, at: 't', book: { title: '', pct: 5 } } }).x!.book, undefined, 'a book needs a title');
 });
