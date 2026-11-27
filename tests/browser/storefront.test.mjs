@@ -39,7 +39,17 @@ async function addSellableToCart(page) {
   throw new Error('no book for sale found');
 }
 
-before(async () => { browser = await chromium.launch(); });
+before(async () => {
+  browser = await chromium.launch();
+  // Every context, not only open()'s: Clerk's bot protection probes ports that never answer, so "network idle"
+  // would never come (2026-11-23; seen again in the tests that make their own context, 2026-11-27).
+  const newContext = browser.newContext.bind(browser);
+  browser.newContext = async (options) => {
+    const context = await newContext(options);
+    await context.route(/\.protect\.clerk\.com/, (route) => route.abort());
+    return context;
+  };
+});
 after(async () => { await browser?.close(); });
 
 test('the public storefront renders for guests even when sign-in is unavailable', async () => {

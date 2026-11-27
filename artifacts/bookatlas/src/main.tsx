@@ -9,6 +9,14 @@ import { ErrorBoundary } from './components/error-boundary';
 
 watchClientErrors();
 
+// The site fonts are preloaded in index.html; applying them here keeps them from holding up the first paint.
+const fonts = document.querySelector<HTMLLinkElement>('link[data-site-fonts]');
+if (fonts && !document.querySelector('link[rel="stylesheet"][data-site-fonts]')) {
+  const sheet = document.createElement('link');
+  sheet.rel = 'stylesheet'; sheet.href = fonts.href; sheet.dataset.siteFonts = '';
+  document.head.appendChild(sheet);
+}
+
 // A file of an older release is gone (a tab left open across a deploy): load the new release once.
 window.addEventListener('vite:preloadError', (event) => { if (reloadForNewRelease()) event.preventDefault(); });
 
