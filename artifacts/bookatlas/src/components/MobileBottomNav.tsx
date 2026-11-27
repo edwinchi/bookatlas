@@ -91,7 +91,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           type="button"
           onClick={onOpenCart}
           className="flex flex-col items-center justify-center min-h-[48px] min-w-[48px] py-1 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer relative"
-          aria-label={`Cart (${cartCount} items)`}
+          aria-label={`Cart (${cartCount} ${cartCount === 1 ? 'item' : 'items'})`}
         >
           <div className="relative">
             <ShoppingBag className="w-5 h-5 mb-0.5" />

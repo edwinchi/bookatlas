@@ -399,7 +399,7 @@ test('F7-5: mobile bottom nav supports 5 primary destinations (Explore, Audio, A
   assert.match(navCode, /aria-label="Audio books"/);
   assert.match(navCode, /aria-label="Gemini AI Studio Hub"/);
   assert.match(navCode, /aria-label="My Bookshelf"/);
-  assert.match(navCode, /aria-label=\{`Cart \(\$\{cartCount\} items\)`\}/);
+  assert.match(navCode, /aria-label=\{`Cart \(\$\{cartCount\} \$\{cartCount === 1 \? 'item' : 'items'\}\)`\}/);
 });
 
 // ----------------------------------------------------------------------------

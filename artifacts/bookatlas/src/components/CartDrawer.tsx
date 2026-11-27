@@ -170,9 +170,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         </span>
                       )}
                     </div>
-                    <h4 className="font-bold text-xs text-gray-900 line-clamp-1 leading-tight mt-0.5">
+                    <h3 className="font-bold text-xs text-gray-900 line-clamp-1 leading-tight mt-0.5">
                       {item.book.title}
-                    </h4>
+                    </h3>
                     <p className="text-[11px] text-gray-500 truncate">{item.book.author}</p>
                   </div>
 

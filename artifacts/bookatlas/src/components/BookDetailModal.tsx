@@ -473,9 +473,9 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
             <Tabs.Content value="overview" className="focus-visible:outline-none">
               <div className="space-y-5">
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                     Book Synopsis
-                  </h3>
+                  </h2>
                   <p className="text-slate-700 leading-relaxed text-sm sm:text-base font-serif">
                     {book.synopsis}
                   </p>
@@ -483,9 +483,9 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
 
                 {book.editorialReview && !isSampleTitle(book) && (
                   <div className="p-4 bg-amber-50/70 border-l-4 border-amber-600 rounded-r-xl">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 mb-1">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-amber-900 mb-1">
                       BooksAtlas Editorial Review
-                    </h4>
+                    </h3>
                     <p className="text-sm italic text-slate-800 font-serif">
                       {book.editorialReview}
                     </p>
@@ -495,9 +495,9 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                 {/* Chapter outline: the sample title's sample chapters, or a published book's real chapters */}
                 {(outline?.length || book.sampleChapters?.length) ? (
                   <div className="space-y-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       {outline?.length ? 'Inside this book' : 'Sample Excerpt Included'}
-                    </h3>
+                    </h2>
                     <ScrollArea.Root type="auto" className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
                       <ScrollArea.Viewport className="max-h-64 w-full">
                         <ul className="divide-y divide-slate-200/70 p-1.5 text-xs">
@@ -566,7 +566,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                     {/* Core Takeaways & Target Reader */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Core Takeaways</h4>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">Core Takeaways</h3>
                         <div className="flex flex-wrap gap-1.5">
                           {Array.isArray(aiSummary.coreTakeaways) ? (
                             aiSummary.coreTakeaways.map((t: string, i: number) => (
@@ -581,21 +581,21 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                       </div>
 
                       <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Ideal Reader Profile</h4>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">Ideal Reader Profile</h3>
                         <p className="text-xs text-slate-700 leading-relaxed">{aiSummary.targetAudience}</p>
                       </div>
                     </div>
 
                     {aiSummary.philosophicalQuestion && (
                       <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-1.5">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-amber-700">Philosophical Question</h4>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-amber-700">Philosophical Question</h3>
                         <p className="text-xs text-amber-900 leading-relaxed italic">{aiSummary.philosophicalQuestion}</p>
                       </div>
                     )}
 
                     {Array.isArray(aiSummary.keyQuotes) && aiSummary.keyQuotes.length > 0 && (
                       <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Key Quotes</h4>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">Key Quotes</h3>
                         <ul className="space-y-1.5">
                           {aiSummary.keyQuotes.map((q: string, i: number) => (
                             <li key={i} className="text-xs text-slate-700 italic leading-relaxed">"{q}"</li>
@@ -609,9 +609,9 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Wand2 className="w-4 h-4 text-amber-400" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300">
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-amber-300">
                             Dynamic AI Story Preview Generator
-                          </h4>
+                          </h3>
                         </div>
                         <div className="flex gap-1">
                           {(['cinematic', 'suspense', 'bedtime'] as const).map((m) => (
@@ -666,7 +666,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
             {/* Tab: Author */}
             <Tabs.Content value="author" className="focus-visible:outline-none">
               <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                <h3 className="font-bold text-base text-slate-950">{book.author}</h3>
+                <h2 className="font-bold text-base text-slate-950">{book.author}</h2>
                 <p className="text-sm text-slate-700 leading-relaxed">{book.authorBio}</p>
                 <div className="pt-2 text-xs text-indigo-600 font-semibold">
                   <span>More titles by {book.author} available on BooksAtlas eBook Store</span>

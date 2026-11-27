@@ -49,3 +49,37 @@ test('the open reader has no accessibility violations', async () => {
   } finally { await browser.close(); }
   assert.deepEqual(found, []);
 });
+
+test('the book window and the cart have no accessibility violations', async () => {
+  const browser = await chromium.launch();
+  const found = [];
+  const scan = async (page, where) => {
+    const { violations } = await new AxeBuilder({ page }).analyze();
+    for (const v of violations) found.push(`${where} ${v.id} (${v.impact}): ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`);
+  };
+  try {
+    for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 900 }]) {
+      const context = await browser.newContext({ viewport, serviceWorkers: 'block' });
+      const page = await context.newPage();
+      await page.goto(base + '/', { waitUntil: 'load' });
+      await page.getByTestId('book-card-title').first().click();
+      await page.getByRole('dialog').first().waitFor({ timeout: 20000 });
+      await page.waitForTimeout(1500);
+      await scan(page, `${viewport.width}px book window`);
+      await page.keyboard.press('Escape');
+      await page.getByRole('dialog').first().waitFor({ state: 'detached' });
+      // The first book for sale (sample titles are not), which opens the cart.
+      const buttons = page.getByRole('button', { name: /add to cart/i });
+      for (let i = 0; i < Math.min(await buttons.count(), 40); i += 1) {
+        if (!(await buttons.nth(i).isVisible())) continue;
+        await buttons.nth(i).click();
+        try { await page.getByLabel('Close shopping cart').waitFor({ timeout: 1500 }); break; } catch { /* a sample title */ }
+      }
+      await page.getByRole('dialog', { name: 'Shopping cart' }).waitFor();
+      await page.waitForTimeout(800);
+      await scan(page, `${viewport.width}px cart`);
+      await context.close();
+    }
+  } finally { await browser.close(); }
+  assert.deepEqual(found, []);
+});

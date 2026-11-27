@@ -57,7 +57,7 @@ test('mobile navigation, cart badge and cart drawer work together', async () => 
   await addSellableToCart(page);
   assert.ok(await page.getByLabel('Close shopping cart').isVisible(), 'adding opens the cart');
   await page.getByLabel('Close shopping cart').click();
-  assert.equal(await cart.getAttribute('aria-label'), 'Cart (1 items)');
+  assert.equal(await cart.getAttribute('aria-label'), 'Cart (1 item)');
   await cart.click();
   assert.ok(await page.getByLabel('Close shopping cart').isVisible());
 });
@@ -517,7 +517,7 @@ test('the pricing calculator shows what each format costs and earns, next to oth
   const page = await open('/');
   const site = page.getByRole('navigation', { name: 'Site' });
   await site.getByRole('button', { name: 'Products', exact: true }).click();
-  await site.getByRole('link', { name: /^Pricing calculator/ }).click();
+  await site.getByRole('link', { name: /^All products and prices/ }).click();
   await page.waitForURL(/\/pricing$/);
   await page.getByRole('heading', { level: 1, name: /what every sale earns/ }).waitFor();
   const summary = page.getByRole('complementary', { name: 'Summary' });
