@@ -42,12 +42,12 @@ async function openReader(viewport) {
 
 test('pages: the chapter is laid out in pages that turn with the arrow keys, and "go to" opens', async () => {
   const { context, page } = await openReader({ width: 1280, height: 640 });
-  const pager = page.getByRole('button', { name: /^page 1 of \d+ in this chapter/i });
+  const pager = page.getByRole('button', { name: /^page 1 \/ \d+ in this chapter/i });
   await pager.waitFor();
-  const total = Number((await pager.getAttribute('aria-label')).match(/of (\d+)/)[1]);
+  const total = Number((await pager.getAttribute('aria-label')).match(/\/ (\d+)/)[1]);
   if (total > 1) {
     await page.keyboard.press('ArrowRight');
-    await page.getByRole('button', { name: /^page 2 of/i }).waitFor();
+    await page.getByRole('button', { name: /^page 2 \//i }).waitFor();
     await page.keyboard.press('ArrowLeft');
     await pager.waitFor();
   }
@@ -65,7 +65,7 @@ test('preferences window: scroll or pages, custom colours, and Escape leaves the
   await prefs.waitFor();
   await prefs.getByRole('tab', { name: 'Page' }).click();
   await prefs.getByRole('radio', { name: 'Scroll' }).click();
-  await page.locator('footer button[aria-label="Go to a place in the book"]').waitFor();
+  await page.locator('[aria-label="Reading progress"] button[aria-label$="Go to a place in the book"]').waitFor();
   await prefs.getByRole('radio', { name: 'Pages' }).click();
   await prefs.getByRole('tab', { name: 'Colours' }).click();
   await prefs.getByRole('button', { name: 'Background #1d2733' }).click();
@@ -74,7 +74,7 @@ test('preferences window: scroll or pages, custom colours, and Escape leaves the
   await page.keyboard.press('Escape');
   await prefs.waitFor({ state: 'hidden' });
   assert.ok(await page.getByLabel('Font & Theme Settings').isVisible(), 'the reader stays open');
-  await page.getByLabel('Open table of contents').click();
+  await page.getByLabel('Contents: open the table of contents').click();
   await page.getByRole('dialog', { name: 'Contents' }).waitFor();
   await page.keyboard.press('Escape');
   await context.close();

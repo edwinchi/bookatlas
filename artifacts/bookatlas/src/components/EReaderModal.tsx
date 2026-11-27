@@ -1313,7 +1313,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       style={settings.theme === 'custom' ? { backgroundColor: layout.customBg, color: layout.customText } : undefined}
     >
       {/* Top eReader Control Header */}
-      <header className={`flex items-center justify-between gap-1 px-1.5 py-1.5 border-b transition-[opacity,colors] duration-200 sm:gap-2 sm:px-6 sm:py-3 ${
+      <div role="group" aria-label="Reader toolbar" className={`flex items-center justify-between gap-1 px-1.5 py-1.5 border-b transition-[opacity,colors] duration-200 sm:gap-2 sm:px-6 sm:py-3 ${
         darkChrome
           ? 'bg-black/70 border-white/10 text-slate-200'
           : 'bg-white/80 border-slate-200 text-slate-800'
@@ -1332,7 +1332,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
           <button
             onClick={() => setShowToc(true)}
-            aria-label="Open table of contents"
+            aria-label="Contents: open the table of contents"
             className="flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition-colors hover:bg-black/10 cursor-pointer sm:min-h-12 sm:min-w-12 sm:px-2.5"
             title="Table of Contents"
           >
@@ -1361,7 +1361,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           {/* Gemini AI Co-Pilot Button */}
           <button
             onClick={toggleCopilot}
-            aria-label={showAICopilot ? 'Close AI reading assistant' : 'Open AI reading assistant'}
+            aria-label={showAICopilot ? 'Close the AI Co-Pilot reading assistant' : 'Open the AI Co-Pilot reading assistant'}
             className={`hidden min-h-12 min-w-12 items-center justify-center gap-1 rounded-lg px-2.5 text-xs font-bold transition-all cursor-pointer sm:flex ${
               showAICopilot
                 ? 'bg-indigo-600 text-white shadow-xs'
@@ -1534,7 +1534,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
         </div>
-      </header>
+      </div>
 
       {/* Main Reading Canvas & Lateral Arrows */}
       <div
@@ -1680,7 +1680,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
           {inPreview && currentChapterIndex === chapters.length - 1 && (book.price === 0 ? !account && (
             <div className="mt-14 p-6 rounded-2xl break-inside-avoid border border-current/20 bg-current/5 text-center space-y-3">
-              <h4 className="font-bold text-base">Read the whole of {book.title} free</h4>
+              <h3 className="font-bold text-base">Read the whole of {book.title} free</h3>
               <p className="text-xs sm:text-sm opacity-80 max-w-md mx-auto">Sign in with a free BooksAtlas account to continue past this preview.</p>
               <button onClick={() => requireSignIn('reading the full book')} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-colors cursor-pointer">
                 Sign in to keep reading
@@ -1688,7 +1688,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             </div>
           ) : (
             <div className="mt-14 p-6 rounded-2xl break-inside-avoid border border-current/20 bg-current/5 text-center space-y-3">
-              <h4 className="font-bold text-base">You have reached the end of the free preview</h4>
+              <h3 className="font-bold text-base">You have reached the end of the free preview</h3>
               <p className="text-xs sm:text-sm opacity-80 max-w-md mx-auto">Buy {book.title} to read and listen to the whole book.</p>
               <button onClick={() => { onAddToCart(book); onClose(); }} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm rounded-xl inline-flex items-center gap-2 shadow-md transition-colors cursor-pointer">
                 <ShoppingBag className="w-4 h-4 text-amber-300" />
@@ -1700,7 +1700,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           {/* End of Preview Banner */}
           {!book.hasReaderContent && (
           <div className="mt-14 p-6 rounded-2xl break-inside-avoid border border-current/20 bg-current/5 text-center space-y-3">
-            <h4 className="font-bold text-base">Enjoying this excerpt of {book.title}?</h4>
+            <h3 className="font-bold text-base">Enjoying this excerpt of {book.title}?</h3>
             <p className="text-xs sm:text-sm opacity-80 max-w-md mx-auto">
               Buy the book to read all {book.pageCount} pages in the BooksAtlas reader on any device, with your place, highlights and notes kept in sync when you sign in.
             </p>
@@ -1740,16 +1740,16 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       </div>
 
       {/* Bottom eReader Navigation & Scrubber Footer */}
-      <footer className={`px-3 sm:px-6 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] border-t flex items-center justify-between gap-3 text-xs transition-[opacity,colors] duration-200 ${
+      <div role="group" aria-label="Reading progress" className={`px-3 sm:px-6 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] border-t flex items-center justify-between gap-3 text-xs transition-[opacity,colors] duration-200 ${
         darkChrome
           ? 'bg-black/70 border-white/10 text-slate-300'
           : 'bg-white/80 border-slate-200 text-slate-700'
       } backdrop-blur-md ${chromeOff ? 'pointer-events-none opacity-0' : ''}`}>
         <GoToPopover container={portal} page={pg.page} pages={paged ? pg.pages : null} onPage={(n) => pg.setPage(n)} percent={progressPercent} onPercent={goToPercent}>
-          <button type="button" aria-label={paged ? `Page ${pg.page + 1} of ${pg.pages} in this chapter. Go to a page` : 'Go to a place in the book'}
+          <button type="button" aria-label={paged ? `Page ${pg.page + 1} / ${pg.pages} in this chapter. Go to a page` : `${minutesLeft} min left in chapter. Go to a place in the book`}
             className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg px-2 font-semibold tabular-nums hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
             {paged ? (
-              <><BookOpen className="w-3.5 h-3.5 opacity-70" aria-hidden />{pg.page + 1}<span className="opacity-80">/ {pg.pages}</span></>
+              <><BookOpen className="w-3.5 h-3.5 opacity-70" aria-hidden />{pg.page + 1}<span className="opacity-80"> / {pg.pages}</span></>
             ) : (
               <><Clock className="w-3.5 h-3.5 opacity-70" aria-hidden />{minutesLeft} min<span className="hidden sm:inline font-medium"> left in chapter</span></>
             )}
@@ -1776,7 +1776,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
           <span className="sm:hidden">Ch. {currentChapterIndex + 1}/{chapters.length}</span>
           <span className="hidden sm:inline">Chapter {currentChapterIndex + 1} of {chapters.length}</span>
         </div>
-      </footer>
+      </div>
 
       {/* Table of Contents */}
       <ReaderContents
