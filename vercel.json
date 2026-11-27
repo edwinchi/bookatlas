@@ -49,6 +49,34 @@
       "destination": "/api"
     },
     {
+      "source": "/pricing",
+      "destination": "/pages/pricing.html"
+    },
+    {
+      "source": "/reading-intelligence",
+      "destination": "/pages/reading-intelligence.html"
+    },
+    {
+      "source": "/reading-intelligence/young-readers",
+      "destination": "/pages/young-readers.html"
+    },
+    {
+      "source": "/reading-intelligence/little-ones",
+      "destination": "/pages/little-ones.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/pages/privacy.html"
+    },
+    {
+      "source": "/legal",
+      "destination": "/pages/legal.html"
+    },
+    {
+      "source": "/refunds",
+      "destination": "/pages/refunds.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
@@ -98,6 +126,15 @@
     },
     {
       "source": "/manifest.webmanifest",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/pages/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
