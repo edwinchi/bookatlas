@@ -100,6 +100,7 @@ const pt: LittleTranslation = {
         'st-shapes': { title: 'As formas', how: 'Diga o nome de cada forma e procurem-na em casa: o relógio redondo, a janela quadrada.' },
         'st-colours': { title: 'Vermelho e azul', how: 'Aponte para algo de cada cor enquanto diz o verso.' },
         'st-chant': { title: 'Redondo, quadrado, bicudo', how: 'Desenhe cada forma no ar com o dedo.' },
+        'st-breathe': { title: 'Respirar como um coelhinho antes de dormir', how: 'Sentem-se bem juntinhos e respirem juntos: três fungadelas curtas pelo nariz, como um coelhinho, e depois uma expiração longa e lenta. Façam isto três vezes e comecem a história de embalar.' },
         'st-sounds': { title: 'O som de uma letra', how: 'Experimente só a letra do nome do seu filho e mais uma ou duas. Sem pressão: é uma brincadeira.' },
         'st-talk': { title: 'Conta-me tu', how: 'Depois de uma história, peça-lhe que lhe conte o que aconteceu e o que ele faria.' },
       },

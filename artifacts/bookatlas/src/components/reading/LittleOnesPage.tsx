@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { Link } from 'wouter';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
-import { ArrowLeft, ArrowRight, Baby, BookHeart, Check, ExternalLink, Eye, HeartHandshake, Info, Lightbulb, MessageCircleHeart, Music, Sparkles, Square, Volume2, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Baby, BookHeart, Check, ExternalLink, Eye, HeartHandshake, Info, Lightbulb, MessageCircleHeart, Music, Sparkles, Square, Volume2, Wind, X } from 'lucide-react';
 import { SelectBox } from '../ui/select-box';
 import { useActiveReader } from './family';
 import { useSpeaker } from './useSpeaker';
@@ -130,7 +130,7 @@ function RhymePlayer({ rhyme, onClose }: { rhyme: Rhyme; onClose: () => void }) 
 // ------------------------------------------------------------------------------------------- the page
 
 const KIND_ICON: Record<Activity['kind'], React.ComponentType<{ className?: string }>> = {
-  contrast: Eye, rhyme: Music, words: Sparkles, book: BookHeart, find: Sparkles, stories: BookHeart, sounds: Sparkles, talk: MessageCircleHeart,
+  contrast: Eye, rhyme: Music, words: Sparkles, book: BookHeart, find: Sparkles, stories: BookHeart, sounds: Sparkles, talk: MessageCircleHeart, breathe: Wind,
 };
 
 /**

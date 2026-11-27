@@ -463,7 +463,7 @@ export default function YoungReadersPage() {
         </div>
       </header>
 
-      <Tabs.Root defaultValue={startStory ? 'stories' : ['first', 'stories', 'sounds', 'games'].includes(qp('tab') ?? '') ? qp('tab')! : reader.kind === 'early' || window.location.hash === '#first-words' ? 'first' : 'stories'} className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <Tabs.Root defaultValue={startStory ? 'stories' : ['first', 'stories', 'sounds', 'games', 'focus'].includes(qp('tab') ?? '') ? qp('tab')! : reader.kind === 'early' || window.location.hash === '#first-words' ? 'first' : 'stories'} className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <Tabs.List aria-label="Activities" className="mb-6 flex flex-wrap gap-2">
           <Tabs.Trigger value="first" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-first"><Baby className="h-4 w-4" aria-hidden />First words</Tabs.Trigger>
           <Tabs.Trigger value="stories" className={`${pill} inline-flex items-center gap-1.5`} data-testid="young-tab-stories"><BookOpen className="h-4 w-4" aria-hidden />Stories</Tabs.Trigger>

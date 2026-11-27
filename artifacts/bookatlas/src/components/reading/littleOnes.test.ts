@@ -31,6 +31,7 @@ test('little ones: every activity points at something that exists', () => {
   }
   assert.equal(activityLink({ id: 'x', kind: 'words', title: '', how: '', minutes: 1, group: 'animals' }), 'reading-intelligence/young-readers?tab=first&first=words&group=animals');
   assert.equal(activityLink({ id: 'x', kind: 'talk', title: '', how: '', minutes: 1 }), null);
+  assert.equal(activityLink({ id: 'x', kind: 'breathe', title: '', how: '', minutes: 2 }), 'reading-intelligence/young-readers?tab=focus#breathing', 'calm breathing before the bedtime story');
   for (const r of RHYMES) assert.ok(r.lines.length >= 4 && r.lines.every((l) => l.text && !/'/.test(l.text)), r.id);
 });
 

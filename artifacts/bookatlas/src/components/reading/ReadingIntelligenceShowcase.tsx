@@ -1,12 +1,12 @@
 import React from 'react';
 import {
-  Accessibility, ArrowRight, Baby, BookOpen, Brain, Check, FileText, Gauge, Headphones, School, Sparkles, Star, TrendingUp, Type, Users, Zap,
+  Accessibility, ArrowRight, Baby, BookOpen, Brain, Check, FileText, Gauge, Headphones, School, Sparkles, Star, Target, TrendingUp, Type, Users, Wind, Zap,
 } from 'lucide-react';
 
 const BASE = import.meta.env.BASE_URL;
 const ri = (id: string) => `${BASE}reading-intelligence#${id}`;
 
-/** The ten Read smarter tools, each with a reason to try it now. */
+/** The twelve Read smarter tools, each with a reason to try it now. */
 const TOOLS: { id: string; icon: React.ComponentType<{ className?: string }>; title: string; pitch: string; cta: string }[] = [
   { id: 'fast-read', icon: Zap, title: 'Fast Read', pitch: 'One word or a few at a time, at the speed you choose. Most readers go noticeably faster in their first session.', cta: 'Try Fast Read' },
   { id: 'speed-check', icon: Gauge, title: 'Speed check', pitch: 'Find out how many words a minute you read in about a minute, then watch the number climb.', cta: 'Check my speed' },
@@ -14,6 +14,8 @@ const TOOLS: { id: string; icon: React.ComponentType<{ className?: string }>; ti
   { id: 'coach', icon: Brain, title: 'AI coach', pitch: 'Summaries in one minute, explanations at your level, flashcards, quizzes and a map of each chapter’s ideas.', cta: 'Meet your coach' },
   { id: 'aids', icon: Accessibility, title: 'Reading aids', pitch: 'Fonts and spacing for dyslexia, focus modes for attention, high contrast for low vision. Keep what helps.', cta: 'See the aids' },
   { id: 'own-text', icon: FileText, title: 'Your own text', pitch: 'Paste an article or open a PDF or EPUB, and use every tool on it: Fast Read, listening and the coach.', cta: 'Bring my text' },
+  { id: 'focus', icon: Target, title: 'Focus gym', pitch: 'Short games that train your attention, and timed focus sprints with nothing else on screen. A little longer each day.', cta: 'Train my focus' },
+  { id: 'breathing', icon: Wind, title: 'Breathing', pitch: 'Fifteen guided breathing practices to settle before reading, when restless, or at bedtime. One minute is enough.', cta: 'Breathe with me' },
   { id: 'progress', icon: TrendingUp, title: 'My progress', pitch: 'Daily goals, streaks, a reading heatmap and your speed over time, so you can see yourself improve.', cta: 'See my progress' },
   { id: 'family', icon: Users, title: 'Family', pitch: 'A profile for everyone at home, from toddlers to grandparents, with a weekly family reading challenge.', cta: 'Set up my family' },
   { id: 'young', icon: Baby, title: 'Young readers', pitch: 'Stories that read themselves aloud, letter sounds and word games in five languages, from birth to age 12.', cta: 'Explore for kids' },
@@ -24,7 +26,7 @@ const YOUNG: { icon: React.ComponentType<{ className?: string }>; title: string;
   { icon: Baby, title: 'First words (0–4)', text: 'Animals, colours, food, family, nature, vehicles and shapes to tap and hear, picture books and a Find it game.' },
   { icon: BookOpen, title: '99 stories read aloud', text: '33 at every level: everyday, bedtime, maths and science. Every word lights up as it is read.' },
   { icon: Type, title: 'Letter sounds', text: 'Every letter, and the letters that work together, each with a word and a picture.' },
-  { icon: Star, title: 'Word games', text: 'Find the picture, build the word, spell it, and collect stars along the way.' },
+  { icon: Star, title: 'Games, focus and calm', text: 'Word games, Listen and catch in every story, attention games and bunny breathing, with stars along the way.' },
 ];
 
 /**
@@ -68,7 +70,7 @@ export function ReadingIntelligenceShowcase({ onOpenBook }: { onOpenBook: () => 
         </ul>
       </nav>
 
-      <div className="grid grid-cols-2 gap-2.5 border-t border-white/10 px-4 py-6 sm:gap-3 sm:border-t-0 sm:px-10 lg:grid-cols-5" data-testid="ri-tools">
+      <div className="grid grid-cols-2 gap-2.5 border-t border-white/10 px-4 py-6 sm:gap-3 sm:border-t-0 sm:px-10 lg:grid-cols-4 xl:grid-cols-6" data-testid="ri-tools">
         {TOOLS.map((t) => (
           <a key={t.id} href={ri(t.id)} className="group flex flex-col rounded-2xl bg-white/[0.07] p-3 ring-1 sm:p-4 ring-white/10 transition hover:-translate-y-0.5 hover:bg-white/[0.12] hover:ring-amber-300/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0">
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-amber-400/15 text-amber-300"><t.icon className="h-5 w-5" aria-hidden /></span>

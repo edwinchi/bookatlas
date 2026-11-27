@@ -100,6 +100,7 @@ const fr: LittleTranslation = {
         'st-shapes': { title: 'Les formes', how: 'Nommez chaque forme, puis cherchez-la à la maison : l’horloge ronde, la fenêtre carrée.' },
         'st-colours': { title: 'Rouge et bleu', how: 'Montrez quelque chose de chaque couleur en disant le vers.' },
         'st-chant': { title: 'Rond, carré, pointu', how: 'Dessinez chaque forme dans l’air avec le doigt.' },
+        'st-breathe': { title: 'Respirer comme un lapin avant de dormir', how: 'Asseyez-vous tout près et respirez ensemble : trois petits reniflements par le nez, comme un lapin, puis une longue expiration lente. Faites-le trois fois, puis commencez l’histoire du soir.' },
         'st-sounds': { title: 'Le son d’une lettre', how: 'Essayez seulement la lettre du prénom de votre enfant et une ou deux autres. Sans pression : c’est un jeu.' },
         'st-talk': { title: 'Raconte-moi', how: 'Après une histoire, demandez à votre enfant de vous raconter ce qui s’est passé, et ce qu’il aurait fait.' },
       },

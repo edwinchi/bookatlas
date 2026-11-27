@@ -100,6 +100,7 @@ const nl: LittleTranslation = {
         'st-shapes': { title: 'Vormen', how: 'Benoem elke vorm en zoek hem dan thuis: de ronde klok, het vierkante raam.' },
         'st-colours': { title: 'Rood en blauw', how: 'Wijs bij elke regel iets van die kleur aan.' },
         'st-chant': { title: 'Rond, vierkant, puntig', how: 'Teken elke vorm met je vinger in de lucht.' },
+        'st-breathe': { title: 'Konijnenademhaling voor het slapen', how: 'Ga dicht bij elkaar zitten en adem samen: drie korte snuifjes door de neus, als een konijntje, en dan één lange, rustige uitademing. Doe het drie keer en begin dan aan het verhaaltje voor het slapengaan.' },
         'st-sounds': { title: 'De klank van een letter', how: 'Probeer alleen de letter van de naam van je kind en een of twee andere. Zonder druk: het is spelen.' },
         'st-talk': { title: 'Vertel het eens', how: 'Vraag na een verhaaltje wat er gebeurde, en wat je kind zelf zou doen.' },
       },

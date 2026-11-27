@@ -17,7 +17,8 @@ export type Activity =
   | { id: string; kind: 'find'; title: string; how: string; minutes: number }
   | { id: string; kind: 'stories'; title: string; how: string; minutes: number }
   | { id: string; kind: 'sounds'; title: string; how: string; minutes: number }
-  | { id: string; kind: 'talk'; title: string; how: string; minutes: number };
+  | { id: string; kind: 'talk'; title: string; how: string; minutes: number }
+  | { id: string; kind: 'breathe'; title: string; how: string; minutes: number };
 
 export interface Stage {
   id: StageId; from: number; to: number; name: string; ages: string; headline: string; why: string;
@@ -110,6 +111,7 @@ export const STAGES: Stage[] = [
       { id: 'st-shapes', kind: 'words', title: 'Shapes', how: 'Name each shape, then look for it at home: the round clock, the square window.', minutes: 2, group: 'shapes' },
       { id: 'st-colours', kind: 'rhyme', title: 'Red and blue', how: 'Point at something of each colour as you say the line.', minutes: 2, rhyme: 'red-and-blue' },
       { id: 'st-chant', kind: 'rhyme', title: 'Round, square, point', how: 'Draw each shape in the air with your finger.', minutes: 2, rhyme: 'round-square-point' },
+      { id: 'st-breathe', kind: 'breathe', title: 'Bunny breaths before bed', how: 'Sit close and breathe together: three little sniffs in through the nose like a bunny, then one long, slow breath out. Do it three times, then start the bedtime story.', minutes: 2 },
       { id: 'st-sounds', kind: 'sounds', title: 'The sound of a letter', how: 'Try just the letter of your child’s name and one or two more. No pressure: this is play.', minutes: 2 },
       { id: 'st-talk', kind: 'talk', title: 'Tell it back', how: 'After a story, ask your child to tell you what happened, and what they would do.', minutes: 5 },
     ],
@@ -233,6 +235,7 @@ export function activityLink(a: Activity): string | null {
     case 'find': return `${base}?tab=first&first=find`;
     case 'stories': return `${base}?tab=stories&level=1`;
     case 'sounds': return `${base}?tab=sounds`;
+    case 'breathe': return `${base}?tab=focus#breathing`;
     default: return null;
   }
 }

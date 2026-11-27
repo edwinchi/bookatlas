@@ -225,8 +225,15 @@ function Breathing({ kid, onFinish }: { kid: boolean; onFinish: (name: string) =
 export function FocusGym({ forKids = false }: { forKids?: boolean }) {
   const { p, save, reader } = useFocusProgress();
   const kid = forKids || young(reader.kind);
-  const [game, setGame] = useState<GameId | null>(null);
+  // A #breathing link (from the home page or Little ones' bedtime plan) opens the breathing practices at once.
+  const fromLink = useRef(typeof window !== 'undefined' && window.location.hash === '#breathing');
+  const [game, setGame] = useState<GameId | null>(fromLink.current ? 'breath' : null);
   const [run, setRun] = useState(0);
+  useEffect(() => {
+    if (!fromLink.current) return;
+    const id = window.setTimeout(() => document.getElementById('breathing')?.scrollIntoView({ block: 'start' }), 400);
+    return () => window.clearTimeout(id);
+  }, []);
   const [result, setResult] = useState<{ score: number; note: string } | null>(null);
   const plan = todaysPlan(p);
   const streak = focusStreak(p);
@@ -238,7 +245,7 @@ export function FocusGym({ forKids = false }: { forKids?: boolean }) {
   if (game) {
     const info = GAMES[game];
     return (
-      <div className="space-y-4 rounded-3xl bg-white p-5 ring-1 ring-slate-200 sm:p-6" data-testid={`focus-game-${game}`}>
+      <div id={game === 'breath' ? 'breathing' : undefined} className="scroll-mt-24 space-y-4 rounded-3xl bg-white p-5 ring-1 ring-slate-200 sm:p-6" data-testid={`focus-game-${game}`}>
         <div className="flex items-center justify-between gap-3">
           <p className="flex items-center gap-2 text-lg font-bold text-slate-900"><info.icon className="h-5 w-5 text-indigo-600" aria-hidden />{kid ? info.kidName : info.name}</p>
           {game !== 'breath' && <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-bold text-indigo-800">Level {p.levels[game]}</span>}
