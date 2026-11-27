@@ -222,7 +222,7 @@ export default function LittleOnesPage() {
           </div>
         </section>
 
-        <section aria-label={stage.name} className="grid gap-3 sm:grid-cols-2" data-testid="little-plan">
+        <section aria-label={`${ui.today.replace(/\s*:\s*$/, '')} · ${stage.name}`} className="grid gap-3 sm:grid-cols-2" data-testid="little-plan">
           {stage.activities.map((a) => {
             const Icon = KIND_ICON[a.kind];
             const done = today.includes(a.id);

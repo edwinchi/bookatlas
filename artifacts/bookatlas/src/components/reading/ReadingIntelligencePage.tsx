@@ -64,7 +64,8 @@ function Feature({ icon: Icon, title, children, how, tryIt }: { icon: React.Comp
       <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Icon className="h-4 w-4 text-indigo-600" aria-hidden />{title}</p>
       <p className="mt-1.5 flex-1 text-[13px] leading-relaxed text-slate-600">{children}</p>
       {how && (
-        <p className="mt-3 flex flex-wrap items-center gap-1 text-[11px] font-semibold text-slate-700" aria-label={`Where: ${how.map((x) => x[1]).join(', then ')}`}>
+        <p className="mt-3 flex flex-wrap items-center gap-1 text-[11px] font-semibold text-slate-700">
+          <span className="sr-only">{`Where: ${how.map((x) => x[1]).join(', then ')}`}</span>
           <span className="mr-0.5 text-slate-500" aria-hidden>Where:</span>
           {how.map(([I, label], i) => (
             <React.Fragment key={i}>
@@ -307,7 +308,7 @@ export default function ReadingIntelligencePage() {
           <div className="mt-6 rounded-2xl bg-white p-5 ring-1 ring-slate-200">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Bold className="h-4 w-4 text-indigo-600" aria-hidden />Bold word starts</p>
-              <Toggle.Root pressed={boldDemo} onPressedChange={setBoldDemo} aria-label="Bold word starts" className="min-h-10 rounded-full bg-slate-100 px-4 text-xs font-bold text-slate-700 hover:bg-slate-200 data-[state=on]:bg-indigo-600 data-[state=on]:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">{boldDemo ? 'Bold starts on' : 'Bold starts off'}</Toggle.Root>
+              <Toggle.Root pressed={boldDemo} onPressedChange={setBoldDemo} className="min-h-10 rounded-full bg-slate-100 px-4 text-xs font-bold text-slate-700 hover:bg-slate-200 data-[state=on]:bg-indigo-600 data-[state=on]:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">{boldDemo ? 'Bold starts on' : 'Bold starts off'}</Toggle.Root>
             </div>
             <p className="mt-3 font-serif-book text-[17px] leading-relaxed text-slate-800">{boldDemo ? <BoldStarts text={SAMPLE_PARAS[1]!} /> : SAMPLE_PARAS[1]}</p>
             <p className="mt-2 text-[11px] text-slate-500">The start of each word in bold leads the eye along the line. Turn it on in the reader under Aa → Aids.</p>
