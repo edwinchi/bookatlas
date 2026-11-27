@@ -59,6 +59,10 @@ export async function createTestServer(): Promise<TestServerInstance> {
   testApp.use(innerApp);
 
   const server = http.createServer(testApp);
+  // Longer than the client's idle keep-alive (about 4 s), so the client always closes an idle connection first: with
+  // Node's 5 s default the server could close one just as a busy test reused it (ECONNRESET, 2026-11-28).
+  server.keepAliveTimeout = 65_000;
+  server.headersTimeout = 66_000;
   await new Promise<void>((resolve, reject) => {
     server.listen(0, '127.0.0.1', () => resolve());
     server.on('error', reject);
