@@ -114,7 +114,7 @@ export default function PricingPage() {
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 group-data-[state=on]:bg-indigo-600 group-data-[state=on]:text-white"><Icon className="h-5 w-5" aria-hidden /></span>
               <span className="min-w-0">
                 <span className="block text-sm font-bold text-slate-900">{name}</span>
-                <span className="block truncate text-[11px] text-slate-500">{hint}</span>
+                <span className="block truncate text-[11px] text-slate-600">{hint}</span>
               </span>
             </ToggleGroup.Item>
           ))}
@@ -145,11 +145,11 @@ export default function PricingPage() {
                     {(['standard', 'pro'] as const).map((id) => (
                       <ToggleGroup.Item key={id} value={id} className="rounded-xl border border-slate-300 px-3 py-2.5 text-left outline-none data-[state=on]:border-indigo-600 data-[state=on]:bg-indigo-50 focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
                         <span className="block text-sm font-bold text-slate-900">{PLANS[id].label}</span>
-                        <span className="block text-[11px] text-slate-500">Keep {Math.round((1 - PLANS[id].commission) * 100)}%{PLANS[id].monthlyFee ? ` · ${euro(PLANS[id].monthlyFee)} a month` : ' · no monthly fee'}</span>
+                        <span className="block text-[11px] text-slate-600">Keep {Math.round((1 - PLANS[id].commission) * 100)}%{PLANS[id].monthlyFee ? ` · ${euro(PLANS[id].monthlyFee)} a month` : ' · no monthly fee'}</span>
                       </ToggleGroup.Item>
                     ))}
                   </ToggleGroup.Root>
-                  {proFrom !== null && <p className="mt-2 text-xs text-slate-500">At this price, Author Pro pays more from {proFrom} copies a month.</p>}
+                  {proFrom !== null && <p className="mt-2 text-xs text-slate-600">At this price, Author Pro pays more from {proFrom} copies a month.</p>}
                 </div>
               </Section>
             )}
@@ -169,12 +169,12 @@ export default function PricingPage() {
                   </label>
                 </div>
                 <dl className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 text-sm sm:grid-cols-4">
-                  <div><dt className="text-xs text-slate-500">Narration, once</dt><dd className="font-bold text-slate-900">{euro(audio.narration)}</dd></div>
-                  <div><dt className="text-xs text-slate-500">Listening time</dt><dd className="font-bold text-slate-900">about {audio.hours} h</dd></div>
-                  <div><dt className="text-xs text-slate-500">You earn per sale</dt><dd className="font-bold text-slate-900">{euro(audio.perSale)}</dd></div>
-                  <div><dt className="text-xs text-slate-500">Paid back after</dt><dd className="font-bold text-slate-900">{audio.paysBackAfter === null ? '—' : `${audio.paysBackAfter} sales`}</dd></div>
+                  <div><dt className="text-xs text-slate-600">Narration, once</dt><dd className="font-bold text-slate-900">{euro(audio.narration)}</dd></div>
+                  <div><dt className="text-xs text-slate-600">Listening time</dt><dd className="font-bold text-slate-900">about {audio.hours} h</dd></div>
+                  <div><dt className="text-xs text-slate-600">You earn per sale</dt><dd className="font-bold text-slate-900">{euro(audio.perSale)}</dd></div>
+                  <div><dt className="text-xs text-slate-600">Paid back after</dt><dd className="font-bold text-slate-900">{audio.paysBackAfter === null ? '—' : `${audio.paysBackAfter} sales`}</dd></div>
                 </dl>
-                <p className="text-xs text-slate-500">€24.99 up to 60,000 words, then €3.99 for every further 10,000 words, VAT included. Readers can also buy the eBook and audiobook together.</p>
+                <p className="text-xs text-slate-600">€24.99 up to 60,000 words, then €3.99 for every further 10,000 words, VAT included. Readers can also buy the eBook and audiobook together.</p>
               </Section>
             )}
 
@@ -191,12 +191,12 @@ export default function PricingPage() {
                     <input className={field} type="number" min={24} max={800} value={pages || ''} onChange={(e) => setPages(Number(e.target.value))} />
                   </label>
                 </div>
-                <p className={`text-xs ${tooFew ? 'font-semibold text-rose-700' : 'text-slate-500'}`}>{binding === 'hardcover' ? 'Hardcovers take 75 to 550 pages.' : 'Paperbacks take 24 to 800 pages (Amazon KDP: up to 828 on white paper).'}</p>
+                <p className={`text-xs ${tooFew ? 'font-semibold text-rose-700' : 'text-slate-600'}`}>{binding === 'hardcover' ? 'Hardcovers take 75 to 550 pages.' : 'Paperbacks take 24 to 800 pages (Amazon KDP: up to 828 on white paper).'}</p>
                 <dl className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 text-sm sm:grid-cols-4">
-                  <div><dt className="text-xs text-slate-500">Spine width</dt><dd className="font-bold text-slate-900">{spec.spineIn.toFixed(3)} in · {inchesToMm(spec.spineIn)} mm</dd></div>
-                  <div><dt className="text-xs text-slate-500">Full cover with bleed</dt><dd className="font-bold text-slate-900">{spec.widthIn.toFixed(2)} × {spec.heightIn.toFixed(2)} in</dd></div>
-                  <div><dt className="text-xs text-slate-500">At 300 dpi</dt><dd className="font-bold text-slate-900">{spec.widthPx} × {spec.heightPx} px</dd></div>
-                  <div><dt className="text-xs text-slate-500">Spine text</dt><dd className="font-bold text-slate-900">{spec.spineTextAllowed ? 'Allowed' : 'Under 80 pages: no'}</dd></div>
+                  <div><dt className="text-xs text-slate-600">Spine width</dt><dd className="font-bold text-slate-900">{spec.spineIn.toFixed(3)} in · {inchesToMm(spec.spineIn)} mm</dd></div>
+                  <div><dt className="text-xs text-slate-600">Full cover with bleed</dt><dd className="font-bold text-slate-900">{spec.widthIn.toFixed(2)} × {spec.heightIn.toFixed(2)} in</dd></div>
+                  <div><dt className="text-xs text-slate-600">At 300 dpi</dt><dd className="font-bold text-slate-900">{spec.widthPx} × {spec.heightPx} px</dd></div>
+                  <div><dt className="text-xs text-slate-600">Spine text</dt><dd className="font-bold text-slate-900">{spec.spineTextAllowed ? 'Allowed' : 'Under 80 pages: no'}</dd></div>
                 </dl>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <label className={label}>Where most readers live
@@ -209,7 +209,7 @@ export default function PricingPage() {
                     <input className={field} type="number" min={0} step={0.01} placeholder="From the printer's calculator" value={printCost} onChange={(e) => setPrintCost(e.target.value === '' ? '' : Math.max(0, Number(e.target.value)))} />
                   </label>
                 </div>
-                <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
                   <span>Look up the printing cost for these specs:</span>
                   <a className="inline-flex items-center gap-1 font-semibold text-indigo-700 hover:underline" href="https://kdp.amazon.com/en_US/help/topic/G201834340" target="_blank" rel="noreferrer">Amazon KDP printing costs<ExternalLink className="h-3 w-3" aria-hidden /></a>
                   <a className="inline-flex items-center gap-1 font-semibold text-indigo-700 hover:underline" href="https://www.lulu.com/pricing" target="_blank" rel="noreferrer">Lulu pricing calculator<ExternalLink className="h-3 w-3" aria-hidden /></a>
@@ -228,13 +228,13 @@ export default function PricingPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <caption className="sr-only">Earnings per eBook sale by platform</caption>
-                    <thead><tr className="border-b border-slate-200 text-xs text-slate-500"><th className="py-2 font-semibold">Platform</th><th className="py-2 font-semibold">Share</th><th className="whitespace-nowrap py-2 text-right font-semibold">You earn</th></tr></thead>
+                    <thead><tr className="border-b border-slate-200 text-xs text-slate-600"><th className="py-2 font-semibold">Platform</th><th className="py-2 font-semibold">Share</th><th className="whitespace-nowrap py-2 text-right font-semibold">You earn</th></tr></thead>
                     <tbody>
                       {rows.map((r) => (
                         <tr key={r.id} className={`border-b border-slate-100 align-top ${r.ours ? 'bg-indigo-50/60' : ''}`}>
                           <td className="py-2.5 pr-3">
                             <span className={`block font-semibold ${r.ours ? 'text-indigo-900' : 'text-slate-900'}`}>{r.name}{r.ours && <Check className="ml-1 inline h-3.5 w-3.5 text-indigo-600" aria-hidden />}</span>
-                            <span className="block text-[11px] leading-snug text-slate-500">{r.note}{r.source && <> <a href={r.source} target="_blank" rel="noreferrer" className="font-semibold text-indigo-700 hover:underline">Source</a></>}</span>
+                            <span className="block text-[11px] leading-snug text-slate-600">{r.note}{r.source && <> <a href={r.source} target="_blank" rel="noreferrer" className="font-semibold text-indigo-700 hover:underline">Source</a></>}</span>
                           </td>
                           <td className="whitespace-nowrap py-2.5 pr-3 tabular-nums text-slate-700">{r.rate}</td>
                           <td className={`whitespace-nowrap py-2.5 text-right font-bold tabular-nums ${r.ours ? 'text-indigo-900' : 'text-slate-900'}`}>{euro(r.perSale)}</td>
@@ -243,7 +243,7 @@ export default function PricingPage() {
                     </tbody>
                   </table>
                 </div>
-                <p className="text-[11px] leading-relaxed text-slate-500">Other platforms' figures are estimates from their published headline rates; their own terms decide what they pay. Lulu's bookstore share is before its own fees, and it reaches far fewer readers than the large stores. Amazon's delivery fee depends on your file size ({fileMb} MB here).
+                <p className="text-[11px] leading-relaxed text-slate-600">Other platforms' figures are estimates from their published headline rates; their own terms decide what they pay. Lulu's bookstore share is before its own fees, and it reaches far fewer readers than the large stores. Amazon's delivery fee depends on your file size ({fileMb} MB here).
                   <label className="ml-1 inline-flex items-center gap-1">File size<input type="number" min={0} step={0.5} value={fileMb} onChange={(e) => setFileMb(Math.max(0, Number(e.target.value)))} className="w-16 rounded-md border border-slate-300 px-1.5 py-0.5 text-[11px]" aria-label="eBook file size in MB" />MB</label>
                 </p>
               </Section>
@@ -287,7 +287,7 @@ export default function PricingPage() {
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Included with BooksAtlas</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-600">Included with BooksAtlas</p>
               <ul className="mt-3 space-y-2 text-sm text-slate-700">
                 {['No setup, delivery or listing fee', 'Word and PDF converted to EPUB for you', 'Store-ready check before you publish', 'Readers pay with iDEAL, cards, Apple Pay and Google Pay', 'VAT invoices handled for every sale', 'Sales dashboard, CSV export and monthly statements'].map((t) => (
                   <li key={t} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />{t}</li>
@@ -298,7 +298,7 @@ export default function PricingPage() {
                   <>
                     {PRINT_PACKAGES.map((p) => (
                       <a key={p.id} href={enquiryHref(p.id)} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm hover:border-indigo-300 hover:bg-indigo-50">
-                        <span><span className="block font-semibold text-slate-900">{p.name}</span><span className="block text-[11px] text-slate-500">{p.body}</span></span>
+                        <span><span className="block font-semibold text-slate-900">{p.name}</span><span className="block text-[11px] text-slate-600">{p.body}</span></span>
                         <span className="shrink-0 font-bold text-slate-900">{euro(p.price)}</span>
                       </a>
                     ))}

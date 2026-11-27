@@ -6,7 +6,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { chromium } from '@playwright/test';
 
 const base = (process.env.BASE_URL || 'http://localhost:5173').replace(/\/+$/, '');
-const PAGES = ['/', '/reading-intelligence', '/reading-intelligence/young-readers', '/reading-intelligence/young-readers?tab=focus', '/reading-intelligence/little-ones', '/sign-up', '/privacy'];
+const PAGES = ['/', '/reading-intelligence', '/reading-intelligence/young-readers', '/reading-intelligence/young-readers?tab=focus', '/reading-intelligence/little-ones', '/sign-up', '/privacy', '/pricing', '/publish', '/about'];
 
 test('public pages have no accessibility violations', async () => {
   const browser = await chromium.launch();
