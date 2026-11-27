@@ -5,6 +5,20 @@ import assert from 'node:assert/strict';
 import AxeBuilder from '@axe-core/playwright';
 import { chromium } from '@playwright/test';
 
+// axe re-reads the page's stylesheets with fetch, which the site's policy blocks for Google Fonts; those reports come
+// from the scan, not from readers, so they are kept out of the site's logs (2026-11-28).
+const launch = chromium.launch.bind(chromium);
+chromium.launch = async (...args) => {
+  const browser = await launch(...args);
+  const newContext = browser.newContext.bind(browser);
+  browser.newContext = async (options) => {
+    const context = await newContext(options);
+    await context.route('**/api/csp-report', (route) => route.fulfill({ status: 204 }));
+    return context;
+  };
+  return browser;
+};
+
 const base = (process.env.BASE_URL || 'http://localhost:5173').replace(/\/+$/, '');
 const PAGES = ['/', '/reading-intelligence', '/reading-intelligence/young-readers', '/reading-intelligence/young-readers?tab=focus', '/reading-intelligence/little-ones', '/sign-up', '/privacy', '/pricing', '/legal', '/refunds'];
 

@@ -13,6 +13,16 @@ export class PaymentRequestError extends Error {
   constructor(message: string, public status: number) { super(message); }
 }
 
+/** Whether payments are live: asked once per page load and shared by every user of the hook (the store and the cart
+ * each asked on their own, 2026-11-28). A failed answer is not kept, so the next mount asks again. */
+let configOnce: Promise<{ enabled: boolean; crypto: boolean }> | null = null;
+export function paymentsConfig() {
+  configOnce ??= fetch('/api/payments/config').then((r) => (r.ok ? r.json() : Promise.reject(new Error(`config ${r.status}`))))
+    .then((d: { enabled?: boolean; crypto?: boolean }) => ({ enabled: !!d.enabled, crypto: !!d.crypto }))
+    .catch((e: unknown) => { configOnce = null; throw e; });
+  return configOnce;
+}
+
 /** Stripe Checkout (TASK-0004): whether payments are live, starting a checkout, and the buyer's books. */
 export function usePayments() {
   const { getToken } = useAuth();
@@ -22,7 +32,7 @@ export function usePayments() {
   const [crypto, setCrypto] = useState(false);
 
   useEffect(() => {
-    fetch('/api/payments/config').then((r) => r.json()).then((d) => { setEnabled(!!d.enabled); setCrypto(!!d.crypto); }).catch(() => { setEnabled(false); setCrypto(false); });
+    paymentsConfig().then((d) => { setEnabled(d.enabled); setCrypto(d.crypto); }).catch(() => { setEnabled(false); setCrypto(false); });
   }, []);
 
   const request = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
