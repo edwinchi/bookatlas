@@ -101,6 +101,11 @@ test('readers follow authors; the new-book e-mail has a one-click unsubscribe th
   assert.equal((await fetch('/api/follows/ada-writer', { method: 'POST', headers: { 'x-test-role': 'reader' } })).status, 201, 'following twice is harmless');
   assert.equal((await (await fetch('/api/follows/ada-writer/mine', as('reader'))).json()).following, true);
   assert.equal((await (await fetch('/api/catalog/authors/ada-writer')).json()).followers, 1);
+  // The home page shows the followed author's new book, even without e-mail.
+  assert.equal((await fetch('/api/follows/new', as('unauthenticated'))).status, 401);
+  const fresh = await (await fetch('/api/follows/new', as('reader'))).json();
+  assert.equal(fresh.following, 1);
+  assert.ok(fresh.books.some((b: { title: string; authorSlug: string }) => b.title === 'The Reviewed Codex' && b.authorSlug === 'ada-writer'), JSON.stringify(fresh));
 
   const service = await import('../../artifacts/api-server/src/bookatlas/follows/service.ts');
   const [f] = await service.followersOf('ada-writer');

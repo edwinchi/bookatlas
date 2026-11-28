@@ -1,7 +1,8 @@
 import type { Express, Request, Response } from 'express';
 import { logger } from '../../lib/logger.js';
 import type { CatalogStore } from '../catalog/store.js';
-import { authorProfile } from '../reviews/routes.js';
+import { authorProfile, authorSlug } from '../reviews/routes.js';
+import { newFromFollowed } from './newBooks.js';
 import { FollowError, follow, followsOf, readUnfollowToken, unfollow } from './service.js';
 
 function guarded(handler: (req: Request, res: Response) => Promise<void>) {
@@ -22,6 +23,16 @@ const page = (title: string, body: string) => `<!doctype html><html lang="en"><h
 
 /** Follow authors (cycle 5c): follow, unfollow, the reader's state, and the signed one-click unsubscribe link. */
 export function mountFollows(app: Express, catalog: CatalogStore) {
+  // New from the authors the reader follows: their books of the last months, newest first (works without e-mail).
+  app.get('/api/follows/new', guarded(async (req, res) => {
+    const follows = (await followsOf(signedIn(req).id)).slice(0, 30);
+    const lists = await Promise.all(follows.map(async (f) => {
+      const page = await catalog.search({ q: f.author_name || f.author_slug.replace(/-/g, ' '), limit: 50 }).catch(() => ({ books: [] }));
+      return { slug: f.author_slug, followedAt: f.created_at, books: (page.books as { author: string }[]).filter((b) => authorSlug(b.author) === f.author_slug) };
+    }));
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json({ following: follows.length, books: newFromFollowed(lists as Parameters<typeof newFromFollowed>[0]) });
+  }));
   app.get('/api/follows/:slug/mine', guarded(async (req, res) => {
     const who = signedIn(req);
     res.setHeader('Cache-Control', 'private, no-store');

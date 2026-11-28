@@ -10,6 +10,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Header } from './components/Header';
 import { HeroCarousel } from './components/HeroCarousel';
 import { ContinueShelf } from './components/reader/ContinueShelf';
+import { FollowedShelf } from './components/FollowedShelf';
 import { FilterSidebar } from './components/FilterSidebar';
 import { MobileFilters } from './components/MobileFilters';
 import { BookCard, focusOpener } from './components/BookCard';
@@ -480,6 +481,12 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
     });
   };
   /** The home page's Continue row: the book is loaded by id and opens at this device's saved place. */
+  /** A book from a home row that only knows its id: its page opens. */
+  const openBookById = async (id: string) => {
+    const book = booksRef.current.find((b) => b.id === id) ?? (await fetchFullBook(id).catch(() => null));
+    if (book) setSelectedBookForDetail(book);
+    else setCheckoutNotice({ tone: 'info', text: 'That book is no longer in the store.' });
+  };
   const continueBook = async (id: string, listen: boolean) => {
     const book = booksRef.current.find((b) => b.id === id) ?? (await fetchFullBook(id).catch(() => null));
     if (book) await handleReadSample(book, { listen });
@@ -953,6 +960,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
             {activeTab === 'store' && !filters.searchQuery && filters.genre === 'All Genres' && (
               <div className="space-y-8 my-6">
                 <ContinueShelf onOpen={continueBook} />
+                {account && <FollowedShelf accountId={account.id} onOpen={openBookById} />}
 
                 {/* Category Quick Pills */}
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
