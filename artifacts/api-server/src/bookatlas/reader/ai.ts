@@ -167,7 +167,8 @@ async function readablePassage(book: Book, who: Identity, raw: unknown) {
   const text = clean(raw, 2000);
   if (text.length < 1) throw new ReaderError('Select some text first.');
   const { chapters } = await readableChapters(book, who);
-  const probe = text.replace(/\s+/g, ' ').slice(0, 80).toLowerCase();
+  // The first paragraph is the probe: a page sent to the translator joins several (2026-11-28).
+  const probe = (text.split(/\n\s*\n/)[0] ?? text).replace(/\s+/g, ' ').trim().slice(0, 80).toLowerCase();
   const found = chapters.some((c) => c.content.some((p) => p.replace(/\s+/g, ' ').toLowerCase().includes(probe)));
   if (!found) throw new ReaderError('Select text from the book you are reading.', 400);
   return text;

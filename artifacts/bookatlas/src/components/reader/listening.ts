@@ -135,25 +135,38 @@ type TranslatorApi = {
   create: (o: { sourceLanguage: string; targetLanguage: string }) => Promise<{ translate: (t: string) => Promise<string> }>;
 };
 const translators = new Map<string, Promise<{ translate: (t: string) => Promise<string> } | null>>();
+/** A promise that gives `fallback` if it has not settled in `ms` (the device translator can wait on a download). */
+export function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const t = setTimeout(() => resolve(fallback), ms);
+    p.then((v) => { clearTimeout(t); resolve(v); }, () => { clearTimeout(t); resolve(fallback); });
+  });
+}
 /**
  * Free, private translation on the reader's own device (Chrome on computers has a built-in translator).
- * Returns null where the browser has none, so the caller can use BooksAtlas's translator instead.
+ * Returns null where the browser has none, so the caller can use BooksAtlas's translator instead. The device
+ * translator is only used once it is ready: a language it still has to download is fetched in the background for
+ * next time, and a check or translation that takes too long falls back too (it waited for ever, 2026-11-28).
  */
 export async function translateOnDevice(text: string, from: string, to: string): Promise<string | null> {
   const api = (globalThis as unknown as { Translator?: TranslatorApi }).Translator;
   if (!api?.availability || !api.create) return null;
   const key = `${from}>${to}`;
   if (!translators.has(key)) {
-    translators.set(key, (async () => {
-      try {
-        const a = await api.availability({ sourceLanguage: from, targetLanguage: to });
-        return a === 'unavailable' ? null : await api.create({ sourceLanguage: from, targetLanguage: to });
-      } catch { return null; }
-    })());
+    const made = (async () => {
+      const a = await within(api.availability({ sourceLanguage: from, targetLanguage: to }).catch(() => 'unavailable'), 3000, 'unavailable');
+      if (a !== 'available' && a !== 'readily') {
+        if (a === 'downloadable' || a === 'downloading' || a === 'after-download') void api.create({ sourceLanguage: from, targetLanguage: to }).catch(() => undefined);
+        setTimeout(() => translators.delete(key), 60_000); // look again later: the download may be done
+        return null;
+      }
+      return within(api.create({ sourceLanguage: from, targetLanguage: to }).catch(() => null), 5000, null);
+    })();
+    translators.set(key, made);
   }
   const t = await translators.get(key)!;
   if (!t) return null;
-  try { return await t.translate(text); } catch { return null; }
+  return within(t.translate(text).catch(() => null), 15000, null);
 }
 
 export const formatClock = (s: number) => {

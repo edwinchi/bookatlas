@@ -29,6 +29,7 @@ import { TRY_HINT, TRY_TARGET, type TryTool } from './reader/tryTools';
 import { FocusSprintPicker, FocusSprintRing, useFocusSprint } from './reader/FocusSprint';
 import { listenFrom, partForParagraph, readPlace, resumeSecond, savePlace, startPlace } from './reader/resumePlace';
 import { useDialogFocus } from './reader/useDialogFocus';
+import { TranslatePanel } from './reader/TranslatePanel';
 import { narrationTimeline, wordAt, type TimedWord } from './reader/narrationSync';
 import { ReaderContents, GoToPopover } from './reader/ReaderNavigation';
 import { useDeviceVoice, type Translated } from './reader/useDeviceVoice';
@@ -1030,6 +1031,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
   useEffect(() => { loadReaderFont(settings.fontFamily); }, [settings.fontFamily]);
   useEffect(() => () => clearSpoken(), []);
   const [showFastRead, setShowFastRead] = useState(false);
+  // Read in your language (2026-11-28): the page on screen, translated, beside the book.
+  const [showTranslate, setShowTranslate] = useState(false);
   const paged = layout.mode === 'page';
   const [portal, setPortal] = useState<HTMLDivElement | null>(null);
   const containerRef = useCallback((el: HTMLDivElement | null) => {
@@ -1280,6 +1283,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
         turn(-1);
       } else if (e.key === 'Escape') {
         if (selectionBar) setSelectionBar(null);
+        else if (showTranslate) setShowTranslate(false);
         else if (showCommunity) setShowCommunity(false);
         else if (showAssistant) setShowAssistant(false);
         else if (showNotebook) setShowNotebook(false);
@@ -1435,6 +1439,13 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
             <NotebookPen className="w-4 h-4" />
           </button>
 
+          {/* Read in your language (2026-11-28) */}
+          <button type="button" onClick={() => setShowTranslate(!showTranslate)} aria-pressed={showTranslate}
+            aria-label="Read in your language: this page, translated" title="Read in your language" data-testid="button-translate"
+            className={`hidden min-h-12 min-w-12 place-items-center rounded-lg transition-colors cursor-pointer sm:grid ${showTranslate ? 'bg-indigo-600 text-white' : 'hover:bg-black/10 opacity-75'}`}>
+            <Languages className="w-4 h-4" />
+          </button>
+
           {/* Fast Read (Reading Intelligence): one word or a few at a time, and a reading-speed check */}
           <button
             onClick={() => setShowFastRead(true)}
@@ -1505,6 +1516,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
                   { label: 'Ask the book, study, translate', icon: GraduationCap, on: () => openAssistant('ask'), show: true },
                   { label: 'Readers and reading groups', icon: Users, on: toggleCommunity, show: !!book.hasReaderContent },
                   { label: 'Notebook', icon: NotebookPen, on: toggleNotebook, show: true },
+                  { label: 'Read in your language', icon: Languages, on: () => setShowTranslate(true), show: true },
                   { label: 'Fast Read and speed check', icon: Zap, on: () => setShowFastRead(true), show: true },
                   { label: 'Share this book', icon: Share2, on: () => setSharing(true), show: true },
                   { label: focus.sprint ? 'Stop the focus sprint' : 'Focus sprint', icon: Timer, on: () => (focus.sprint ? focus.end(false) : setSprintPicker(true)), show: true },
@@ -2282,6 +2294,13 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
 
       {/* Reading aids: the reading guide band */}
       {layout.readingGuide && !showFastRead && <ReadingGuide dark={darkChrome} />}
+      {showTranslate && (
+        <TranslatePanel onClose={() => setShowTranslate(false)} root={() => readerContainerRef.current}
+          bookLang={bookLang} chapterKey={currentChapterIndex} paragraphs={(currentChapter?.content ?? []).map(String)}
+          pageKey={`${currentChapterIndex}:${paged ? pg.page : currentParagraphIndex}`}
+          signedIn={!!account} onSignIn={() => requireSignIn('reading in your language')}
+          translate={(text, to) => ebookApi.translatePassage({ bookId: book.id, text, target: to })} />
+      )}
 
       {/* Fast Read (Reading Intelligence): the chapter one word or a few at a time, and a speed check */}
       <FastReadDialog

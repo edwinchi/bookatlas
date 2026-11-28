@@ -20,3 +20,19 @@ test('device voices: Android language tags never break the reader (RangeError fr
   assert.ok(groups.some((g) => g.lang === 'zh' && g.label === 'Chinese – China'), labels.join(' | '));
   assert.equal(baseLang(undefined as unknown as string), '');
 });
+
+test('device translator: used when ready, skipped (and downloaded for later) when not, never waited on for ever', async () => {
+  const { translateOnDevice } = await import('./listening');
+  const g = globalThis as unknown as { Translator?: unknown };
+  let created = 0;
+  g.Translator = { availability: () => new Promise(() => {}), create: async () => ({ translate: async (t: string) => t }) };
+  const t0 = Date.now();
+  assert.equal(await translateOnDevice('Hello', 'en', 'de'), null, 'a check that never answers');
+  assert.ok(Date.now() - t0 < 4500);
+  g.Translator = { availability: async () => 'downloadable', create: async () => { created += 1; return { translate: async (t: string) => t }; } };
+  assert.equal(await translateOnDevice('Hello', 'en', 'it'), null, 'not ready yet: BooksAtlas translates this time');
+  assert.equal(created, 1, 'the download starts for next time');
+  g.Translator = { availability: async () => 'available', create: async () => ({ translate: async (t: string) => `[pt] ${t}` }) };
+  assert.equal(await translateOnDevice('Hello', 'en', 'pt'), '[pt] Hello');
+  delete g.Translator;
+});

@@ -106,6 +106,12 @@ test('reader AI: ask with sources, study tools, explain, translate and define; h
   assert.equal((await fetch('/api/reader/ai/translate', post('', { bookId, text: 'Paragraph 3 of the opening chapter.', target: 'xx' }))).status, 400);
   const nl = await (await fetch('/api/reader/ai/translate', post('', { bookId, text: 'Paragraph 3 of the opening chapter.', target: 'nl' }))).json();
   assert.deepEqual([nl.language, nl.translation], ['Dutch', 'Alinea 3 van het openingshoofdstuk.']);
+  // Read in your language (2026-11-28): a page of short paragraphs goes in one request, checked by its first paragraph.
+  reply = () => 'Alinea 3.\n\nAlinea 4.';
+  const page = await fetch('/api/reader/ai/translate', post('', { bookId, text: 'Paragraph 3 of the opening chapter.\n\nParagraph 4 of the opening chapter.', target: 'nl' }));
+  assert.equal(page.status, 200);
+  assert.equal((await page.json()).translation, 'Alinea 3.\n\nAlinea 4.');
+  assert.equal((await fetch('/api/reader/ai/translate', post('', { bookId, text: 'Not from this book at all.\n\nParagraph 4 of the opening chapter.', target: 'nl' }))).status, 400, 'still only the book\'s own text');
 
   // Define.
   reply = () => '```json\n{"word":"opening","pronunciation":"/ˈəʊpənɪŋ/","partOfSpeech":"adjective","definitions":["coming at the beginning"],"synonyms":["first","initial"],"example":"the opening chapter","origin":""}\n```';
