@@ -67,6 +67,14 @@ test('reader AI: ask with sources, study tools, explain, translate and define; h
   assert.ok(sent.systemInstruction!.includes('Paragraph 7 of the opening chapter'));
   assert.equal(typeof asked.remaining, 'number');
 
+  // A question in another language: the AI first gives search words in the book's language, then answers from them.
+  reply = (o) => (o.systemInstruction?.startsWith('You help a keyword search') ? 'opening chapter welcome' : 'Le premier chapitre souhaite la bienvenue [1].');
+  const callsBefore = calls.length;
+  const asked2 = await (await fetch('/api/reader/ai/ask', post('', { bookId, question: 'Que dit le début du livre ?', chapterIndex: 0 }))).json();
+  assert.equal(calls.length - callsBefore, 2, 'one call for the search words, one for the answer');
+  assert.ok(asked2.sources.length >= 1 && asked2.sources.some((s: { excerpt: string }) => /opening chapter/.test(s.excerpt)));
+  assert.match(asked2.answer, /\[1\]/);
+
   // Study: JSON is validated; malformed items are dropped; the result is cached for the chapter.
   const chapterIndex = asked.sources[0].chapterIndex;
   reply = () => JSON.stringify({ questions: [

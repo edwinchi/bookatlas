@@ -43,9 +43,11 @@ export async function readableChapters(book: Book, who: Identity): Promise<{ acc
 // ------------------------------------------------------------------------------------------- retrieval
 
 const STOP = new Set('a an and are as at be but by for from has have he her his i in is it its me my of on or our she so that the their them they this to was we were what when where which who why will with you your about into than then there these those do does did how can could would should not no yes also just only over very more most such been being am'.split(' '));
-const terms = (t: string) => t.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').match(/[\p{L}\p{N}]{2,}/gu)?.filter((w) => !STOP.has(w)) ?? [];
+/** A light stem, so "walks", "walked" and "walking" meet "walk". Short words are left alone. */
+export const stem = (w: string) => { const x = w.length > 5 ? w.replace(/(ing|ed)$/, '') : w; return x.length > 3 && !x.endsWith('ss') ? x.replace(/s$/, '') : x; };
+const terms = (t: string) => (t.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').match(/[\p{L}\p{N}]{2,}/gu)?.filter((w) => !STOP.has(w)) ?? []).map(stem);
 
-export interface Passage { chapterIndex: number; paragraphIndex: number; text: string }
+export interface Passage { chapterIndex: number; paragraphIndex: number; text: string; /** 0 when it is only the start of the reader's chapter. */ score: number }
 
 /** Windows of up to 3 paragraphs, ranked by BM25 against the question; ties favour the reader's chapter. */
 export function retrieve(chapters: ReaderChapter[], question: string, near?: { chapterIndex: number }, k = 6): Passage[] {
@@ -53,7 +55,7 @@ export function retrieve(chapters: ReaderChapter[], question: string, near?: { c
   chapters.forEach((c, ci) => {
     for (let p = 0; p < c.content.length; p += 2) {
       const text = c.content.slice(p, p + 3).join('\n');
-      if (text.trim()) windows.push({ chapterIndex: ci, paragraphIndex: p, text: text.slice(0, 1800), words: terms(text) });
+      if (text.trim()) windows.push({ chapterIndex: ci, paragraphIndex: p, text: text.slice(0, 1800), words: terms(text), score: 0 });
     }
   });
   const q = [...new Set(terms(question))];
@@ -71,7 +73,7 @@ export function retrieve(chapters: ReaderChapter[], question: string, near?: { c
     if (near && w.chapterIndex === near.chapterIndex) s += 0.15;
     return { w, s };
   }).sort((a, b) => b.s - a.s);
-  const picked = scored.filter((x) => x.s > 0.15).slice(0, k).map((x) => x.w);
+  const picked = scored.filter((x) => x.s > 0.15).slice(0, k).map((x) => ({ ...x.w, score: Math.round(x.s * 100) / 100 }));
   // A vague question ("what is this chapter about?") gets the start of the reader's chapter.
   if (!picked.length && near) return windows.filter((w) => w.chapterIndex === near.chapterIndex).slice(0, 3).map(({ words: _w, ...p }) => p);
   return picked.map(({ words: _w, ...p }) => p);
@@ -93,14 +95,31 @@ function parseJson<T>(raw: string): T {
   try { return JSON.parse(m ? m[0] : raw) as T; } catch { throw new ReaderError('The AI assistant returned an unreadable answer. Please try again.', 502); }
 }
 
+/** The question as search words in the language of the book (names, synonyms), for the keyword search. */
+async function searchWords(generate: Generate, chapters: ReaderChapter[], question: string) {
+  const sample = chapters.flatMap((c) => c.content).join(' ').replace(/\s+/g, ' ').slice(0, 400);
+  const raw = await generate({
+    temperature: 0, systemInstruction: 'You help a keyword search inside one book. Reply with 4 to 12 search words only, separated by spaces: the important words of the question translated into the language of the book sample, plus close synonyms and any names. No sentences, no punctuation.',
+    messages: [{ role: 'user', text: `Book sample:\n"""${fence(sample)}"""\n\nQuestion: ${question}` }],
+  });
+  return clean(raw, 300).replace(/[^\p{L}\p{N}\s'-]/gu, ' ');
+}
+
 export async function askBook(generate: Generate, book: Book, who: Identity, body: Record<string, unknown>) {
   const question = clean(body.question, 600);
   if (question.length < 3) throw new ReaderError('Ask a question about the book.');
   const { access, chapters } = await readableChapters(book, who);
   const chapterIndex = Math.min(Math.max(0, Number(body.chapterIndex) || 0), Math.max(0, chapters.length - 1));
-  const passages = retrieve(chapters, question, { chapterIndex });
-  if (!passages.length) throw new ReaderError('This book has no readable text to answer from yet.', 409);
   const history = Array.isArray(body.history) ? body.history.slice(-6).map((h) => ({ role: (h as { role?: string }).role === 'assistant' ? 'model' as const : 'user' as const, text: clean((h as { text?: unknown }).text, 1200) })).filter((h) => h.text) : [];
+  let passages = retrieve(chapters, question, { chapterIndex });
+  // Nothing matched word for word (a question in another language, other words for the same thing, or a
+  // follow-up like "and then?"): the AI turns it into search words in the book's own language, once.
+  if (!passages.some((p) => p.score > 0)) {
+    const before = history.filter((h) => h.role === 'user').slice(-1).map((h) => h.text).join(' ');
+    const words = await searchWords(generate, chapters, `${before} ${question}`.trim()).catch(() => '');
+    if (words) { const again = retrieve(chapters, `${words} ${before}`, { chapterIndex }); if (again.some((p) => p.score > 0)) passages = again; }
+  }
+  if (!passages.length) throw new ReaderError('This book has no readable text to answer from yet.', 409);
   const excerpts = passages.map((p, i) => `[${i + 1}] ${chapters[p.chapterIndex]!.title} (chapter ${p.chapterIndex + 1}):\n"""${fence(p.text)}"""`).join('\n\n');
   const answer = await ask(generate, {
     systemInstruction: `${persona(book)}\nAnswer ONLY from the numbered excerpts below and cite them like [1] or [2]. ${access === 'preview' ? 'The reader has only the free preview; if the answer is probably later in the book, say it is beyond the preview without guessing.' : ''}\nThe reader is in chapter ${chapterIndex + 1}: "${chapters[chapterIndex]?.title ?? ''}". Avoid spoilers beyond that chapter unless asked.\n\nExcerpts:\n${excerpts}`,
