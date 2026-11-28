@@ -12,7 +12,7 @@ import { HeroCarousel } from './components/HeroCarousel';
 import { ContinueShelf } from './components/reader/ContinueShelf';
 import { FilterSidebar } from './components/FilterSidebar';
 import { MobileFilters } from './components/MobileFilters';
-import { BookCard } from './components/BookCard';
+import { BookCard, focusOpener } from './components/BookCard';
 import { HorizontalProductCarousel } from './components/HorizontalProductCarousel';
 import { PromotionalFeatureBanner, EditorialCuratorBlock } from './components/EditorialBlock';
 import { ReadingIntelligenceShowcase } from './components/reading/ReadingIntelligenceShowcase';
@@ -1359,7 +1359,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
       )}
       <BookDetailModal
         book={selectedBookForDetail}
-        onClose={() => setSelectedBookForDetail(null)}
+        onClose={() => { const id = selectedBookForDetail?.id; setSelectedBookForDetail(null); focusOpener(id); }}
         // The reader replaces the book window; it used to open behind it (found 2026-11-16).
         onReadSample={(b) => { setSelectedBookForDetail(null); void handleReadSample(b); }}
         onListen={handleListen}

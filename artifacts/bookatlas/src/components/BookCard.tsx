@@ -4,6 +4,29 @@ import { Star, BookOpen, ShoppingBag, Heart, Headphones, Sparkles } from 'lucide
 import { Book } from '../types';
 import { hasRealRating, isSampleTitle } from '../utils/ratings';
 
+/**
+ * The book window changes the address, which rebuilds the store, so the title that opened it is gone when it closes.
+ * Its book and place among that book's titles are kept, and the same title takes the focus back (2026-11-28).
+ */
+let opener: { id: string; nth: number } | null = null;
+const titlesOf = (id: string) => [...document.querySelectorAll<HTMLElement>('[data-testid="book-card-title"]')].filter((el) => el.dataset.bookId === id);
+function rememberOpener(el: HTMLElement, id: string) { opener = { id, nth: Math.max(0, titlesOf(id).indexOf(el)) }; }
+export function focusOpener(id: string | undefined) {
+  const was = opener;
+  opener = null;
+  if (!id || !was || was.id !== id) return;
+  let tries = 0;
+  const go = () => {
+    const a = document.activeElement;
+    if (a && a !== document.body && a.isConnected) return; // something else (Radix, the reader) already has it
+    const list = titlesOf(id);
+    const el = list[was.nth] ?? list[0];
+    if (el) el.focus();
+    else if ((tries += 1) < 20) window.setTimeout(go, 50);
+  };
+  window.setTimeout(go, 60);
+}
+
 interface BookCardProps {
   book: Book;
   onOpenDetail: (book: Book) => void;
@@ -154,13 +177,12 @@ export const BookCard: React.FC<BookCardProps> = ({
           </div>
 
           {/* Title */}
-          <h3
-            data-testid="book-card-title"
-            onClick={() => onOpenDetail(book)}
-            className="font-serif font-bold text-slate-900 text-sm line-clamp-2 min-h-[2.5em] group-hover:text-indigo-600 transition-colors cursor-pointer leading-tight"
-            title={book.title}
-          >
-            {book.title}
+          {/* A button inside the heading, so the book's page opens from the keyboard too (2026-11-28). */}
+          <h3 className="font-serif font-bold text-slate-900 text-sm line-clamp-2 min-h-[2.5em] group-hover:text-indigo-600 transition-colors leading-tight">
+            <button type="button" data-testid="book-card-title" data-book-id={book.id} title={book.title} onClick={(e) => { rememberOpener(e.currentTarget, book.id); onOpenDetail(book); }}
+              className="cursor-pointer text-left rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+              {book.title}
+            </button>
           </h3>
 
           {/* Author */}

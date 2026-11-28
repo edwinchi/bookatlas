@@ -28,6 +28,7 @@ import { formatBytes, offlineBook, removeOffline, saveOffline, type OfflineBook 
 import { TRY_HINT, TRY_TARGET, type TryTool } from './reader/tryTools';
 import { FocusSprintPicker, FocusSprintRing, useFocusSprint } from './reader/FocusSprint';
 import { listenFrom, partForParagraph, readPlace, resumeSecond, savePlace, startPlace } from './reader/resumePlace';
+import { useDialogFocus } from './reader/useDialogFocus';
 import { narrationTimeline, wordAt, type TimedWord } from './reader/narrationSync';
 import { ReaderContents, GoToPopover } from './reader/ReaderNavigation';
 import { useDeviceVoice, type Translated } from './reader/useDeviceVoice';
@@ -1035,6 +1036,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     (readerContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
     setPortal(el);
   }, []);
+  useDialogFocus(readerContainerRef);
   const pg = usePagedLayout(paged, layout.spread, currentChapterIndex, [
     chapters, settings.fontSize, settings.lineHeight, settings.fontFamily, settings.marginWidth, layout.align, layout.boldStarts, layout.boldStrength, inPreview, fullError, isSpeaking,
   ]);
@@ -1309,7 +1311,8 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-label={`Reader: ${book.title}`}
-      className={`fixed inset-0 z-50 flex flex-col transition-colors duration-200 select-text ${getThemeClasses(settings.theme)}`}
+      tabIndex={-1}
+      className={`fixed inset-0 z-50 flex flex-col outline-none transition-colors duration-200 select-text ${getThemeClasses(settings.theme)}`}
       style={settings.theme === 'custom' ? { backgroundColor: layout.customBg, color: layout.customText } : undefined}
     >
       {/* Top eReader Control Header */}

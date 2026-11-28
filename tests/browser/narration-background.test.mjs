@@ -9,7 +9,16 @@ import { chromium, webkit, devices } from '@playwright/test';
 
 const base = (process.env.BASE_URL || 'http://localhost:5173').replace(/\/+$/, '');
 let browser;
-before(async () => { browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] }); });
+before(async () => {
+  browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+  // Clerk's bot protection probes ports that never answer, so "network idle" would never come (as in storefront.test).
+  const newContext = browser.newContext.bind(browser);
+  browser.newContext = async (options) => {
+    const context = await newContext(options);
+    await context.route(/\.protect\.clerk\.com/, (route) => route.abort());
+    return context;
+  };
+});
 after(async () => { await browser?.close(); });
 
 /** A short 16-bit mono WAV tone, so each narration part lasts `seconds`. */
