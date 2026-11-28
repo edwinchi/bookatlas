@@ -202,10 +202,12 @@ export const EXPLAIN_LEVELS = {
   student: 'Explain the passage for a student: what it says, what it means in the book, and any hard words, names or references, with one example. Use short paragraphs or bullets; at most 180 words.',
   professional: 'Explain the passage for a capable professional from outside this field: the main point in precise but plain terms, why it matters, how it could be applied or used at work, and one concrete example. Define any specialist term you use. Use short paragraphs or bullets; at most 220 words.',
   expert: 'Explain the passage for a specialist in its field: the argument, method or technique at work; its assumptions and their limits; the context, sources and traditions it relies on; where it agrees or disagrees with established views or other positions; and how it connects to the rest of the book. Use the field’s exact terms without defining the basics. Use short paragraphs or bullets; at most 280 words.',
+  // For a parent helping a child (Curriculum Intelligence Layer: the parent may not speak the language of the book).
+  parent: 'Explain the passage for a parent who is helping their child read it, and who may not speak the language of the book. In 2 or 3 sentences say what the passage is about and what the child is practising or learning from it. Then list up to 4 hard words: the word as it is in the book, then its meaning. End with one simple thing to do or talk about together at home, starting "At home: ". At most 170 words.',
 } as const;
 export type ExplainLevel = keyof typeof EXPLAIN_LEVELS;
 export const explainLevel = (mode: unknown): ExplainLevel =>
-  mode === 'child' || mode === 'simplify' ? 'child' : mode === 'professional' || mode === 'expert' ? mode : 'student';
+  mode === 'child' || mode === 'simplify' ? 'child' : mode === 'professional' || mode === 'expert' || mode === 'parent' ? mode : 'student';
 
 /** The prompt (the specification's ExplainPromptBuilder): the level's instructions, and the surrounding text as context only. */
 export function explainPrompt(level: ExplainLevel, passage: string, context?: string) {
@@ -228,12 +230,16 @@ export async function explainPassage(generate: Generate, book: Book, who: Identi
   // Context (the sentences around a selection) is used only when it is from the book too.
   const rawContext = clean(body.context, 1500);
   const context = rawContext && rawContext !== text ? await readablePassage(book, who, rawContext).catch(() => '') : '';
-  const key = `${book.id}|${level}|${text}|${context}`;
+  // A parent reads the explanation in their own language (the book's words are kept as they are).
+  const lang = level === 'parent' && LANGUAGES[String(body.target ?? '')] ? String(body.target) : '';
+  const key = `${book.id}|${level}|${lang}|${text}|${context}`;
   const known = explainCache.get(key);
   if (known) return { mode, level, answer: known, cached: true };
   const p = explainPrompt(level, text, context);
+  const inLang = lang ? `
+Write the whole explanation in ${LANGUAGES[lang]}, whatever the language of the book or of these instructions; keep the hard words as they are in the book.` : '';
   const answer = await ask(generate, { systemInstruction: `${persona(book)}
-${p.instruction}`, messages: [{ role: 'user', text: p.message }] });
+${p.instruction}${inLang}`, messages: [{ role: 'user', text: p.message }] });
   if (explainCache.size >= 500) explainCache.delete(explainCache.keys().next().value!);
   explainCache.set(key, answer);
   return { mode, level, answer, cached: false };

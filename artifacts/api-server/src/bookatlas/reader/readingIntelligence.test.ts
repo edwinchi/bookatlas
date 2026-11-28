@@ -38,12 +38,14 @@ test('explain levels and summary lengths (the old names keep working)', () => {
   assert.equal(explainLevel('professional'), 'professional');
   assert.equal(explainLevel('anything'), 'student');
   assert.equal(explainLevel('expert'), 'expert');
-  assert.deepEqual(Object.keys(EXPLAIN_LEVELS), ['child', 'student', 'professional', 'expert']);
+  assert.deepEqual(Object.keys(EXPLAIN_LEVELS), ['child', 'student', 'professional', 'expert', 'parent']);
+  assert.equal(explainLevel('parent'), 'parent');
+  assert.match(EXPLAIN_LEVELS.parent, /At home: /);
   // The four levels ask for different depths (master build plan M7).
   assert.match(EXPLAIN_LEVELS.child, /10-year-old/);
   assert.match(EXPLAIN_LEVELS.professional, /outside this field/);
   assert.match(EXPLAIN_LEVELS.expert, /specialist/);
-  assert.equal(new Set(Object.values(EXPLAIN_LEVELS)).size, 4);
+  assert.equal(new Set(Object.values(EXPLAIN_LEVELS)).size, 5);
   assert.ok(STUDY_KINDS.includes('summary') && STUDY_KINDS.includes('summary_short') && STUDY_KINDS.includes('summary_full'));
 });
 

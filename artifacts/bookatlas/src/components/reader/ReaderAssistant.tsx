@@ -316,8 +316,8 @@ function WordsTab({ api, bookId, languages, request, onRemaining }: { api: Api; 
     if (req.action === 'define') { const d = await run(() => api.defineWord({ bookId, word: req.text, context: req.context })); if (d) setOut({ kind: 'def', def: d }); return; }
     if (req.action === 'translate') { const t = await run(() => api.translatePassage({ bookId, text: req.text, target: lang })); if (t) setOut({ kind: 'text', title: `In ${t.language}`, text: t.translation }); return; }
     setLevel(lvl);
-    const e = await run(() => api.explainPassage({ bookId, text: req.text, context: req.context, mode: lvl }));
-    if (e) setOut({ kind: 'text', title: lvl === 'child' ? 'In simple words' : lvl === 'professional' ? 'For a professional' : lvl === 'expert' ? 'For an expert' : 'Explained', text: e.answer });
+    const e = await run(() => api.explainPassage({ bookId, text: req.text, context: req.context, mode: lvl, ...(lvl === 'parent' ? { target: lang } : {}) }));
+    if (e) setOut({ kind: 'text', title: lvl === 'child' ? 'In simple words' : lvl === 'professional' ? 'For a professional' : lvl === 'expert' ? 'For an expert' : lvl === 'parent' ? `For a parent, in ${languages[lang] ?? 'your language'}` : 'Explained', text: e.answer });
   };
   useEffect(() => { if (request) void go(request, target, request.action === 'simplify' ? 'child' : defaultsFor(activeReader().kind).explain); }, [request?.id]);
   const speak = (t: string) => { try { window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(t)); } catch { /* no voice */ } };
@@ -336,11 +336,20 @@ function WordsTab({ api, bookId, languages, request, onRemaining }: { api: Api; 
       )}
       {(request?.action === 'explain' || request?.action === 'simplify') && (
         <ToggleGroup.Root type="single" value={level} onValueChange={(v) => { if (v && v !== level) void go(request, target, v as ExplainLevel); }} disabled={busy} aria-label="Explain for" className="flex gap-1 rounded-xl bg-slate-100 p-1">
-          {([['child', 'A child'], ['student', 'A student'], ['professional', 'A professional'], ['expert', 'An expert']] as const).map(([k, label]) => (
+          {([['child', 'A child'], ['student', 'A student'], ['professional', 'A professional'], ['expert', 'An expert'], ['parent', 'A parent']] as const).map(([k, label]) => (
             <ToggleGroup.Item key={k} value={k} data-testid={`explain-level-${k}`}
               className="flex-1 rounded-lg px-1 py-1.5 text-[11px] font-bold text-slate-600 data-[state=on]:bg-white data-[state=on]:text-slate-900 data-[state=on]:shadow-sm disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">{label}</ToggleGroup.Item>
           ))}
         </ToggleGroup.Root>
+      )}
+      {(request?.action === 'explain' || request?.action === 'simplify') && level === 'parent' && (
+        <label className="flex items-center gap-2 text-[11px] font-bold text-slate-700">
+          Explain in
+          <SelectBox value={target} aria-label="The parent's language" onChange={(e) => { setTarget(e.target.value); try { localStorage.setItem(LAST_LANG, e.target.value); } catch { /* ignore */ } void go(request, e.target.value, 'parent'); }}
+            className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-normal">
+            {Object.entries(languages).sort((a, b) => a[1].localeCompare(b[1])).map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+          </SelectBox>
+        </label>
       )}
       {busy && <Spinner label="Working…" />}
       <Err text={error} />
