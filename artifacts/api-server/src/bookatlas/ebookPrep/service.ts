@@ -492,3 +492,10 @@ export function bookCoverRendition(id: string, width: number): Promise<Uint8Arra
   }
   return coverRenditions.get(key)!;
 }
+
+/** The chapters of the author's own prepared book, as the reader shows them (for the AI proofreader). */
+export async function ownChapters(who: Identity, id: string) {
+  const row = owned(await loadSubmission(id), who);
+  if (!row.data.prepared) throw new PrepError('The book has not been prepared yet.', 409);
+  return readerContent(await getFile(preparedKey(id), row.data.prepared), row.data.intake.title).chapters;
+}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ClipboardCheck, Copy, Download, Loader2 } from 'lucide-react';
 import { saveBlob, type ReadinessPackage } from './ebookApi';
+import { ProofreadTab } from './ProofreadTab';
 
 type Check = ReadinessPackage['chapters'][number]['editing'];
 const CHECK: Record<Check, { label: string; tone: string }> = {
@@ -20,10 +21,11 @@ const TABS = [
   { id: 'kdpPrint', label: 'KDP print' },
   { id: 'lulu', label: 'Lulu' },
   { id: 'metadata', label: 'Metadata' },
+  { id: 'proofread', label: 'Proofread (AI)' },
 ] as const;
 
 /** The Amazon KDP and Lulu readiness package for one submission: score, issues, chapter audit, checklists, metadata. */
-export const ReadinessPanel: React.FC<{ title: string; load: () => Promise<ReadinessPackage> }> = ({ title, load }) => {
+export const ReadinessPanel: React.FC<{ title: string; load: () => Promise<ReadinessPackage>; submissionId?: string }> = ({ title, load, submissionId }) => {
   const [pkg, setPkg] = useState<ReadinessPackage | null>(null);
   const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [tab, setTab] = useState<(typeof TABS)[number]['id']>('chapters');
@@ -84,7 +86,7 @@ export const ReadinessPanel: React.FC<{ title: string; load: () => Promise<Readi
       )}
 
       <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-slate-100 px-3 pt-2 text-xs font-semibold">
-        {TABS.map((t) => (
+        {TABS.filter((t) => t.id !== 'proofread' || submissionId).map((t) => (
           <button key={t.id} role="tab" aria-selected={tab === t.id} type="button" onClick={() => setTab(t.id)}
             className={`whitespace-nowrap rounded-t-lg px-3 py-2 ${tab === t.id ? 'border-b-2 border-indigo-600 text-indigo-700' : 'text-slate-500 hover:text-slate-800'}`}>{t.label}</button>
         ))}
@@ -115,6 +117,8 @@ export const ReadinessPanel: React.FC<{ title: string; load: () => Promise<Readi
             </tbody>
           </table>
         )}
+
+        {tab === 'proofread' && submissionId && <ProofreadTab submissionId={submissionId} chapters={pkg.chapters.map((c) => c.title)} />}
 
         {checklist && (
           <ul className="space-y-2">

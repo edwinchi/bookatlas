@@ -196,7 +196,7 @@ export const SubmissionCard: React.FC<{
         </div>
       )}
 
-      {s.prepared && s.status !== 'uploading' && <ReadinessPanel key={`${s.id}:${s.prepared.sha256 ?? ''}:${s.updatedAt ?? ''}`} title={s.intake.title} load={onReadiness} />}
+      {s.prepared && s.status !== 'uploading' && <ReadinessPanel key={`${s.id}:${s.prepared.sha256 ?? ''}:${s.updatedAt ?? ''}`} title={s.intake.title} load={onReadiness} submissionId={s.id} />}
       {s.status === 'published' && <PriceEditor key={s.intake.price} price={Number(s.intake.price) || 0} onSave={onPrice} />}
       {extra}
       {['ready', 'checking', 'needs_author', 'published'].includes(s.status) && (

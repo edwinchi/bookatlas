@@ -267,3 +267,35 @@ test('reading insights for authors (phase 9): own books only, nothing before 5 r
   const other = await (await fetch('/api/author/insights', { headers: { 'x-test-role': 'reader' } })).json();
   assert.equal(other.books.some((b: { bookId: string }) => b.bookId === bookId), false);
 });
+
+test('AI proofreader: the author\'s own chapter, only real quotes kept, other readers refused', async () => {
+  const { fetch } = await getSharedTestServer();
+  resetQuota();
+  const file = epub2(3);
+  const intake = {
+    title: 'The Proofread Codex', author: 'Proof Writer', language: 'English', description: 'A book to check for errors. '.repeat(8),
+    categories: ['Spiritual Healing & Alignment'], keywords: ['proof'], copyrightHolder: 'Test Press', copyrightYear: 2026,
+    price: 0, rightsConfirmed: true, aiContent: 'none', wantsPrint: false,
+  };
+  const s = await (await fetch('/api/ebook-submissions', post('', { intake, fileName: 'p.epub', size: file.byteLength }, 'admin'))).json();
+  for (let part = 0; part < s.upload.parts; part += 1) {
+    await fetch(`/api/ebook-submissions/${s.id}/upload/${part}`, { method: 'PUT', headers: { 'content-type': 'application/octet-stream', 'x-test-role': 'admin' }, body: file.subarray(part * s.partBytes, (part + 1) * s.partBytes) });
+  }
+  await fetch(`/api/ebook-submissions/${s.id}/prepare`, post('', {}, 'admin'));
+  const pkg = await (await fetch(`/api/ebook-submissions/${s.id}/readiness`, { headers: { 'x-test-role': 'admin' } })).json();
+  const ci = pkg.chapters.findIndex((c: { words: number }) => c.words > 20);
+  assert.ok(ci >= 0);
+
+  assert.equal((await fetch('/api/reader/ai/proofread', post('', { submissionId: s.id, chapterIndex: ci }, 'unauthenticated'))).status, 401);
+  assert.equal((await fetch('/api/reader/ai/proofread', post('', { submissionId: s.id, chapterIndex: ci }, 'reader'))).status, 404, 'another account cannot proofread this book');
+
+  reply = () => JSON.stringify({ issues: [{ original: 'Paragraph 1 of the', suggestion: 'Paragraph one of the', kind: 'consistency', reason: 'Numbers in words.' }, { original: 'not in this book', suggestion: 'x', kind: 'typo' }] });
+  const n = calls.length;
+  const r = await (await fetch('/api/reader/ai/proofread', post('', { submissionId: s.id, chapterIndex: ci }, 'admin'))).json();
+  assert.equal(calls.length - n, 1);
+  assert.match(calls.at(-1)!.systemInstruction!, /proofreader/);
+  assert.equal(r.chapterIndex, ci);
+  assert.deepEqual(r.issues.map((i: { original: string }) => i.original), ['Paragraph 1 of the'], JSON.stringify(r));
+  assert.equal(typeof r.remaining, 'number');
+  assert.equal((await fetch('/api/reader/ai/proofread', post('', { submissionId: s.id, chapterIndex: 999 }, 'admin'))).status, 404);
+});

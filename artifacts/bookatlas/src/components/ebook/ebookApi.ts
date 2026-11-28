@@ -278,6 +278,8 @@ export function useEbookApi() {
     removeFlashcard: (id: string) => json<{ removed: boolean; total: number }>(`/api/reader/flashcards/${encodeURIComponent(id)}`, 'DELETE'),
     // Knowledge maps (master build plan M10).
     knowledgeMap: (body: { bookId: string; chapterIndex: number }) => json<{ chapterIndex: number; title: string; nodes: import('../reader/knowledgeMap').MapNode[]; edges: import('../reader/knowledgeMap').MapEdge[]; remaining: number }>('/api/reader/ai/map', 'POST', body),
+    // The AI proofreader for an author's own prepared book: one chapter a request.
+    proofread: (body: { submissionId: string; chapterIndex: number }) => json<{ chapterIndex: number; title: string; issues: { original: string; suggestion: string; kind: string; reason: string }[]; checkedChars: number; totalChars: number; remaining: number }>('/api/reader/ai/proofread', 'POST', body),
     flashcardsFromPassage: (body: { bookId: string; text: string }) => json<{ chapterIndex: number; cards: { question: string; answer: string }[]; remaining: number }>('/api/reader/ai/flashcards', 'POST', body),
     savePayout: (body: PayoutInput) => json<PayoutView>('/api/author/payout', 'PUT', body),
     // Follow authors (cycle 5c).

@@ -11,6 +11,7 @@ import { achievements, DEFAULT_DAILY_GOAL } from './achievements.js';
 import { chapterSocial, hideTarget, report, reportedItems, setShared, sharedAnnotationExists } from './social.js';
 import { addPost, createGroup, deletePost, groupCount, groupDetail, joinGroup, leaveGroup, myGroups, postExists } from './groups.js';
 import { DAILY_AI_LIMIT, LANGUAGES, askBook, defineWord, explainPassage, refundAiQuota, studyChapter, translatePassage, useAiQuota, type Generate } from './ai.js';
+import { proofreadChapter } from './proofread.js';
 import { digestEmailConfigured, getDigest, resendBatch, runDigest, setDigest, unsubscribeDigest } from './digest.js';
 import { recordYoungStory, youngTitle } from './youngStories.js';
 import { checkpointQuestions, checkpointsOf, recordCheckpoint } from './checkpoints.js';
@@ -256,6 +257,17 @@ export function mountReader(app: Express, catalog: CatalogStore, generate?: Gene
     });
   app.get('/api/reader/ai/config', (_req, res) => { res.json({ dailyLimit: DAILY_AI_LIMIT, languages: LANGUAGES }); });
   app.post('/api/reader/ai/ask', json, ai(askBook));
+  // The AI proofreader for an author's own prepared book (one chapter a request, from the same daily allowance).
+  app.post('/api/reader/ai/proofread', json, guarded(async (req, res) => {
+    if (!req.bookatlasIdentity) throw new ReaderError('Sign in to use the proofreader.', 401);
+    const who = req.bookatlasIdentity;
+    const gen = generatorOverride ?? generate;
+    if (!gen) throw new ReaderError('The AI assistant is not configured yet.', 503);
+    const remaining = useAiQuota(who.id);
+    let result: object;
+    try { result = await proofreadChapter(gen, who, body(req)); } catch (e) { refundAiQuota(who.id); throw e; }
+    res.json({ ...result, remaining });
+  }));
   app.post('/api/reader/ai/study', json, ai(studyChapter));
   app.post('/api/reader/ai/explain', json, ai(explainPassage));
   app.post('/api/reader/ai/translate', json, ai(translatePassage));
