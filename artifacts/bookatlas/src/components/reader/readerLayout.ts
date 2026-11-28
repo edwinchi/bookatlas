@@ -1,5 +1,6 @@
 import { DEFAULT_CHECKPOINT_MODE, cleanCheckpointMode, type CheckpointMode } from './checkpoints';
 import { DEFAULT_BOLD_STRENGTH, cleanBoldStrength } from './fastRead';
+import type { ReaderSettings } from '../../types';
 /**
  * Page layout preferences kept on this device (owner request 2026-11-17): pages or scrolling, two pages side by side,
  * alignment, brightness and custom colours. The synced reading settings (font, size, spacing, theme) are separate.
@@ -95,3 +96,22 @@ export function paragraphFocusClass(mode: FocusMode, current: boolean) {
 }
 /** What zen keeps on screen: the text only. */
 export const zenLayout = (zen: boolean) => ({ toolbars: !zen, community: !zen });
+
+/**
+ * One-tap set-ups (Reading Intelligence accessibility centre, 2026-11-28): dyslexia, attention (ADHD) and low vision.
+ * Each sets the reading aids that help most; everything stays adjustable afterwards. Tested in readerLayout.test.ts.
+ */
+export type AidPreset = 'dyslexia' | 'attention' | 'lowVision';
+export const AID_PRESETS: { id: AidPreset; label: string; note: string; settings: Partial<ReaderSettings>; layout: Partial<ReaderLayout> }[] = [
+  { id: 'dyslexia', label: 'Dyslexia', note: 'Dyslexia-friendly font, more space between lines, text not stretched, a band to follow the line.',
+    settings: { fontFamily: 'dyslexia', lineHeight: 2, fontSize: 20 }, layout: { align: 'left', ...withFocusMode('line') } },
+  { id: 'attention', label: 'Attention (ADHD)', note: 'Only the paragraph you are reading stays clear, bold word starts, no toolbars, a short check at each chapter end.',
+    settings: {}, layout: { ...withFocusMode('paragraph'), boldStarts: true, zen: true, checkpoints: 'chapter' } },
+  { id: 'lowVision', label: 'Low vision', note: 'Large clear letters, white on black, wide line spacing.',
+    settings: { fontFamily: 'clear', fontSize: 28, lineHeight: 1.9, theme: 'black' }, layout: { align: 'left' } },
+];
+/** The set-up the reader's settings match now, if any. */
+export function activePreset(settings: ReaderSettings, layout: ReaderLayout): AidPreset | null {
+  const same = (want: object, have: object) => Object.entries(want).every(([k, v]) => (have as Record<string, unknown>)[k] === v);
+  return AID_PRESETS.find((p) => same(p.settings, settings) && same(p.layout, layout))?.id ?? null;
+}

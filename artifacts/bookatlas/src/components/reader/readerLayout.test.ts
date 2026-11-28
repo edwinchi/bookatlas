@@ -25,3 +25,18 @@ test('focus reader: zen hides the toolbars and the community markers', () => {
   assert.deepEqual(zenLayout(true), { toolbars: false, community: false });
   assert.deepEqual(zenLayout(false), { toolbars: true, community: true });
 });
+
+test('quick set-ups for dyslexia, attention and low vision: one tap, and the set-up in use is shown', async () => {
+  const { AID_PRESETS, activePreset, DEFAULT_LAYOUT } = await import('./readerLayout');
+  const { DEFAULT_READER_SETTINGS, sanitizeReaderSettings } = await import('../../utils/readerSettings');
+  const layout = { ...DEFAULT_LAYOUT };
+  assert.equal(activePreset(DEFAULT_READER_SETTINGS, layout), null);
+  for (const p of AID_PRESETS) {
+    const settings = sanitizeReaderSettings({ ...DEFAULT_READER_SETTINGS, ...p.settings });
+    assert.deepEqual(settings, { ...DEFAULT_READER_SETTINGS, ...p.settings }, `${p.id}: every value is a valid setting`);
+    assert.equal(activePreset(settings, { ...layout, ...p.layout }), p.id);
+  }
+  const attention = AID_PRESETS.find((p) => p.id === 'attention')!;
+  assert.equal(attention.layout.focusParagraph, true);
+  assert.equal(attention.layout.readingGuide, false, 'one focus mode at a time');
+});

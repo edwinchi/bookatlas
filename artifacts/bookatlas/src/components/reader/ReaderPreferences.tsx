@@ -8,7 +8,7 @@ import { AlignJustify, AlignLeft, BookOpen, Columns2, Palette, ScrollText, Sun, 
 import { BoldStarts, canFollowWords, loadReaderFont } from './readingAids';
 import { BOLD_STRENGTHS } from './fastRead';
 import type { ReaderFont, ReaderSettings, ReaderTheme } from '../../types';
-import { BACKGROUND_SWATCHES, FOCUS_MODES, TEXT_SWATCHES, focusModeOf, withFocusMode, type FocusMode, type ReaderLayout } from './readerLayout';
+import { AID_PRESETS, BACKGROUND_SWATCHES, FOCUS_MODES, TEXT_SWATCHES, activePreset, focusModeOf, withFocusMode, type FocusMode, type ReaderLayout } from './readerLayout';
 import { CHECKPOINT_MODES, type CheckpointMode } from './checkpoints';
 
 const FOCUS_LABELS: Record<FocusMode, { label: string; note: string }> = {
@@ -198,6 +198,23 @@ export function ReaderPreferences({ open, onOpenChange, container, settings, set
 
               <Tabs.Content value="aids" className="space-y-5 focus-visible:outline-none">
                 <p className="flex items-start gap-2 text-[11px] text-slate-500"><Accessibility className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" aria-hidden />Help for dyslexia, attention and low vision. Try one at a time and keep what makes reading easier for you.</p>
+                <div className="space-y-2" data-testid="aid-presets">
+                  <p className={label}>Quick set-up</p>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {AID_PRESETS.map((p) => {
+                      const on = activePreset(settings, layout) === p.id;
+                      return (
+                        <button key={p.id} type="button" aria-pressed={on} data-testid={`aid-preset-${p.id}`}
+                          onClick={() => { if (p.settings.fontFamily) loadReaderFont(p.settings.fontFamily); set(p.settings); lay(p.layout); }}
+                          className={`rounded-xl p-3 text-left ring-1 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${on ? 'bg-indigo-50 ring-indigo-500' : 'bg-white ring-slate-200 hover:bg-slate-50'}`}>
+                          <span className="block text-sm font-semibold">{p.label}</span>
+                          <span className="block text-[11px] text-slate-600">{p.note}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-slate-600">Change anything below afterwards; “Reset to defaults” at the bottom brings back the usual settings.</p>
+                </div>
                 <div className="space-y-2">
                   <p className={label}>Reading font</p>
                   {AID_FONTS.map((f) => (
