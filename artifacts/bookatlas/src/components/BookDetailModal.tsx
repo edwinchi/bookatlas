@@ -2,7 +2,8 @@ import { authorPath } from './AuthorProfileModal';
 import { ReviewsPanel, Stars } from './ebook/ReviewsPanel';
 import { coverProps } from '../utils/coverImage';
 import { isSampleTitle } from '../utils/ratings';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { readingLevel } from './reading/readingLevel';
 import * as Tabs from '@radix-ui/react-tabs';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import * as ScrollArea from '@radix-ui/react-scroll-area';
@@ -71,6 +72,8 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
   const { account, requireSignIn } = useAccount();
   const openFullBook = () => { if (account) onReadSample(book); else requireSignIn('reading the full book'); };
 
+  // Reading level (Curriculum Intelligence Layer): estimated from the free preview's own text.
+  const level = useMemo(() => readingLevel((book.sampleChapters ?? []).flatMap((c) => c.content ?? []), book.language), [book.sampleChapters, book.language]);
   const [activeTab, setActiveTab] = useState<'overview' | 'ai_summary' | 'reviews' | 'author'>('overview');
   const [sharing, setSharing] = useState(false);
   /** The book's real chapter titles (prepared books), for "Sample excerpt included". */
@@ -452,6 +455,13 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
               </span>
               <p className="font-bold text-slate-900">{book.language}</p>
             </div>
+            {level && (
+              <p data-testid="reading-level" className="col-span-2 sm:col-span-4 border-t border-slate-200 pt-3 text-slate-700">
+                <span className="font-medium text-slate-600">Reading level: </span>
+                <span className="font-bold text-slate-900">{level.label}, about age {level.ages}{level.groep ? ` (${level.groep})` : ''}</span>
+                <span className="text-slate-600"> · estimated from the sentences and words of the free preview, not an official AVI or CLIB level.</span>
+              </p>
+            )}
           </div>
 
           {/* Tabs: Synopsis, AI Briefing, Reviews, Author */}
