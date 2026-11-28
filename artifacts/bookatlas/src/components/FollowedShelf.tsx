@@ -1,3 +1,4 @@
+import { coverProps } from '../utils/coverImage';
 import { useEffect, useState } from 'react';
 import { UserCheck } from 'lucide-react';
 import { useEbookApi } from './ebook/ebookApi';
@@ -34,7 +35,7 @@ export function FollowedShelf({ accountId, onOpen }: { accountId: string; onOpen
               onClick={() => { setOpening(b.id); Promise.resolve(onOpen(b.id)).finally(() => setOpening(null)); }}
               className="group w-full cursor-pointer rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 disabled:opacity-60">
               {b.coverImage
-                ? <img src={b.coverImage} alt="" loading="lazy" className="aspect-[2/3] w-full rounded-lg object-cover shadow-sm ring-1 ring-slate-200 group-hover:shadow-md" />
+                ? <img {...coverProps(b.coverImage, 144)} alt="" loading="lazy" className="aspect-[2/3] w-full rounded-lg object-cover shadow-sm ring-1 ring-slate-200 group-hover:shadow-md" />
                 : <div aria-hidden className="grid aspect-[2/3] w-full place-items-center rounded-lg bg-emerald-700 text-3xl font-bold text-white">{b.title.slice(0, 1)}</div>}
               <span className="mt-2 line-clamp-2 block text-sm font-semibold text-slate-900">{b.title}</span>
               <span className="block truncate text-xs text-slate-600">{b.author}{when(b.publishDate) ? ` · ${when(b.publishDate)}` : ''}</span>

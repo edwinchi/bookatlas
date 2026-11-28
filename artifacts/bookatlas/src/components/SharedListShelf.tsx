@@ -1,3 +1,4 @@
+import { coverProps } from '../utils/coverImage';
 import { useEffect, useState } from 'react';
 import { Gift, X } from 'lucide-react';
 import { fetchFullBook } from '../hooks/useCatalog';
@@ -35,7 +36,7 @@ export function SharedListShelf({ onOpen, wishlistIds, onToggleWishlist }: { onO
             <button type="button" data-testid="shared-book" onClick={() => onOpen(b)}
               className="group w-full cursor-pointer rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-rose-600">
               {b.coverImage
-                ? <img src={b.coverImage} alt="" loading="lazy" className="aspect-[2/3] w-full rounded-lg object-cover shadow-sm ring-1 ring-slate-200 group-hover:shadow-md" />
+                ? <img {...coverProps(b.coverImage, 144)} alt="" loading="lazy" className="aspect-[2/3] w-full rounded-lg object-cover shadow-sm ring-1 ring-slate-200 group-hover:shadow-md" />
                 : <div aria-hidden className="grid aspect-[2/3] w-full place-items-center rounded-lg bg-rose-700 text-3xl font-bold text-white">{b.title.slice(0, 1)}</div>}
               <span className="mt-2 line-clamp-2 block text-sm font-semibold text-slate-900">{b.title}</span>
               <span className="block truncate text-xs text-slate-600">{b.author}</span>
