@@ -6,6 +6,9 @@ import {
 import { bookatlasDb } from '../db/supabaseClient.js';
 import { logger } from '../../lib/logger.js';
 
+/** Database errors that pass by themselves: a clock difference in the token check, or the connection dropping. */
+export const isPassingDbError = (e: { code?: string; message?: string }) => e.code === 'PGRST303' || /issued at future|fetch failed|ECONNRESET|timeout/i.test(e.message ?? '');
+
 export interface CatalogPage { books: BookCard[]; total: number; page: number; limit: number; hasMore: boolean }
 export interface Facets {
   total: number;
@@ -127,7 +130,11 @@ export function postgresCatalog(db: NonNullable<typeof bookatlasDb>): CatalogSto
       qb = qb.order('popularity', { ascending: false }).order('id', { ascending: true });
       const from = (page - 1) * limit;
       // One extra id tells us exactly whether another page exists.
-      const { data, count, error } = await qb.range(from, from + limit);
+      // A rare passing error from the database's own sign-in check ("JWT issued at future", a clock difference of a
+      // second) is tried once more before the shopper sees an error (seen in the production logs, 2026-11-28).
+      let result = await qb.range(from, from + limit);
+      if (result.error && isPassingDbError(result.error)) { await new Promise((r) => setTimeout(r, 400)); result = await qb.range(from, from + limit); }
+      const { data, count, error } = result;
       if (error) { logger.error({ err: error }, '[catalog] search failed'); throw new CatalogError('The catalogue is temporarily unavailable.'); }
       const ids = (data as { id: string }[]).map((r) => r.id);
       const hasMore = ids.length > limit;
