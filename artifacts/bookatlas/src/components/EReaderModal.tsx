@@ -1091,6 +1091,7 @@ export const EReaderModal: React.FC<EReaderModalProps> = ({
     if (t.kind === 'coach') { setStudyTool(t.study); openAssistant(t.tab === 'words' ? 'words' : t.tab); }
     else if (t.kind === 'settings') { setSettingsTab(t.tab); setShowSettings(true); }
     else if (t.kind === 'fast-read') setShowFastRead(true);
+    else if (t.kind === 'translate-page') setShowTranslate(true);
     setTryHint(TRY_HINT[initialTool]);
   }, [initialTool, fullChapters, fullError]); // eslint-disable-line react-hooks/exhaustive-deps
   // After the settings close (not on first load), they open on Text again.
