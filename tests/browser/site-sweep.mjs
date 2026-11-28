@@ -146,15 +146,13 @@ for (const [menu, item, check] of [
   const startBook = await page.getByRole('link', { name: 'Start a book', exact: true }).first().getAttribute('href');
   ok('Start a book pill opens the enquiry form', startBook === '#start-book', startBook);
   // Language and currency.
-  await page.getByLabel('Currency').first().click();
-  await page.getByRole('option', { name: 'USD ($)' }).click();
-  await page.waitForTimeout(200);
-  ok('Currency switch updates prices', /\$\d/.test(await page.locator('main').innerText()));
+  // Prices are in euros, the currency of every checkout (2026-11-28; the symbol-only switch was removed).
+  ok('Prices are shown in euros only', !/[$£¥]\d/.test(await page.locator('main').innerText()) && /€\d/.test(await page.locator('main').innerText()));
   await page.getByLabel('Language').first().click();
   await page.getByRole('option', { name: 'Nederlands' }).click();
   await page.waitForTimeout(200);
   const prefs = await page.evaluate(() => Object.entries(localStorage).find(([k]) => /prefer/i.test(k))?.[1] ?? '');
-  ok('Language and currency persist', /"nl"/.test(prefs) && /USD/.test(prefs), prefs);
+  ok('Language persists', /"nl"/.test(prefs), prefs);
   // Utility row.
   const status = await page.getByRole('status').first().innerText().catch(() => '');
   ok('Utility row shows sign-in status', /Sign-in is temporarily unavailable|next chapter|Signed in/.test(status), status.slice(0, 60));

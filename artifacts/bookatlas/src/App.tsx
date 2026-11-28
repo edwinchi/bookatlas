@@ -156,8 +156,11 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
     if (tab === 'publish' && !requireSignIn('eBook publishing', '/user-portal?view=publish')) return;
     setActiveTabState(tab);
   };
-  const [currency, setCurrency] = useState<string>(() => readStorePreferences().currency);
-  const currencySymbol = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
+  // Prices are shown in euros, the currency every checkout charges (2026-11-28: the old picker changed only the symbol,
+  // so a €9.99 book showed as £9.99 or $9.99). Other currencies come back once prices are really converted.
+  const [, setCurrency] = useState<string>(() => readStorePreferences().currency);
+  const currency = 'EUR';
+  const currencySymbol = '€';
   const [language, setLanguage] = useState<StoreLanguage>(() => readStorePreferences().language);
 
   useEffect(() => {

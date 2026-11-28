@@ -348,16 +348,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </SelectBox>
               </label>
             )}
-            <label className="flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-700 hover:border-slate-300">
-              <span className="sr-only">Currency</span>
-              <SelectBox value={currency} onChange={(e) => setCurrency(e.target.value)} className="bg-transparent text-xs font-semibold focus:outline-hidden cursor-pointer">
-                <option value="EUR">EUR (€) Netherlands</option>
-                <option value="USD">USD ($) Global</option>
-                <option value="GBP">GBP (£) UK</option>
-                <option value="CAD">CAD ($) Canada</option>
-                <option value="JPY">JPY (¥) Japan</option>
-              </SelectBox>
-            </label>
+            <span className="flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700" title="Every price is in euros, VAT included; your card converts it if needed.">Prices in € (EUR)</span>
           </div>
         </div>
       </div>
@@ -742,12 +733,9 @@ export const Header: React.FC<HeaderProps> = ({
               <option value="en">English</option><option value="nl">Nederlands</option>
             </SelectBox>
           </label>}
-          <label className="flex min-h-12 items-center justify-between gap-3 rounded-lg px-3 text-sm font-medium text-slate-800">
-            <span>Currency</span>
-            <SelectBox value={currency} onChange={event => setCurrency(event.target.value)} aria-label="Currency" className="min-h-11 max-w-40 rounded-lg border border-slate-300 bg-white px-2">
-              <option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CAD">CAD ($)</option><option value="JPY">JPY (¥)</option>
-            </SelectBox>
-          </label>
+          <p className="flex min-h-12 items-center justify-between gap-3 rounded-lg px-3 text-sm font-medium text-slate-800">
+            <span>Currency</span><span className="text-slate-600">Prices in € (EUR), VAT included</span>
+          </p>
           {/* Admin Session Mobile Bar */}
           {isAdminAuthenticated ? (
             <div className="flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
