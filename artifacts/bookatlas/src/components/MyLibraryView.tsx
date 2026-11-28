@@ -33,6 +33,7 @@ import { UserLibraryItem, Book } from '../types';
 import { exportUserLibraryPDF } from '../utils/exportLibraryPdf';
 import { OrdersPanel, ORDERS_SECTION_ID } from './AccountInvoices';
 import { TRANSLATIONS } from '../data/translations';
+import { wishlistShareUrl } from './share/shareLinks';
 
 interface MyLibraryViewProps {
   library: UserLibraryItem[];
@@ -70,6 +71,7 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
   const storagePrefix = `bookatlas:account:${account?.id || 'guest'}:`;
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
   const [activeTab, setActiveTab] = useState<'reading' | 'all' | 'finished' | 'wishlist'>(initialTab);
+  const [shareNote, setShareNote] = useState('');
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [pdfSuccessBanner, setPdfSuccessBanner] = useState(false);
   const [libraryNotice, setLibraryNotice] = useState('');
@@ -321,6 +323,17 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
       </div>
 
       {/* Main Tab Content */}
+      {activeTab === 'wishlist' && wishlist.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-xs text-rose-950">
+          <span>Share your wishlist: friends and family see these books, no account needed. Only your first name is in the link.</span>
+          <button type="button" data-testid="share-wishlist" onClick={async () => {
+            const url = wishlistShareUrl(wishlist.map((b) => b.id), account?.name ?? '');
+            try { if (navigator.share) { await navigator.share({ title: 'My BooksAtlas wishlist', url }); return; } } catch { return; }
+            try { await navigator.clipboard.writeText(url); setShareNote('Link copied. Paste it in a message.'); } catch { setShareNote(url); }
+          }} className="cursor-pointer rounded-full bg-rose-600 px-3 py-1.5 font-bold text-white hover:bg-rose-700">Share my wishlist</button>
+          {shareNote && <p role="status" className="w-full break-all font-semibold">{shareNote}</p>}
+        </div>
+      )}
       {activeTab === 'wishlist' ? (
         wishlist.length === 0 ? (
           <div className="text-center py-16 bg-slate-50 rounded-3xl border border-dashed border-slate-300">

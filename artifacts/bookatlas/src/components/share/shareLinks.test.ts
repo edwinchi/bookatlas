@@ -33,3 +33,14 @@ test('share: quote lines wrap to the card width', () => {
   assert.deepEqual(wrapLines('one two three four five', 100, measure), ['one two', 'three four', 'five']);
   assert.deepEqual(wrapLines('unbreakablewordthatislong', 50, measure), ['unbreakablewordthatislong'], 'a long word stays whole');
 });
+
+test('a wishlist as a link: the books and a first name, cleaned both ways', async () => {
+  const { wishlistShareUrl, parseSharedList, MAX_SHARED } = await import('./shareLinks');
+  const url = wishlistShareUrl(['atlas-afr-001', 'atlas-afr-001', 'bad id!', 'atlas-ebook-42'], 'Amara Okafor');
+  assert.equal(url, 'https://booksatlas.app/?list=atlas-afr-001,atlas-ebook-42&from=Amara');
+  assert.deepEqual(parseSharedList(new URL(url).search), { ids: ['atlas-afr-001', 'atlas-ebook-42'], from: 'Amara' });
+  assert.equal(parseSharedList('?list=%3Cscript%3E'), null);
+  assert.equal(parseSharedList('?q=x'), null);
+  assert.equal(parseSharedList('?list=a1&from=%3Cb%3EEve%3C%2Fb%3E')!.from, 'bEveb');
+  assert.equal(parseSharedList(`?list=${Array.from({ length: 60 }, (_, i) => `b${i}`).join(',')}`)!.ids.length, MAX_SHARED);
+});

@@ -10,6 +10,24 @@ export interface ShareBook { id: string; title: string; author: string }
 /** The book's page, marked as a share so the visit can be told apart from search traffic. */
 export const bookShareUrl = (id: string, via: 'share' | 'quote' | 'author' = 'share') => `${SITE}/books/${encodeURIComponent(id)}?via=${via}`;
 
+/** A wishlist as a link (2026-11-28): the books are in the link itself, so nothing is stored and nothing is public. */
+const LIST_ID = /^[\w-]{1,80}$/;
+export const MAX_SHARED = 40;
+export function wishlistShareUrl(ids: string[], from = '') {
+  const list = [...new Set(ids.filter((id) => LIST_ID.test(id)))].slice(0, MAX_SHARED);
+  const name = from.replace(/\s+/g, ' ').trim().split(' ')[0]?.slice(0, 30) ?? '';
+  return `${SITE}/?list=${list.map(encodeURIComponent).join(',')}${name ? `&from=${encodeURIComponent(name)}` : ''}`;
+}
+/** The books and the first name in a shared-wishlist link, or null when it is not one. */
+export function parseSharedList(search: string): { ids: string[]; from: string } | null {
+  const p = new URLSearchParams(search);
+  const raw = p.get('list');
+  if (!raw) return null;
+  const ids = [...new Set(raw.split(',').map((s) => s.trim()).filter((id) => LIST_ID.test(id)))].slice(0, MAX_SHARED);
+  if (!ids.length) return null;
+  return { ids, from: (p.get('from') ?? '').replace(/[^\p{L}\p{N} '’-]/gu, '').trim().slice(0, 30) };
+}
+
 export type ShareMood = 'reading' | 'finished' | 'author';
 /** A ready-made message the reader can change before sending. */
 export function shareMessage(book: ShareBook, mood: ShareMood): string {

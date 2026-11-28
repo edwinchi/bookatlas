@@ -11,6 +11,7 @@ import { Header } from './components/Header';
 import { HeroCarousel } from './components/HeroCarousel';
 import { ContinueShelf } from './components/reader/ContinueShelf';
 import { FollowedShelf } from './components/FollowedShelf';
+import { SharedListShelf } from './components/SharedListShelf';
 import { FilterSidebar } from './components/FilterSidebar';
 import { MobileFilters } from './components/MobileFilters';
 import { BookCard, focusOpener } from './components/BookCard';
@@ -959,6 +960,7 @@ export default function App({ initialTab = 'store', initialLibraryTab = 'reading
             {/* Netflix-Style Horizontal Product Carousels & Editorial Blocks */}
             {activeTab === 'store' && !filters.searchQuery && filters.genre === 'All Genres' && (
               <div className="space-y-8 my-6">
+                <SharedListShelf onOpen={(b) => setSelectedBookForDetail(b)} wishlistIds={wishlist.map((w) => w.id)} onToggleWishlist={handleToggleWishlist} />
                 <ContinueShelf onOpen={continueBook} />
                 {account && <FollowedShelf accountId={account.id} onOpen={openBookById} />}
 
