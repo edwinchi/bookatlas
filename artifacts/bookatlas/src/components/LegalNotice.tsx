@@ -22,7 +22,7 @@ const sections: { title: string; body: ReactNode }[] = [
   },
   {
     title: 'Books and content',
-    body: <p>Book texts, covers, audio samples and the BooksAtlas name and design are protected by copyright and other intellectual property rights of {OPERATOR.name}, its authors or licensors. Purchases and samples are for your personal, non-commercial reading. You may not copy, redistribute or resell them unless the law allows it.</p>,
+    body: <p>Book texts, covers, audio samples and the BooksAtlas name and design are protected by copyright and other intellectual property rights of {OPERATOR.name}, its authors or licensors. Purchases and samples are for your personal, non-commercial reading. You may not copy, redistribute or resell them unless the law allows it. If you believe a book on BooksAtlas uses your work without permission, use “Report a copyright problem” on the book's page; we review every report, may take a book down while we check, and tell you what we decide.</p>,
   },
   {
     title: 'AI features',

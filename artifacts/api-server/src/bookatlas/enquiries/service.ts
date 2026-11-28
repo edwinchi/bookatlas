@@ -10,7 +10,8 @@ import { getObject, listObjects, putObject, removeObject } from '../ebookPrep/st
 export class EnquiryError extends Error { constructor(message: string, readonly status = 400) { super(message); } }
 
 export const ENQUIRY_FORMATS = ['ebook', 'paperback', 'hardcover', 'audiobook'] as const;
-export const ENQUIRY_TOPICS = ['start', 'print', 'premium', 'ebook', 'audiobook', 'question', 'help'] as const;
+// 'copyright': a rights holder reports a book (notice and action, EU Digital Services Act art. 16).
+export const ENQUIRY_TOPICS = ['start', 'print', 'premium', 'ebook', 'audiobook', 'question', 'help', 'copyright'] as const;
 export type EnquiryTopic = typeof ENQUIRY_TOPICS[number];
 
 export interface Enquiry {

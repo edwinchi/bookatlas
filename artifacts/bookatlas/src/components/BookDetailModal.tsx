@@ -4,6 +4,7 @@ import { coverProps } from '../utils/coverImage';
 import { isSampleTitle } from '../utils/ratings';
 import React, { useEffect, useMemo, useState } from 'react';
 import { readingLevel } from './reading/readingLevel';
+import { openEnquiry } from './StartBookDialog';
 import * as Tabs from '@radix-ui/react-tabs';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import * as ScrollArea from '@radix-ui/react-scroll-area';
@@ -463,6 +464,11 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
               </p>
             )}
           </div>
+
+          <p className="-mt-3 text-right text-[11px] text-slate-600">
+            <button type="button" data-testid="report-copyright" onClick={() => openEnquiry('copyright', { title: `${book.title} by ${book.author} (${typeof window !== 'undefined' ? window.location.origin : ''}/books/${book.id})` })}
+              className="cursor-pointer underline underline-offset-2 hover:text-slate-800">Report a copyright problem</button>
+          </p>
 
           {/* Tabs: Synopsis, AI Briefing, Reviews, Author */}
           <Tabs.Root value={activeTab} onValueChange={changeTab} className="space-y-4">

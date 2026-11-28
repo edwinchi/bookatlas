@@ -16,6 +16,7 @@ export const TOPICS = [
   { id: 'ebook', label: 'Sell my eBook' },
   { id: 'audiobook', label: 'Audiobook' },
   { id: 'question', label: 'A question' },
+  { id: 'copyright', label: 'Copyright problem' },
 ] as const;
 export type Topic = typeof TOPICS[number]['id'] | 'help';
 
@@ -73,7 +74,8 @@ export function StartBookDialog() {
   };
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const print = formats.includes('paperback') || formats.includes('hardcover') || topic === 'print' || topic === 'premium';
-  const bookTopic = topic !== 'question' && topic !== 'help';
+  const copyright = topic === 'copyright';
+  const bookTopic = topic !== 'question' && topic !== 'help' && !copyright;
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
@@ -103,10 +105,10 @@ export function StartBookDialog() {
           <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-5 pb-4 pt-5 sm:px-6">
             <div>
               <Dialog.Title className="flex items-center gap-2 font-serif text-xl font-bold text-slate-900">
-                <BookOpenCheck className="h-5 w-5 text-indigo-600" aria-hidden />{bookTopic ? 'Tell us about your book' : 'Ask us a question'}
+                <BookOpenCheck className="h-5 w-5 text-indigo-600" aria-hidden />{copyright ? 'Report a copyright problem' : bookTopic ? 'Tell us about your book' : 'Ask us a question'}
               </Dialog.Title>
               <Dialog.Description id={`${id}-desc`} className="mt-1 text-sm text-slate-600">
-                {bookTopic ? 'We reply by email with what your book needs and what it costs, before any work starts.' : 'We reply by email.'}
+                {copyright ? 'Tell us which book, what it copies and why you hold the rights. We review every report, may take the book down while we check, and reply by email.' : bookTopic ? 'We reply by email with what your book needs and what it costs, before any work starts.' : 'We reply by email.'}
               </Dialog.Description>
             </div>
             <Dialog.Close aria-label="Close" className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-slate-500 hover:bg-slate-200 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer"><X className="h-5 w-5" /></Dialog.Close>
@@ -116,7 +118,7 @@ export function StartBookDialog() {
             <div role="status" className="space-y-4 px-5 py-8 text-center sm:px-6">
               <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-100 text-emerald-700"><Check className="h-7 w-7" /></span>
               <h3 className="font-serif text-lg font-bold text-slate-900">Thank you, we have your message</h3>
-              <p className="text-sm text-slate-600">We will reply to <strong className="text-slate-900">{form.email}</strong>. Nothing is charged until you agree to a quote.</p>
+              <p className="text-sm text-slate-600">We will reply to <strong className="text-slate-900">{form.email}</strong>. {copyright ? 'We review the report and tell you what we decide.' : 'Nothing is charged until you agree to a quote.'}</p>
               <button type="button" onClick={close} className="h-11 rounded-xl bg-slate-900 px-6 text-sm font-bold text-white hover:bg-slate-700 cursor-pointer">Done</button>
             </div>
           ) : (
@@ -131,6 +133,9 @@ export function StartBookDialog() {
                 <label className={label}>Your name<input required autoComplete="name" value={form.name} onChange={set('name')} className={field} /></label>
                 <label className={label}>Email for our reply<input required type="email" autoComplete="email" inputMode="email" value={form.email} onChange={set('email')} className={field} /></label>
               </div>
+              {copyright && (
+                <label className={label}>The book on BooksAtlas <span className="font-normal text-slate-500">(title or link)</span><input required value={form.title} onChange={set('title')} className={field} /></label>
+              )}
               {bookTopic && (
                 <>
                   <label className={label}>Book title <span className="font-normal text-slate-500">(working title is fine)</span><input value={form.title} onChange={set('title')} className={field} /></label>
@@ -161,9 +166,9 @@ export function StartBookDialog() {
                   )}
                 </>
               )}
-              <label className={label}>{bookTopic ? 'About your book' : 'Your question'}
+              <label className={label}>{copyright ? 'What is copied, and the original work it comes from' : bookTopic ? 'About your book' : 'Your question'}
                 <textarea required minLength={10} rows={4} value={form.message} onChange={set('message')} className={field}
-                  placeholder={bookTopic ? 'Genre, where the manuscript is now (Word, PDF, EPUB), any deadline…' : ''} />
+                  placeholder={copyright ? 'Which pages or passages, the original title and author, and that you are the rights holder or act for them…' : bookTopic ? 'Genre, where the manuscript is now (Word, PDF, EPUB), any deadline…' : ''} />
               </label>
               {/* Bots fill in fields people never see. */}
               <input type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" value={form.website} onChange={set('website')} name="website" className="absolute -left-[9999px] h-0 w-0 opacity-0" />

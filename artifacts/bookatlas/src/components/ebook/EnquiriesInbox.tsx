@@ -5,7 +5,7 @@ import { useEbookApi, type BookEnquiry } from './ebookApi';
 
 const TOPIC: Record<string, string> = {
   start: 'Start a book', print: 'Print-ready files (€99)', premium: 'Premium with cover (€249)', ebook: 'Sell my eBook',
-  audiobook: 'Audiobook', question: 'Question', help: 'Help',
+  audiobook: 'Audiobook', question: 'Question', help: 'Help', copyright: 'Copyright report',
 };
 
 /**

@@ -95,3 +95,12 @@ test('the team email answers the visitor on reply, escapes what they wrote, and 
     } finally { globalThis.fetch = realFetch; }
   } finally { process.env = saved; }
 });
+
+test('a copyright report is kept as its own topic for administrators (notice and action)', async () => {
+  const { fetch } = await getSharedTestServer();
+  const sent = await fetch('/api/book-enquiries', post({ topic: 'copyright', name: 'Rights Holder', email: 'rights@example.com', title: 'Some Book by Someone (https://booksatlas.app/books/x)', message: 'Chapter 2 copies my published essay word for word.' }));
+  assert.equal(sent.status, 201);
+  const { id } = await sent.json();
+  const list = (await (await fetch('/api/manager/book-enquiries', { headers: { 'x-test-role': 'admin' } })).json()).enquiries;
+  assert.equal(list.find((x: { id: string }) => x.id === id)?.topic, 'copyright');
+});
