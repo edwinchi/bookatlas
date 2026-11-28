@@ -64,11 +64,8 @@ export const PromotionalFeatureBanner: React.FC<FeaturedPromotionProps> = ({
           </div>
 
           <h2
-            onClick={() => onOpenDetail(featuredBook)}
-            className="text-2xl sm:text-4xl font-serif font-black text-white hover:text-amber-300 transition-colors cursor-pointer leading-tight"
-          >
-            {featuredBook.title}
-          </h2>
+            className="text-2xl sm:text-4xl font-serif font-black text-white hover:text-amber-300 transition-colors leading-tight"
+          ><button type="button" onClick={() => onOpenDetail(featuredBook)} className="cursor-pointer text-left rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">{featuredBook.title}</button></h2>
 
           <p className="text-sm text-indigo-200 font-semibold">
             By {featuredBook.author} • {featuredBook.primaryGenre} • {featuredBook.pageCount} Pages

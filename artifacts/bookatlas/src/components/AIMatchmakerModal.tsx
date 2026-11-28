@@ -310,11 +310,8 @@ export const AIMatchmakerModal: React.FC<AIMatchmakerModalProps> = ({
                       </div>
 
                       <h4
-                        onClick={() => onOpenBookDetail(book)}
-                        className="font-serif font-bold text-sm text-slate-950 hover:text-indigo-600 cursor-pointer"
-                      >
-                        {book.title}
-                      </h4>
+                        className="font-serif font-bold text-sm text-slate-950 hover:text-indigo-600"
+                      ><button type="button" onClick={() => onOpenBookDetail(book)} className="cursor-pointer text-left rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">{book.title}</button></h4>
                       <p className="text-xs text-slate-600">{book.author}</p>
 
                       <p className="text-xs text-slate-700 font-medium italic pt-1">

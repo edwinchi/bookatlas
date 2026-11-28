@@ -15,6 +15,7 @@ import {
   Unlock
 } from 'lucide-react';
 import { Book } from '../types';
+import { pressable } from '../utils/pressable';
 
 interface AIStudioHubProps {
   isOpen: boolean;
@@ -102,9 +103,8 @@ export function AIStudioHub({
         <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-900/90">
           
           {/* Card 1: Gemini Chatbot */}
-          <div 
-            onClick={() => { onClose(); onOpenChat(); }}
-            className="p-5 bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-indigo-500/60 rounded-2xl transition-all group cursor-pointer flex flex-col justify-between"
+          <div {...pressable(() => { onClose(); onOpenChat(); })}
+            className="p-5 bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-indigo-500/60 focus-visible:outline-2 focus-visible:outline-indigo-400 rounded-2xl transition-all group cursor-pointer flex flex-col justify-between"
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -131,8 +131,7 @@ export function AIStudioHub({
           </div>
 
           {/* Card 2: Live Voice Companion */}
-          <div 
-            onClick={() => { onClose(); onOpenVoice(); }}
+          <div {...pressable(() => { onClose(); onOpenVoice(); })}
             className="p-5 bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-violet-500/60 rounded-2xl transition-all group cursor-pointer flex flex-col justify-between"
           >
             <div className="space-y-3">
@@ -160,8 +159,7 @@ export function AIStudioHub({
           </div>
 
           {/* Video generation tools are available only from the private admin workspace. */}
-          {isAdminAuthenticated && <div 
-            onClick={handleVideoClick}
+          {isAdminAuthenticated && <div {...pressable(handleVideoClick)}
             className="p-5 bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-pink-500/60 rounded-2xl transition-all group cursor-pointer flex flex-col justify-between"
           >
             <div className="space-y-3">
@@ -196,8 +194,7 @@ export function AIStudioHub({
           </div>}
 
           {/* Card 4: Google Search Grounding */}
-          <div 
-            onClick={() => { onClose(); onOpenSearch(); }}
+          <div {...pressable(() => { onClose(); onOpenSearch(); })}
             className="p-5 bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-sky-500/60 rounded-2xl transition-all group cursor-pointer flex flex-col justify-between"
           >
             <div className="space-y-3">

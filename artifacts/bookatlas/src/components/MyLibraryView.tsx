@@ -354,11 +354,8 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
                     />
                   </div>
                   <h3 
-                    onClick={() => onOpenBookDetail(book)}
-                    className="font-serif font-bold text-slate-900 text-sm line-clamp-1 hover:text-indigo-600 cursor-pointer"
-                  >
-                    {book.title}
-                  </h3>
+                    className="font-serif font-bold text-slate-900 text-sm line-clamp-1 hover:text-indigo-600"
+                  ><button type="button" onClick={() => onOpenBookDetail(book)} className="cursor-pointer text-left rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">{book.title}</button></h3>
                   <p className="text-xs text-slate-500">{book.author}</p>
                   <p className="text-xs font-bold text-slate-900 mt-1">€{book.price.toFixed(2)}</p>
                 </div>
@@ -441,11 +438,8 @@ export const MyLibraryView: React.FC<MyLibraryViewProps> = ({
                       </div>
 
                       <h3 
-                        onClick={() => onOpenBookDetail(item.book)}
-                        className="font-serif font-bold text-slate-900 text-sm line-clamp-1 hover:text-indigo-600 cursor-pointer"
-                      >
-                        {item.book.title}
-                      </h3>
+                        className="font-serif font-bold text-slate-900 text-sm line-clamp-1 hover:text-indigo-600"
+                      ><button type="button" onClick={() => onOpenBookDetail(item.book)} className="cursor-pointer text-left rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">{item.book.title}</button></h3>
                       <p className="text-xs text-slate-500 font-medium truncate">{item.book.author}</p>
                     </div>
 

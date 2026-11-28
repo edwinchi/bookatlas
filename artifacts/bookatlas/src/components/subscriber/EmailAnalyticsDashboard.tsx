@@ -515,7 +515,7 @@ export const EmailAnalyticsDashboard: React.FC<EmailAnalyticsDashboardProps> = (
                   >
                     <td className="py-3 px-4">
                       <div className="max-w-xs">
-                        <span className="font-bold text-slate-900 block line-clamp-1">{c.title}</span>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedCampaignId(c.id); }} aria-pressed={c.id === selectedCampaignId} className="font-bold text-slate-900 block line-clamp-1 text-left cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-indigo-600">{c.title}</button>
                         <span className="text-[11px] text-slate-500 block line-clamp-1">"{c.subject}"</span>
                       </div>
                     </td>
