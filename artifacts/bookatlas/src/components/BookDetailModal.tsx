@@ -458,7 +458,7 @@ const BookDetailContent: React.FC<BookDetailModalProps & { book: Book }> = ({
             {level && (
               <p data-testid="reading-level" className="col-span-2 sm:col-span-4 border-t border-slate-200 pt-3 text-slate-700">
                 <span className="font-medium text-slate-600">Reading level: </span>
-                <span className="font-bold text-slate-900">{level.label}, about age {level.ages}{level.groep ? ` (${level.groep})` : ''}</span>
+                <span className="font-bold text-slate-900">{level.label}, for {level.who}{level.groep ? ` (${level.groep})` : ''}</span>
                 <span className="text-slate-600"> · estimated from the sentences and words of the free preview, not an official AVI or CLIB level.</span>
               </p>
             )}

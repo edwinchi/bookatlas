@@ -24,6 +24,8 @@ test('reading level: short simple text is very easy for young readers; dense pro
   assert.equal(easy.groep, undefined, 'the Dutch school year only for Dutch books');
   const hard = readingLevel(hardEn)!;
   assert.ok(['Hard', 'Very hard'].includes(hard.label), hard.label);
+  assert.match(hard.who, /readers$/);
+  assert.equal(easy.who, 'readers aged 6–8');
   const nl = readingLevel(easyNl)!;
   assert.equal(nl.lang, 'nl');
   assert.equal(nl.groep, 'groep 3–4');

@@ -56,11 +56,11 @@ const BANDS: { min: number; label: string; ages: string; groep?: string }[] = [
   { min: 70, label: 'Fairly easy', ages: '10–12', groep: 'groep 7–8' },
   { min: 60, label: 'Standard', ages: '12–15', groep: 'first years of secondary school' },
   { min: 50, label: 'Fairly hard', ages: '15–18' },
-  { min: 30, label: 'Hard', ages: 'adults' },
+  { min: 30, label: 'Hard', ages: 'adult readers' },
   { min: 0, label: 'Very hard', ages: 'specialist readers' },
 ];
 
-export interface ReadingLevel { lang: LevelLang; ease: number; label: string; ages: string; groep?: string; words: number }
+export interface ReadingLevel { lang: LevelLang; ease: number; label: string; /** "6–8", or who it suits ("adult readers"). */ ages: string; /** For whom, ready to show: "readers aged 6–8" or "adult readers". */ who: string; groep?: string; words: number }
 
 /** The reading level of some paragraphs, or null when there is too little text or the language is not known. */
 export function readingLevel(paragraphs: string[], hint?: string): ReadingLevel | null {
@@ -73,7 +73,7 @@ export function readingLevel(paragraphs: string[], hint?: string): ReadingLevel 
   const syl = words.reduce((n, w) => n + syllables(w, lang), 0);
   const ease = readingEase(words.length / sentences, syl / words.length, lang);
   const band = BANDS.find((b) => ease >= b.min)!;
-  return { lang, ease, label: band.label, ages: band.ages, groep: lang === 'nl' ? band.groep : undefined, words: words.length };
+  return { lang, ease, label: band.label, ages: band.ages, who: /^\d/.test(band.ages) ? `readers aged ${band.ages}` : band.ages, groep: lang === 'nl' ? band.groep : undefined, words: words.length };
 }
 
 function hintLang(hint?: string): LevelLang | null {
